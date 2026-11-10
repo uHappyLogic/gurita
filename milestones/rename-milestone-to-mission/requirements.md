@@ -124,5 +124,9 @@ The documentation this work rewrites states the upgrade itself, and the release 
 
 `CLAUDE.md` gains one dedicated invariant entry for the hard cut, written only in the new vocabulary and naming no retired form. It states the rule positively: the plugin answers to its current names only, through one flag, one discovery pattern (`**/mission_*/requirements.md`), and one finish marker, with no alias and no second pattern, the record starts at the first `Mission-finish:` commit, and no migration is shipped. It gives low adoption as the ground, and it carries the bootstrap's replacement of an older workflow section as its stated exception.
 
+### Existing store at upgrade
+
+The bootstrap carries an existing project's store over as part of the pass that replaces an older workflow section. When `milestones/answer_decision_principles.md` stands and `answer_decision_principles.md` at the root does not, it moves the file to the root unchanged and commits both paths with the context file in its one `Workflow-bootstrap: missions` commit; when both stand, or only the new one does, it moves nothing. The old path is named literally in the bootstrap skill, beside the old heading it already names by decision, and in `core/shared/workflow-guidance.md` only if its third case describes the move. The recommendation procedure and the capture skill name only the new path, with no fallback read of the old one, and the docs describe the move as part of what the bootstrap does.
+
 ## Out of Scope
 
