@@ -112,5 +112,9 @@ This work moves the sibling milestone `milestones/rename-cairn-to-gurita/` to th
 
 No host suite run is made in this work, on any host. The plugin rename's work, which touches the same trigger sets directly after, owes and makes the one round of passing runs on all three hosts, covering both renames.
 
+### Rename completeness bar
+
+The rename is known to be complete by two bars, one per surface. The runtime surface, `core/` and thereby every rendered host tree, gets a permanent check, written as a build check beside `host-name-in-core` in `scripts/build_hosts.py` or as a pytest over the same files, whose residue list holds only the few old forms runtime prose keeps by decision and is therefore empty or nearly so. The rest of the tree (the docs, `CLAUDE.md`, the README and CONTRIBUTING, `tests/`, `host_tests/`, `.github/`, `.claude/`, `ideas/`) is checked once by hand when the work ends: the last task runs one whole-tree search, compares its result against a residue list recorded in the milestone, and carries the result in its bar. Outside the runtime surface the word is not banned for good.
+
 ## Out of Scope
 
