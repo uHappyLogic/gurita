@@ -88,5 +88,9 @@ A copy of the plugin held at the old word runs every task of this milestone and 
 
 The `--date` option is removed from `core/tools/commit.py` in the same work that removes `/migrate-milestones`, its only caller: its parser entry, `check_date`, the `--date DATE` arguments added to `git commit`, and the three usage lines, docstring paragraph, and help text that state it. `tests/test_commit_date.py` is deleted, `--date` is dropped from the option set `tests/test_commit_contract.py` asserts and from that test's name, and the option's mentions in `CLAUDE.md`'s committing invariant and in `docs/workflow.md` go with it, with no entry banning its return. The rebuilt host trees carry the reduced tool byte-identical, as the parity test requires.
 
+### Legacy title prefix strip
+
+The legacy `Milestone <N>: ` title prefix strip is removed at both sites together. In the read-only tool, `LEGACY_TITLE_PREFIX` and its branch in `title_of` are deleted, so a live mission's title is its first `# ` heading with whitespace folded and nothing taken off it, and the sentences about the prefix in the module docstring, the `live` help text, and the `title_of` docstring go too. The finish skill takes the title as the heading's text as it stands, with no strip and no `# Milestone 21: …` example. The prefix mentions in `docs/skill-reference.md` and in the read-only tool and finish invariants of `CLAUDE.md` are dropped. The tests that feed the strip change with it: the two prefixed cases in `tests/test_milestones_live.py` are deleted, and the fixture headings written as `# Milestone 7: …` in `tests/test_milestones_contract.py` and `tests/test_milestones_summary.py` become `# <title>`, as the definition tool writes them. The host suite fixture's `# Milestone 1: Pocket Ledger Foundations` heading is retitled when the fixture moves into the mission form.
+
 ## Out of Scope
 
