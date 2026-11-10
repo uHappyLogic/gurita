@@ -96,5 +96,9 @@ The legacy `Milestone <N>: ` title prefix strip is removed at both sites togethe
 
 `tasks PATH` keeps its current selection unchanged: every `Task-completion:` commit that changed PATH is listed, a pre-rename one included, its milestone field the existing `-` placeholder because its task list lies under a `milestones/` container the `**/mission_*/TASKS_TODO.md` join does not match, and its verified bar printed beneath it under `--with-body` as for any other commit. The tool reads no old pattern to do this. Only its help text and the docs change: they state that task commits made before the rename list under the placeholder, beside the existing note that the record starts at the first `Task-completion:` commit.
 
+### Idea drafts wording
+
+`ideas/gurita.md` is revised to record the mission rename as carried out: its Today column and present-tense statements of the old forms are recast as what stood before the rename, the open questions this milestone answers are marked as answered with the recorded decisions, and the old word is kept only where it names a retired form. `ideas/kepala.md` and `ideas/benchmark_for_cairn.md` follow the rename wherever they describe the plugin, identifiers and prose in the new word, and kepala's "a milestone today" gloss is dropped.
+
 ## Out of Scope
 
