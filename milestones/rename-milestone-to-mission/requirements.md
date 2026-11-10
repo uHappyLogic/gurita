@@ -72,5 +72,9 @@ One other live milestone overlaps this one's scope: `milestones/rename-cairn-to-
 
 ## Decisions
 
+### Bootstrap on an older workflow section
+
+When the context file holds a `## Milestone Workflow` section and no `## Mission Workflow` one, the bootstrap recognizes the old heading as an older section and replaces it whole, from its heading line down to the line before the next `# ` or `## ` heading or to the end of the file, with the `## Mission Workflow` section, leaving every line outside it untouched. `core/shared/workflow-guidance.md` keeps its third case, the whole-section replacement, with the bootstrap named as its writer in place of `/migrate-milestones`. The run commits under `Workflow-bootstrap: missions` and prints the existing success line. The skill therefore names the old heading literally, a use of the old word in runtime prose kept by decision.
+
 ## Out of Scope
 
