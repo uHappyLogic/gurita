@@ -116,5 +116,9 @@ No host suite run is made in this work, on any host. The plugin rename's work, w
 
 The rename is known to be complete by two bars, one per surface. The runtime surface, `core/` and thereby every rendered host tree, gets a permanent check, written as a build check beside `host-name-in-core` in `scripts/build_hosts.py` or as a pytest over the same files, whose residue list holds only the few old forms runtime prose keeps by decision and is therefore empty or nearly so. The rest of the tree (the docs, `CLAUDE.md`, the README and CONTRIBUTING, `tests/`, `host_tests/`, `.github/`, `.claude/`, `ideas/`) is checked once by hand when the work ends: the last task runs one whole-tree search, compares its result against a residue list recorded in the milestone, and carries the result in its bar. Outside the runtime surface the word is not banned for good.
 
+### Upgrade guidance placement
+
+The documentation this work rewrites states the upgrade itself, and the release notes are not relied on for it. In `docs/workflow.md`'s bootstrap paragraph, in the place of the sentence that sends a pointer-era project to `/migrate-milestones`, it gives one rule: finish every live milestone with the copy of the plugin it was started under before upgrading. The pointer-era state (`milestones/README.md` and the numbered directories) is described as read by nothing, left in place, and removable by hand, and the old `## Milestone Workflow` section as replaced by a bootstrap run. No recipe for moving a directory by hand is given.
+
 ## Out of Scope
 
