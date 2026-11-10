@@ -92,5 +92,9 @@ The `--date` option is removed from `core/tools/commit.py` in the same work that
 
 The legacy `Milestone <N>: ` title prefix strip is removed at both sites together. In the read-only tool, `LEGACY_TITLE_PREFIX` and its branch in `title_of` are deleted, so a live mission's title is its first `# ` heading with whitespace folded and nothing taken off it, and the sentences about the prefix in the module docstring, the `live` help text, and the `title_of` docstring go too. The finish skill takes the title as the heading's text as it stands, with no strip and no `# Milestone 21: …` example. The prefix mentions in `docs/skill-reference.md` and in the read-only tool and finish invariants of `CLAUDE.md` are dropped. The tests that feed the strip change with it: the two prefixed cases in `tests/test_milestones_live.py` are deleted, and the fixture headings written as `# Milestone 7: …` in `tests/test_milestones_contract.py` and `tests/test_milestones_summary.py` become `# <title>`, as the definition tool writes them. The host suite fixture's `# Milestone 1: Pocket Ledger Foundations` heading is retitled when the fixture moves into the mission form.
 
+### Pre-rename task commits
+
+`tasks PATH` keeps its current selection unchanged: every `Task-completion:` commit that changed PATH is listed, a pre-rename one included, its milestone field the existing `-` placeholder because its task list lies under a `milestones/` container the `**/mission_*/TASKS_TODO.md` join does not match, and its verified bar printed beneath it under `--with-body` as for any other commit. The tool reads no old pattern to do this. Only its help text and the docs change: they state that task commits made before the rename list under the placeholder, beside the existing note that the record starts at the first `Task-completion:` commit.
+
 ## Out of Scope
 
