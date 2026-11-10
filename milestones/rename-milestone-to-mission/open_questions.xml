@@ -103,4 +103,7 @@
       <drawback>The file whose job is to stop a later editor undoing a design decision would be silent on one of the largest decisions this release makes. The places it would live instead are weak: `ideas/` drafts may be revised or dropped, and this milestone&apos;s decisions survive only at its finish commit&apos;s parent, which `summary` and `show` reach only if the sibling own-finish question makes that commit a `Mission-finish:` one.</drawback>
     </alternative>
   </open-question>
+  <open-question id="Existing store at upgrade">
+    <question>The principle store moves from `milestones/answer_decision_principles.md` to `answer_decision_principles.md` at the project root, and the renamed recommendation procedure and capture skill name only the new path. A store an existing project holds at the old path is therefore read by nothing after the upgrade: its recommendations lose every confirmed principle without any sign, and its next capture starts a new store at the root. What is done for such a store: does the bootstrap move it, as it already replaces an older workflow section; does the documentation this work rewrites tell the project to move the file by hand; or is it left unmentioned?</question>
+  </open-question>
 </open-questions>
