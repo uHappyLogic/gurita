@@ -100,5 +100,9 @@ The legacy `Milestone <N>: ` title prefix strip is removed at both sites togethe
 
 `ideas/gurita.md` is revised to record the mission rename as carried out: its Today column and present-tense statements of the old forms are recast as what stood before the rename, the open questions this milestone answers are marked as answered with the recorded decisions, and the old word is kept only where it names a retired form. `ideas/kepala.md` and `ideas/benchmark_for_cairn.md` follow the rename wherever they describe the plugin, identifiers and prose in the new word, and kepala's "a milestone today" gloss is dropped.
 
+### Principle store wording
+
+This work edits the principle store's header by hand to name the renamed capture skill, and edits the "Description over retirement note" directive so that "the milestone record" reads in the new word. The "Required input over optional branch" origin line is kept as written, `MILESTONE_DIR` included, as a historical pointer to the question it came from.
+
 ## Out of Scope
 
