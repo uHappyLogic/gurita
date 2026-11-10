@@ -76,5 +76,9 @@ One other live milestone overlaps this one's scope: `milestones/rename-cairn-to-
 
 When the context file holds a `## Milestone Workflow` section and no `## Mission Workflow` one, the bootstrap recognizes the old heading as an older section and replaces it whole, from its heading line down to the line before the next `# ` or `## ` heading or to the end of the file, with the `## Mission Workflow` section, leaving every line outside it untouched. `core/shared/workflow-guidance.md` keeps its third case, the whole-section replacement, with the bootstrap named as its writer in place of `/migrate-milestones`. The run commits under `Workflow-bootstrap: missions` and prints the existing success line. The skill therefore names the old heading literally, a use of the old word in runtime prose kept by decision.
 
+### Principle store location
+
+The project-wide principle store moves to the project root as `answer_decision_principles.md`, its file name unchanged, in no directory, a path that holds neither the old word, the new word, nor the plugin's name, so the plugin rename that follows does not move it again. The recommendation procedure, the capture skill's prose and its `git status`, `cp`, `git diff`, and restore commands, the docs, `CLAUDE.md`, and the two tests name that path literally. This repository's store is moved there with `git mv`, and the root `milestones/` directory disappears once it stands empty.
+
 ## Out of Scope
 
