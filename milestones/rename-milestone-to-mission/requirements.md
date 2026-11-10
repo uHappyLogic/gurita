@@ -80,5 +80,9 @@ When the context file holds a `## Milestone Workflow` section and no `## Mission
 
 The project-wide principle store moves to the project root as `answer_decision_principles.md`, its file name unchanged, in no directory, a path that holds neither the old word, the new word, nor the plugin's name, so the plugin rename that follows does not move it again. The recommendation procedure, the capture skill's prose and its `git status`, `cp`, `git diff`, and restore commands, the docs, `CLAUDE.md`, and the two tests name that path literally. This repository's store is moved there with `git mv`, and the root `milestones/` directory disappears once it stands empty.
 
+### Running copy and own finish
+
+A copy of the plugin held at the old word runs every task of this milestone and its finish: for example, the directory marketplace is re-added from a separate checkout or worktree held at the commit before the first rename task, and pointed back at the working tree's `hosts/claude` after the finish. `hosts/` is rebuilt with every change under `core/` as usual, so every commit passes `--check`. The milestone is finished where it stands, at `milestones/rename-milestone-to-mission/`, by the old `finish-milestone`, as the last `Milestone-finish:` commit, which the renamed tool never prints.
+
 ## Out of Scope
 
