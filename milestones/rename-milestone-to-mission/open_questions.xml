@@ -1,1 +1,41 @@
-<open-questions/>
+<open-questions>
+  <open-question id="Principle store location">
+    <question>The project-wide principle store stands at `milestones/answer_decision_principles.md`, inside the root `milestones/` container, which no longer exists once a mission stands directly in its scope as `mission_&lt;slug&gt;/`. The recommendation pass reads the store and the capture skill writes it at one fixed path both name literally, so it needs a path that depends on no mission. At what path does the principle store live after the rename?</question>
+  </open-question>
+  <open-question id="Rename completeness bar">
+    <question>Some occurrences of the word milestone stay by decision after the rename (the CHANGELOG&apos;s entries, the `milestone_NN` directory names and the numbered milestones `CLAUDE.md` cites for its measurements), so a search that finds nothing cannot be the bar, and the test suites pin behaviour, not vocabulary: a leftover in runtime prose, in the docs, or in a help text no test quotes fails nothing. How is the rename known to be complete: by a listed residue a test checks, by a listed residue checked once by hand when the work ends, or by no bar beyond the drift gate and the suites?</question>
+  </open-question>
+  <open-question id="Running copy and own finish">
+    <question>This milestone stands at `milestones/rename-milestone-to-mission/`, and the skills that work on it are served from the working tree&apos;s `hosts/claude`, which the rename&apos;s own tasks rebuild under the new word; from that rebuild on, that copy takes no `--milestone` flag, discovers nothing under a `milestones/` container, and writes `Mission-finish:`. Two choices constrain each other here. Which copy of the plugin runs this milestone&apos;s own tasks and its finish: a copy held at the old word for the length of the work, or the working tree&apos;s, with the rebuild that switches it held to the last task? And how is the milestone itself finished: where it stands, as the last `Milestone-finish:` commit, which the renamed tool never prints, or moved to `mission_rename-milestone-to-mission/` and finished as the first `Mission-finish:` commit?</question>
+  </open-question>
+  <open-question id="Sibling milestone relocation">
+    <question>A second live milestone, `milestones/rename-cairn-to-gurita/`, defined and not started, stands in the root `milestones/` container, where the renamed plugin discovers nothing, while this work is to end with `main` consistent under the new word. How does that milestone come to stand under the new form: is its directory moved to `mission_rename-cairn-to-gurita/` as part of this work, is it defined again by the renamed plugin, or is it left where it stands for its own work to deal with?</question>
+  </open-question>
+  <open-question id="Bootstrap on old section">
+    <question>The bootstrap skill writes the workflow section into the context file only when the file holds no section under that section&apos;s heading, which the rename changes from `## Milestone Workflow` to `## Mission Workflow`, and with `/migrate-milestones` removed no skill rewrites an older section. What does the bootstrap do with a context file that holds a `## Milestone Workflow` section and no `## Mission Workflow` one: append the new section and leave the old one standing beside it, replace the old section with the new one, or stop?</question>
+  </open-question>
+  <open-question id="Commit date option">
+    <question>`/migrate-milestones` is the only caller of the commit tool&apos;s `--date` option, which sets a commit&apos;s author date and is covered by `tests/test_commit_date.py`. When the skill is removed, is the option removed from the tool together with its test, or kept with no caller?</question>
+  </open-question>
+  <open-question id="Legacy title prefix strip">
+    <question>The read-only tool strips a legacy `Milestone &lt;N&gt;: ` prefix from the title it reads off a `requirements.md` heading, and the finish skill strips the same prefix from the title line of its commit body. No directory defined under the new word carries that prefix, and the hard cut reads nothing recorded under the old vocabulary. Is the prefix strip removed with the rename, or kept as it is?</question>
+  </open-question>
+  <open-question id="Pre-rename task commits">
+    <question>The read-only tool&apos;s `tasks PATH` query lists every `Task-completion:` commit that changed PATH and joins each to its milestone through the discovery pattern, printing a fixed placeholder in the milestone field when the commit&apos;s task list matches none. `Task-completion:` does not carry the word and stays, so after the rename every one of the 233 task commits already in the log is such an unmatched commit. Does `tasks` go on listing them under the placeholder, with their verified bars under `--with-body`, or does the record&apos;s start at the rename leave them out?</question>
+  </open-question>
+  <open-question id="Idea drafts wording">
+    <question>`ideas/` holds three design drafts that carry the word milestone 189 times between them: `ideas/gurita.md`, the dated draft this rename follows, whose tables state the old forms as what stands today, `ideas/kepala.md`, and `ideas/benchmark_for_cairn.md`. Do the drafts follow the rename, or stay as written?</question>
+  </open-question>
+  <open-question id="Upgrade guidance placement">
+    <question>The hard cut gives an existing project no migration: a live milestone under a `milestones/` container and the pointer-era state release 1.9.0 left (`milestones/README.md`, numbered directories) are read by nothing in the renamed plugin. Does the documentation this work rewrites say what such a project does at the upgrade, such as finishing its live milestones first or moving a directory by hand, or does it describe only the new shape and leave the upgrade to the release notes written by the plugin rename&apos;s work?</question>
+  </open-question>
+  <open-question id="Host suite verification">
+    <question>The on-demand host suite is owed a passing run against each host whose trigger set a change touches, and this rename touches all three hosts&apos; sets: slot value files and README templates in each host&apos;s definition, `core/agents/*.md`, and `host_tests/` itself. The plugin rename that follows directly touches the same sets again. Is the host suite run and passed on all three hosts within this work, or is that run left to the plugin rename&apos;s work?</question>
+  </open-question>
+  <open-question id="Principle store wording">
+    <question>The principle store&apos;s text is written only by the capture skill, and it carries the word milestone on three lines: its header names `capture-milestone-principle-updates` as the file&apos;s only writer, one principle&apos;s origin line cites `MILESTONE_DIR` and an earlier question&apos;s title, and one principle&apos;s text speaks of the milestone record. Does this work edit the store&apos;s text by hand so it follows the rename, or leave the text as written until a capture run rewrites it?</question>
+  </open-question>
+  <open-question id="Hard cut invariant entry">
+    <question>`CLAUDE.md` records the design decisions a later editor must not undo, often by naming a retired form with a ban on restoring it. Does it gain such an entry for the hard cut, naming the retired forms (the `milestones/` container, the `--milestone` flag, the `Milestone-definition:` and `Milestone-finish:` markers, `/migrate-milestones`) as never to be accepted or read again, which keeps the old word in the file by decision, or does it describe only the new shape?</question>
+  </open-question>
+</open-questions>
