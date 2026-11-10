@@ -120,5 +120,9 @@ The rename is known to be complete by two bars, one per surface. The runtime sur
 
 The documentation this work rewrites states the upgrade itself, and the release notes are not relied on for it. In `docs/workflow.md`'s bootstrap paragraph, in the place of the sentence that sends a pointer-era project to `/migrate-milestones`, it gives one rule: finish every live milestone with the copy of the plugin it was started under before upgrading. The pointer-era state (`milestones/README.md` and the numbered directories) is described as read by nothing, left in place, and removable by hand, and the old `## Milestone Workflow` section as replaced by a bootstrap run. No recipe for moving a directory by hand is given.
 
+### Hard cut invariant entry
+
+`CLAUDE.md` gains one dedicated invariant entry for the hard cut, written only in the new vocabulary and naming no retired form. It states the rule positively: the plugin answers to its current names only, through one flag, one discovery pattern (`**/mission_*/requirements.md`), and one finish marker, with no alias and no second pattern, the record starts at the first `Mission-finish:` commit, and no migration is shipped. It gives low adoption as the ground, and it carries the bootstrap's replacement of an older workflow section as its stated exception.
+
 ## Out of Scope
 
