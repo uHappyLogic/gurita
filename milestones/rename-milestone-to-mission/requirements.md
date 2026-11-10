@@ -84,5 +84,9 @@ The project-wide principle store moves to the project root as `answer_decision_p
 
 A copy of the plugin held at the old word runs every task of this milestone and its finish: for example, the directory marketplace is re-added from a separate checkout or worktree held at the commit before the first rename task, and pointed back at the working tree's `hosts/claude` after the finish. `hosts/` is rebuilt with every change under `core/` as usual, so every commit passes `--check`. The milestone is finished where it stands, at `milestones/rename-milestone-to-mission/`, by the old `finish-milestone`, as the last `Milestone-finish:` commit, which the renamed tool never prints.
 
+### Commit date option
+
+The `--date` option is removed from `core/tools/commit.py` in the same work that removes `/migrate-milestones`, its only caller: its parser entry, `check_date`, the `--date DATE` arguments added to `git commit`, and the three usage lines, docstring paragraph, and help text that state it. `tests/test_commit_date.py` is deleted, `--date` is dropped from the option set `tests/test_commit_contract.py` asserts and from that test's name, and the option's mentions in `CLAUDE.md`'s committing invariant and in `docs/workflow.md` go with it, with no entry banning its return. The rebuilt host trees carry the reduced tool byte-identical, as the parity test requires.
+
 ## Out of Scope
 
