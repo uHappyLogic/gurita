@@ -104,5 +104,9 @@ The legacy `Milestone <N>: ` title prefix strip is removed at both sites togethe
 
 This work edits the principle store's header by hand to name the renamed capture skill, and edits the "Description over retirement note" directive so that "the milestone record" reads in the new word. The "Required input over optional branch" origin line is kept as written, `MILESTONE_DIR` included, as a historical pointer to the question it came from.
 
+### Sibling milestone relocation
+
+This work moves the sibling milestone `milestones/rename-cairn-to-gurita/` to the new form, in a separate task near the end, after the rename tasks have landed. That task runs `git mv` from `milestones/rename-cairn-to-gurita/` to `mission_rename-cairn-to-gurita/`, leaves the files unchanged, and lands in a commit of its own that holds the move alone.
+
 ## Out of Scope
 
