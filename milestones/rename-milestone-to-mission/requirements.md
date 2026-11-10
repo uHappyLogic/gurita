@@ -108,5 +108,9 @@ This work edits the principle store's header by hand to name the renamed capture
 
 This work moves the sibling milestone `milestones/rename-cairn-to-gurita/` to the new form, in a separate task near the end, after the rename tasks have landed. That task runs `git mv` from `milestones/rename-cairn-to-gurita/` to `mission_rename-cairn-to-gurita/`, leaves the files unchanged, and lands in a commit of its own that holds the move alone.
 
+### Host suite verification
+
+No host suite run is made in this work, on any host. The plugin rename's work, which touches the same trigger sets directly after, owes and makes the one round of passing runs on all three hosts, covering both renames.
+
 ## Out of Scope
 
