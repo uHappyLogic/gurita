@@ -1,9 +1,9 @@
 """The milestones tool's live query: one line per live milestone, ordered by path, each three
 tab-separated fields (the milestone path with its trailing slash, "started" or "defined" by the
 path-scoped git log -1 --diff-filter=M test on its TASKS_TODO.md, and the title from the first
-"# " heading of its requirements.md, any legacy "Milestone <N>: " prefix stripped, "-" when it
-has none), a live milestone being the directory of a tracked file matching the discovery
-pattern **/milestones/*/requirements.md that is present in the working tree. Given no argument
+"# " heading of its requirements.md with whitespace folded, "-" when it has none), a live
+milestone being the directory of a tracked file matching the discovery pattern
+**/milestones/*/requirements.md that is present in the working tree. Given no argument
 the query prints every live milestone, and nothing, exiting 0, when no milestone is live; its
 MILESTONE_PATH filter is pinned in test_milestones_live_filter.py. Every test runs on a
 repository seeded through the conftest factory, then given commits made through the conftest
@@ -132,8 +132,6 @@ def test_a_removed_milestone_is_not_live_though_its_task_commits_remain(repo, ma
 @pytest.mark.parametrize(
     "heading, title",
     [
-        ("# Milestone 54: Milestones addressed by path", "Milestones addressed by path"),
-        ("# Milestone 7: Golden sweep fixture", "Golden sweep fixture"),
         ("# Milestones addressed by path", "Milestones addressed by path"),
         ("# Milestone planning", "Milestone planning"),
         ("# Spaced \t title  here ", "Spaced title here"),
@@ -141,7 +139,7 @@ def test_a_removed_milestone_is_not_live_though_its_task_commits_remain(repo, ma
         ("## Goal", "-"),
     ],
 )
-def test_the_title_is_the_first_heading_with_any_legacy_prefix_stripped(repo, run_milestones, heading, title):
+def test_the_title_is_the_first_heading_with_whitespace_folded(repo, run_milestones, heading, title):
     seeded = repo({}, files={ALPHA + "requirements.md": f"{heading}\n\n## Goal\n\nThe goal.\n".encode("utf-8")})
     assert live(run_milestones, seeded) == f"{ALPHA}\tdefined\t{title}\n"
 

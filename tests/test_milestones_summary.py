@@ -14,7 +14,7 @@ import pytest
 ALPHA = "milestones/alpha/"
 BETA = "milestones/beta/"
 REQUIREMENTS = (
-    b"# Milestone 7: Alpha Work\n"
+    b"# Alpha Work\n"
     b"\n"
     b"## Goal\n"
     b"\n"

@@ -24,7 +24,7 @@ Follow `${PLUGIN_ROOT}/shared/resolve-milestone.md` to resolve `<MILESTONE_DIR>`
 ### 2. Read milestone content
 
 In parallel, as two independent tool calls:
-- Read `<MILESTONE_DIR>/requirements.md` — to extract the milestone's title, its **Goal**, and its key decisions. The title is the text of the file's top-level `# ` heading with any legacy `Milestone <N>: ` prefix stripped (e.g. `# Milestone 21: Public Release Preparation` and `# Public Release Preparation` both give the title `Public Release Preparation`).
+- Read `<MILESTONE_DIR>/requirements.md` — to extract the milestone's title, its **Goal**, and its key decisions. The title is the text of the file's top-level `# ` heading as it stands.
 - Run the plugin's milestones tool, to list what was concretely built:
 
   ```

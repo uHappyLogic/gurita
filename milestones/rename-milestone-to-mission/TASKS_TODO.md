@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Remove the Legacy Title Prefix Strip
-
-Remove the legacy `Milestone <N>: ` title prefix strip at both sites together, as the Legacy title prefix strip decision lists: `LEGACY_TITLE_PREFIX` and its branch in `title_of` with the docstring and help sentences in the read-only tool, the strip and its `# Milestone 21: …` example in the finish skill, the prefix mentions in `docs/skill-reference.md` and `CLAUDE.md`, and the tests that feed it. A live milestone's title is then its first `# ` heading with whitespace folded and nothing taken off it; the host suite fixture's heading is left to the task that moves that fixture. Verified by the drift gate and both pytest runs passing and by a search of `core/`, `docs/`, and `CLAUDE.md` finding no mention of the prefix.
-
----
-
 ## Read-Only Tool Discovers Missions by Prefix
 
 Change the read-only tool from the `milestones/` container to the prefix form: its one discovery pattern becomes `**/mission_*/requirements.md`, a mission's scope is the directory holding its directory, `live`, `gate`, `since`, and `milestones --milestone` refuse a path whose last component does not open with `mission_`, and the `tasks` join reads `**/mission_*/TASKS_TODO.md`, with no second pattern for the old container. `tasks PATH` keeps its selection unchanged, so a task commit made before the rename lists under the existing `-` placeholder with its bar beneath it under `--with-body`, which the help text now states. Verified by the tool's tests, moved onto fixtures at `<scope>/mission_<slug>/`, passing under both interpreters with the drift gate.

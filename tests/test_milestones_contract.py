@@ -15,7 +15,7 @@ FIRST = "milestones/milestone_07_first/"
 
 @pytest.fixture
 def seeded(repo):
-    return repo({FIRST: "parallel_first"}, files={FIRST + "requirements.md": b"# Milestone 7: First\n"})
+    return repo({FIRST: "parallel_first"}, files={FIRST + "requirements.md": b"# First\n"})
 
 
 def assert_one_error_line(result):

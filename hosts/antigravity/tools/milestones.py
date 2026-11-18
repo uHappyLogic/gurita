@@ -51,8 +51,8 @@ Subcommands:
       milestone's TASKS_TODO.md after the commit that added it (the path-scoped
       "git log -1 --diff-filter=M" test, one log read per live milestone) and the fixed word
       "defined" otherwise; and its title, the text of the first "# " heading of its
-      requirements.md with any legacy "Milestone <N>: " prefix stripped and whitespace runs
-      folded to one space, or the fixed placeholder "-" when the file holds no such heading.
+      requirements.md with whitespace runs folded to one space, or the fixed placeholder "-"
+      when the file holds no such heading.
       When no milestone is live the tool prints nothing and exits 0.
       With MILESTONE_PATH, read and refused as the gate query reads and refuses it, the query
       prints, in the same line and order, only every live milestone other than the one
@@ -240,7 +240,6 @@ STARTED = "started"
 DEFINED = "defined"
 NO_TITLE = "-"
 TITLE_HEADING = re.compile(r"# (.*)")
-LEGACY_TITLE_PREFIX = re.compile(r"Milestone [0-9]+: ")
 
 LIVE = "live"
 FINISHED = "finished"
@@ -283,9 +282,8 @@ working tree is one live milestone, the directory holding it. Each line is three
 fields separated by tabs: the milestone path with its trailing slash; "started"
 when a commit other than a merge modified the milestone's TASKS_TODO.md after
 the one adding it (git log -1 --diff-filter=M on that path), "defined"
-otherwise; and the title, the first "# " heading of its requirements.md with any
-legacy "Milestone <N>: " prefix stripped ("-" when it has none). Nothing is
-printed when no milestone is live.
+otherwise; and the title, the first "# " heading of its requirements.md ("-"
+when it has none). Nothing is printed when no milestone is live.
 With MILESTONE_PATH, read lexically relative to the workspace root and refused
 when it names no directory directly inside a milestones/ container, as for the
 gate query, only the other live milestones, started or defined, whose scope, the
@@ -569,18 +567,14 @@ def goal_lines(text):
 
 
 def title_of(text):
-    """A milestone's title: the text of the first "# " heading of its requirements.md, any
-    legacy "Milestone <N>: " prefix stripped and whitespace folded, or the fixed placeholder
-    when the text holds no such heading or the heading holds nothing else."""
+    """A milestone's title: the text of the first "# " heading of its requirements.md with
+    whitespace folded, or the fixed placeholder when the text holds no such heading or the
+    heading holds nothing else."""
     for line in text.lstrip("﻿").splitlines():
         heading = TITLE_HEADING.fullmatch(line)
         if heading is None:
             continue
-        title = fold(heading.group(1))
-        prefix = LEGACY_TITLE_PREFIX.match(title)
-        if prefix is not None:
-            title = title[prefix.end() :].strip()
-        return title or NO_TITLE
+        return fold(heading.group(1)) or NO_TITLE
     return NO_TITLE
 
 
