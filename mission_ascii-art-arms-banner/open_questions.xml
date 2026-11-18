@@ -1,34 +1,4 @@
 <open-questions>
-  <open-question id="Character rendering in SVG">
-    <question>How are the banner&apos;s characters drawn inside the SVG, given that GitHub loads no external font for an SVG shown as an image and a text element is drawn in whatever font the viewer&apos;s system supplies: as text elements relying on a system monospace font stack, as text with a font embedded in the file, or as glyph outlines converted to paths?</question>
-    <applied-principle>Check tier claims against the live environment</applied-principle>
-    <recommendation option="System font, pinned columns">Pinning each character to the grid keeps the columns aligned in whatever monospace font the viewer has, with no font file, licence, or font tool added; a test render on this machine honoured the pinned positions, whereas an embedded font depends on the image renderer accepting a data-URI font, which is unconfirmed, and glyph outlines need a font tool the repository lacks.</recommendation>
-    <alternative id="System font, pinned columns">
-      Text elements in a system monospace stack, as above, but every character is placed on a fixed grid regardless of the font&apos;s own advance widths. Each row is a tspan with an explicit x list, one coordinate per column, or a textLength with lengthAdjust fitted to the row&apos;s grid width. No font is embedded.
-      <advantage>It keeps the small, licence-free text file but guarantees the columns line up, and that the art fills the viewBox exactly, whichever monospace font the viewer gets. This removes the main failure of relying on font metrics.</advantage>
-      <drawback>Glyph shapes, weights, and vertical metrics still differ per system, so the art never looks the same everywhere, and a missing glyph still falls back to another font. The per-character coordinate lists make the file impractical to write or edit by hand, so this option effectively needs a generator, which depends on how the Banner source of truth question is settled.</drawback>
-    </alternative>
-    <alternative id="System font, natural advance">
-      Each row of the art is a text element (or a tspan per row) with whitespace preserved, its font-family a system monospace stack such as ui-monospace, SFMono-Regular, Menlo, Consolas, DejaVu Sans Mono, monospace. No font is embedded and no character carries its own position, so column alignment comes from whatever monospace font the viewer&apos;s system supplies.
-      <advantage>It is the smallest and simplest file. A plain-text drawing maps onto it line for line, it needs no tool beyond a text editor or the stdlib, and it adds no font licence to the repository.</advantage>
-      <drawback>The look varies from viewer to viewer. Glyph shapes, advance widths, and line metrics differ between Menlo, Consolas, DejaVu Sans Mono, and the rest, so the art&apos;s width, and the point where the curling arms meet the bottom edge, shift against a fixed viewBox, and the image may clip or leave gaps. Any check done on one machine says little about another. If the art uses Unicode box-drawing, block, or braille glyphs (the Art character set question), a system font may lack them and substitute a proportional fallback that breaks the columns.</drawback>
-    </alternative>
-    <alternative id="Embedded whole font">
-      Text elements whose font-family names a font defined by an @font-face rule in the SVG&apos;s own style element. The rule&apos;s src is a base64 data URI of one complete monospace font file under a licence that permits embedding and redistribution, for example the SIL Open Font License. The font is not subset, and the system stack is kept only as a fallback.
-      <advantage>Every viewer draws the art in the same chosen font with known metrics, because a data URI is not an external load. The base64 encoding needs only the Python stdlib, so no new dependency enters the tooling project.</advantage>
-      <drawback>A complete monospace font runs to tens or hundreds of kilobytes, inflated by a third in base64. That weight sits in every committed copy and in each README page load, and the copies multiply if Banner delivery to host pages puts one in each host tree. It also brings a third-party font and its licence text into the repository, and it relies on the image renderer honouring an embedded data-URI font, which needs checking under Rendered look verification.</drawback>
-    </alternative>
-    <alternative id="Embedded subset font">
-      Text elements, as with the whole font, but the @font-face data URI holds a subset of a licence-compatible monospace font cut down to the glyphs the art actually uses. The subset is produced with a font tool such as fonttools&apos; pyftsubset, and the system stack is kept as a fallback.
-      <advantage>It gives the same consistent rendering as embedding the whole font at a file size of a few kilobytes, so the banner stays light in every copy and on every page load while the art remains live text.</advantage>
-      <drawback>It needs a subsetting tool that the repository does not hold today (its one tooling dependency is PyYAML), and the subset must be rebuilt whenever the art gains a new character. Without a committed generator that becomes a manual, easily forgotten step, which ties it to the Banner source of truth question. It also carries the third-party font licence, and the same reliance on the renderer honouring a data-URI font.</drawback>
-    </alternative>
-    <alternative id="Glyph outlines as paths">
-      The SVG holds no text element. Each character of the art is drawn as its glyph outline, taken from a chosen licence-compatible monospace font and placed on the character grid as path data, either inline per character or as one symbol per distinct glyph reused through use elements. The colours are applied as fills.
-      <advantage>It looks identical in every renderer and on every system, depending on no font being present or honoured. This rules out metric drift, missing glyphs, and data-URI font support in one step, whatever the Art character set question decides.</advantage>
-      <drawback>The file is no longer text that can be read or edited as character art. Every change to the drawing means converting it again, with a font tool such as fonttools or an editor like Inkscape that the repository does not hold, so in practice it needs a generator (see Banner source of truth). The path data is larger than plain text unless glyphs are reused through use elements, and the art is not selectable as text.</drawback>
-    </alternative>
-  </open-question>
   <open-question id="Palette colour values">
     <question>Which exact colour values make up the banner&apos;s violet and grey-blue palette: the values the root README&apos;s workflow diagram already uses (violet #9333ea and #581c87, slate #94a3b8 and #475569), or values chosen for the banner alone?</question>
     <applied-principle>Check tier claims against the live environment</applied-principle>
@@ -189,7 +159,6 @@
   <open-question id="Rendered look verification">
     <question>How is the banner&apos;s rendered appearance checked before it is committed, the repository holding no tool that renders an SVG: by rendering the file locally to an image that is inspected, by viewing it on GitHub after a push in both page themes, or by no rendering check beyond the file being a well-formed SVG?</question>
     <applied-principle>Check tier claims against the live environment</applied-principle>
-    <depends-on question="Character rendering in SVG" option="System font, pinned columns"/>
     <recommendation option="Local render then GitHub">The local render gives the drawing agent a loop it can see before anything is committed, qlmanage on this machine having rendered a test SVG with pinned characters correctly, and the view on github.com in both themes covers what no local renderer shows, the viewer&apos;s own monospace font and the real page backgrounds.</recommendation>
     <alternative id="Local render then GitHub">
       The SVG is rendered locally to PNGs on the light and dark backgrounds and inspected before the commit, with a renderer already on the machine and nothing committed for it, and after the push to main the README pages are viewed on github.com in both themes as a final confirmation, a fix landing as a follow-up commit.

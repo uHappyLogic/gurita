@@ -68,5 +68,9 @@ The executing agent draws the art and lands it in the READMEs on its own judgmen
 
 The mission's task list holds no release, and the mission ends with the banner committed on `main`. The maintainer runs `/release-plugin` directly after `/finish-mission` as the mission's committed closing step, so the release follows the finish commit and the three host pages gain the banner the same day.
 
+### Character rendering in SVG
+
+The characters are drawn as text elements in a system monospace font stack, with no font embedded in the file and no glyph converted to paths. Every character is placed on a fixed grid regardless of the font's own advance widths: each row is a `tspan` with an explicit `x` list, one coordinate per column, or carries a `textLength` with `lengthAdjust` fitted to the row's grid width.
+
 ## Out of Scope
 
