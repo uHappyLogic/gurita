@@ -60,5 +60,9 @@ The lookup of the name `gurita` that the naming draft owed before publication is
 
 The README's bold tagline, "Mark the path first, then hand off the walk.", is replaced by a new tagline drawn from the image the new name carries: the arms that each carry a mission out on their own once its questions are decided, for example a line on deciding first and letting the arms carry the work. The new tagline keeps the old one's place, directly under the title and above the pitch.
 
+### Distribution repository transition
+
+The three distribution repositories are created fresh, not renamed in place. Three new, empty repositories `uHappyLogic/gurita-<host>` are created, receive their `TRAFFIC_TOKEN` secret and the token's scope, and take the release's first distribution publish as a parentless root commit. Each old `uHappyLogic/cairn-<host>` is archived as it stands, its 1.9.0 tree, release, history, and `traffic-data` branch unchanged and read-only, so the old names keep serving exactly the last Cairn release and nothing is created or redirected at them.
+
 ## Out of Scope
 
