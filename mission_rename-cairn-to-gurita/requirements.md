@@ -112,5 +112,9 @@ The `.cairn/daemon.toml` line is deleted from `.gitignore`, under neither name, 
 
 The root README carries one sentence near its title and pitch saying that Gurita was published as Cairn up to 1.9.0 and that the old names no longer work, with a link to where the upgrade steps are documented. The three host README templates take a plain substitution with no mention of the former name, and the Claude Code host README's "Migrating from the old marketplace" section and its lead-in line are removed.
 
+### Hands-on check blocks
+
+Each host gets a re-check of the name-dependent points only: install under the new marketplace and plugin id, the `gurita:` namespace or invocation form, agent dispatch by the new names, and the install and cache paths. It is taken from a host suite run against the renamed installed copy, in the form the 2026-11-09 re-checks already used. In each `settings.toml` block a dated "Re-checked" sentence naming that run and the installed version is added, and the bullets it covered (Install, Dispatch, and the paths) are rewritten from it; the earlier dated sentences and the bullets it did not cover stay as written, carried forward under their original names.
+
 ## Out of Scope
 
