@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Rename the Plugin in the Benchmark Draft
-
-Rename the plugin throughout `ideas/benchmark.md`, its title, prose, and example identifiers alike, since the draft describes the plugin as it stands and no decision keeps the old name there. It is verified by a search finding no old name in the file.
-
----
-
 ## Record the Rename in the Idea Drafts
 
 Revise `ideas/gurita.md`, `ideas/kepala.md`, and `ideas/vscode_extension.md` in place to record the plugin's rename as carried out, in the form the word's rename used in commit `9f443e9` and as the "Idea drafts after rename" and "Final name lookup" decisions lay out: the plugin-name table's columns becoming "Before the rename" and "Now", the three remaining open questions marked "Answered by the plugin's rename." with their recorded decisions, the collision-check sentence saying no further lookup is made, and neither of the other two drafts still waiting on the rename. It is verified by every Now cell matching the tree and by every Cairn mention left in the three drafts naming the former name or the rename's history.
