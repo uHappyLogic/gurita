@@ -48,5 +48,9 @@ One SVG is committed once in the source repository, at a root location such as a
 
 The source of truth is a plain-text drawing of the arms, committed together with whatever colour mapping it needs. A new standalone script under `scripts/`, run by hand like `set_version.py`, reads the drawing and writes the SVG. The generated SVG is committed as derived output, never hand-edited, and is regenerated whenever the drawing changes.
 
+### Art character set
+
+The art uses only the 95 printable 7-bit ASCII characters (U+0020 to U+007E). The arms' curls are built from characters such as `/ \ | ( ) _ ~ ' . , o`, and no character outside that range appears anywhere in the drawing, so no box-drawing, block, or braille glyph is used.
+
 ## Out of Scope
 

@@ -1,23 +1,4 @@
 <open-questions>
-  <open-question id="Art character set">
-    <question>Which characters may the banner&apos;s art use: only the printable 7-bit ASCII characters, or also Unicode characters such as box-drawing, block, or braille glyphs?</question>
-    <recommendation option="Printable ASCII only">It keeps the goal&apos;s ASCII art literal, every system monospace font draws all 95 characters at one width so no glyph falls back to another font, and the drawing stays a plain-text file any editor or script handles.</recommendation>
-    <alternative id="Printable ASCII only">
-      The art uses only the 95 printable 7-bit ASCII characters (U+0020 to U+007E): the arms&apos; curls are built from characters such as / \ | ( ) _ ~ &apos; . , o and similar, and no character outside that range appears anywhere in the drawing.
-      <advantage>It keeps the goal&apos;s &quot;ASCII art&quot; literal, and every monospace font a viewer&apos;s system can supply covers this range with one uniform advance width, so the columns stay aligned and no glyph falls back to a different font whichever way the characters end up drawn in the SVG; the drawing also stays a plain-text file any editor or script handles without encoding concerns.</advantage>
-      <drawback>Curves made of slashes, brackets, and underscores are coarse and stair-stepped, so arms curling up from the bottom edge read less smoothly and need more columns and rows to look organic, and the colour palette can only tint thin line characters, with no solid or shaded areas to carry it.</drawback>
-    </alternative>
-    <alternative id="ASCII plus box-drawing and block glyphs">
-      The art may use the printable ASCII characters plus the Unicode Box Drawing (U+2500 to U+257F) and Block Elements (U+2580 to U+259F) ranges, for example rounded arcs such as ╭ ╮ ╰ ╯, lines, and the shade and fill blocks ░ ▒ ▓ █; braille and every other Unicode range stay excluded.
-      <advantage>Rounded arc glyphs give the curling arms smooth turns that slashes cannot, and the shade blocks let the violet and grey-blue palette fill and grade the arms&apos; bodies, while both ranges are carried by the common monospace fonts (Menlo, Consolas, DejaVu Sans Mono and the like) at the same cell width as ASCII.</advantage>
-      <drawback>The art is no longer ASCII in the strict sense the goal&apos;s wording names, and its alignment holds only where the glyphs are drawn at a uniform width: whether that is guaranteed depends on the sibling question of how the characters are rendered in the SVG, since a viewer font lacking a glyph substitutes another font whose width and baseline may differ, and block glyphs can show hairline seams between rows.</drawback>
-    </alternative>
-    <alternative id="Any Unicode including braille">
-      The art may use any Unicode character the drawing calls for, braille patterns (U+2800 to U+28FF) included alongside ASCII, box-drawing, and block glyphs, with no range excluded.
-      <advantage>Braille patterns give each character cell a 2 by 4 grid of dots, so the arms&apos; curves and suckers can be drawn at close to pixel resolution, giving the smoothest and most detailed silhouette any character set allows.</advantage>
-      <drawback>Braille and the less common ranges have the weakest monospace font coverage, so this option is viable only if the sibling question on character rendering settles on a method that does not depend on the viewer&apos;s fonts; dense braille also reads as a dithered picture rather than as a drawing made of characters, drifting furthest from the &quot;ASCII art&quot; the goal names, and the plain-text source becomes hard to read or edit by hand.</drawback>
-    </alternative>
-  </open-question>
   <open-question id="Light and dark themes">
     <question>How does the banner handle GitHub&apos;s light and dark page themes, no README today using a picture element or a theme-specific image variant: one image with a transparent background whose colours must read on both page backgrounds, one image with its own filled background, or separate light and dark variants selected per theme?</question>
     <applied-principle>Check tier claims against the live environment</applied-principle>
@@ -153,7 +134,6 @@
   <open-question id="Character rendering in SVG">
     <question>How are the banner&apos;s characters drawn inside the SVG, given that GitHub loads no external font for an SVG shown as an image and a text element is drawn in whatever font the viewer&apos;s system supplies: as text elements relying on a system monospace font stack, as text with a font embedded in the file, or as glyph outlines converted to paths?</question>
     <applied-principle>Check tier claims against the live environment</applied-principle>
-    <depends-on question="Art character set" option="Printable ASCII only"/>
     <recommendation option="System font, pinned columns">Pinning each character to the grid keeps the columns aligned in whatever monospace font the viewer has, with no font file, licence, or font tool added; a test render on this machine honoured the pinned positions, whereas an embedded font depends on the image renderer accepting a data-URI font, which is unconfirmed, and glyph outlines need a font tool the repository lacks.</recommendation>
     <alternative id="System font, pinned columns">
       Text elements in a system monospace stack, as above, but every character is placed on a fixed grid regardless of the font&apos;s own advance widths. Each row is a tspan with an explicit x list, one coordinate per column, or a textLength with lengthAdjust fitted to the row&apos;s grid width. No font is embedded.
@@ -235,7 +215,6 @@
   <open-question id="Banner alt text">
     <question>What alternative text does the banner image carry in the four READMEs: an empty alt marking the image as decorative, or a short description of the arms, and in that case what wording?</question>
     <applied-principle>Check tier claims against the live environment</applied-principle>
-    <depends-on question="Art character set" option="Printable ASCII only"/>
     <recommendation option="Short literal description">GitHub wraps every README image in a link, so an empty alt would leave a link with no name for a screen reader to announce, while a few literal words name it, follow the written-alt pattern of every badge on the pages, and stay true however the count, size, or palette is tuned; the wording is the option&apos;s own example, &quot;Octopus arms drawn in ASCII art&quot;.</recommendation>
     <alternative id="Short literal description">
       The banner carries one short literal description of the picture, identical in all four READMEs, naming only what is drawn and how, with no colours and no counts — for example &quot;Octopus arms drawn in ASCII art&quot; — and nothing of the project&apos;s name or tagline.
