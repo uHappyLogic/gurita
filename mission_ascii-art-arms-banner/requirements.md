@@ -88,5 +88,9 @@ The banner image carries the alternative text "Octopus arms drawn in ASCII art",
 
 The mission does not run the host suite and ends without one. The run is left to the next release's pre-flight, whose step g diffs each host's trigger set since the last tag and so selects all three hosts. The maintainer refreshes the installed copies then, as that step's remedy describes.
 
+### Permanent banner check
+
+A test under `tests/`, run by both pytest runs in CI, guards the banner file only: every committed copy parses as a well-formed SVG, all copies are byte-identical, and the committed SVG equals what the generator script produces from the plain-text drawing. Nothing checks where the READMEs place the image, so their opening lines stay unpinned.
+
 ## Out of Scope
 
