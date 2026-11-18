@@ -83,7 +83,7 @@ Step 1's `--without-alternatives` filter is the whole skip test: a block that al
 an `<alternative>` element is never dispatched and never re-annotated, so re-runs are cheap and
 an existing alternative set is left as it stands — that set is frozen for the recommendation
 pass, which picks against it. The primary re-run motive is exactly the bare set a later
-`/review-milestone-requirements` pass surfaces.
+`/review-mission-requirements` pass surfaces.
 
 **Escape hatch for a stale alternative set:** to force a fresh set on a block, run
 

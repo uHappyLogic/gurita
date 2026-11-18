@@ -98,22 +98,22 @@ Every skill's console report opens with one fixed line saying how the run ended,
 
 | Source | Kind | Line |
 |--------|------|------|
-| `init-milestone-base-workflow` | success | `Workflow bootstrapped.` |
-| `init-milestone-base-workflow` | no-op | `Workflow already bootstrapped — the guidance section is present.` |
-| `init-milestone-base-workflow` | no-op | `Bootstrap committed nothing — the guidance already matched the last commit.` |
-| `define-milestone-goal` | success | `Milestone defined.` |
-| `define-milestone-goal` | no-op | `Milestone not committed — its directory held no uncommitted file.` |
-| `define-milestone-goal` | stop | `Milestone not defined — no git work tree at the workspace root.` |
-| `define-milestone-goal` | stop | `Milestone not defined — no suitable python3 interpreter.` |
-| `define-milestone-goal` | stop | `Milestone not defined — no --at scope was given.` |
-| `define-milestone-goal` | stop | `Milestone not defined — the definition tool failed.` |
-| `specify-milestone-starting-state` | success | `Starting state recorded.` |
-| `specify-milestone-starting-state` | no-op | `Starting state unchanged — nothing committed.` |
-| `specify-milestone-starting-state` | no-op | `Starting state current — the ground has not moved since it was recorded.` |
-| `review-milestone-requirements` | success | `Requirements reviewed.` |
-| `review-milestone-requirements` | no-op | `Requirements unchanged — the review found nothing to reshape.` |
-| `review-milestone-requirements` | verdict | `Requirements converged — ready for task derivation.` |
-| `review-milestone-requirements` | stop | `Review stopped — the milestones record could not be read.` |
+| `init-mission-base-workflow` | success | `Workflow bootstrapped.` |
+| `init-mission-base-workflow` | no-op | `Workflow already bootstrapped — the guidance section is present.` |
+| `init-mission-base-workflow` | no-op | `Bootstrap committed nothing — the guidance already matched the last commit.` |
+| `define-mission-goal` | success | `Milestone defined.` |
+| `define-mission-goal` | no-op | `Milestone not committed — its directory held no uncommitted file.` |
+| `define-mission-goal` | stop | `Milestone not defined — no git work tree at the workspace root.` |
+| `define-mission-goal` | stop | `Milestone not defined — no suitable python3 interpreter.` |
+| `define-mission-goal` | stop | `Milestone not defined — no --at scope was given.` |
+| `define-mission-goal` | stop | `Milestone not defined — the definition tool failed.` |
+| `specify-mission-starting-state` | success | `Starting state recorded.` |
+| `specify-mission-starting-state` | no-op | `Starting state unchanged — nothing committed.` |
+| `specify-mission-starting-state` | no-op | `Starting state current — the ground has not moved since it was recorded.` |
+| `review-mission-requirements` | success | `Requirements reviewed.` |
+| `review-mission-requirements` | no-op | `Requirements unchanged — the review found nothing to reshape.` |
+| `review-mission-requirements` | verdict | `Requirements converged — ready for task derivation.` |
+| `review-mission-requirements` | stop | `Review stopped — the milestones record could not be read.` |
 | `discuss-open-question` | stop | `Cannot discuss: no open question matches the title.` |
 | `answer-open-question`, `answer-open-question-with-recommendation`, `answer-open-question-with-alternative` | success | `Answer recorded.` |
 | `answer-open-question` | stop | `Answer not recorded — the input has no "." separator.` |
@@ -128,17 +128,17 @@ Every skill's console report opens with one fixed line saying how the run ended,
 | `answer-all-open-questions-with-recommendation` | stop | `Sweep stopped — the question gather failed.` |
 | `answer-all-open-questions-with-recommendation` | stop | `Sweep stopped — the milestone files already held changes.` |
 | `answer-all-open-questions-with-recommendation` | stop | `Sweep stopped — an answer could not be recorded.` |
-| `modify-milestone-goal` | success | `Goal revised.` |
-| `modify-milestone-goal` | no-op | `Goal unchanged — the revision matched the existing goal.` |
-| `modify-milestone-goal` | stop | `Goal revision stopped — clearing the undermined picks failed.` |
-| `capture-milestone-principle-updates` | success | `Principles captured.` |
-| `capture-milestone-principle-updates` | no-op | `Nothing captured or committed — no answer commit touches the milestone.` |
-| `capture-milestone-principle-updates` | no-op | `Nothing captured or committed — no answer generalizes or contradicts the store.` |
-| `capture-milestone-principle-updates` | no-op | `Nothing captured or committed — the store already holds what the milestone teaches.` |
-| `capture-milestone-principle-updates` | no-op | `Nothing captured or committed — the rewrite was declined and the store restored.` |
-| `capture-milestone-principle-updates` | stop | `Capture stopped — no milestone path was given.` |
-| `capture-milestone-principle-updates` | stop | `Capture stopped — no milestone directory matches the path.` |
-| `capture-milestone-principle-updates` | stop | `Capture stopped — declined at a start-of-run guard.` |
+| `modify-mission-goal` | success | `Goal revised.` |
+| `modify-mission-goal` | no-op | `Goal unchanged — the revision matched the existing goal.` |
+| `modify-mission-goal` | stop | `Goal revision stopped — clearing the undermined picks failed.` |
+| `capture-mission-principle-updates` | success | `Principles captured.` |
+| `capture-mission-principle-updates` | no-op | `Nothing captured or committed — no answer commit touches the milestone.` |
+| `capture-mission-principle-updates` | no-op | `Nothing captured or committed — no answer generalizes or contradicts the store.` |
+| `capture-mission-principle-updates` | no-op | `Nothing captured or committed — the store already holds what the milestone teaches.` |
+| `capture-mission-principle-updates` | no-op | `Nothing captured or committed — the rewrite was declined and the store restored.` |
+| `capture-mission-principle-updates` | stop | `Capture stopped — no milestone path was given.` |
+| `capture-mission-principle-updates` | stop | `Capture stopped — no milestone directory matches the path.` |
+| `capture-mission-principle-updates` | stop | `Capture stopped — declined at a start-of-run guard.` |
 | `provide-alternatives-to-all-open-questions` | success | `Alternatives embedded.` |
 | `provide-alternatives-to-all-open-questions` | no-op | `No alternatives embedded — the document holds no questions.` |
 | `provide-alternatives-to-all-open-questions` | no-op | `No alternatives embedded — every question already carries a set.` |
@@ -174,12 +174,12 @@ Every skill's console report opens with one fixed line saying how the run ended,
 | `complete-all-tasks` | stop | `Task run stopped — a completed task could not be committed.` |
 | `complete-task` | success | `Task completed.` |
 | `complete-task` | no-op | `No task completed — no file changed.` |
-| `finish-milestone` | success | `Milestone finished.` |
-| `finish-milestone` | no-op | `Nothing to finish — no changes to commit.` |
-| `finish-milestone` | stop | `Cannot finish the milestone: the completed-task read failed.` |
-| `finish-milestone` | stop | `Cannot finish the milestone: the following open questions must be resolved first:` |
-| `finish-milestone` | stop | `Cannot finish the milestone: the open-question check failed.` |
-| `finish-milestone` | stop | `Cannot finish the milestone: tasks remain to be completed.` |
+| `finish-mission` | success | `Milestone finished.` |
+| `finish-mission` | no-op | `Nothing to finish — no changes to commit.` |
+| `finish-mission` | stop | `Cannot finish the milestone: the completed-task read failed.` |
+| `finish-mission` | stop | `Cannot finish the milestone: the following open questions must be resolved first:` |
+| `finish-mission` | stop | `Cannot finish the milestone: the open-question check failed.` |
+| `finish-mission` | stop | `Cannot finish the milestone: tasks remain to be completed.` |
 | `shared/resolve-mission.md` | stop | `No milestone resolved — pass --mission with a live milestone's path.` |
 | `shared/check-scope-gate.md` | stop | `Scope gate closed — the scope is held or could not be checked.` |
 | `shared/complete-procedure.md` | stop | `No task matches the given name.` |

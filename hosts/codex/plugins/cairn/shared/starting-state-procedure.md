@@ -1,7 +1,7 @@
 # Starting-state procedure (shared core)
 
 This is the single source of truth for writing a milestone's `## Relevant starting state`
-section, a first run and a refresh alike: the `specify-milestone-starting-state` skill follows
+section, a first run and a refresh alike: the `specify-mission-starting-state` skill follows
 it whenever it runs, and the `derive-tasks` and `submit-task` skills follow it in place when
 their own check finds the ground moved. The runner supplies the input below and wraps the
 result; this file describes only the work itself — check, explore, edit, clear the picks the

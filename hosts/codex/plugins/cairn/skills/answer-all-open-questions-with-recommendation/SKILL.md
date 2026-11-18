@@ -116,7 +116,7 @@ the printed order, first tell its kind, then decide three values before writing 
 
 A question is a **conflict question** when its question text, as step 1's
 `list --with-question` printed it after the tab, starts with exactly
-`Which conflicting decision stands:` — the fixed opening `/review-milestone-requirements` gives
+`Which conflicting decision stands:` — the fixed opening `/review-mission-requirements` gives
 every conflict question it authors, followed by the `###` headings of the two conflicting
 `## Decisions` entries in double quotes. That exact-prefix check of the printed text is the
 whole test. Every other question is an **ordinary question**, a block asking about a conflict
@@ -130,7 +130,7 @@ a new decision, as the three values below describe.
   the pick resolves the question completely, and what constraint it imposes — and record the
   pick as given whatever you conclude. Its other two questions are not this run's: the run
   carries no cascade, so an entry a decision moots stays in the document for the next
-  `/review-milestone-requirements` pass to clean up or flag, and it forms no contradiction
+  `/review-mission-requirements` pass to clean up or flag, and it forms no contradiction
   judgment, since that pass's `## Decisions` consistency step is where a conflicting pair is
   noticed. A new open question the decision may raise is not reported and never added: it is
   that pass's to find. That procedure's tool steps are never followed: this call runs the fold,
@@ -162,7 +162,7 @@ new statement is folded anywhere under `## Decisions`:
 
 The call rewrites exactly one subsection per conflict question: the entry that stands, and any
 clause elsewhere in `requirements.md` the pick bears on, stay as written, and any conflict left
-standing is the next `/review-milestone-requirements` pass's `## Decisions` consistency step to
+standing is the next `/review-mission-requirements` pass's `## Decisions` consistency step to
 flag. Telling a conflict question by its opening and rewriting its losing entry is still
 recording the pick as given: no contradiction is judged and no pick is weighed.
 

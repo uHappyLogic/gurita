@@ -104,7 +104,7 @@ Step 1's `--without-recommendation` filter is the whole skip test: a block that 
 carries a `<recommendation>` element is never re-picked, so re-runs are cheap and a standing
 recommendation is left as it stands — the tool's `embed --recommendation` refuses a block
 already carrying one, so the rule holds in the tool and not only here. The primary re-run
-motive is exactly the recommendation-less set a later `/review-milestone-requirements` pass
+motive is exactly the recommendation-less set a later `/review-mission-requirements` pass
 surfaces, or that an answer's cascade cleared: a dependent whose pick an answer invalidated
 loses its `<recommendation>`, `<depends-on>`, and `<applied-principle>` children and keeps its
 `<alternative>` children, so it is this pass's to re-pick on the next run, against the same

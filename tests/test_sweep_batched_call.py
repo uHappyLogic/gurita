@@ -23,7 +23,7 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parent.parent
 TREE = REPO_ROOT / "hosts" / "claude"
 SWEEP = TREE / "skills" / "answer-all-open-questions-with-recommendation" / "SKILL.md"
-REVIEW = TREE / "skills" / "review-milestone-requirements" / "SKILL.md"
+REVIEW = TREE / "skills" / "review-mission-requirements" / "SKILL.md"
 TOOL = TREE / "tools" / "open_questions.py"
 PLUGIN_ROOT_VARIABLE = "CLAUDE_PLUGIN_ROOT"
 FIXTURE_NAME = "sweep"

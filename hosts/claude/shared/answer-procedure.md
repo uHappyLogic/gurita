@@ -124,7 +124,7 @@ rewrote and the standing one — each by the `###` heading it sits under, with e
 lead or opening words to tell it apart wherever it shares that heading with another entry or
 sits among several bullets, then one sentence in your own words stating what each entry says
 and why both cannot hold. Write no question text: the next
-`/review-milestone-requirements` pass authors the open question from the note.
+`/review-mission-requirements` pass authors the open question from the note.
 
 Write the notes, like the fold, **before** removing the answered block in step 5.
 

@@ -11,7 +11,7 @@ changes nothing.
 A milestone's scope is the directory holding its `milestones/` container. A milestone is
 started when it is live — its directory still stands in the working tree — and tasks were
 entered into its task list at some time, which the log shows as its `TASKS_TODO.md` changed
-after the commit that defined it. It stays started until `/finish-milestone` removes its
+after the commit that defined it. It stays started until `/finish-mission` removes its
 directory, also after every one of its tasks is completed. A milestone that is only defined,
 or that is still deciding its questions, is not started.
 

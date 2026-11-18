@@ -17,7 +17,7 @@ This repository is the Codex distribution of [Cairn](https://github.com/uHappyLo
 
 ## Installation
 
-Cairn has two runtime prerequisites: **git**, with your project root inside a git work tree that every skill commits into, and a **Python 3.9 or later** interpreter that answers as `python3` on your PATH. The skills drive the plugin's stdlib-only Python tools with it (no packages to install), and `$cairn:define-milestone-goal` checks both each time it defines a milestone, git first, stopping with the remedy before anything is written when either is missing.
+Cairn has two runtime prerequisites: **git**, with your project root inside a git work tree that every skill commits into, and a **Python 3.9 or later** interpreter that answers as `python3` on your PATH. The skills drive the plugin's stdlib-only Python tools with it (no packages to install), and `$cairn:define-mission-goal` checks both each time it defines a milestone, git first, stopping with the remedy before anything is written when either is missing.
 
 ### Codex
 
@@ -28,7 +28,7 @@ codex plugin marketplace add uHappyLogic/cairn-codex
 codex plugin add cairn@cairn
 ```
 
-In a Codex session, invoke a skill by its name under the plugin's namespace, such as `$cairn:init-milestone-base-workflow`. The skills' own text names other skills in the slash form, such as `/derive-tasks`; those slash names refer to the same skills, which you invoke as `$cairn:derive-tasks`.
+In a Codex session, invoke a skill by its name under the plugin's namespace, such as `$cairn:init-mission-base-workflow`. The skills' own text names other skills in the slash form, such as `/derive-tasks`; those slash names refer to the same skills, which you invoke as `$cairn:derive-tasks`.
 
 Codex reads its project instructions from `AGENTS.md`, so on Codex the skills read your project's environment context from `AGENTS.md`, and the bootstrap writes its workflow section there.
 
@@ -39,7 +39,7 @@ Run your sessions under Codex's workspace-write sandbox with the on-request appr
 Then, in your project root, add the milestone workflow guidance to `AGENTS.md` once:
 
 ```
-$cairn:init-milestone-base-workflow
+$cairn:init-mission-base-workflow
 ```
 
 Run Codex's `/init` to document your project — its domain context, working conventions, available tools, and how work is verified as done — in `AGENTS.md`, so the skills can read that environment context.

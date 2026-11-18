@@ -2,7 +2,7 @@
 
 This is the single source of truth for the `## Milestone Workflow` section of
 `{{CONTEXT_FILE}}`, the guidance that tells anyone working in the project where milestones live
-and how each is named and finished. `init-milestone-base-workflow` writes it into a project
+and how each is named and finished. `init-mission-base-workflow` writes it into a project
 whose `{{CONTEXT_FILE}}` lacks it and states which of the cases below it writes, and this file
 states what the section is and how each case writes it.
 
@@ -17,8 +17,8 @@ This project uses the milestone-driven workflow. Each milestone lives at
 `<scope>/milestones/<slug>/`, under the `milestones/` container of the directory holding the
 core of its work, with `requirements.md`, `open_questions.xml`, and `TASKS_TODO.md`. No
 milestone is current: every skill working inside one is given its path as
-`--mission <path>`, exactly as `/define-milestone-goal` printed it, trailing slash included.
-A milestone directory is removed only by `/finish-milestone`, whose `Milestone-finish: <path>`
+`--mission <path>`, exactly as `/define-mission-goal` printed it, trailing slash included.
+A milestone directory is removed only by `/finish-mission`, whose `Milestone-finish: <path>`
 commit carries the milestone's record, so the directories standing are the live milestones and
 the git log holds the finished ones.
 ```

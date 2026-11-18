@@ -105,7 +105,7 @@ step 1:
   `<MISSION_DIR>/requirements.md`.
 - **SUBJECT** — exactly `Alternative-answer: <Short Title>` (the answered question's handle).
   This distinct subject marks an override of the embedded recommendation: when
-  `/capture-milestone-principle-updates` walks a milestone's answer commits across all three
+  `/capture-mission-principle-updates` walks a milestone's answer commits across all three
   subjects, it reads this one as an override signal, like `Manual-answer:`, and — because the
   body below carries no user rationale — asks the user then why the alternative was preferred;
   `Recommendation-answer:` commits are evidence about existing principles only.

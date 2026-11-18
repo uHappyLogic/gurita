@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Rename the Nine Skills to Mission
-
-Rename the nine remaining skill directories named with the old word (`ask-in-milestone-context`, `capture-milestone-principle-updates`, `define-milestone-goal`, `discuss-milestone-goal`, `finish-milestone`, `init-milestone-base-workflow`, `modify-milestone-goal`, `review-milestone-requirements`, `specify-milestone-starting-state`) to the same names with `mission`, and update each one's frontmatter name and every reference to them under `core/` and `scripts/hosts/` and in the Source column of the fixed-console-lines table. Verified by the drift gate and both pytest runs passing and by a search of `core/` and `scripts/hosts/` finding no old skill name.
-
----
-
 ## Runtime Prose and Console Lines Say Mission
 
 Rewrite what is left of the old word in `core/skills`, `core/shared`, `core/agents`, and the slot values: prose and frontmatter descriptions, example paths and the wording of the `milestones/` container recast to `<scope>/mission_<slug>/`, the `Mission-finish:` subject and the `Workflow-bootstrap: missions` descriptor, the `## Mission Workflow` guidance, and each fixed console line that carries the word, reworded together with its row in `docs/skill-reference.md`. Verified by the drift gate and both pytest runs passing and by a search of `core/` finding the old word only in the principle store's path, which moves in its own task.

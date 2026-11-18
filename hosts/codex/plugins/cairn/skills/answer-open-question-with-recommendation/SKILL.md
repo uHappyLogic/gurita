@@ -68,7 +68,7 @@ step 1:
   `<MISSION_DIR>/requirements.md`.
 - **SUBJECT** — exactly `Recommendation-answer: <Short Title>` (the answered question's
   handle). This distinct subject marks an accepted recommendation: when
-  `/capture-milestone-principle-updates` walks a milestone's answer commits across all three
+  `/capture-mission-principle-updates` walks a milestone's answer commits across all three
   subjects, it reads this one as evidence about principles already in the store only, never as
   a source of new principles — those come from the `Manual-answer:` and `Alternative-answer:`
   override signals.
