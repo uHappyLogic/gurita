@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Rename the Plugin Across the Docs Pages
-
-Rename the plugin across the pages under `docs/`: the `/gurita:<skill>` chain lines and prose of `docs/ways-of-using.md`, the title, prose, and three claim headings of `docs/design-claims.md`, with the README's anchor link to the renamed claim heading following in the same change, and the prose of `docs/skill-reference.md` and `docs/workflow.md`. It is verified by a search finding no old name under `docs/`, the README's claim link resolving to its heading, and both test runs.
-
----
-
 ## Rename the Root README and Rewrite Its Opening
 
 Rename the plugin throughout the root README (title, pitch, "Why" section, release and CI badges, install commands, invocation forms, and links) and rewrite its opening as decided: a new bold tagline in the old one's place, drawn from the arms that each carry a mission out on their own once its questions are decided; the bare gloss "(Indonesian for octopus)" inside the pitch; and one sentence near the title and pitch saying that Gurita was published as Cairn up to 1.9.0 and that the old names no longer work, linking to where the upgrade steps are documented. The adoption table carries four rows, `uHappyLogic/gurita` and the three `uHappyLogic/gurita-<host>` repositories, every badge URL under the new names with nothing deferred. It is verified by a search whose only old-name hits left in the README are that sentence and the Antigravity project-level note the upgrade task folds away, and by every in-tree link resolving.

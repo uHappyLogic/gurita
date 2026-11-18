@@ -1,6 +1,6 @@
 # Skill reference
 
-What each of Cairn's skills and dispatched agents does. The phases they form, how they commit, and the [answer-principle-learning loop](workflow.md#the-answer-principle-learning-loop) are described in [workflow.md](workflow.md), and how to chain them as headless command lines is in [ways-of-using.md](ways-of-using.md).
+What each of Gurita's skills and dispatched agents does. The phases they form, how they commit, and the [answer-principle-learning loop](workflow.md#the-answer-principle-learning-loop) are described in [workflow.md](workflow.md), and how to chain them as headless command lines is in [ways-of-using.md](ways-of-using.md).
 
 ### `init-mission-base-workflow`
 

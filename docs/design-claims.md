@@ -1,6 +1,6 @@
-# The design claims of cairn
+# The design claims of Gurita
 
-This page lists the 19 design claims Cairn makes, in six groups, each with the
+This page lists the 19 design claims Gurita makes, in six groups, each with the
 design that makes it true and one metric for a test. The claims are written in
 ASD-STE100 Simplified Technical English, a controlled register whose short
 sentences and one-meaning-per-word vocabulary keep each claim unambiguous, so
@@ -15,7 +15,7 @@ other tests yet.
 
 ## Decisions
 
-### 1. Cairn finds the open questions before the work starts.
+### 1. Gurita finds the open questions before the work starts.
 
 - **Design:** The review skill reads the requirements and writes each gap as an
   open question. Task derivation does not start while an open question remains.
@@ -89,7 +89,7 @@ other tests yet.
 - **Metric:** Recall of requirement IDs in the tasks and in the verified
   bullets of the task commits.
 
-### 8. Cairn makes the detailed design late, against the live project.
+### 8. Gurita makes the detailed design late, against the live project.
 
 - **Design:** A task holds only a title and 1 to 3 sentences. The completer
   makes the detailed design at completion time. It reads the live deliverables
@@ -233,7 +233,7 @@ other tests yet.
   question, so an interruption leaves a safe superset.
 - **Metric:** Result of a kill-and-resume test: work continued, not done again.
 
-### 16. When in doubt, cairn keeps the record and flags it.
+### 16. When in doubt, Gurita keeps the record and flags it.
 
 - **Design:** When the cascade is not sure, it strips the dependent question
   and does not answer it. When a hand answer or a goal change is possibly
@@ -275,7 +275,7 @@ other tests yet.
 
 ### 19. Each skill does one thing, on an explicit command.
 
-- **Design:** Cairn runs only by slash command. Each skill has one function. To
+- **Design:** Gurita runs only by slash command. Each skill has one function. To
   record an answer, to change the goal, and to review the questions are 3
   different skills. Task completion is the only function that has both a skill
   and an agent. They use the same procedure and differ only in where it runs:

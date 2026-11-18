@@ -119,7 +119,7 @@ This holds for any kind of work. Skills read your project's environment — its 
 
 ## Design principles
 
-- **[Cairn finds the open questions before the work starts.](docs/design-claims.md#1-cairn-finds-the-open-questions-before-the-work-starts)** The review skill reads the mission's requirements and writes each gap as an open question, and task derivation does not start while one remains, so the questions reach you before an agent starts building.
+- **[Gurita finds the open questions before the work starts.](docs/design-claims.md#1-gurita-finds-the-open-questions-before-the-work-starts)** The review skill reads the mission's requirements and writes each gap as an open question, and task derivation does not start while one remains, so the questions reach you before an agent starts building.
 - **[Unattended batch runs are possible.](docs/design-claims.md#14-unattended-batch-runs-are-possible)** The batch skills recommend, answer, and complete every item in one run, strictly in sequence — you start them and read the git log afterwards.
 - **[Each decision has a record in git.](docs/design-claims.md#2-each-decision-has-a-record-in-git)** One answer is one path-scoped commit whose subject marks how it was made — manual, recommendation, or alternative — so the log is provenance and a revert reopens the question.
 
