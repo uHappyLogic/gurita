@@ -144,5 +144,9 @@ The documentation links in the 2.0.0 CHANGELOG entry are pinned to the release t
 
 Removing the old Cairn copy is required, and its steps are commands written per host in the root README's install sections. Each host subsection gains a short "Upgrading from Cairn" note beside its fresh-install commands: Claude Code uninstalls `cairn@cairn` at every scope it was installed at and then removes the `cairn` marketplace; Codex removes the `cairn@cairn` plugin and the `cairn` marketplace; Antigravity deletes `~/.gemini/config/plugins/cairn` and restarts any running `agy` session. The existing project-level `.agents/plugins/cairn` note is folded into the Antigravity note, which then removes both old copies, its path kept as an old-name literal listed in the closing search's residue. The upgrade paragraph of `docs/workflow.md` states the order once, with no commands: finish every live milestone under the old copy, then remove it, then install Gurita and re-run the bootstrap.
 
+### Badges for fresh repositories
+
+Every traffic-badge URL is rewritten to the new names before the release and nothing is deferred. The root README's adoption table carries four rows, `uHappyLogic/gurita` and the three `uHappyLogic/gurita-<host>` repositories, and the three host README templates take their plain substitution, so the 2.0.0 tag and each new repository's landing page reference `traffic-data` branches that do not yet exist in the three fresh repositories. The broken images are accepted as a window that closes at each new repository's first `traffic-badges` run, which the maintainer dispatches by hand right after the publish (`gh workflow run traffic-badges.yml`) or which the daily 03:17 UTC schedule otherwise makes. Nothing is pre-seeded and no follow-up commit is made.
+
 ## Out of Scope
 
