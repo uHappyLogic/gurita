@@ -1,23 +1,4 @@
 <open-questions>
-  <open-question id="Arm count">
-    <question>How many arms does the banner show, the goal saying only &quot;several&quot;: all eight of an octopus&apos;s arms, or a smaller number?</question>
-    <recommendation option="All eight arms">Eight is the count the project&apos;s image rests on, an octopus having eight arms and the plugin being the arms, and a fixed count gives the drawing a criterion checked by counting; across 80 to 100 columns each arm keeps ten to twelve columns for its curl.</recommendation>
-    <alternative id="All eight arms">
-      The banner shows exactly eight arms, every one of an octopus&apos;s arms, each curling up from the bottom edge, and the requirements record eight as a fixed count the drawing must meet.
-      <advantage>It carries the image the project already chose: ideas/gurita.md records that an octopus has eight arms and that &quot;the plugin is the arms&quot;, so the banner states the full metaphor rather than a fragment of it, and a fixed count gives the drawing an objective criterion to be checked against.</advantage>
-      <drawback>Eight curling arms side by side need many character columns to stay legible, so the art is either wide or crowded with arms too thin to curl; whether that fits depends on the column count and display width the banner-size question settles, and an eight-arm drawing is the hardest of the options to make read well in characters.</drawback>
-    </alternative>
-    <alternative id="Fixed smaller count">
-      The banner shows a fixed number of arms below eight, chosen from three to five, framed as a view in which only some of the octopus&apos;s arms rise into the banner, and the requirements record the exact number the drawing must meet.
-      <advantage>Fewer arms leave each one room for a full, legible curl within a modest width, the reading the goal&apos;s &quot;several&quot; already suggests, while a recorded number still gives the drawing an objective criterion.</advantage>
-      <drawback>It gives up the eight-arm image the naming draft rests on, so a viewer reads it as part of an octopus rather than the whole set of arms the plugin claims to be, and any number chosen in the range is arbitrary with no project fact to anchor it.</drawback>
-    </alternative>
-    <alternative id="Count left to the drawing">
-      No arm count is recorded: the requirements keep the goal&apos;s &quot;several&quot;, meaning more than two, and the number is settled when the character drawing is made, by whatever look reads best at the banner&apos;s size.
-      <advantage>The count follows from the drawing&apos;s actual space and legibility rather than being fixed before any art exists, so it never forces eight arms into too few columns or leaves an awkward gap with too few.</advantage>
-      <drawback>The drawing has no countable criterion to be accepted against, so the number becomes whatever the drawer&apos;s judgment yields; that is acceptable only as far as the drawing-author-and-approval question puts a judge in place who can weigh it, and an unattended drawer may land on a count that reads as neither a deliberate eight nor a deliberate fragment.</drawback>
-    </alternative>
-  </open-question>
   <open-question id="Banner alt text">
     <question>What alternative text does the banner image carry in the four READMEs: an empty alt marking the image as decorative, or a short description of the arms, and in that case what wording?</question>
     <applied-principle>Check tier claims against the live environment</applied-principle>
