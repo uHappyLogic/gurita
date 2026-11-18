@@ -72,5 +72,9 @@ The release that publishes the rename carries 2.0.0, a major bump over the last 
 
 `/release-plugin` is left as it is apart from the rename itself, and the rebranding notes reach the release through its existing revision path. Before the release task, the mission fixes the entry's wording, the rebranding sections and bullets at `###` under the entry heading, ending in the Full Changelog link, and records it as a decision in this `requirements.md`. The release still takes the empty-range branch: the commit-derived body is accepted at step 5d, and at step 7's pause the revision path replaces it with the prepared wording verbatim.
 
+### Upgrade guidance in notes
+
+The release's CHANGELOG entry states two facts in a sentence or two each, with no commands: that the plugin must be installed again under its new name on every host, a reinstall and not an update, with no alias left for `cairn:`, and that live milestones are finished under the last Cairn release before upgrading. For the per-host commands and the full rule it links the places in the documentation that hold them, the README's install sections and the upgrade paragraph of `docs/workflow.md`, pinned to the release tag or to the default branch.
+
 ## Out of Scope
 
