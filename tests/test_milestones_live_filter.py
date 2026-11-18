@@ -1,22 +1,22 @@
 """The milestones tool's live query filtered by a MILESTONE_PATH: read lexically relative to the
 workspace root as the gate query reads its argument, and refused on one Error line with exit 1
-and nothing on stdout when it names no directory directly inside a milestones/ container, it
-prints, in the unchanged three-field line and path order, every other live milestone, started or
-defined, whose scope (the directory holding its milestones/ container) equals the named
-milestone's scope, contains it, or lies under it, the named milestone left out as the gate query
-leaves it out; with no argument the query prints every live milestone, as it always has. Every
-test runs on a repository seeded through the conftest factory, then given commits made through
-the conftest helper, a milestone being started by a task-derivation-shaped commit writing its
-task list."""
+and nothing on stdout when it names no mission_ directory, its last component opening with
+mission_, it prints, in the unchanged three-field line and path order, every other live
+milestone, started or defined, whose scope (the directory holding its own directory) equals the
+named milestone's scope, contains it, or lies under it, the named milestone left out as the
+gate query leaves it out; with no argument the query prints every live milestone, as it always
+has. Every test runs on a repository seeded through the conftest factory, then given commits
+made through the conftest helper, a milestone being started by a task-derivation-shaped commit
+writing its task list."""
 
 import pytest
 
-ROOT = "milestones/root-work/"
-ROOT_TOO = "milestones/more-root-work/"
-API = "packages/api/milestones/rate-limits/"
-API_TOO = "packages/api/milestones/caching/"
-API_DEEP = "packages/api/v2/milestones/endpoints/"
-WEB = "packages/web/milestones/forms/"
+ROOT = "mission_root-work/"
+ROOT_TOO = "mission_more-root-work/"
+API = "packages/api/mission_rate-limits/"
+API_TOO = "packages/api/mission_caching/"
+API_DEEP = "packages/api/v2/mission_endpoints/"
+WEB = "packages/web/mission_forms/"
 TODO = b"# TASKS TODO\n\n"
 
 
@@ -86,7 +86,7 @@ def test_overlap_reaches_through_every_level_in_both_directions(repo, run_milest
     assert live(run_milestones, seeded, API) == line(API_DEEP, "defined")
 
 
-def test_a_milestone_in_the_same_container_is_listed(repo, run_milestones):
+def test_a_milestone_in_the_same_scope_is_listed(repo, run_milestones):
     seeded = seed(repo, API, API_TOO)
     assert live(run_milestones, seeded, API) == line(API_TOO, "defined")
 
@@ -99,7 +99,7 @@ def test_a_disjoint_scope_is_not_listed(repo, make_commit, run_milestones):
 
 
 def test_scope_is_compared_by_whole_components_not_by_prefix(repo, run_milestones):
-    near = "packages/api-extra/milestones/other/"
+    near = "packages/api-extra/mission_other/"
     seeded = seed(repo, API, near)
     assert live(run_milestones, seeded, API) == ""
 
@@ -145,7 +145,7 @@ def test_a_finished_milestone_whose_directory_is_gone_is_not_listed(repo, make_c
 # --- reading MILESTONE_PATH ---------------------------------------------------------------
 
 
-@pytest.mark.parametrize("spelling", ["./milestones/root-work/", "milestones/root-work", "milestones//root-work/"])
+@pytest.mark.parametrize("spelling", ["./mission_root-work/", "mission_root-work", ".//mission_root-work/"])
 def test_the_named_path_is_read_lexically(repo, run_milestones, spelling):
     seeded = seed(repo, ROOT, ROOT_TOO)
     assert live(run_milestones, seeded, spelling) == line(ROOT_TOO, "defined")
@@ -154,7 +154,7 @@ def test_the_named_path_is_read_lexically(repo, run_milestones, spelling):
 def test_the_named_milestone_need_not_be_live(repo, make_commit, run_milestones):
     seeded = seed(repo, ROOT, WEB)
     start(make_commit, seeded, ROOT)
-    assert live(run_milestones, seeded, "packages/api/milestones/not-defined-yet/") == line(ROOT, "started")
+    assert live(run_milestones, seeded, "packages/api/mission_not-defined-yet/") == line(ROOT, "started")
 
 
 def test_no_overlapping_milestone_prints_nothing_and_exits_0(repo, run_milestones):
@@ -173,20 +173,24 @@ def test_no_overlapping_milestone_prints_nothing_and_exits_0(repo, run_milestone
         "rate-limits/",
         ".",
         "./",
-        "milestones/",
-        "milestones",
-        "milestones/root-work/nested/",
-        "milestones.fixture/root-work/",
-        "/abs/milestones/root-work/",
-        "../milestones/root-work/",
-        "milestones/root-work/../../..",
+        "mission",
+        "mission-root-work/",
+        "missions/root-work/",
+        "my_mission_root-work/",
+        "Mission_root-work/",
+        "mission_root-work/nested/",
+        "milestones/root-work/",
+        "packages/api/milestones/rate-limits/",
+        "/abs/mission_root-work/",
+        "../mission_root-work/",
+        "mission_root-work/../../..",
     ],
 )
-def test_a_path_with_no_milestones_container_is_refused(repo, run_milestones, path):
+def test_a_path_naming_no_mission_directory_is_refused(repo, run_milestones, path):
     seeded = seed(repo, ROOT, ROOT_TOO)
     line = assert_one_error_line(run_milestones(seeded, "live", path))
     assert path in line
-    assert "milestones/ container" in line
+    assert "names no mission_ directory" in line
 
 
 def test_an_empty_path_is_refused(repo, run_milestones):

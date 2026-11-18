@@ -1,23 +1,24 @@
 """The milestones tool's milestones query: one line per milestone, live or finished, that changed
-PATH through a task commit or whose scope (the directory holding its milestones/ container)
-contains PATH or lies under it, each four tab-separated fields (the state, "live" or
-"finished"; the finish commit's author date as YYYY-MM-DD, "-" for a live milestone; the path
-with its trailing slash; the title, read as the live query reads it for a live milestone and
-from the first line of the finish commit's body for a finished one), every live line above
-every finished one, the live lines by path and the finished lines newest first by the finish
-commit's author timestamp. A finished milestone is a milestone path that is not live and that
-a Milestone-finish: <path> subject names, so presence wins over the log and a legacy subject
-naming an id is not read. Every test runs on a repository seeded through the conftest factory,
-then given finish-shaped commits (the directory removed, the subject naming its path, the body
-its title line, a blank line, and its bullets) made through the conftest helper."""
+PATH through a task commit or whose scope (the directory holding its own directory) contains
+PATH or lies under it, each four tab-separated fields (the state, "live" or "finished"; the
+finish commit's author date as YYYY-MM-DD, "-" for a live milestone; the path with its trailing
+slash; the title, read as the live query reads it for a live milestone and from the first line
+of the finish commit's body for a finished one), every live line above every finished one, the
+live lines by path and the finished lines newest first by the finish commit's author timestamp.
+A finished milestone is a milestone path that is not live and that a Milestone-finish: <path>
+subject names, so presence wins over the log and a legacy subject naming an id, or a path under
+a milestones/ container, is not read. Every test runs on a repository seeded through the
+conftest factory, then given finish-shaped commits (the directory removed, the subject naming
+its path, the body its title line, a blank line, and its bullets) made through the conftest
+helper."""
 
 import pytest
 
-ALPHA = "milestones/alpha/"
-BETA = "milestones/beta/"
-GAMMA = "milestones/gamma/"
-API = "packages/api/milestones/rate-limits/"
-WEB = "packages/web/milestones/forms/"
+ALPHA = "mission_alpha/"
+BETA = "mission_beta/"
+GAMMA = "mission_gamma/"
+API = "packages/api/mission_rate-limits/"
+WEB = "packages/web/mission_forms/"
 TODO = b"# TASKS TODO\n\n"
 
 
@@ -100,7 +101,7 @@ def test_the_finish_sort_key_is_the_author_timestamp_not_the_printed_day(three, 
 
 def test_live_lines_are_ordered_by_path(repo, run_milestones):
     files = {}
-    for directory in ("pkg/milestones/zeta/", "milestones/beta/", "milestones/alpha/", "docs/milestones/gamma/"):
+    for directory in ("pkg/mission_zeta/", "mission_beta/", "mission_alpha/", "docs/mission_gamma/"):
         files.update(milestone_files(directory, "Work"))
     seeded = repo({}, files=files)
     paths = [line.split("\t")[2] for line in milestones(run_milestones, seeded).splitlines()]
@@ -152,12 +153,13 @@ def test_the_latest_finish_commit_of_a_path_is_its_finish_commit(three, make_com
     "subject",
     [
         "Milestone-finish: milestone_07_alpha",
-        "Milestone-finish: milestones/alpha",
-        "Milestone-finish: ./milestones/alpha/",
-        "Milestone-finish: milestones//alpha/",
+        "Milestone-finish: mission_alpha",
+        "Milestone-finish: ./mission_alpha/",
+        "Milestone-finish: mission_alpha//",
         "Milestone-finish: alpha/",
-        "Milestone-finished: milestones/alpha/",
-        "Finish: milestones/alpha/",
+        "Milestone-finish: milestones/alpha/",
+        "Milestone-finished: mission_alpha/",
+        "Finish: mission_alpha/",
     ],
 )
 def test_a_subject_naming_no_milestone_path_is_not_a_finish(three, make_commit, run_milestones, subject):
@@ -166,13 +168,30 @@ def test_a_subject_naming_no_milestone_path_is_not_a_finish(three, make_commit, 
     assert milestones(run_milestones, three) == f"live\t-\t{BETA}\tBeta Work\nlive\t-\t{GAMMA}\tGamma Work\n"
 
 
+def test_a_milestone_under_a_milestones_container_and_its_task_commits_are_in_no_line(
+    three, make_commit, run_milestones
+):
+    old = "milestones/old-work/"
+    make_commit(three, "Chore: an old milestone", files=milestone_files(old, "Old Work"))
+    make_commit(
+        three,
+        "Task-completion: An Old Task",
+        files={old + "TASKS_TODO.md": TODO + b"\n", "src/app.txt": b"old\n"},
+        body="- the old bar\n",
+    )
+    finish(make_commit, three, old, "Old Work")
+    printed = milestones(run_milestones, three, "src/app.txt")
+    assert printed == milestones(run_milestones, three, "src")
+    assert "old-work" not in printed and "Old Work" not in printed
+
+
 def test_a_finish_subject_in_a_merge_commit_is_not_read(three, make_commit, run_milestones, git, environment):
     git(three, environment, "checkout", "-q", "-b", "side")
     make_commit(three, "Chore: side work", files={"side.txt": b"side\n"})
     git(three, environment, "checkout", "-q", "-")
     make_commit(three, "Chore: main work", files={"main.txt": b"main\n"})
-    git(three, environment, "merge", "-q", "--no-ff", "-m", "Milestone-finish: milestones/delta/", "side")
-    assert "milestones/delta/" not in milestones(run_milestones, three)
+    git(three, environment, "merge", "-q", "--no-ff", "-m", "Milestone-finish: mission_delta/", "side")
+    assert "mission_delta/" not in milestones(run_milestones, three)
 
 
 def test_a_finished_milestone_in_a_package_has_its_packages_scope(repo, make_commit, run_milestones):
@@ -267,9 +286,9 @@ def test_a_task_commit_joined_to_a_path_neither_live_nor_finished_lists_nothing(
     make_commit(
         seeded,
         "Task-completion: A Task",
-        files={"packages/old/milestones/gone/TASKS_TODO.md": TODO, "docs/guide.md": b"two\n"},
+        files={"packages/old/mission_gone/TASKS_TODO.md": TODO, "docs/guide.md": b"two\n"},
     )
-    make_commit(seeded, "Chore: drop the old milestone", removed=("packages/old/milestones/gone/TASKS_TODO.md",))
+    make_commit(seeded, "Chore: drop the old milestone", removed=("packages/old/mission_gone/TASKS_TODO.md",))
     assert milestones(run_milestones, seeded, "docs/guide.md") == ""
 
 
@@ -284,7 +303,7 @@ def test_a_path_changed_only_by_history_is_accepted(three, make_commit, run_mile
     assert milestones(run_milestones, three, "src/app.txt").startswith(f"live\t-\t{ALPHA}\t")
 
 
-@pytest.mark.parametrize("path", ["milestones/omega/", "src/missing.txt"])
+@pytest.mark.parametrize("path", ["mission_omega/", "src/missing.txt"])
 def test_a_path_neither_present_nor_ever_changed_is_refused(three, run_milestones, path):
     result = run_milestones(three, "milestones", path)
     assert result.returncode == 1
@@ -296,6 +315,6 @@ def test_a_path_neither_present_nor_ever_changed_is_refused(three, run_milestone
 
 
 def test_an_untracked_requirements_file_is_not_listed(three, run_milestones):
-    (three / "milestones" / "delta").mkdir()
-    (three / "milestones" / "delta" / "requirements.md").write_bytes(b"# Delta\n")
-    assert "milestones/delta/" not in milestones(run_milestones, three)
+    (three / "mission_delta").mkdir()
+    (three / "mission_delta" / "requirements.md").write_bytes(b"# Delta\n")
+    assert "mission_delta/" not in milestones(run_milestones, three)

@@ -3,16 +3,17 @@ tab-separated fields (the milestone path with its trailing slash, "started" or "
 path-scoped git log -1 --diff-filter=M test on its TASKS_TODO.md, and the title from the first
 "# " heading of its requirements.md with whitespace folded, "-" when it has none), a live
 milestone being the directory of a tracked file matching the discovery pattern
-**/milestones/*/requirements.md that is present in the working tree. Given no argument
-the query prints every live milestone, and nothing, exiting 0, when no milestone is live; its
-MILESTONE_PATH filter is pinned in test_milestones_live_filter.py. Every test runs on a
+**/mission_*/requirements.md that is present in the working tree, its name opening with
+mission_, and no pattern read for any other form, a milestones/ container included. Given no
+argument the query prints every live milestone, and nothing, exiting 0, when no milestone is
+live; its MILESTONE_PATH filter is pinned in test_milestones_live_filter.py. Every test runs on a
 repository seeded through the conftest factory, then given commits made through the conftest
 helper."""
 
 import pytest
 
-ALPHA = "milestones/alpha/"
-BETA = "milestones/beta/"
+ALPHA = "mission_alpha/"
+BETA = "mission_beta/"
 REQUIREMENTS = b"# Alpha Work\n\n## Goal\n\nBuild the alpha.\n"
 TODO = b"# TASKS TODO\n\n"
 
@@ -38,13 +39,13 @@ def test_a_line_is_path_state_and_title_tab_separated(repo, run_milestones):
 
 def test_a_task_list_modified_after_the_commit_adding_it_reads_started(repo, make_commit, run_milestones):
     seeded = repo({}, files={**milestone_files(ALPHA), **milestone_files(BETA, "Beta Work")})
-    make_commit(seeded, "Task-derivation: milestones/alpha/", files={ALPHA + "TASKS_TODO.md": TODO + b"## A Task\n"})
+    make_commit(seeded, "Task-derivation: mission_alpha/", files={ALPHA + "TASKS_TODO.md": TODO + b"## A Task\n"})
     assert live(run_milestones, seeded) == f"{ALPHA}\tstarted\tAlpha Work\n{BETA}\tdefined\tBeta Work\n"
 
 
 def test_a_milestone_added_by_a_later_commit_still_reads_defined(repo, make_commit, run_milestones):
     seeded = repo({}, files={"README.md": b"# A project\n"})
-    make_commit(seeded, "Milestone-definition: milestones/alpha/", files=milestone_files(ALPHA))
+    make_commit(seeded, "Milestone-definition: mission_alpha/", files=milestone_files(ALPHA))
     assert live(run_milestones, seeded) == f"{ALPHA}\tdefined\tAlpha Work\n"
 
 
@@ -52,10 +53,10 @@ def test_a_commit_changing_only_other_files_starts_nothing(repo, make_commit, ru
     seeded = repo({}, files={**milestone_files(ALPHA), **milestone_files(BETA, "Beta Work")})
     make_commit(
         seeded,
-        "Requirements-review: milestones/alpha/",
+        "Requirements-review: mission_alpha/",
         files={ALPHA + "requirements.md": REQUIREMENTS + b"\n## Decisions\n", "src/app.txt": b"one\n"},
     )
-    make_commit(seeded, "Task-derivation: milestones/beta/", files={BETA + "TASKS_TODO.md": TODO + b"## B Task\n"})
+    make_commit(seeded, "Task-derivation: mission_beta/", files={BETA + "TASKS_TODO.md": TODO + b"## B Task\n"})
     assert live(run_milestones, seeded) == f"{ALPHA}\tdefined\tAlpha Work\n{BETA}\tstarted\tBeta Work\n"
 
 
@@ -67,13 +68,13 @@ def test_a_milestone_with_no_task_list_reads_defined(repo, run_milestones):
 @pytest.mark.parametrize(
     "directory",
     [
-        "milestones/alpha/",
-        "pkg/milestones/alpha/",
-        "packages/api/milestones/rate limits/",
-        "a/milestones/b/milestones/c/",
+        "mission_alpha/",
+        "pkg/mission_alpha/",
+        "packages/api/mission_rate limits/",
+        "a/mission_b/mission_c/",
     ],
 )
-def test_the_discovery_pattern_matches_a_container_at_any_depth(repo, run_milestones, directory):
+def test_the_discovery_pattern_matches_a_mission_directory_at_any_depth(repo, run_milestones, directory):
     seeded = repo({}, files=milestone_files(directory))
     assert live(run_milestones, seeded) == f"{directory}\tdefined\tAlpha Work\n"
 
@@ -81,13 +82,17 @@ def test_the_discovery_pattern_matches_a_container_at_any_depth(repo, run_milest
 @pytest.mark.parametrize(
     "name",
     [
-        "milestones/requirements.md",
-        "milestones/alpha/nested/requirements.md",
-        "milestones.fixture/alpha/requirements.md",
-        "my-milestones/alpha/requirements.md",
-        "Milestones/alpha/requirements.md",
-        "milestones/alpha/requirements.md.bak",
-        "milestones/alpha/README.md",
+        "requirements.md",
+        "mission/requirements.md",
+        "mission-alpha/requirements.md",
+        "missions/alpha/requirements.md",
+        "my_mission_alpha/requirements.md",
+        "Mission_alpha/requirements.md",
+        "mission_alpha/nested/requirements.md",
+        "mission_alpha/requirements.md.bak",
+        "mission_alpha/README.md",
+        "milestones/alpha/requirements.md",
+        "pkg/milestones/alpha/requirements.md",
     ],
 )
 def test_a_path_outside_the_discovery_pattern_is_not_a_milestone(repo, run_milestones, name):
@@ -96,7 +101,7 @@ def test_a_path_outside_the_discovery_pattern_is_not_a_milestone(repo, run_miles
 
 
 def test_lines_are_ordered_by_path(repo, run_milestones):
-    directories = ["pkg/milestones/zeta/", "milestones/beta/", "milestones/alpha/", "docs/milestones/gamma/"]
+    directories = ["pkg/mission_zeta/", "mission_beta/", "mission_alpha/", "docs/mission_gamma/"]
     files = {}
     for directory in directories:
         files.update(milestone_files(directory))
@@ -107,14 +112,14 @@ def test_lines_are_ordered_by_path(repo, run_milestones):
 
 def test_an_untracked_requirements_file_is_not_live(repo, run_milestones):
     seeded = repo({}, files=milestone_files(ALPHA))
-    (seeded / "milestones" / "beta").mkdir()
-    (seeded / "milestones" / "beta" / "requirements.md").write_bytes(b"# Beta Work\n")
+    (seeded / "mission_beta").mkdir()
+    (seeded / "mission_beta" / "requirements.md").write_bytes(b"# Beta Work\n")
     assert live(run_milestones, seeded) == f"{ALPHA}\tdefined\tAlpha Work\n"
 
 
 def test_a_tracked_requirements_file_missing_from_the_working_tree_is_not_live(repo, run_milestones):
     seeded = repo({}, files={**milestone_files(ALPHA), **milestone_files(BETA, "Beta Work")})
-    (seeded / "milestones" / "beta" / "requirements.md").unlink()
+    (seeded / "mission_beta" / "requirements.md").unlink()
     assert live(run_milestones, seeded) == f"{ALPHA}\tdefined\tAlpha Work\n"
 
 
@@ -122,7 +127,7 @@ def test_a_removed_milestone_is_not_live_though_its_task_commits_remain(repo, ma
     seeded = repo({}, files={**milestone_files(ALPHA), **milestone_files(BETA, "Beta Work")})
     make_commit(seeded, "Task-completion: A Task", files={BETA + "TASKS_TODO.md": TODO + b"\n"})
     make_commit(
-        seeded, "Milestone-finish: milestones/beta/", removed=(BETA + "requirements.md", BETA + "TASKS_TODO.md")
+        seeded, "Milestone-finish: mission_beta/", removed=(BETA + "requirements.md", BETA + "TASKS_TODO.md")
     )
     assert live(run_milestones, seeded) == f"{ALPHA}\tdefined\tAlpha Work\n"
     tasks = run_milestones(seeded, "tasks", BETA)
@@ -147,7 +152,7 @@ def test_the_title_is_the_first_heading_with_whitespace_folded(repo, run_milesto
 def test_the_title_comes_from_the_first_top_level_heading_of_the_working_tree_file(repo, run_milestones):
     seeded = repo({}, files={ALPHA + "requirements.md": b"Preamble line\n\n## Goal\n\n# First Title\n\n# Second\n"})
     assert live(run_milestones, seeded) == f"{ALPHA}\tdefined\tFirst Title\n"
-    (seeded / "milestones" / "alpha" / "requirements.md").write_bytes(b"# Edited Title\n")
+    (seeded / "mission_alpha" / "requirements.md").write_bytes(b"# Edited Title\n")
     assert live(run_milestones, seeded) == f"{ALPHA}\tdefined\tEdited Title\n"
 
 

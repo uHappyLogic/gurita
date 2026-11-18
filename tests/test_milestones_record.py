@@ -11,10 +11,10 @@ through the conftest helper."""
 
 import pytest
 
-ALPHA = "milestones/alpha/"
-BETA = "milestones/beta/"
-API = "packages/api/milestones/rate-limits/"
-WEB = "packages/web/milestones/forms/"
+ALPHA = "mission_alpha/"
+BETA = "mission_beta/"
+API = "packages/api/mission_rate-limits/"
+WEB = "packages/web/mission_forms/"
 TODO = b"# TASKS TODO\n\n"
 INDENT = "    "
 

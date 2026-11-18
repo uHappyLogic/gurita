@@ -1,16 +1,18 @@
 """The milestones tool's shared contract: its help states the record's limits (a shallow clone's
 truncated log, with no check made for it, the record's start at the first Task-completion:
-commit, and the finish subjects read only in the path form) for the tasks query and the three
-history queries, the live query's started test reading the same log, the gate and since queries
-the two that refuse a shallow repository, and the trailer rule over every printed body; every failure is one Error line on stderr with exit 1 and nothing on stdout,
-a malformed invocation gets argparse's exit 2, no traceback reaches the caller, and a query
-writes nothing: the repository's status and HEAD are the same after it as before."""
+commit, a task commit made before the mission rename listed under the placeholder, and the
+finish subjects read only in the path form) for the tasks query and the three history queries,
+the live query's started test reading the same log, the gate and since queries the two that
+refuse a shallow repository, and the trailer rule over every printed body; every failure is one
+Error line on stderr with exit 1 and nothing on stdout, a malformed invocation gets argparse's
+exit 2, no traceback reaches the caller, and a query writes nothing: the repository's status
+and HEAD are the same after it as before."""
 
 import os
 
 import pytest
 
-FIRST = "milestones/milestone_07_first/"
+FIRST = "mission_first/"
 
 
 @pytest.fixture
@@ -88,7 +90,7 @@ def test_the_gate_help_names_its_scope_rule_and_both_refusals(tmp_path, run_mile
     assert "exits 0 whether or not it prints" in text
     assert "git rev-parse --is-shallow-repository" in text
     assert "git fetch --unshallow" in text
-    assert "no milestones/ container is refused" in text
+    assert "naming no mission_ directory is refused" in text
 
 
 @pytest.mark.parametrize(
@@ -113,7 +115,7 @@ def test_the_history_helps_name_their_line_shapes(tmp_path, run_milestones):
 
 def test_the_live_help_names_the_discovery_pattern_and_the_line(tmp_path, run_milestones):
     text = " ".join(run_milestones(tmp_path, "live", "--help").stdout.decode("utf-8").split())
-    assert "**/milestones/*/requirements.md" in text
+    assert "**/mission_*/requirements.md" in text
     assert "started" in text and "defined" in text
     assert "--diff-filter=M" in text
 
@@ -122,6 +124,17 @@ def test_the_help_names_the_query_and_its_body_flag(tmp_path, run_milestones):
     text = run_milestones(tmp_path, "tasks", "--help").stdout.decode("utf-8")
     assert "PATH" in text
     assert "--with-body" in text
+    assert "**/mission_*/TASKS_TODO.md" in text
+
+
+@pytest.mark.parametrize("args", [("--help",), ("tasks", "--help")])
+def test_the_help_states_that_a_task_commit_made_before_the_rename_lists_under_the_placeholder(
+    tmp_path, run_milestones, args
+):
+    text = " ".join(run_milestones(tmp_path, *args).stdout.decode("utf-8").split())
+    assert "a task commit made before the mission rename" in text
+    assert 'the placeholder "-"' in text
+    assert "its bar beneath it under --with-body" in text
 
 
 def test_outside_a_git_repository_the_query_fails_on_one_error_line(tmp_path, run_milestones):
@@ -239,7 +252,7 @@ def test_a_query_writes_nothing(seeded, make_commit, run_milestones, git, enviro
         ("live", "nope/"),
         ("gate", FIRST),
         ("gate", "nope/"),
-        ("gate", "milestones/nope/"),
+        ("gate", "mission_nope/"),
         ("milestones", "."),
         ("milestones", "nope"),
         ("summary", FIRST),

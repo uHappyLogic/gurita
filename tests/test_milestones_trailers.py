@@ -8,7 +8,7 @@ finish-shaped commits made through the conftest helper."""
 
 import pytest
 
-FIRST = "milestones/milestone_07_first/"
+FIRST = "mission_first/"
 TODO = FIRST + "TASKS_TODO.md"
 ATTRIBUTION = "Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 SESSION = "Claude-Session: https://claude.ai/code/session_0123"

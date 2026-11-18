@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Read-Only Tool Discovers Missions by Prefix
-
-Change the read-only tool from the `milestones/` container to the prefix form: its one discovery pattern becomes `**/mission_*/requirements.md`, a mission's scope is the directory holding its directory, `live`, `gate`, `since`, and `milestones --milestone` refuse a path whose last component does not open with `mission_`, and the `tasks` join reads `**/mission_*/TASKS_TODO.md`, with no second pattern for the old container. `tasks PATH` keeps its selection unchanged, so a task commit made before the rename lists under the existing `-` placeholder with its bar beneath it under `--with-body`, which the help text now states. Verified by the tool's tests, moved onto fixtures at `<scope>/mission_<slug>/`, passing under both interpreters with the drift gate.
-
----
-
 ## Rename the Read-Only Tool to Missions
 
 Rename the read-only tool's own identifiers: `core/tools/milestones.py` becomes `missions.py`, the `milestones` query `missions`, `--milestone` and `since --milestones` become `--mission` and `--missions`, `MILESTONE_PATH` becomes `MISSION_PATH`, and `Mission-finish:` is the only finish marker it reads, so the record starts at the first such commit, with its docstring and help text in the new word. Every command under `core/` that calls the tool follows, its fifteen test files become `tests/test_missions_*.py`, and `tests/conftest.py` names the tool and its runner in the new word. Verified by the drift gate and both pytest runs passing and by a search of `core/` and `tests/` finding no call of the old file, query, or flags.

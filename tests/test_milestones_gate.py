@@ -1,25 +1,26 @@
-"""The milestones tool's gate query: for a MILESTONE_PATH naming a directory directly inside a
-milestones/ container, read lexically relative to the workspace root, it prints one bare path
-per line, ordered by path, for every other live milestone that is started (its TASKS_TODO.md
-modified after the commit adding it, by the path-scoped git log -1 --diff-filter=M test) and
-whose scope (the directory holding its milestones/ container) equals the named milestone's
-scope, contains it, or lies under it, and exits 0 whether or not it prints. It refuses a
-shallow repository (git rev-parse --is-shallow-repository printing true), naming
-git fetch --unshallow, and a MILESTONE_PATH with no milestones/ container, each on one Error
-line with exit 1 and nothing on stdout. Every test runs on a repository seeded through the
-conftest factory, then given commits made through the conftest helper, a milestone being
-started by a task-derivation-shaped commit writing its task list."""
+"""The milestones tool's gate query: for a MILESTONE_PATH naming a mission_ directory, its last
+component opening with mission_, read lexically relative to the workspace root, it prints one
+bare path per line, ordered by path, for every other live milestone that is started (its
+TASKS_TODO.md modified after the commit adding it, by the path-scoped git log -1
+--diff-filter=M test) and whose scope (the directory holding its own directory) equals the
+named milestone's scope, contains it, or lies under it, and exits 0 whether or not it prints.
+It refuses a shallow repository (git rev-parse --is-shallow-repository printing true), naming
+git fetch --unshallow, and a MILESTONE_PATH naming no mission_ directory, a path under a
+milestones/ container included, each on one Error line with exit 1 and nothing on stdout.
+Every test runs on a repository seeded through the conftest factory, then given commits made
+through the conftest helper, a milestone being started by a task-derivation-shaped commit
+writing its task list."""
 
 import subprocess
 
 import pytest
 
-ROOT = "milestones/root-work/"
-ROOT_TOO = "milestones/more-root-work/"
-API = "packages/api/milestones/rate-limits/"
-API_TOO = "packages/api/milestones/caching/"
-API_DEEP = "packages/api/v2/milestones/endpoints/"
-WEB = "packages/web/milestones/forms/"
+ROOT = "mission_root-work/"
+ROOT_TOO = "mission_more-root-work/"
+API = "packages/api/mission_rate-limits/"
+API_TOO = "packages/api/mission_caching/"
+API_DEEP = "packages/api/v2/mission_endpoints/"
+WEB = "packages/web/mission_forms/"
 TODO = b"# TASKS TODO\n\n"
 
 
@@ -65,7 +66,7 @@ def assert_one_error_line(result):
 # --- overlap ------------------------------------------------------------------------------
 
 
-def test_a_started_milestone_in_the_same_container_holds_the_scope(repo, make_commit, run_milestones):
+def test_a_started_milestone_in_the_same_scope_holds_the_scope(repo, make_commit, run_milestones):
     seeded = seed(repo, ROOT, ROOT_TOO)
     start(make_commit, seeded, ROOT_TOO)
     assert gate(run_milestones, seeded, ROOT) == ROOT_TOO + "\n"
@@ -100,7 +101,7 @@ def test_disjoint_packages_hold_nothing_against_each_other(repo, make_commit, ru
 
 
 def test_scope_is_compared_by_whole_components_not_by_prefix(repo, make_commit, run_milestones):
-    near = "packages/api-extra/milestones/other/"
+    near = "packages/api-extra/mission_other/"
     seeded = seed(repo, API, near)
     start(make_commit, seeded, near)
     assert gate(run_milestones, seeded, API) == ""
@@ -152,16 +153,23 @@ def test_a_finished_milestone_whose_directory_is_gone_holds_nothing(repo, make_c
 
 def test_an_untracked_milestone_directory_holds_nothing(repo, make_commit, run_milestones):
     seeded = seed(repo, ROOT)
-    (seeded / "milestones" / "stray").mkdir()
-    (seeded / "milestones" / "stray" / "requirements.md").write_bytes(b"# Stray\n")
-    (seeded / "milestones" / "stray" / "TASKS_TODO.md").write_bytes(TODO + b"## A Task\n")
+    (seeded / "mission_stray").mkdir()
+    (seeded / "mission_stray" / "requirements.md").write_bytes(b"# Stray\n")
+    (seeded / "mission_stray" / "TASKS_TODO.md").write_bytes(TODO + b"## A Task\n")
+    assert gate(run_milestones, seeded, ROOT) == ""
+
+
+def test_a_started_directory_under_a_milestones_container_holds_nothing(repo, make_commit, run_milestones):
+    old = "milestones/old-work/"
+    seeded = seed(repo, ROOT, old)
+    start(make_commit, seeded, old)
     assert gate(run_milestones, seeded, ROOT) == ""
 
 
 # --- reading MILESTONE_PATH ---------------------------------------------------------------
 
 
-@pytest.mark.parametrize("spelling", ["./milestones/root-work/", "milestones/root-work", "milestones//root-work/"])
+@pytest.mark.parametrize("spelling", ["./mission_root-work/", "mission_root-work", ".//mission_root-work/"])
 def test_the_named_path_is_read_lexically(repo, make_commit, run_milestones, spelling):
     seeded = seed(repo, ROOT, ROOT_TOO)
     start(make_commit, seeded, ROOT)
@@ -172,7 +180,7 @@ def test_the_named_path_is_read_lexically(repo, make_commit, run_milestones, spe
 def test_the_named_milestone_need_not_be_live(repo, make_commit, run_milestones):
     seeded = seed(repo, ROOT)
     start(make_commit, seeded, ROOT)
-    assert gate(run_milestones, seeded, "packages/api/milestones/not-defined-yet/") == ROOT + "\n"
+    assert gate(run_milestones, seeded, "packages/api/mission_not-defined-yet/") == ROOT + "\n"
 
 
 def test_no_live_milestone_prints_nothing_and_exits_0(repo, run_milestones):
@@ -191,21 +199,25 @@ def test_no_live_milestone_prints_nothing_and_exits_0(repo, run_milestones):
         "rate-limits/",
         ".",
         "./",
-        "milestones/",
-        "milestones",
-        "milestones/root-work/nested/",
-        "milestones.fixture/root-work/",
-        "/abs/milestones/root-work/",
-        "../milestones/root-work/",
-        "milestones/root-work/../../..",
+        "mission",
+        "mission-root-work/",
+        "missions/root-work/",
+        "my_mission_root-work/",
+        "Mission_root-work/",
+        "mission_root-work/nested/",
+        "milestones/root-work/",
+        "packages/api/milestones/rate-limits/",
+        "/abs/mission_root-work/",
+        "../mission_root-work/",
+        "mission_root-work/../../..",
     ],
 )
-def test_a_path_with_no_milestones_container_is_refused(repo, make_commit, run_milestones, path):
+def test_a_path_naming_no_mission_directory_is_refused(repo, make_commit, run_milestones, path):
     seeded = seed(repo, ROOT, ROOT_TOO)
     start(make_commit, seeded, ROOT_TOO)
     line = assert_one_error_line(run_milestones(seeded, "gate", path))
     assert path in line
-    assert "milestones/ container" in line
+    assert "names no mission_ directory" in line
 
 
 def shallow_clone(source, destination, environment):

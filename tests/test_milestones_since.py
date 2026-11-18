@@ -17,11 +17,11 @@ import subprocess
 
 import pytest
 
-ROOT = "milestones/root-work/"
-SIBLING = "milestones/sibling-work/"
-API = "packages/api/milestones/rate-limits/"
-API_TOO = "packages/api/milestones/caching/"
-WEB = "packages/web/milestones/forms/"
+ROOT = "mission_root-work/"
+SIBLING = "mission_sibling-work/"
+API = "packages/api/mission_rate-limits/"
+API_TOO = "packages/api/mission_caching/"
+WEB = "packages/web/mission_forms/"
 TODO = b"# TASKS TODO\n\n"
 FILES = ("requirements.md", "TASKS_TODO.md", "open_questions.xml")
 
@@ -128,7 +128,7 @@ def test_the_anchor_under_the_path_form_is_the_first_line(repo, history, run_mil
 def test_the_anchor_under_the_bare_directory_name_subject_is_found_the_same_way(repo, history, run_milestones):
     seeded = seed(repo, ROOT)
     made = history(seeded)
-    anchor = made.starting_state(ROOT, subject="Starting-state: root-work")
+    anchor = made.starting_state(ROOT, subject="Starting-state: mission_root-work")
     work = made.commit("Fix the app", files={"src/app.txt": b"fixed\n"})
     assert since(run_milestones, seeded, ROOT) == anchor + work
 
@@ -136,7 +136,7 @@ def test_the_anchor_under_the_bare_directory_name_subject_is_found_the_same_way(
 def test_the_latest_starting_state_commit_is_the_anchor(repo, history, run_milestones):
     seeded = seed(repo, ROOT)
     made = history(seeded)
-    made.starting_state(ROOT, subject="Starting-state: root-work")
+    made.starting_state(ROOT, subject="Starting-state: mission_root-work")
     made.commit("Fix the app", files={"src/app.txt": b"fixed\n"})
     anchor = made.starting_state(ROOT, text=b"refreshed facts")
     assert both(run_milestones, seeded, ROOT) == (anchor, anchor)
@@ -301,7 +301,7 @@ def test_a_sibling_whose_scope_lies_under_the_milestones_reads_the_same_way(repo
 # --- goal revisions -----------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("subject", ["Goal-revision: " + ROOT, "Goal-revision: root-work"])
+@pytest.mark.parametrize("subject", ["Goal-revision: " + ROOT, "Goal-revision: mission_root-work"])
 def test_the_milestones_own_goal_revision_is_listed_in_the_broad_form_only(repo, history, run_milestones, subject):
     seeded = seed(repo, ROOT)
     made = history(seeded)
@@ -382,7 +382,7 @@ def test_a_merged_branchs_commits_count_and_the_merge_does_not(repo, history, ru
 # --- reading MILESTONE_PATH ---------------------------------------------------------------
 
 
-@pytest.mark.parametrize("spelling", ["./milestones/root-work/", "milestones/root-work", "milestones//root-work/"])
+@pytest.mark.parametrize("spelling", ["./mission_root-work/", "mission_root-work", ".//mission_root-work/"])
 def test_the_named_path_is_read_lexically(repo, history, run_milestones, spelling):
     seeded = seed(repo, ROOT)
     made = history(seeded)
@@ -406,20 +406,21 @@ def test_a_finished_milestone_is_read_from_its_history(repo, history, run_milest
         "packages/api/",
         "rate-limits/",
         ".",
-        "milestones/",
-        "milestones/root-work/nested/",
-        "milestones.fixture/root-work/",
-        "/abs/milestones/root-work/",
-        "../milestones/root-work/",
+        "missions/root-work/",
+        "my_mission_root-work/",
+        "mission_root-work/nested/",
+        "milestones/root-work/",
+        "/abs/mission_root-work/",
+        "../mission_root-work/",
     ],
 )
 @pytest.mark.parametrize("flags", [(), ("--milestones",)])
-def test_a_path_with_no_milestones_container_is_refused(repo, history, run_milestones, path, flags):
+def test_a_path_naming_no_mission_directory_is_refused(repo, history, run_milestones, path, flags):
     seeded = seed(repo, ROOT)
     history(seeded).starting_state(ROOT)
     line = assert_one_error_line(run_milestones(seeded, "since", path, *flags))
     assert path in line
-    assert "milestones/ container" in line
+    assert "names no mission_ directory" in line
 
 
 def test_an_empty_path_is_refused(repo, run_milestones):
@@ -478,7 +479,7 @@ def test_the_since_help_names_its_lines_its_forms_and_its_refusals(tmp_path, run
     assert '"defined"' in text
     assert "git rev-parse --is-shallow-repository" in text
     assert "git fetch --unshallow" in text
-    assert "no milestones/ container is refused" in text
+    assert "naming no mission_ directory is refused" in text
     assert "two queries check for a shallow clone, gate and since" in text
 
 

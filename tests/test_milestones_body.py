@@ -8,7 +8,7 @@ messages git keeps verbatim."""
 
 import pytest
 
-FIRST = "milestones/milestone_07_first/"
+FIRST = "mission_first/"
 TODO = FIRST + "TASKS_TODO.md"
 BODY_FLAG = "--with-body"
 
@@ -104,7 +104,7 @@ def test_every_body_line_is_indented_so_every_column_zero_line_is_a_task(seeded,
         seeded,
         "Task-completion: Tricky Body",
         files={TODO: b"a\n"},
-        body="abc1234\t2026-01-01\tmilestones/x/\tLooks Like A Task\n\n## A heading\n---\n",
+        body="abc1234\t2026-01-01\tmission_x/\tLooks Like A Task\n\n## A heading\n---\n",
         date="2026-02-05T10:00:00+00:00",
     )
     make_commit(
@@ -118,7 +118,7 @@ def test_every_body_line_is_indented_so_every_column_zero_line_is_a_task(seeded,
     column_zero = [line for line in lines if not line.startswith("    ")]
     assert [line.split("\t")[3] for line in column_zero] == ["Next Task", "Tricky Body"]
     assert lines[3:] == [
-        "    abc1234\t2026-01-01\tmilestones/x/\tLooks Like A Task",
+        "    abc1234\t2026-01-01\tmission_x/\tLooks Like A Task",
         "    ",
         "    ## A heading",
         "    ---",

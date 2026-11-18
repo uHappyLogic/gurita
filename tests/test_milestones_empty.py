@@ -5,7 +5,7 @@ test runs on a repository seeded through the conftest factory."""
 
 import pytest
 
-FIRST = "milestones/milestone_07_first/"
+FIRST = "mission_first/"
 
 
 @pytest.fixture
@@ -33,7 +33,7 @@ def test_a_milestone_with_no_completed_task_prints_nothing(seeded, run_milestone
 
 
 def test_a_milestone_whose_only_commits_are_not_task_commits_prints_nothing(seeded, make_commit, run_milestones):
-    make_commit(seeded, "Task-derivation: milestone_07_first", files={FIRST + "TASKS_TODO.md": b"a\n"})
+    make_commit(seeded, "Task-derivation: mission_first/", files={FIRST + "TASKS_TODO.md": b"a\n"})
     make_commit(
         seeded,
         "Tasklist-completion: complete one milestone task",
@@ -58,13 +58,13 @@ def test_a_path_changed_only_by_history_prints_nothing(seeded, make_commit, run_
 
 def test_a_removed_milestone_directory_whose_task_commits_remain_is_listed(seeded, make_commit, run_milestones):
     make_commit(seeded, "Task-completion: The Only Task", files={FIRST + "TASKS_TODO.md": b"a\n"})
-    make_commit(seeded, "Milestone-finish: milestone_07_first", removed=(FIRST + "TASKS_TODO.md",))
+    make_commit(seeded, "Milestone-finish: mission_first/", removed=(FIRST + "TASKS_TODO.md",))
     result = run_milestones(seeded, "tasks", FIRST)
     assert result.returncode == 0, result.stderr
     assert result.stdout.decode("utf-8").endswith("\tThe Only Task\n")
 
 
 def test_a_path_neither_present_nor_ever_changed_is_refused(seeded, run_milestones):
-    path = "milestones/milestone_99_mistyped/"
+    path = "mission_mistyped/"
     assert_refused(run_milestones(seeded, "tasks", path), path)
     assert_refused(run_milestones(seeded, "tasks", path, "--with-body"), path)

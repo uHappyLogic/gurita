@@ -1,22 +1,22 @@
 """The milestones tool's milestones query in its milestone-path form and under its bound: with
 --milestone MILESTONE_PATH in place of PATH, read lexically relative to the workspace root as the
 gate query reads its argument and refused on one Error line with exit 1 and nothing on stdout
-when it names no directory directly inside a milestones/ container, the query prints exactly the
-overview it prints with that milestone's scope (the directory holding its milestones/ container,
-"." for the root) as PATH; with --last N it prints every live line and only the N newest finished
-lines; and with neither it prints what it always has. Every test runs on a repository seeded
-through the conftest factory, then given finish-shaped commits made through the conftest
-helper."""
+when it names no mission_ directory, its last component opening with mission_, the query prints
+exactly the overview it prints with that milestone's scope (the directory holding its own
+directory, "." for the root) as PATH; with --last N it prints every live line and only the N
+newest finished lines; and with neither it prints what it always has. Every test runs on a
+repository seeded through the conftest factory, then given finish-shaped commits made through
+the conftest helper."""
 
 import pytest
 
-ROOT_A = "milestones/alpha/"
-ROOT_B = "milestones/beta/"
-ROOT_C = "milestones/gamma/"
-ROOT_D = "milestones/delta/"
-API = "packages/api/milestones/rate-limits/"
-API_TOO = "packages/api/milestones/caching/"
-WEB = "packages/web/milestones/forms/"
+ROOT_A = "mission_alpha/"
+ROOT_B = "mission_beta/"
+ROOT_C = "mission_gamma/"
+ROOT_D = "mission_delta/"
+API = "packages/api/mission_rate-limits/"
+API_TOO = "packages/api/mission_caching/"
+WEB = "packages/web/mission_forms/"
 TODO = b"# TASKS TODO\n\n"
 
 
@@ -82,7 +82,7 @@ def project(repo, make_commit):
         (API, "packages/api"),
         (WEB, "packages/web"),
         (API_TOO, "packages/api"),
-        ("packages/api/milestones/not-yet/", "packages/api"),
+        ("packages/api/mission_not-yet/", "packages/api"),
     ],
 )
 def test_the_milestone_path_form_prints_the_scope_calls_overview(project, run_milestones, milestone, scope):
@@ -102,16 +102,25 @@ def test_the_package_form_lists_the_root_and_its_own_scope_only(project, run_mil
     )
 
 
-@pytest.mark.parametrize("spelling", ["./packages/api/milestones/rate-limits", "packages//api/milestones/rate-limits/./"])
+@pytest.mark.parametrize("spelling", ["./packages/api/mission_rate-limits", "packages//api/mission_rate-limits/./"])
 def test_the_milestone_path_is_read_lexically(project, run_milestones, spelling):
     assert query(run_milestones, project, "--milestone", spelling) == query(run_milestones, project, "packages/api")
 
 
 @pytest.mark.parametrize(
     "value",
-    ["packages/api/", "packages/api/src/limit.py", "milestones/", "/abs/milestones/alpha/", "../milestones/alpha/", "milestones/alpha/extra/"],
+    [
+        "packages/api/",
+        "packages/api/src/limit.py",
+        "missions/alpha/",
+        "milestones/alpha/",
+        "packages/api/milestones/rate-limits/",
+        "/abs/mission_alpha/",
+        "../mission_alpha/",
+        "mission_alpha/extra/",
+    ],
 )
-def test_a_value_naming_no_directory_inside_a_container_is_refused(project, run_milestones, value):
+def test_a_value_naming_no_mission_directory_is_refused(project, run_milestones, value):
     assert_one_error_line(run_milestones(project, "milestones", "--milestone", value), value)
 
 

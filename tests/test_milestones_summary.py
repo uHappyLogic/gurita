@@ -11,8 +11,8 @@ commits made through the conftest helper."""
 
 import pytest
 
-ALPHA = "milestones/alpha/"
-BETA = "milestones/beta/"
+ALPHA = "mission_alpha/"
+BETA = "mission_beta/"
 REQUIREMENTS = (
     b"# Alpha Work\n"
     b"\n"
@@ -162,7 +162,7 @@ def test_a_reverted_finish_summarizes_as_live(seeded, make_commit, run_milestone
 
 
 def test_a_package_milestone_is_summarized(repo, make_commit, run_milestones):
-    directory = "packages/api/milestones/rate-limits/"
+    directory = "packages/api/mission_rate-limits/"
     seeded = repo({}, files=milestone_files(directory))
     make_commit(
         seeded,
@@ -176,7 +176,7 @@ def test_a_package_milestone_is_summarized(repo, make_commit, run_milestones):
 
 @pytest.mark.parametrize(
     "path",
-    ["milestones/alpha", "./milestones/alpha/", "milestones/omega/", "milestones/", "milestones/alpha/requirements.md"],
+    ["mission_alpha", "./mission_alpha/", "mission_omega/", "alpha/", "mission_alpha/requirements.md"],
 )
 def test_a_path_naming_no_milestone_is_refused(seeded, run_milestones, path):
     assert_refused(run_milestones(seeded, "summary", path), path)
@@ -187,9 +187,10 @@ def test_a_milestone_finished_under_a_legacy_id_subject_is_refused(seeded, make_
     assert_refused(run_milestones(seeded, "summary", ALPHA), ALPHA)
 
 
-def test_a_requirements_file_outside_a_container_is_not_a_live_milestone(repo, run_milestones):
-    seeded = repo({}, files=milestone_files("plans/alpha/"))
-    assert_refused(run_milestones(seeded, "summary", "plans/alpha/"), "plans/alpha/")
+@pytest.mark.parametrize("directory", ["plans/alpha/", "milestones/alpha/"])
+def test_a_requirements_file_outside_a_mission_directory_is_not_a_live_milestone(repo, run_milestones, directory):
+    seeded = repo({}, files=milestone_files(directory))
+    assert_refused(run_milestones(seeded, "summary", directory), directory)
 
 
 def test_an_empty_milestone_path_is_refused(seeded, run_milestones):

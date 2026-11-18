@@ -8,8 +8,8 @@ then given finish-shaped commits made through the conftest helper."""
 
 import pytest
 
-ALPHA = "milestones/alpha/"
-BETA = "milestones/beta/"
+ALPHA = "mission_alpha/"
+BETA = "mission_beta/"
 REQUIREMENTS = (
     b"# Alpha Work\n"
     b"\n"
@@ -117,7 +117,7 @@ def test_a_reverted_finish_shows_the_live_file(seeded, make_commit, run_mileston
 
 
 def test_a_finished_package_milestone_is_shown(repo, make_commit, run_milestones):
-    directory = "packages/api/milestones/rate-limits/"
+    directory = "packages/api/mission_rate-limits/"
     seeded = repo({}, files=milestone_files(directory))
     finish(make_commit, seeded, directory)
     assert show(run_milestones, seeded, directory) == REQUIREMENTS
@@ -133,15 +133,15 @@ def test_showing_a_finished_milestone_writes_nothing(seeded, make_commit, run_mi
 
 @pytest.mark.parametrize(
     "path",
-    ["milestones/alpha", "./milestones/alpha/", "milestones/omega/", "milestones/", "milestones/alpha/requirements.md"],
+    ["mission_alpha", "./mission_alpha/", "mission_omega/", "alpha/", "mission_alpha/requirements.md"],
 )
 def test_a_path_naming_no_milestone_is_refused(seeded, run_milestones, path):
     assert_refused(run_milestones(seeded, "show", path), path)
 
 
 def test_the_refusal_matches_the_summary_querys(seeded, run_milestones):
-    shown = run_milestones(seeded, "show", "milestones/omega/")
-    summarized = run_milestones(seeded, "summary", "milestones/omega/")
+    shown = run_milestones(seeded, "show", "mission_omega/")
+    summarized = run_milestones(seeded, "summary", "mission_omega/")
     assert shown.returncode == summarized.returncode == 1
     assert shown.stderr == summarized.stderr
 

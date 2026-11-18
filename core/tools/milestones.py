@@ -20,11 +20,12 @@ parent, read by the show query. The tool writes no file, commits nothing, reads 
 own, and never reads milestones/README.md.
 
 A live milestone is a directory holding a tracked file that matches the discovery pattern
-**/milestones/*/requirements.md and is present in the working tree: "**/" stands for any run
-of leading directories, none included, and "*" for exactly one directory name. The pattern is
-matched against the repository paths git ls-files lists, so a milestones/ container may stand
-at the root or at any depth beneath it. The tasks query joins a commit to its milestone by the
-same pattern, read with TASKS_TODO.md in place of requirements.md.
+**/mission_*/requirements.md and is present in the working tree: "**/" stands for any run of
+leading directories, none included, and "mission_*" for exactly one directory name opening
+with mission_. The pattern is matched against the repository paths git ls-files lists, so a
+mission_ directory may stand at the root or at any depth beneath it. The tasks query joins a
+commit to its milestone by the same pattern, read with TASKS_TODO.md in place of
+requirements.md, and no other pattern is read.
 
 A finished milestone is a milestone path that is not live and that the subject of a commit
 other than a merge names after the "Milestone-finish:" marker, its surrounding spaces trimmed:
@@ -33,8 +34,8 @@ with requirements.md appended, with no empty, "." or ".." component. When severa
 commits name one path, the first the log lists, the latest, is that milestone's finish commit,
 and its body is the milestone's record: its title line, a blank line, and its summary bullets.
 Presence wins over the log, so a milestone whose finish was reverted, its directory present
-again, is live. A milestone's scope is the directory holding its milestones/ container, the
-repository root for milestones/<slug>/ and pkg/ for pkg/milestones/<slug>/.
+again, is live. A milestone's scope is the directory holding its own directory, the
+repository root for mission_<slug>/ and pkg/ for pkg/mission_<slug>/.
 
 Every commit body the tool prints (the task bars under tasks --with-body, the finish bodies
 summary and record print) has its outer blank lines trimmed and then drops a trailing
@@ -65,15 +66,16 @@ Subcommands:
       than the one MILESTONE_PATH names that is started, by the live query's started test, and
       whose scope equals MILESTONE_PATH's scope, contains it, or lies under it. MILESTONE_PATH
       is read lexically relative to the workspace root, as the milestones query reads PATH
-      ("." components and a trailing slash folded away), and must name a directory directly
-      inside a milestones/ container, whose own directory is its scope; the milestone it names
-      need not be live. A defined milestone holds nothing, and a finished one, its directory
-      gone, is not live. The query prints nothing when no milestone holds the scope and exits
-      0 whether or not it prints. It first runs "git rev-parse --is-shallow-repository" and
-      refuses when that prints "true", since a shallow clone's truncated log can read a
-      started milestone as defined: the remedy is "git fetch --unshallow". A MILESTONE_PATH
-      with no milestones/ container (an absolute one or one leading out of the workspace
-      included) is refused.
+      ("." components and a trailing slash folded away), and must name a mission_ directory,
+      its last component opening with mission_, the directory holding it being its scope; the
+      milestone it names need not be live. A defined milestone holds nothing, and a finished
+      one, its directory gone, is not live. The query prints nothing when no milestone holds
+      the scope and exits 0 whether or not it prints. It first runs
+      "git rev-parse --is-shallow-repository" and refuses when that prints "true", since a
+      shallow clone's truncated log can read a started milestone as defined: the remedy is
+      "git fetch --unshallow". A MILESTONE_PATH naming no mission_ directory (one whose last
+      component does not open with mission_, an absolute one, or one leading out of the
+      workspace) is refused.
   tasks PATH [--with-body]
       print one line for every commit that changed PATH and whose subject opens with
       "Task-completion:", the completion of one task. Each line is four fields separated
@@ -82,10 +84,12 @@ Subcommands:
       which is the subject after the "Task-completion:" marker with its surrounding spaces
       trimmed. The milestone is the directory, with its trailing slash, of the one file in
       the commit's whole file list that matches the discovery pattern read with TASKS_TODO.md
-      as its last component, **/milestones/*/TASKS_TODO.md (the task list the completion
-      removed the task from), so a milestones/ container at any depth joins; when no file of
+      as its last component, **/mission_*/TASKS_TODO.md (the task list the completion
+      removed the task from), so a mission_ directory at any depth joins; when no file of
       the list matches, or more than one does, the field holds the fixed placeholder "-" and
-      the line is printed all the same. The lines are ordered newest first by author
+      the line is printed all the same. A task commit made before the mission rename, its
+      task list standing in no mission_ directory, is therefore listed with the placeholder,
+      its bar beneath it under --with-body. The lines are ordered newest first by author
       timestamp, sorted after the log is read, commits sharing a timestamp keeping git's
       order. A commit changed PATH when PATH, a file or a directory, differs between it and
       its parent; merge commits are never listed. PATH may be a milestone directory, which
@@ -189,9 +193,14 @@ Limits:
     starts at that marker's first use (2026-09-02, in the plugin's own milestone_15); a task
     completed earlier, under the retired "Tasklist-completion:" marker that carried the task
     title in the commit body, is not listed
+  - a task commit made before the mission rename, its task list standing in no mission_
+    directory, joins no milestone: the tasks query lists it with the placeholder "-" as
+    its milestone, its bar beneath it under --with-body, and the milestones and record
+    queries list it under no milestone
   - only "Milestone-finish:" subjects naming a milestone path are read as finish commits,
-    so a milestone whose finish subject names it by its id instead (the form used before
-    milestones were addressed by path) is not finished to the tool
+    so a milestone whose finish subject names it by its id or by a path in no mission_
+    directory instead (the forms used before the mission rename) is not finished to the
+    tool
 
 Output and error contract:
   - a query prints its lines on stdout and exits 0, printing nothing for an empty result
@@ -200,8 +209,8 @@ Output and error contract:
     working tree nor changed by any commit and a summary or show MILESTONE_PATH naming neither
     a live nor a finished milestone (the reason naming the value as given), a shallow
     repository, which the gate and since queries refuse naming "git fetch --unshallow", and a
-    live, gate, or since MILESTONE_PATH or a milestones --milestone value with no milestones/
-    container (the reason naming the value as given), a git command that could not be run or failed (outside a git repository, for
+    live, gate, or since MILESTONE_PATH or a milestones --milestone value naming no mission_
+    directory (the reason naming the value as given), a git command that could not be run or failed (outside a git repository, for
     instance), the reason naming the command and its exit status and carrying git's own
     message folded to one line, and a live milestone's requirements.md that could not be read;
     a malformed invocation gets
@@ -229,12 +238,14 @@ TASK_LIST_NAME = "TASKS_TODO.md"
 # The discovery pattern, defined here once: every tracked file matching it, present in the
 # working tree, is one live milestone, the directory holding the file, and the tasks join reads
 # it with the task list's name in place of its last component. "**" stands for any run of whole
-# leading path components, none included, "*" for exactly one non-empty component, and every
-# other component is matched literally.
-DISCOVERY_PATTERN = "**/milestones/*/requirements.md"
-# The container's name, read from the discovery pattern: the component the milestone's own
-# directory stands directly inside.
-CONTAINER = DISCOVERY_PATTERN.split("/")[-3]
+# leading path components, none included, a component holding one "*" for exactly one
+# non-empty component opening with the text before the star and ending with the text after it,
+# and every other component is matched literally.
+DISCOVERY_PATTERN = "**/mission_*/requirements.md"
+# The milestone directory's component, read from the discovery pattern, and the text its name
+# opens with.
+MILESTONE_COMPONENT = DISCOVERY_PATTERN.split("/")[-2]
+MILESTONE_PREFIX = MILESTONE_COMPONENT.split("*", 1)[0]
 
 STARTED = "started"
 DEFINED = "defined"
@@ -277,19 +288,20 @@ git reads every PATH relative to the working directory."""
 
 LIVE_DESCRIPTION = """\
 Print one line per live milestone, ordered by path: every tracked file matching
-the discovery pattern **/milestones/*/requirements.md that is present in the
-working tree is one live milestone, the directory holding it. Each line is three
-fields separated by tabs: the milestone path with its trailing slash; "started"
-when a commit other than a merge modified the milestone's TASKS_TODO.md after
-the one adding it (git log -1 --diff-filter=M on that path), "defined"
-otherwise; and the title, the first "# " heading of its requirements.md ("-"
-when it has none). Nothing is printed when no milestone is live.
+the discovery pattern **/mission_*/requirements.md that is present in the
+working tree is one live milestone, the directory holding it, its name opening
+with mission_. Each line is three fields separated by tabs: the milestone path
+with its trailing slash; "started" when a commit other than a merge modified the
+milestone's TASKS_TODO.md after the one adding it (git log -1 --diff-filter=M on
+that path), "defined" otherwise; and the title, the first "# " heading of its
+requirements.md ("-" when it has none). Nothing is printed when no milestone is
+live.
 With MILESTONE_PATH, read lexically relative to the workspace root and refused
-when it names no directory directly inside a milestones/ container, as for the
-gate query, only the other live milestones, started or defined, whose scope, the
-directory holding their milestones/ container, equals MILESTONE_PATH's scope,
-contains it, or lies under it are printed, in the same line and order; the
-milestone it names is left out and need not be live."""
+when it names no mission_ directory, as for the gate query, only the other live
+milestones, started or defined, whose scope, the directory holding their own
+directory, equals MILESTONE_PATH's scope, contains it, or lies under it are
+printed, in the same line and order; the milestone it names is left out and need
+not be live."""
 
 TASKS_DESCRIPTION = """\
 Print one line per commit that changed PATH and whose subject opens with
@@ -297,8 +309,10 @@ Task-completion:, newest first by author timestamp. Each line is four fields
 separated by tabs: the abbreviated hash, the author date as YYYY-MM-DD, the
 milestone directory, with its trailing slash, joined from the one task list in
 the commit's file list matching the discovery pattern read with TASKS_TODO.md
-as its last component, **/milestones/*/TASKS_TODO.md ("-" when none or several
-match), and the task title.
+as its last component, **/mission_*/TASKS_TODO.md ("-" when none or several
+match), and the task title. A task commit made before the mission rename, its
+task list standing in no mission_ directory, is listed with the placeholder "-",
+its bar beneath it under --with-body.
 A milestone directory as PATH lists that milestone's completed tasks. When no
 task commit changed PATH, nothing is printed if PATH is present in the working
 tree or was changed by any commit, and one Error line is printed otherwise.
@@ -313,21 +327,24 @@ Limits:
   - only subjects opening with Task-completion: are read, so the record starts at
     that marker's first use (2026-09-02, in the plugin's own milestone_15); a task
     completed earlier, under the retired Tasklist-completion: marker that carried
-    the task title in the commit body, is not listed"""
+    the task title in the commit body, is not listed
+  - a task commit made before the mission rename, its task list standing in no
+    mission_ directory, joins no milestone and is listed with the placeholder "-"
+    as its milestone, its bar beneath it under --with-body"""
 
 GATE_DESCRIPTION = """\
 Print the milestones holding MILESTONE_PATH's scope, one bare path per line, as
 the live query prints it, ordered by path: every other live milestone that is
 started, by the live query's started test, and whose scope, the directory
-holding its milestones/ container, equals MILESTONE_PATH's scope, contains it,
-or lies under it. MILESTONE_PATH is read lexically relative to the workspace
-root and must name a directory directly inside a milestones/ container; the
+holding its own directory, equals MILESTONE_PATH's scope, contains it, or lies
+under it. MILESTONE_PATH is read lexically relative to the workspace root and
+must name a mission_ directory, its last component opening with mission_; the
 milestone it names need not be live. A defined milestone holds nothing. Nothing
 is printed when no milestone holds the scope, and the query exits 0 whether or
 not it prints.
 A shallow repository (git rev-parse --is-shallow-repository printing true) is
 refused, since its truncated log can read a started milestone as defined: run
-git fetch --unshallow first. A MILESTONE_PATH with no milestones/ container is
+git fetch --unshallow first. A MILESTONE_PATH naming no mission_ directory is
 refused."""
 
 LIVE_LIMITS = """\
@@ -351,9 +368,9 @@ MILESTONES_DESCRIPTION = (
     """\
 Print one line per milestone, live or finished, that changed PATH through a task
 commit (one the tasks query lists for PATH and joins to it) or whose scope
-overlaps PATH: the scope, the directory holding the milestone's milestones/
-container (the root for milestones/<slug>/), contains PATH or lies under it,
-read lexically, so every scope overlaps ".". Each line is four fields separated
+overlaps PATH: the scope, the directory holding the milestone's own directory
+(the root for mission_<slug>/), contains PATH or lies under it, read
+lexically, so every scope overlaps ".". Each line is four fields separated
 by tabs: "live" or "finished"; the finish commit's author date as YYYY-MM-DD,
 "-" for a live milestone; the milestone path with its trailing slash; and the
 title, read as the live query reads it for a live milestone and from the first
@@ -362,11 +379,11 @@ line stands above every finished one, the live lines by path, the finished ones
 newest first by the finish commit's author timestamp. A PATH neither present in
 the working tree nor changed by any commit is refused.
 With --milestone MILESTONE_PATH in place of PATH, read lexically relative to the
-workspace root and refused when it names no directory directly inside a
-milestones/ container, as for the gate query, the query prints the overview of
-that milestone's scope, exactly what it prints with the scope as PATH ("." for
-the root); the milestone it names need not be live. With --last N every live
-line is printed and only the N newest finished lines; without it, every one."""
+workspace root and refused when it names no mission_ directory, as for the gate
+query, the query prints the overview of that milestone's scope, exactly what it
+prints with the scope as PATH ("." for the root); the milestone it names need
+not be live. With --last N every live line is printed and only the N newest
+finished lines; without it, every one."""
     + "\n\n"
     + FINISHED_DEFINITION
 )
@@ -407,15 +424,15 @@ SINCE_DESCRIPTION = """\
 Print what changed around a milestone since its starting state was written, one
 line per commit, three fields separated by tabs: the abbreviated hash, the
 author date as YYYY-MM-DD, and the subject. MILESTONE_PATH is read lexically
-relative to the workspace root and must name a directory directly inside a
-milestones/ container, as for the gate query.
+relative to the workspace root and must name a mission_ directory, as for the
+gate query.
 The first line is the anchor: the latest commit other than a merge that changed
 MILESTONE_PATH's requirements.md and whose subject opens with Starting-state:,
 whatever follows the marker. With no anchor nothing is printed at all. Beneath
 it, newest first by author timestamp, stands every later commit (reachable from
 HEAD and not from the anchor, merges left out) that changed a path inside the
-milestone's scope, the directory holding its milestones/ container, but outside
-its own directory; the milestone's own Task-completion: commits, joined to it as
+milestone's scope, the directory holding its own directory, but outside its own
+directory; the milestone's own Task-completion: commits, joined to it as
 the tasks query joins them, are never listed. Without --milestones a commit is
 left out when every path it changed lies inside the directory of another live
 milestone that reads "defined" now, unless it is another milestone's task or
@@ -427,7 +444,7 @@ every line --milestones lists.
 A shallow repository (git rev-parse --is-shallow-repository printing true) is
 refused in both forms before any log read, since its truncated log can omit the
 anchor or the commits after it: run git fetch --unshallow first. A
-MILESTONE_PATH with no milestones/ container is refused."""
+MILESTONE_PATH naming no mission_ directory is refused."""
 
 SHOW_DESCRIPTION = (
     """\
@@ -454,12 +471,15 @@ Limits:
     so a milestone whose finish commit is cut off is neither listed nor
     summarized
   - only Milestone-finish: subjects naming a milestone path are read, so a
-    milestone whose finish subject names its id instead is not finished to the
-    tool
+    milestone whose finish subject names its id or a path in no mission_
+    directory instead, the forms used before the mission rename, is not finished
+    to the tool
   - only subjects opening with Task-completion: are read as task commits, so task
     lines start at that marker's first use (2026-09-02, in the plugin's own
     milestone_15); a task completed under the retired Tasklist-completion: marker
-    is not listed"""
+    is not listed
+  - a task commit made before the mission rename, its task list standing in no
+    mission_ directory, joins no milestone, so no milestone lists it"""
 
 LIMITS = """\
 Limits:
@@ -472,9 +492,13 @@ Limits:
     that marker's first use (2026-09-02, in the plugin's own milestone_15); a task
     completed earlier, under the retired Tasklist-completion: marker that carried
     the task title in the commit body, is not listed
+  - a task commit made before the mission rename, its task list standing in no
+    mission_ directory, joins no milestone: tasks lists it with the placeholder
+    "-" as its milestone, its bar beneath it under --with-body
   - only Milestone-finish: subjects naming a milestone path are read, so a
-    milestone whose finish subject names its id instead is not finished to the
-    tool"""
+    milestone whose finish subject names its id or a path in no mission_
+    directory instead, the forms used before the mission rename, is not finished
+    to the tool"""
 
 
 class ToolError(Exception):
@@ -581,20 +605,32 @@ def title_of(text):
 # --- discovery ------------------------------------------------------------------------
 
 
+def matches_component(pattern, component):
+    """Whether one path component matches one pattern component: a pattern component holding one
+    "*" matches any non-empty component opening with the text before the star and ending with
+    the text after it, and any other matches itself alone."""
+    if not component:
+        return False
+    if "*" not in pattern:
+        return component == pattern
+    prefix, suffix = pattern.split("*", 1)
+    return (
+        len(component) >= len(prefix) + len(suffix)
+        and component.startswith(prefix)
+        and component.endswith(suffix)
+    )
+
+
 def matches_components(pattern, components):
     """Whether a path's components match a pattern's, "**" taking any run of whole leading
-    components (none included), "*" exactly one non-empty component, any other literally."""
+    components (none included) and every other pattern component exactly one path component,
+    as matches_component reads it."""
     if not pattern:
         return not components
     head, rest = pattern[0], pattern[1:]
     if head == "**":
         return any(matches_components(rest, components[start:]) for start in range(len(components) + 1))
-    if not components:
-        return False
-    if head == "*":
-        if components[0] == "":
-            return False
-    elif components[0] != head:
+    if not components or not matches_component(head, components[0]):
         return False
     return matches_components(rest, components[1:])
 
@@ -627,9 +663,9 @@ def is_milestone_path(text):
 
 
 def scope_of(directory):
-    """A milestone's scope as path components: the directory holding its milestones/ container,
-    no component for the repository root."""
-    return directory[:-1].split("/")[:-2]
+    """A milestone's scope as path components: the directory holding its own directory, no
+    component for the repository root."""
+    return directory[:-1].split("/")[:-1]
 
 
 def path_scope(path):
@@ -645,10 +681,10 @@ def path_scope(path):
 
 def named_milestone(path):
     """A gate MILESTONE_PATH as components relative to the workspace root, read lexically as
-    path_scope reads PATH, its last two the milestones/ container and the milestone's own
-    directory, or None when it names no directory directly inside such a container."""
+    path_scope reads PATH, its last the milestone's own directory, its name opening with the
+    prefix the discovery pattern gives it, or None when it names no such directory."""
     components = path_scope(path)
-    if components is None or len(components) < 2 or components[-2] != CONTAINER:
+    if not components or not matches_component(MILESTONE_COMPONENT, components[-1]):
         return None
     return components
 
@@ -1009,14 +1045,14 @@ def task_line(commit):
 
 def required_milestone(path):
     """A live, gate, or since MILESTONE_PATH, or a milestones --milestone value, as components,
-    as named_milestone reads it, an empty one or one with no milestones/ container refused."""
+    as named_milestone reads it, an empty one or one naming no milestone directory refused."""
     if not path:
         raise ToolError("the MILESTONE_PATH given is empty")
     components = named_milestone(path)
     if components is None:
         raise ToolError(
-            f"the path {path} has no milestones/ container: a milestone path names a directory "
-            "directly inside one, read relative to the workspace root"
+            f"the path {path} names no {MILESTONE_PREFIX} directory: a milestone path, read relative "
+            f"to the workspace root, ends in a directory whose name opens with {MILESTONE_PREFIX}"
         )
     return components
 
@@ -1026,7 +1062,7 @@ def cmd_live(args):
     if args.milestone_path is not None:
         components = required_milestone(args.milestone_path)
         own = "/".join(components) + "/"
-        scope = components[:-2]
+        scope = components[:-1]
         listed = [
             (directory, requirements)
             for directory, requirements in listed
@@ -1049,7 +1085,7 @@ def cmd_gate(args):
         )
     components = required_milestone(path)
     own = "/".join(components) + "/"
-    scope = components[:-2]
+    scope = components[:-1]
     holders = [
         directory
         for directory, _ in live_milestones()
@@ -1089,7 +1125,7 @@ def bounded(listed, last):
 def cmd_milestones(args):
     path = args.path
     if args.milestone is not None:
-        scope = required_milestone(args.milestone)[:-2]
+        scope = required_milestone(args.milestone)[:-1]
         path = "/".join(scope) or "."
     listed, _ = listed_milestones(path)
     sys.stdout.write("".join(milestone_line(milestone) for milestone in bounded(listed, args.last)))
@@ -1158,7 +1194,7 @@ def cmd_since(args):
     if anchor is None:
         return 0
     full_hash, anchor_line = anchor
-    lines = [anchor_line] + since_lines(own, components[:-2], full_hash, args.milestones)
+    lines = [anchor_line] + since_lines(own, components[:-1], full_hash, args.milestones)
     sys.stdout.write("".join(lines))
     return 0
 
@@ -1201,7 +1237,7 @@ def build_parser():
         metavar="MILESTONE_PATH",
         nargs="?",
         help=(
-            "a milestone directory directly inside a milestones/ container, read relative to the "
+            "a milestone directory, its name opening with mission_, read relative to the "
             "workspace root, whose overlapping scope's other live milestones alone are listed"
         ),
     )
@@ -1217,7 +1253,7 @@ def build_parser():
         "milestone_path",
         metavar="MILESTONE_PATH",
         help=(
-            "a milestone directory directly inside a milestones/ container, read relative to the "
+            "a milestone directory, its name opening with mission_, read relative to the "
             "workspace root"
         ),
     )
@@ -1264,8 +1300,8 @@ def build_parser():
         "--milestone",
         metavar="MILESTONE_PATH",
         help=(
-            "in place of PATH, a milestone directory directly inside a milestones/ container, read "
-            "relative to the workspace root, whose scope's overview is printed"
+            "in place of PATH, a milestone directory, its name opening with mission_, read relative "
+            "to the workspace root, whose scope's overview is printed"
         ),
     )
     milestones_parser.add_argument(
@@ -1315,7 +1351,7 @@ def build_parser():
         "milestone_path",
         metavar="MILESTONE_PATH",
         help=(
-            "a milestone directory directly inside a milestones/ container, read relative to the "
+            "a milestone directory, its name opening with mission_, read relative to the "
             "workspace root"
         ),
     )

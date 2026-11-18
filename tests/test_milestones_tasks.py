@@ -1,16 +1,17 @@
 """The milestones tool's tasks query, its line and its selection: one line per Task-completion:
 commit that changed PATH, four tab-separated fields (%h, the author date as YYYY-MM-DD, the
 milestone joined from the commit's one task list matching the discovery pattern read as
-**/milestones/*/TASKS_TODO.md, with its trailing slash, the title after the marker), newest
+**/mission_*/TASKS_TODO.md, with its trailing slash, the title after the marker), newest
 first by author timestamp sorted after the read, with one fixed placeholder in the milestone
-field when the commit's file list holds no matching task list or more than one.
+field when the commit's file list holds no matching task list or more than one, a task commit
+made before the mission rename, its list under a milestones/ container, among them.
 Every test runs on a repository seeded through the conftest factory with two fixture
 milestones and one project file, then given commits made through the conftest helper."""
 
 import pytest
 
-FIRST = "milestones/milestone_07_first/"
-SECOND = "milestones/milestone_08_second/"
+FIRST = "mission_first/"
+SECOND = "mission_second/"
 PROJECT_FILE = "src/app.txt"
 NO_MILESTONE = "-"
 
@@ -101,7 +102,7 @@ def test_commits_sharing_an_author_timestamp_keep_the_logs_order(seeded, make_co
 
 def test_only_task_completion_subjects_are_listed(seeded, make_commit, run_milestones):
     todo = FIRST + "TASKS_TODO.md"
-    make_commit(seeded, "Task-derivation: milestone_07_first", files={todo: b"a\n"})
+    make_commit(seeded, "Task-derivation: mission_first/", files={todo: b"a\n"})
     make_commit(
         seeded,
         "Tasklist-completion: complete one milestone task",
@@ -124,7 +125,7 @@ def test_only_commits_that_changed_the_path_are_listed(seeded, make_commit, run_
     assert [line.split("\t")[3] for line in tasks(run_milestones, seeded, SECOND).splitlines()] == [
         "Second Milestone Task"
     ]
-    assert [line.split("\t")[3] for line in tasks(run_milestones, seeded, "milestones").splitlines()] == [
+    assert [line.split("\t")[3] for line in tasks(run_milestones, seeded, ".").splitlines()] == [
         "Second Milestone Task",
         "First Milestone Task",
     ]
@@ -170,19 +171,21 @@ def test_a_commit_with_two_task_lists_gets_the_placeholder(seeded, make_commit, 
 
 
 def test_the_join_pattern_is_the_discovery_pattern(seeded, make_commit, run_milestones):
-    # Beside the root milestone's list, every list outside **/milestones/*/TASKS_TODO.md is
-    # passed by, so the commit joins the one list that matches.
+    # Beside the root milestone's list, every list outside **/mission_*/TASKS_TODO.md is
+    # passed by, a list under a milestones/ container included, so the commit joins the one
+    # list that matches.
     make_commit(
         seeded,
         "Task-completion: Also Edits Unmatched Lists",
         files={
             FIRST + "TASKS_TODO.md": b"a\n",
             "tests/fixtures/sample/TASKS_TODO.md": b"b\n",
-            "milestones/milestone_07_first/nested/TASKS_TODO.md": b"c\n",
-            "tests/fixtures/host_project/milestones.fixture/milestone_01/TASKS_TODO.md": b"d\n",
-            "milestones/TASKS_TODO.md": b"e\n",
-            "docs/Milestones/alpha/TASKS_TODO.md": b"f\n",
-            "pkg/milestones/alpha/TASKS_DONE.md": b"g\n",
+            "mission_first/nested/TASKS_TODO.md": b"c\n",
+            "milestones/milestone_07_first/TASKS_TODO.md": b"d\n",
+            "TASKS_TODO.md": b"e\n",
+            "docs/Mission_alpha/TASKS_TODO.md": b"f\n",
+            "pkg/mission_alpha/TASKS_DONE.md": b"g\n",
+            "my_mission_alpha/TASKS_TODO.md": b"j\n",
         },
     )
     lines = tasks(run_milestones, seeded, FIRST).splitlines()
@@ -194,7 +197,7 @@ def test_the_join_pattern_is_the_discovery_pattern(seeded, make_commit, run_mile
         "Task-completion: Also Edits A Nested Project List",
         files={
             FIRST + "TASKS_TODO.md": b"h\n",
-            "tests/fixtures/host_project/milestones/milestone_01/TASKS_TODO.md": b"i\n",
+            "tests/fixtures/host_project/mission_pocket-ledger/TASKS_TODO.md": b"i\n",
         },
     )
     lines = tasks(run_milestones, seeded, FIRST).splitlines()
@@ -204,13 +207,13 @@ def test_the_join_pattern_is_the_discovery_pattern(seeded, make_commit, run_mile
 @pytest.mark.parametrize(
     "directory",
     [
-        "pkg/milestones/alpha/",
-        "packages/api/milestones/rate limits/",
-        "a/milestones/b/milestones/c/",
-        "tests/fixtures/host_project/milestones/milestone_01/",
+        "pkg/mission_alpha/",
+        "packages/api/mission_rate limits/",
+        "a/mission_b/mission_c/",
+        "tests/fixtures/host_project/mission_pocket-ledger/",
     ],
 )
-def test_a_task_list_in_a_container_at_any_depth_joins_its_milestone(seeded, make_commit, run_milestones, directory):
+def test_a_task_list_in_a_mission_directory_at_any_depth_joins_its_milestone(seeded, make_commit, run_milestones, directory):
     make_commit(seeded, "Task-completion: A Scoped Task", files={directory + "TASKS_TODO.md": b"a\n"})
     lines = tasks(run_milestones, seeded, directory).splitlines()
     assert [line.split("\t")[2:] for line in lines] == [[directory, "A Scoped Task"]]
@@ -220,15 +223,36 @@ def test_a_task_list_in_a_container_at_any_depth_joins_its_milestone(seeded, mak
     "name",
     [
         "tests/fixtures/sample/TASKS_TODO.md",
-        "milestones/milestone_07_first/nested/TASKS_TODO.md",
-        "tests/fixtures/host_project/milestones.fixture/milestone_01/TASKS_TODO.md",
-        "milestones/TASKS_TODO.md",
+        "mission_first/nested/TASKS_TODO.md",
+        "milestones/milestone_07_first/TASKS_TODO.md",
+        "pkg/milestones/alpha/TASKS_TODO.md",
+        "TASKS_TODO.md",
     ],
 )
 def test_a_task_list_outside_the_pattern_alone_gets_the_placeholder(seeded, make_commit, run_milestones, name):
     make_commit(seeded, "Task-completion: Only An Unmatched List", files={name: b"c\n"})
     lines = tasks(run_milestones, seeded, name).splitlines()
     assert [line.split("\t")[2:] for line in lines] == [[NO_MILESTONE, "Only An Unmatched List"]]
+
+
+def test_a_task_commit_made_before_the_rename_lists_under_the_placeholder_with_its_bar(
+    seeded, make_commit, run_milestones, git, environment
+):
+    # Its task list stood under the milestones/ container the plugin used before the rename,
+    # which no second pattern joins, so the commit is listed all the same, its milestone the
+    # placeholder and its bar beneath it under --with-body.
+    old = "milestones/milestone_07_first/"
+    commit = make_commit(
+        seeded,
+        "Task-completion: Before The Rename",
+        files={old + "TASKS_TODO.md": b"# TASKS TODO\n\n", PROJECT_FILE: b"two\n"},
+        body="- the old bar\n",
+        date="2026-02-01T10:00:00+00:00",
+    )
+    line = f"{short_hash(git, seeded, environment, commit)}\t2026-02-01\t{NO_MILESTONE}\tBefore The Rename\n"
+    for path in (PROJECT_FILE, old):
+        assert tasks(run_milestones, seeded, path) == line
+        assert tasks(run_milestones, seeded, path, "--with-body") == line + "    - the old bar\n"
 
 
 def test_a_removed_task_list_still_joins_its_milestone(seeded, make_commit, run_milestones):
@@ -250,5 +274,5 @@ def test_merge_commits_are_never_listed(seeded, make_commit, run_milestones, git
     git(seeded, environment, "checkout", "-q", "-")
     make_commit(seeded, "Task-completion: On The Main Line", files={SECOND + "TASKS_TODO.md": b"b\n"})
     git(seeded, environment, "merge", "-q", "--no-ff", "-m", "Task-completion: A Merge", "side")
-    lines = tasks(run_milestones, seeded, "milestones").splitlines()
+    lines = tasks(run_milestones, seeded, ".").splitlines()
     assert sorted(line.split("\t")[3] for line in lines) == ["On The Main Line", "On The Side"]

@@ -244,7 +244,7 @@ def run_commit(environment):
 @pytest.fixture
 def run_milestones(environment):
     """Run the milestones tool as a subprocess from a working directory under the isolated git
-    environment: run_milestones(repo, "tasks", "milestones/milestone_07_first/"). Standard input
+    environment: run_milestones(repo, "tasks", "mission_first/"). Standard input
     is never a terminal; env replaces the environment fixture's for one call."""
 
     def run(cwd, *args, env=None):
