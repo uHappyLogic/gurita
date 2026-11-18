@@ -68,5 +68,9 @@ The three distribution repositories are created fresh, not renamed in place. Thr
 
 The release that publishes the rename carries 2.0.0, a major bump over the last tag 1.9.0. The number is chosen now and written into the release task, so `/release-plugin 2.0.0` passes the strictly-greater gate unchanged, and the count continues in the renamed source repository beside its existing tags.
 
+### Release notes authoring path
+
+`/release-plugin` is left as it is apart from the rename itself, and the rebranding notes reach the release through its existing revision path. Before the release task, the mission fixes the entry's wording, the rebranding sections and bullets at `###` under the entry heading, ending in the Full Changelog link, and records it as a decision in this `requirements.md`. The release still takes the empty-range branch: the commit-derived body is accepted at step 5d, and at step 7's pause the revision path replaces it with the prepared wording verbatim.
+
 ## Out of Scope
 
