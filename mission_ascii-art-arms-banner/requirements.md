@@ -60,5 +60,9 @@ The banner is one SVG with no background fill, so the page shows through, and it
 
 The art is a wide, low strip of about 80 to 100 character columns by about 8 to 12 rows, an aspect of roughly 4:1 to 6:1. It is displayed at the full width of the README column (an `img` width of 100%), which comes to about 800 to 900 pixels on a desktop repository page and shrinks with the column on narrow screens. The same grid and width apply to all four READMEs.
 
+### Drawing author and approval
+
+The executing agent draws the art and lands it in the READMEs on its own judgment against the criteria recorded in these requirements, unattended, with no approval step before it lands. The maintainer reviews the result on `main` afterwards, before a release puts it on the three host pages, and any correction is entered as a follow-up task or made by reverting the commit.
+
 ## Out of Scope
 

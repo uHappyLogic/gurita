@@ -1,43 +1,4 @@
 <open-questions>
-  <open-question id="Drawing author and approval">
-    <question>Who produces the character drawing of the arms, and what decides it is good enough to ship: does the executing agent draw it and accept it on its own judgment against criteria recorded in the requirements, does the agent draw it for the maintainer to approve before it lands in the READMEs, or does the maintainer supply the drawing?</question>
-    <recommendation option="Maintainer reviews after landing">The task run stays unattended, which the completion runners need since they have no pause for an approval, and the maintainer still sees the art before a release puts it on the three host pages; a correction enters as an ordinary follow-up task or a revert, so no new mechanism is needed.</recommendation>
-    <alternative id="Maintainer reviews after landing">
-      The executing agent draws the art and lands it in the READMEs on its own judgment against recorded criteria, unattended. The maintainer then reviews the result on main afterwards, before it matters, and any correction is entered as a follow-up task or made by reverting the commit.
-      <advantage>Keeps the task run unattended while still putting a human eye on the art. The review happens in the most realistic setting, the page as shown, and costs nothing in the run itself.</advantage>
-      <drawback>The source repository&apos;s landing page may show an unreviewed drawing between the push and the review. A rejection costs a further commit, or a revert followed by redoing the work, instead of a draft round. How long a weak drawing stays visible depends on whether a release falls within this mission, an axis a sibling question owns.</drawback>
-    </alternative>
-    <alternative id="Agent-judged against criteria">
-      The executing agent draws the character art itself during task completion. It accepts the drawing on its own judgment, checked against acceptance criteria written into requirements.md before tasks are derived, for example arms visibly curling upward from the bottom edge, the shapes readable as arms rather than noise, and no recognisable letters or words formed by accident. No maintainer review is held before the drawing lands in the four READMEs.
-      <advantage>The mission stays fully unattended through complete-all-tasks. The completion procedure derives its acceptance bar from requirements.md, so recorded criteria become checkable bullets in the Task-completion commit body rather than a judgment of taste left unstated.</advantage>
-      <drawback>Taste criteria are hard to state so that an agent&apos;s self-check is meaningful. A drawing can pass every written criterion and still look poor, and the first human to see it is a visitor to the landing page. How much the criteria can say depends on axes sibling questions own (arm count, size, character set).</drawback>
-    </alternative>
-    <alternative id="Agent-judged, goal only">
-      The executing agent draws the art and accepts it on its own judgment against the goal&apos;s wording alone (&quot;several octopus arms curling up from the bottom edge&quot;). No acceptance criteria are recorded beyond what other decisions already fix, and no maintainer review is held before it lands.
-      <advantage>Costs no extra decision work now and nothing during execution. The agent has the most freedom to find a drawing that works, rather than being held to criteria written before anyone has seen a draft.</advantage>
-      <drawback>The completion bar for the drawing is whatever the agent writes for itself at run time, so &quot;good enough&quot; is not checkable against anything recorded. A weak drawing passes as easily as a strong one and ships unseen.</drawback>
-    </alternative>
-    <alternative id="Maintainer approves draft">
-      The executing agent draws the art, offering one draft or a few candidates, and the drawing lands in the READMEs only after the maintainer approves or picks one. The maintainer&apos;s verdict is the acceptance gate, with revisions requested until it passes. In the task list the drawing and its placement in the READMEs are separate tasks, with the maintainer&apos;s review between them.
-      <advantage>A human with taste sees the art before any landing page shows it. For a purely aesthetic deliverable at the top of every page, that is the one judgment no recorded criterion can stand in for.</advantage>
-      <drawback>Breaks unattended execution: the completion runners return only DONE or FAILED and have no pause for approval, so complete-all-tasks has to stop at the review point and the maintainer has to resume it by hand. Each rejected draft costs a round trip and a task of its own.</drawback>
-    </alternative>
-    <alternative id="Maintainer sketch, agent finish">
-      The maintainer supplies a rough sketch or reference of the arms (a coarse character layout, or a description of poses and curls), recorded in requirements.md before tasks are derived. The executing agent refines it into the final drawing at the decided size and character set, accepting the result on its own judgment by its faithfulness to the sketch.
-      <advantage>The composition, which is the part of the drawing taste decides most, comes from the maintainer. The agent does the laborious character-level work, and execution stays unattended once the sketch is recorded.</advantage>
-      <drawback>The maintainer has to produce and record a sketch before tasks can be derived. Refining can still lose what made the sketch work, and nothing but the agent&apos;s own judgment checks that it did not.</drawback>
-    </alternative>
-    <alternative id="Maintainer supplies drawing">
-      The maintainer draws the finished character art and supplies it, recorded in requirements.md or handed over as a file before tasks are derived. The executing agent only places it, taking it verbatim, so the maintainer&apos;s authorship is the acceptance and no further judgment of the drawing is made.
-      <advantage>The drawing is exactly what the maintainer wants, with no draft rounds and no taste criteria to formulate. Execution afterwards is mechanical and unattended.</advantage>
-      <drawback>All the drawing effort falls on the maintainer, and execution cannot begin until the drawing exists. A drawing made before the size, character-set, and arm-count questions settle may need redrawing to fit them, so its timing depends on those sibling axes.</drawback>
-    </alternative>
-    <alternative id="Adapted existing art">
-      The drawing is not drawn from scratch. The executing agent finds existing character art of octopus arms or tentacles under a licence compatible with the repository&apos;s LICENSE, then adapts it to the banner&apos;s requirements. It accepts the result against recorded criteria that include licence compatibility and any attribution the source requires.
-      <advantage>Starts from art someone has already made work visually. That lowers the risk of a weak original drawing without needing the maintainer to draw.</advantage>
-      <drawback>Most published character art carries no clear licence, so finding a usable source is uncertain, and attribution may have to appear somewhere on or near the banner. Arms curling up from a bottom edge is a specific composition that existing art rarely matches, so adaptation may amount to redrawing anyway.</drawback>
-    </alternative>
-  </open-question>
   <open-question id="Release within mission">
     <question>Does this mission include a release that publishes the banner to the three host landing pages, which change only when a release publishes the host trees, or does it end with the banner committed on main, showing only on the source repository&apos;s page until the next release?</question>
     <recommendation option="Release right after finish">The goal names four landing pages and the three host pages change only at a release, while the release notes are composed from missions already finished, so only a release that follows the finish commit both puts the banner on every page and gives this mission its own section on the standard path, with no empty-range confirmation.</recommendation>
@@ -248,7 +209,6 @@
   <open-question id="Rendered look verification">
     <question>How is the banner&apos;s rendered appearance checked before it is committed, the repository holding no tool that renders an SVG: by rendering the file locally to an image that is inspected, by viewing it on GitHub after a push in both page themes, or by no rendering check beyond the file being a well-formed SVG?</question>
     <applied-principle>Check tier claims against the live environment</applied-principle>
-    <depends-on question="Drawing author and approval" option="Maintainer reviews after landing"/>
     <depends-on question="Character rendering in SVG" option="System font, pinned columns"/>
     <recommendation option="Local render then GitHub">The local render gives the drawing agent a loop it can see before anything is committed, qlmanage on this machine having rendered a test SVG with pinned characters correctly, and the view on github.com in both themes covers what no local renderer shows, the viewer&apos;s own monospace font and the real page backgrounds.</recommendation>
     <alternative id="Local render then GitHub">
