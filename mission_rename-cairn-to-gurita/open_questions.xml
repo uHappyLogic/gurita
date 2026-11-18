@@ -1,28 +1,4 @@
 <open-questions>
-  <open-question id="Ignored daemon path">
-    <question>What happens to the .gitignore entry .cairn/daemon.toml? It is the file&apos;s first line and names a path under a directory called after the plugin, yet nothing else in the tree names that path, no tool creates it, and no such directory stands in the maintainer&apos;s checkout.</question>
-    <recommendation option="Remove the line">Nothing in the tree or its history names the path, no tool creates it, and no such directory stands in the checkout, so the entry is dead and goes with the old name instead of being renamed to a path that cannot exist. Every commit of the workflow is path-scoped, so a stray file would not be swept into one.</recommendation>
-    <alternative id="Remove the line">
-      The `.cairn/daemon.toml` line is deleted from `.gitignore`, under neither name, and nothing replaces it. The other six entries stay as they are, `.scratchpad.md` becoming the first line.
-      <advantage>It drops a dead entry along with the old name. Nothing in the tree or its history names the path, no tool creates it, and no `.cairn/` directory stands in the checkout, so the tree ends up with no leftover to explain and no made-up new path to protect.</advantage>
-      <drawback>If some program outside the repository (a local daemon or an older tool the maintainer once ran) still writes `.cairn/daemon.toml` into a checkout, that file shows as untracked and could be committed by a careless `git add`. Its origin was never recorded, so the risk can only be judged, not checked.</drawback>
-    </alternative>
-    <alternative id="Keep the line as written">
-      The `.gitignore` entry `.cairn/daemon.toml` stays exactly as it stands, as the file&apos;s first line, under the old name. The rename does not touch it, now or later: it is treated as a line about a local file outside the plugin&apos;s identifier sites, not as a place the plugin&apos;s name lands.
-      <advantage>Nothing is lost if some program on a maintainer&apos;s machine still writes `.cairn/daemon.toml` into the checkout: the entry was added by hand as the whole of the new `.gitignore` in `35ad784` (&quot;milestone 10 prepared&quot;, 2026-07-14), no commit since has touched or explained it, and keeping it is the one choice that needs no answer about what wrote it.</advantage>
-      <drawback>The old name stays in a tracked root file the goal says to rename everywhere, with no alias, so the closing check has to list it as a known leftover with a reason nobody can give. Whether that is allowed depends on the surface and bar the completeness question settles. It also keeps a line that, by every trace in the tree and its history, guards nothing.</drawback>
-    </alternative>
-    <alternative id="Rename to the new name">
-      The entry is rewritten to `.gurita/daemon.toml`, the same file name under a directory named after the new plugin name, still as the file&apos;s first line. It is changed like every other occurrence of the name, by substitution.
-      <advantage>The rename stays mechanical and the bar stays simple: every `cairn` becomes `gurita` with no case judged one by one, and the ignore rule keeps its shape for a daemon config that would be expected, by analogy, under the new name.</advantage>
-      <drawback>It protects a path nothing creates. No tool in the tree or anything recorded writes `.gurita/daemon.toml`, so the line goes from guarding an unexplained file to guarding one that cannot exist. A program that really did write `.cairn/daemon.toml` would lose its ignore rule without anyone noticing.</drawback>
-    </alternative>
-    <alternative id="Move to a local exclude">
-      The line is taken out of the tracked `.gitignore`, and the maintainer keeps the rule `.cairn/daemon.toml` in an untracked ignore file of their own, either the checkout&apos;s `.git/info/exclude` or their global git excludes file. The repository then names the path nowhere.
-      <advantage>The old name leaves the tracked tree as the goal asks, and any stray file a program on the maintainer&apos;s machine might still write stays ignored there, which matches what the entry seems to be: a local machine&apos;s concern, added by hand, that no contributor&apos;s checkout shares.</advantage>
-      <drawback>It writes outside the tracked tree into the maintainer&apos;s own git configuration, where no commit records it and no other clone gets it. It is a second place to keep up for a rule whose need nobody has confirmed, and it does nothing for any other contributor whose machine might write the same file.</drawback>
-    </alternative>
-  </open-question>
   <open-question id="Former name in READMEs">
     <question>What do the root README and the three host READMEs tell a reader who knows the plugin as Cairn? A link to the source repository&apos;s old URL lands on the renamed README, which after a plain substitution would say nothing of the former name, and the Claude Code host README carries a &quot;Migrating from the old marketplace&quot; section stating that installs from uHappyLogic/cairn keep working and updating under the unchanged id cairn@cairn, which no longer holds once the marketplace and the plugin are named gurita. The hard cut rules out an alias for the old name and does not say whether prose may name it.</question>
     <recommendation option="Root note only">The redirected source repository&apos;s landing page is where an old link lands, so one sentence there tells a reader who knows Cairn that this is the same plugin and where the upgrade is documented, at the smallest standing old-name surface. The host READMEs stay plain install notes, and the Claude Code migration section, whose claim no longer holds, is removed.</recommendation>

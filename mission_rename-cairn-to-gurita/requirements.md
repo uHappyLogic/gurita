@@ -104,5 +104,9 @@ A copy of the plugin frozen under the name cairn runs every task of this mission
 
 The release stays a task of this mission, entered and completed by the maintainer. The list `derive-tasks` writes ends at the last pre-release task, so `complete-all-tasks` can work it unattended to empty. Once it has, the maintainer enters the release as one task with `/submit-task` and completes it inline with `/complete-task`, present to give both of `/release-plugin`'s confirmations, the task's `Task-completion:` commit landing after the release commit and tag.
 
+### Ignored daemon path
+
+The `.cairn/daemon.toml` line is deleted from `.gitignore`, under neither name, and nothing replaces it. The other six entries stay as they are, `.scratchpad.md` becoming the first line.
+
 ## Out of Scope
 
