@@ -80,5 +80,9 @@ The release's CHANGELOG entry states two facts in a sentence or two each, with n
 
 No permanent check guards the rename: the build gains no name check and no test is added. Completeness is shown once, by one closing task whose verified bar records a whole-tree search over every tracked file, `hosts/`, `uv.lock`, and file paths included (`git grep -I -i cairn` beside `git ls-files | grep -i cairn`), with every hit compared by hand against a residue list of what stays, each residue entry naming its file, its count, and the decision that keeps it.
 
+### Past CHANGELOG entries
+
+Every existing CHANGELOG entry, 1.9.0 back to 0.9.0, stays byte-for-byte as published: its prose naming Cairn, its literal paths and invocation forms (`.agents/plugins/cairn`, `~/.gemini/config/plugins/cairn`, `$cairn:<skill>`, `cairn:complete-task`), and its `uHappyLogic/cairn` compare and release links. The file's preamble, which is not an entry, takes the rename like any other current prose, so it keeps saying each entry is its release's notes verbatim and that claim stays true. Nothing is added to explain the former name, and no published GitHub release page is edited.
+
 ## Out of Scope
 
