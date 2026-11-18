@@ -156,5 +156,9 @@ One task of this mission, ordered before the closing whole-tree search, revises 
 
 The closing whole-tree search runs over this mission's own directory like every other tracked file, and `mission_rename-cairn-to-gurita/` is kept as it stands: it is this mission's own record, its path is the identity every skill, commit subject, and starting-state anchor uses, its title is the heading the release entry's `### Rename Cairn to Gurita` section must match, and finish removes it after the release. The residue list carries it as one entry per hit source like every other residue, the three file-path matches and each file's content count as measured when the closing search runs, each citing this decision.
 
+### Project plugin enablement
+
+No task of this mission touches `.claude/settings.json`. The `cairn@cairn` entry stands through the release and the finish, so the frozen copy keeps loading with no further step. After the finish, the maintainer deletes the entry in a hand commit outside the mission, returning the file to its state before `0a823b7`, and enables `gurita@gurita` out of tree (the git-ignored `.claude/settings.local.json` or user scope) when the marketplace is re-added under the name gurita. The closing search's residue list names `.claude/settings.json`, count 1, kept by this decision until after the finish.
+
 ## Out of Scope
 
