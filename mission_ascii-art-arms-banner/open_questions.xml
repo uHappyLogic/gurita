@@ -1,39 +1,4 @@
 <open-questions>
-  <open-question id="Banner alt text">
-    <question>What alternative text does the banner image carry in the four READMEs: an empty alt marking the image as decorative, or a short description of the arms, and in that case what wording?</question>
-    <applied-principle>Check tier claims against the live environment</applied-principle>
-    <recommendation option="Short literal description">GitHub wraps every README image in a link, so an empty alt would leave a link with no name for a screen reader to announce, while a few literal words name it, follow the written-alt pattern of every badge on the pages, and stay true however the count, size, or palette is tuned; the wording is the option&apos;s own example, &quot;Octopus arms drawn in ASCII art&quot;.</recommendation>
-    <alternative id="Short literal description">
-      The banner carries one short literal description of the picture, identical in all four READMEs, naming only what is drawn and how, with no colours and no counts — for example &quot;Octopus arms drawn in ASCII art&quot; — and nothing of the project&apos;s name or tagline.
-      <advantage>Tells anyone who cannot see the image what is there in a few words, follows the written-alt pattern the badges already set, and stays true whatever arm count, size, or palette the sibling questions settle, so it needs no rewording when the drawing is tuned.</advantage>
-      <drawback>Read aloud before the title on every page, it adds a line a screen-reader user hears ahead of the project&apos;s name for an image that conveys no information; the words &quot;ASCII art&quot; hold only while the art&apos;s character set is limited to ASCII, which the art-character-set question decides.</drawback>
-    </alternative>
-    <alternative id="No alt attribute">
-      The banner&apos;s image element carries no alt attribute at all in any of the four READMEs: no text is written for it, empty or otherwise, and what a screen reader or a failed image load shows is left to the browser.
-      <advantage>Nothing to word or keep in step across the four files, so the banner&apos;s line in each README is the shortest it can be.</advantage>
-      <drawback>Breaks the pattern every image on the four pages follows today, each badge carrying a written alt such as &quot;Latest Release&quot; or &quot;unique views&quot;; screen readers commonly announce the file name or URL in its place, and a broken load shows nothing that says what was meant to be there.</drawback>
-    </alternative>
-    <alternative id="Empty decorative alt">
-      The banner carries an empty alt (alt=&quot;&quot;) in all four READMEs, marking it as decorative so assistive technology skips it and the page&apos;s spoken reading starts at the badges, then the title.
-      <advantage>Matches what the banner is for a non-sighted reader: pure ornament ahead of a title that already names the project, so nothing redundant is read before the &quot;# Gurita&quot; heading, and no wording has to track the drawing&apos;s arm count, characters, or colours as those are settled or later changed.</advantage>
-      <drawback>A sighted reader whose image fails to load, and every screen-reader user, learns nothing of the banner at all; it is also the one image on the pages with no written alt, so the choice reads as an omission unless it is understood as deliberate.</drawback>
-    </alternative>
-    <alternative id="Detailed literal description">
-      The banner carries one fuller literal description, identical in all four READMEs, stating what is drawn, how it sits, and its colours — for example &quot;Octopus arms curling up from the bottom edge, drawn in violet and grey-blue characters&quot; — still naming neither the project nor the tagline.
-      <advantage>Gives a non-sighted reader or a failed load the closest equivalent of the picture, its shape and its palette included, which is the whole of what the banner adds to the pages.</advantage>
-      <drawback>The longest text read ahead of the title on every page, and every detail it names (the colours, the curling from the bottom edge, any count) becomes a fact the alt must keep in step with the drawing by hand in four files; its wording depends on how the palette, arm count, and character-set questions are settled.</drawback>
-    </alternative>
-    <alternative id="Project name as alt">
-      The banner carries the project&apos;s name as its alt in all four READMEs — &quot;Gurita&quot; in each, treating the banner as the project&apos;s logo — with no description of the arms.
-      <advantage>Follows the common convention for a header image standing in as a logo, needs no wording to track the drawing&apos;s details, and gives a failed load a sensible label.</advantage>
-      <drawback>Each page&apos;s next heading already says &quot;Gurita&quot; (&quot;# Gurita&quot; or &quot;# Gurita for &lt;Host&gt;&quot;), so a screen reader hears the name twice in a row, and the text says nothing of what the image shows.</drawback>
-    </alternative>
-    <alternative id="Tagline as alt">
-      The banner carries the tagline &quot;Decide first, then let the arms carry the work.&quot; as its alt in all four READMEs, describing the image by the metaphor it illustrates rather than by its appearance.
-      <advantage>Ties the picture to the meaning the earlier rename mission gave the arms, so a reader who cannot see the banner still gets what it stands for, and it brings that line to the three host pages, which carry no tagline today.</advantage>
-      <drawback>On the root README the same sentence stands as bold text just under the title, so it is read twice there; on the host pages it adds the tagline the finished rename mission deliberately kept off them, and it does not say what the image actually depicts.</drawback>
-    </alternative>
-  </open-question>
   <open-question id="Host suite run">
     <question>Is the host suite run on all three hosts as part of this mission, since adding the banner to each host&apos;s README template changes every host&apos;s trigger set and the suite first requires each host&apos;s installed copy to equal the built tree, or is that run left to the next release&apos;s pre-flight?</question>
     <recommendation option="Defer to release pre-flight">The release pre-flight runs the suite on all three hosts against the same final state before anything reaches a host page, so a closing run inside the mission would only repeat it shortly before, and deferring keeps the task run unattended and the home-directory installations in the maintainer&apos;s hands.</recommendation>

@@ -80,5 +80,9 @@ The banner takes its colours from the violet and slate families the root README'
 
 The banner shows exactly eight arms, every one of an octopus's arms, each curling up from the bottom edge. Eight is a fixed count the drawing must meet, checked by counting.
 
+### Banner alt text
+
+The banner image carries the alternative text "Octopus arms drawn in ASCII art", identical in all four READMEs: a short literal description naming only what is drawn and how, with no colours, no counts, and nothing of the project's name or tagline. The alt is never left empty, since GitHub wraps every README image in a link that would then have no name.
+
 ## Out of Scope
 
