@@ -22,38 +22,38 @@ Once those are clear, `submit-task` takes over — keep what you produce high-le
 ## Usage
 
 ```
-/discuss-new-task --milestone <path> <issue description>
+/discuss-new-task --mission <path> <issue description>
 ```
 
-- `--milestone <path>`: required and leading; names the milestone by its repo-relative path, exactly as the definition tool printed it, trailing slash included, e.g. `milestones/user-guide/`.
+- `--mission <path>`: required and leading; names the milestone by its repo-relative path, exactly as the definition tool printed it, trailing slash included, e.g. `milestones/user-guide/`.
 - `<issue description>`: a free-form, possibly rough description of a problem, gap, or idea surfaced mid-flight. May be a single issue or a larger "we need to create X" that spans several pieces.
 
 **Example (single task):**
 ```
-/discuss-new-task --milestone milestones/user-guide/ the setup section's steps are out of order, feels confusing
+/discuss-new-task --mission milestones/user-guide/ the setup section's steps are out of order, feels confusing
 ```
 
 **Example (likely several tasks):**
 ```
-/discuss-new-task --milestone milestones/user-guide/ I think we need a proper glossary — this is probably a few tasks, not one
+/discuss-new-task --mission milestones/user-guide/ I think we need a proper glossary — this is probably a few tasks, not one
 ```
 
 ## Workflow
 
 ### 0. Find the milestone
 
-First strip the leading `--milestone <path>` from the invocation text by the rule in `${CLAUDE_PLUGIN_ROOT}/shared/resolve-milestone.md`, reading only the rest as the issue description. Follow `${CLAUDE_PLUGIN_ROOT}/shared/resolve-milestone.md` to resolve `<MILESTONE_DIR>`. Never use a hardcoded task-list path.
+First strip the leading `--mission <path>` from the invocation text by the rule in `${CLAUDE_PLUGIN_ROOT}/shared/resolve-mission.md`, reading only the rest as the issue description. Follow `${CLAUDE_PLUGIN_ROOT}/shared/resolve-mission.md` to resolve `<MISSION_DIR>`. Never use a hardcoded task-list path.
 
 ### 1. Gather context
 
 In parallel, as independent tool calls, to ground the discussion in the real project state rather than guessing:
 
-- Read `<MILESTONE_DIR>/requirements.md` — the goal, constraints, and decisions the issue must fit within.
-- Read `<MILESTONE_DIR>/TASKS_TODO.md` — pending tasks, to spot overlap and dependencies.
+- Read `<MISSION_DIR>/requirements.md` — the goal, constraints, and decisions the issue must fit within.
+- Read `<MISSION_DIR>/TASKS_TODO.md` — pending tasks, to spot overlap and dependencies.
 - Run the plugin's missions tool — completed work, to catch issues already addressed:
 
   ```
-  python3 ${CLAUDE_PLUGIN_ROOT}/tools/missions.py tasks <MILESTONE_DIR> --with-body
+  python3 ${CLAUDE_PLUGIN_ROOT}/tools/missions.py tasks <MISSION_DIR> --with-body
   ```
 
   It prints, newest first, one tab-separated line per task completed in the milestone (the commit's abbreviated hash, its date, the milestone directory, and the task title), with the task's verified bar indented beneath it, and prints nothing when no task has been completed, which is no failure.

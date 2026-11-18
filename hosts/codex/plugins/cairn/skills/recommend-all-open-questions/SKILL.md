@@ -13,7 +13,7 @@ its frozen set of `<alternative>` elements, and this pass picks one of them per 
 still lacking a `<recommendation>` in view at once, follow the shared pick procedure over that
 whole set, and embed each block's `<recommendation>`, its `<depends-on>` declarations, and its
 `<applied-principle>` citations yourself, through the plugin's open-question tool. You are the
-only party in this pass that changes `<MILESTONE_DIR>/open_questions.xml`, and every write
+only party in this pass that changes `<MISSION_DIR>/open_questions.xml`, and every write
 you make of it is a tool call — `embed` to write, `lift` to read back the lines the commit
 records, `sort` to reorder — never a direct edit, and every commit of it is a call to the
 plugin's commit tool, never a git write of your own; reading the document whole
@@ -22,9 +22,9 @@ is the tool's, each call written out in full as its fenced block shows it, never
 variable, alias, or function of your own defined to stand for the command or any part of it.
 Once the picks are decided, the writing is **one fixed shell call** that embeds every picked
 block, lifts each one the tool accepted, commits the document under one
-`Recommendation-annotation: <MILESTONE_DIR>` commit whose body is one lifted line per annotated
+`Recommendation-annotation: <MISSION_DIR>` commit whose body is one lifted line per annotated
 question, then sorts the document — the annotated blocks first in the order the answer sweep
-will walk them — and commits that reorder as its own `Question-ordering: <MILESTONE_DIR>`
+will walk them — and commits that reorder as its own `Question-ordering: <MISSION_DIR>`
 commit, a fixed step of every run that found questions. A run makes that call once, and once
 more only to re-send the blocks it refused, so it lands at most two annotation commits. It takes
 **no Short Title**, records **no decisions**, triggers **no cascades**, and never adds, drops,
@@ -36,20 +36,20 @@ Each embedded recommendation is consumed later, when it is recorded as an answer
 ## Usage
 
 ```
-/recommend-all-open-questions --milestone <path>
+/recommend-all-open-questions --mission <path>
 ```
 
 It sweeps every `<open-question>` block in the named milestone's `open_questions.xml`. The
-required leading `--milestone <path>` names the milestone by its repo-relative path, exactly as
+required leading `--mission <path>` names the milestone by its repo-relative path, exactly as
 the definition tool printed it, trailing slash included, e.g. `milestones/user-guide/`.
-Both commit subjects below carry `<MILESTONE_DIR>`, the milestone path exactly as resolved,
+Both commit subjects below carry `<MISSION_DIR>`, the milestone path exactly as resolved,
 trailing slash included.
 
 ## Workflow
 
 ### 0. Find the milestone
 
-Follow `${PLUGIN_ROOT}/shared/resolve-milestone.md` to resolve `<MILESTONE_DIR>`.
+Follow `${PLUGIN_ROOT}/shared/resolve-mission.md` to resolve `<MISSION_DIR>`.
 Never use a hardcoded path.
 
 ### 1. Gather the questions once, in three tool calls
@@ -57,7 +57,7 @@ Never use a hardcoded path.
 **a. Every question.** Run
 
 ```
-python3 ${PLUGIN_ROOT}/tools/open_questions.py list <MILESTONE_DIR>
+python3 ${PLUGIN_ROOT}/tools/open_questions.py list <MISSION_DIR>
 ```
 
 It prints the `id` (Short Title) of every `<open-question>` block, one per line in document
@@ -69,7 +69,7 @@ the fixed line `Recommendation pass stopped — the question list failed.` first
 **b. The ones without alternatives — the stop test.** Run
 
 ```
-python3 ${PLUGIN_ROOT}/tools/open_questions.py list --without-alternatives <MILESTONE_DIR>
+python3 ${PLUGIN_ROOT}/tools/open_questions.py list --without-alternatives <MISSION_DIR>
 ```
 
 It prints, in document order, the ids of the blocks carrying no `<alternative>` element. If it
@@ -83,7 +83,7 @@ Only when this call prints nothing does the pass continue.
 **c. The ones without a recommendation.** Run
 
 ```
-python3 ${PLUGIN_ROOT}/tools/open_questions.py list --without-recommendation <MILESTONE_DIR>
+python3 ${PLUGIN_ROOT}/tools/open_questions.py list --without-recommendation <MISSION_DIR>
 ```
 
 It prints, in document order, the ids of the blocks carrying no `<recommendation>` element —
@@ -115,7 +115,7 @@ against, and never revises it.
 **Escape hatch for a stale recommendation:** to force a fresh pick on a block, run
 
 ```
-python3 ${PLUGIN_ROOT}/tools/open_questions.py strip --recommendation <MILESTONE_DIR> "<Short Title>" …
+python3 ${PLUGIN_ROOT}/tools/open_questions.py strip --recommendation <MISSION_DIR> "<Short Title>" …
 ```
 
 (one or more Short Titles), then re-run this skill. `strip --recommendation` deletes only the
@@ -137,7 +137,7 @@ wants re-picked is named in the same `strip --recommendation` call.
 
 ### 3. Pick over the whole set at once
 
-Read `<MILESTONE_DIR>/requirements.md` and `<MILESTONE_DIR>/open_questions.xml` **whole**
+Read `<MISSION_DIR>/requirements.md` and `<MISSION_DIR>/open_questions.xml` **whole**
 with the file-reading tool. The document read gives you, for every id step 1c printed, the
 block's `<question>` text and its frozen `<alternative>` set — each option's `id`, what-it-is
 text, `<advantage>`, and `<drawback>` — and, for every other block, the `<recommendation>`
@@ -208,28 +208,28 @@ canonical form when it is written.
 ### 5. Write, commit, and sort in one batched shell call
 
 Run this one fixed shell call, written out in full exactly as shown, with only
-`<MILESTONE_DIR>` (in the two subjects too) and each block section's `<Short Title>` and
+`<MISSION_DIR>` (in the two subjects too) and each block section's `<Short Title>` and
 rendered elements replaced:
 
 ```
 body=''
-if { err="$(python3 ${PLUGIN_ROOT}/tools/open_questions.py embed --recommendation <MILESTONE_DIR> "<Short Title>" 2>&1)"; } <<'EOF'
+if { err="$(python3 ${PLUGIN_ROOT}/tools/open_questions.py embed --recommendation <MISSION_DIR> "<Short Title>" 2>&1)"; } <<'EOF'
 <the block's rendered elements>
 EOF
 then
   body="${body:+$body
-}$(python3 ${PLUGIN_ROOT}/tools/open_questions.py lift <MILESTONE_DIR> "<Short Title>")"
+}$(python3 ${PLUGIN_ROOT}/tools/open_questions.py lift <MISSION_DIR> "<Short Title>")"
 else
   printf '%s\t%s\n' "<Short Title>" "$err"
 fi
 if [ -n "$body" ]; then
-  out="$(python3 ${PLUGIN_ROOT}/tools/commit.py --subject "Recommendation-annotation: <MILESTONE_DIR>" --body "$body" -- <MILESTONE_DIR>/open_questions.xml)" &&
+  out="$(python3 ${PLUGIN_ROOT}/tools/commit.py --subject "Recommendation-annotation: <MISSION_DIR>" --body "$body" -- <MISSION_DIR>/open_questions.xml)" &&
   if [ -z "$out" ]; then
     echo 'annotation commit landed'
   fi
 fi &&
-python3 ${PLUGIN_ROOT}/tools/open_questions.py sort <MILESTONE_DIR> &&
-out="$(python3 ${PLUGIN_ROOT}/tools/commit.py --subject "Question-ordering: <MILESTONE_DIR>" -- <MILESTONE_DIR>/open_questions.xml)" &&
+python3 ${PLUGIN_ROOT}/tools/open_questions.py sort <MISSION_DIR> &&
+out="$(python3 ${PLUGIN_ROOT}/tools/commit.py --subject "Question-ordering: <MISSION_DIR>" -- <MISSION_DIR>/open_questions.xml)" &&
 if [ -z "$out" ]; then
   echo 'ordering commit landed'
 fi
@@ -264,15 +264,15 @@ a tab, and the `Error:` line, and adds no line to `body`.
 
 After the last section the call runs the one command of the shared commit procedure at
 `${PLUGIN_ROOT}/shared/commit-procedure.md`, the plugin's commit tool, with
-`<MILESTONE_DIR>/open_questions.xml` alone as its path, `Recommendation-annotation:
-<MILESTONE_DIR>` as its subject, and the lifted lines, one per annotated block in section order,
+`<MISSION_DIR>/open_questions.xml` alone as its path, `Recommendation-annotation:
+<MISSION_DIR>` as its subject, and the lifted lines, one per annotated block in section order,
 as its body. That commit is conditioned on a non-empty `body`, so a call that wrote no block
 never commits an empty-bodied annotation. The call then runs `sort`, which rewrites the
 document with the `<recommendation>`-bearing blocks first, in exactly the order the answer
 sweep's `walk` will dispatch them, and every block still carrying none last in its prior order
 — so a reader meets the questions whose answers no dependency can nullify before the questions
 that build on them — and commits the reorder through the same tool under `Question-ordering:
-<MILESTONE_DIR>` with **no body**. Each time, the tool runs the dirty-own-path guard over the
+<MISSION_DIR>` with **no body**. Each time, the tool runs the dirty-own-path guard over the
 one document, stages exactly it, and commits it with it as the commit's pathspec, so nothing
 else the index holds — a change another run has staged included — rides in the commit, and it
 repeats a git write another process's lock refused before giving up. Its stdout is captured in
@@ -292,10 +292,10 @@ What the call prints is the whole outcome:
 
 - **`<Short Title>`, a tab, an `Error:` line** — a refused block, unchanged in the document.
   Hold the line verbatim for step 6.
-- **`annotation commit landed`** — the `Recommendation-annotation: <MILESTONE_DIR>` commit
+- **`annotation commit landed`** — the `Recommendation-annotation: <MISSION_DIR>` commit
   landed.
 - **`ordering commit landed`** — the sort moved a block and the `Question-ordering:
-  <MILESTONE_DIR>` commit landed.
+  <MISSION_DIR>` commit landed.
 - **Any other line** — the sort's own `Error:` line (the document unchanged by it) or the
   commit tool's (nothing committed, its line carrying git's own message); nothing after it in
   the call ran. Print it verbatim alongside step 7's report.
@@ -309,7 +309,7 @@ If the call printed no refused block, there is nothing to re-send: go to step 7.
 fragments are yours, so each refusal is a rendering slip: correct every refused block's elements
 against the `Error:` line the call printed for it, then re-send them **all together** in **one**
 more call of exactly step 5's shape, with one section per refused block — that call commits its
-own `Recommendation-annotation: <MILESTONE_DIR>` commit and sorts again, as any call does.
+own `Recommendation-annotation: <MISSION_DIR>` commit and sorts again, as any call does.
 
 Make at most **one** such call per run. A block it refuses again is **skipped**: correct it no
 further, and note its Short Title with that second `Error:` line verbatim for the step-7

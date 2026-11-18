@@ -180,7 +180,7 @@ Every skill's console report opens with one fixed line saying how the run ended,
 | `finish-milestone` | stop | `Cannot finish the milestone: the following open questions must be resolved first:` |
 | `finish-milestone` | stop | `Cannot finish the milestone: the open-question check failed.` |
 | `finish-milestone` | stop | `Cannot finish the milestone: tasks remain to be completed.` |
-| `shared/resolve-milestone.md` | stop | `No milestone resolved — pass --milestone with a live milestone's path.` |
+| `shared/resolve-mission.md` | stop | `No milestone resolved — pass --mission with a live milestone's path.` |
 | `shared/check-scope-gate.md` | stop | `Scope gate closed — the scope is held or could not be checked.` |
 | `shared/complete-procedure.md` | stop | `No task matches the given name.` |
 | `shared/starting-state-procedure.md` | stop | `Starting state stopped — a milestones-tool read failed.` |

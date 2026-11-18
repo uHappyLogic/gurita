@@ -10,20 +10,20 @@ Pure orchestrator. Reads the named milestone's task list and spawns one isolated
 ## Invocation
 
 ```
-/complete-all-tasks --milestone <path>
+/complete-all-tasks --mission <path>
 ```
 
-The required leading `--milestone <path>` names the milestone by its repo-relative path, exactly as the definition tool printed it, trailing slash included, e.g. `milestones/user-guide/`.
+The required leading `--mission <path>` names the milestone by its repo-relative path, exactly as the definition tool printed it, trailing slash included, e.g. `milestones/user-guide/`.
 
 ## Workflow
 
 ### 0. Find the milestone
 
-Follow `~/.gemini/config/plugins/cairn/shared/resolve-milestone.md` to resolve `<MILESTONE_DIR>`. Never use a hardcoded task-list path.
+Follow `~/.gemini/config/plugins/cairn/shared/resolve-mission.md` to resolve `<MISSION_DIR>`. Never use a hardcoded task-list path.
 
 ### 1. Read the task list
 
-Read `<MILESTONE_DIR>/TASKS_TODO.md` and confirm it has at least one `##` section. If the file is empty or has no `##` sections, print this one fixed no-op line and stop:
+Read `<MISSION_DIR>/TASKS_TODO.md` and confirm it has at least one `##` section. If the file is empty or has no `##` sections, print this one fixed no-op line and stop:
 
 ```
 No tasks to complete — the task list is empty.
@@ -43,25 +43,25 @@ Then repeat the following loop until no tasks remain:
 
 #### 2a. Identify the next task
 
-Re-read `<MILESTONE_DIR>/TASKS_TODO.md` to get the current top task — the first `##` heading in the file. Do not cache the task list across iterations, since each completed task is removed.
+Re-read `<MISSION_DIR>/TASKS_TODO.md` to get the current top task — the first `##` heading in the file. Do not cache the task list across iterations, since each completed task is removed.
 
 #### 2b. Check the scope gate
 
-Before dispatching the task 2a identified, follow `~/.gemini/config/plugins/cairn/shared/check-scope-gate.md` for `<MILESTONE_DIR>`, on every pass through the loop, so a milestone that started holding the scope while the run was working stops it before its next task. When the gate is closed, end the run there: its report is the whole output, no agent is dispatched for the task, and every task committed earlier in the run stays committed.
+Before dispatching the task 2a identified, follow `~/.gemini/config/plugins/cairn/shared/check-scope-gate.md` for `<MISSION_DIR>`, on every pass through the loop, so a milestone that started holding the scope while the run was working stops it before its next task. When the gate is closed, end the run there: its report is the whole output, no agent is dispatched for the task, and every task committed earlier in the run stays committed.
 
 #### 2c. Spawn a subagent to complete the task
 
-Use the `invoke_subagent` tool with one entry in its `Subagents` array whose `TypeName` is the name this plugin registers the `complete-task` agent under, `complete-task`, whose `Role` is `Task completer`, and whose `Prompt` carries the task name, the milestone directory, and the scratch directory and nothing else, substituting `<TASK_NAME>` with the exact `##` heading text (without the `##` prefix), `<MILESTONE_DIR>` with the directory resolved in step 0, and `<scratch dir>` with the directory created at the start of step 2. The call returns at once, and the agent's final message reaches you as a message from it once it ends; that message is its return:
+Use the `invoke_subagent` tool with one entry in its `Subagents` array whose `TypeName` is the name this plugin registers the `complete-task` agent under, `complete-task`, whose `Role` is `Task completer`, and whose `Prompt` carries the task name, the milestone directory, and the scratch directory and nothing else, substituting `<TASK_NAME>` with the exact `##` heading text (without the `##` prefix), `<MISSION_DIR>` with the directory resolved in step 0, and `<scratch dir>` with the directory created at the start of step 2. The call returns at once, and the agent's final message reaches you as a message from it once it ends; that message is its return:
 
 ```
 Complete the task named: "<TASK_NAME>"
 
-Milestone directory: <MILESTONE_DIR>
+Mission directory: <MISSION_DIR>
 
 Scratch directory: <scratch dir>
 ```
 
-Every dispatch carries the `Milestone directory:` line, holding the `<MILESTONE_DIR>` step 0 resolved from the `--milestone` path, so each agent works in the milestone this run commits for, and the `Scratch directory:` line, holding the one `<scratch dir>` created at the start of this step, the same directory on every dispatch, so each agent writes its two files where 2d reads them.
+Every dispatch carries the `Mission directory:` line, holding the `<MISSION_DIR>` step 0 resolved from the `--mission` path, so each agent works in the milestone this run commits for, and the `Scratch directory:` line, holding the one `<scratch dir>` created at the start of this step, the same directory on every dispatch, so each agent writes its two files where 2d reads them.
 
 Wait for the agent to return.
 
@@ -108,4 +108,4 @@ Go back to 2a and process the next task.
 
 ### 3. Report completion
 
-On the success path, when `<MILESTONE_DIR>/TASKS_TODO.md` contains no more `##` sections, print exactly one fixed terse status line for the whole run — `All tasks completed.` — and nothing more: no list of the tasks that were completed and no next-step pointer. This is the line whatever the per-task commits found: a task whose commit tool found none of its paths changed was skipped silently in 2d, and a run whose every task returned `DONE` and was committed or skipped has no other line.
+On the success path, when `<MISSION_DIR>/TASKS_TODO.md` contains no more `##` sections, print exactly one fixed terse status line for the whole run — `All tasks completed.` — and nothing more: no list of the tasks that were completed and no next-step pointer. This is the line whatever the per-task commits found: a task whose commit tool found none of its paths changed was skipped silently in 2d, and a run whose every task returned `DONE` and was committed or skipped has no other line.

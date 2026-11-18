@@ -13,16 +13,16 @@ the work itself — lift, delegate.
 This procedure records one recommendation-derived answer given two inputs the caller
 supplies:
 
-- **MILESTONE_DIR** — the already-resolved directory of the milestone the question belongs
-  to, the `<MILESTONE_DIR>` every tool call below uses. The caller resolves it; this
+- **MISSION_DIR** — the already-resolved directory of the milestone the question belongs
+  to, the `<MISSION_DIR>` every tool call below uses. The caller resolves it; this
   procedure never looks the milestone up, and hands it on to the recording core as that
-  core's own `MILESTONE_DIR` input.
+  core's own `MISSION_DIR` input.
 - **SHORT TITLE** — the resolved handle of an existing `<open-question>` block to answer
   (its `id`, compared case-insensitively). The caller has already obtained it; lifting the
   block's `<recommendation>` element and delegating the recording are this procedure's job.
 
 The ANSWER is **not** an input here — this procedure *derives* it by lifting the block's
-embedded `<recommendation>` element. That derived ANSWER, together with MILESTONE_DIR,
+embedded `<recommendation>` element. That derived ANSWER, together with MISSION_DIR,
 SHORT TITLE, and the lifted `option` value as RECORDED OPTION, is what it hands to
 `shared/answer-procedure.md`.
 
@@ -33,7 +33,7 @@ SHORT TITLE, and the lifted `option` value as RECORDED OPTION, is what it hands 
 Run the plugin's open-question tool:
 
 ```
-python3 ${CLAUDE_PLUGIN_ROOT}/tools/open_questions.py lift <MILESTONE_DIR> "<SHORT TITLE>"
+python3 ${CLAUDE_PLUGIN_ROOT}/tools/open_questions.py lift <MISSION_DIR> "<SHORT TITLE>"
 ```
 
 On success it prints one line, "`<option>` — `<rationale>`": the block's
@@ -50,7 +50,7 @@ anything** and report why, quoting the tool's `Error:` line: nothing is recorded
 
 ### 2. Delegate to the recording core
 
-Hand the given **MILESTONE_DIR** and **SHORT TITLE**, the derived **ANSWER**, and the
+Hand the given **MISSION_DIR** and **SHORT TITLE**, the derived **ANSWER**, and the
 **RECORDED OPTION** lifted in step 1 (passed separately, so the core hands it to the tool
 as an exact id rather than parsing it out of ANSWER) to
 `${CLAUDE_PLUGIN_ROOT}/shared/answer-procedure.md` and follow it unchanged. That procedure owns the recording work (locate, analyse, fold, remove, cascade);

@@ -14,39 +14,39 @@ When the answer surfaces a concrete next step, this skill names the right cairn 
 ## Usage
 
 ```
-/ask-in-milestone-context --milestone <path> <question>
+/ask-in-milestone-context --mission <path> <question>
 ```
 
-- `--milestone <path>`: required and leading; names the milestone by its repo-relative path, exactly as the definition tool printed it, trailing slash included, e.g. `milestones/user-guide/`.
+- `--mission <path>`: required and leading; names the milestone by its repo-relative path, exactly as the definition tool printed it, trailing slash included, e.g. `milestones/user-guide/`.
 - `<question>`: a free-form, informational question about the named milestone. Optional — invoked with no question, give a brief orientation to the milestone (goal, what's done, what's left) and invite a specific question.
 
 **Examples:**
 ```
-/ask-in-milestone-context --milestone milestones/user-guide/ how did we end up handling the case where two milestones are active at once?
-/ask-in-milestone-context --milestone milestones/user-guide/ what's left in this milestone and what's blocking it?
-/ask-in-milestone-context --milestone milestones/user-guide/ what changed in the rename task — which files did it touch?
+/ask-in-milestone-context --mission milestones/user-guide/ how did we end up handling the case where two milestones are active at once?
+/ask-in-milestone-context --mission milestones/user-guide/ what's left in this milestone and what's blocking it?
+/ask-in-milestone-context --mission milestones/user-guide/ what changed in the rename task — which files did it touch?
 ```
 
 ## Workflow
 
 ### 0. Find the milestone
 
-First strip the leading `--milestone <path>` from the invocation text by the rule in `${PLUGIN_ROOT}/shared/resolve-milestone.md`, reading only the rest as the question. Follow `${PLUGIN_ROOT}/shared/resolve-milestone.md` to resolve `<MILESTONE_DIR>`. Never use a hardcoded task-list path. A call that resolves no milestone stops as that procedure says, with no answer and no fallback: this skill answers only within a named milestone.
+First strip the leading `--mission <path>` from the invocation text by the rule in `${PLUGIN_ROOT}/shared/resolve-mission.md`, reading only the rest as the question. Follow `${PLUGIN_ROOT}/shared/resolve-mission.md` to resolve `<MISSION_DIR>`. Never use a hardcoded task-list path. A call that resolves no milestone stops as that procedure says, with no answer and no fallback: this skill answers only within a named milestone.
 
 ### 1. Gather context
 
 In parallel, as independent tool calls, so the answer rests on the real state rather than memory:
 
-- Read `<MILESTONE_DIR>/requirements.md` — the goal, relevant starting state, and recorded decisions.
-- Read `<MILESTONE_DIR>/open_questions.xml` — any remaining open questions, each an `<open-question>` block carrying whatever alternatives and recommendation the recommend sweep has embedded. Read it whole with the file-reading tool, exactly as you read `requirements.md`; that whole read is for reasoning only, and a locate, list, or lift of one block is a call to the plugin's open-question tool, `python3 ${PLUGIN_ROOT}/tools/open_questions.py <subcommand> <MILESTONE_DIR> …`, never a search of your own over the file.
+- Read `<MISSION_DIR>/requirements.md` — the goal, relevant starting state, and recorded decisions.
+- Read `<MISSION_DIR>/open_questions.xml` — any remaining open questions, each an `<open-question>` block carrying whatever alternatives and recommendation the recommend sweep has embedded. Read it whole with the file-reading tool, exactly as you read `requirements.md`; that whole read is for reasoning only, and a locate, list, or lift of one block is a call to the plugin's open-question tool, `python3 ${PLUGIN_ROOT}/tools/open_questions.py <subcommand> <MISSION_DIR> …`, never a search of your own over the file.
 - Run the plugin's missions tool — completed tasks:
 
   ```
-  python3 ${PLUGIN_ROOT}/tools/missions.py tasks <MILESTONE_DIR> --with-body
+  python3 ${PLUGIN_ROOT}/tools/missions.py tasks <MISSION_DIR> --with-body
   ```
 
   It prints, newest first, one tab-separated line per task completed in the milestone (the commit's abbreviated hash, its date, the milestone directory, and the task title), with the task's verified bar indented beneath it, and prints nothing when no task has been completed, which is no failure. Each task's title and verified bar tell you *what the task was meant to achieve* — the intent behind the deliverable that now exists — and its brief stands in its commit's diff, as the section removed from `TASKS_TODO.md`, which `git show <hash>` pulls up.
-- Read `<MILESTONE_DIR>/TASKS_TODO.md` — pending tasks, in priority order. Their ordering explains dependencies ("what's blocking what").
+- Read `<MISSION_DIR>/TASKS_TODO.md` — pending tasks, in priority order. Their ordering explains dependencies ("what's blocking what").
 - Read `AGENTS.md` — the project's domain context, conventions, and real names for its systems and files, so your answer uses the project's vocabulary.
 - When the question concerns past work — what an earlier milestone built, when or why something landed, a finished milestone — run the plugin's missions tool for the project's composed record, at your own discretion and scoped to the question: the path the question concerns (a file or directory), the milestone's scope (the directory holding its `milestones/` container, `.` for one at `milestones/<slug>/`) for the work around this milestone, or `.` for a project-wide question:
 
@@ -54,7 +54,7 @@ In parallel, as independent tool calls, so the answer rests on the real state ra
   python3 ${PLUGIN_ROOT}/tools/missions.py record <PATH>
   ```
 
-  It prints one tab-separated line at column 0 for each milestone, live or finished, that changed PATH or whose scope overlaps it (`live` or `finished`, the finish date or `-` for a live one, the milestone's path, and its title; the live ones first, then the finished ones newest first), with its summary bullets, or a live one's goal, and its tasks that changed PATH indented beneath it. A finished milestone, its directory removed, resolves under no `--milestone`, so it is answered from this read, scoped as wide as `.` when nothing narrower lists it.
+  It prints one tab-separated line at column 0 for each milestone, live or finished, that changed PATH or whose scope overlaps it (`live` or `finished`, the finish date or `-` for a live one, the milestone's path, and its title; the live ones first, then the finished ones newest first), with its summary bullets, or a live one's goal, and its tasks that changed PATH indented beneath it. A finished milestone, its directory removed, resolves under no `--mission`, so it is answered from this read, scoped as wide as `.` when nothing narrower lists it.
 
 If the `tasks` call or a `record` call fails, tell the user in prose that the completed-task read or the record read failed, quoting its one `Error: <reason>` line from stderr verbatim, and carry on from the other reads and the live deliverables, printing no fixed line.
 

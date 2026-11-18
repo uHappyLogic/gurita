@@ -5,31 +5,31 @@ description: Answer a named open question of a milestone by recording the suppli
 
 # answer-open-question
 
-Resolves a named open question of the milestone named by `--milestone` by recording the user's answer as a decision in `requirements.md`, removing the answered block from `open_questions.xml`, propagating the answer's implications through both, and committing those edits on their own with the decision's rationale in the commit body — establishing the `Manual-answer:` commit that `/capture-milestone-principle-updates` later reads, alongside `Alternative-answer:` and `Recommendation-answer:` commits, when it distills a milestone's answers into reusable principles: a manual answer is an override signal (a decision the recommender did not make), so its body rationale is what gets distilled. The answer text is recorded **literally**; the one reserved answer text is the retired sentinel `record the recommendation`, which this skill redirects instead of recording (step 2).
+Resolves a named open question of the milestone named by `--mission` by recording the user's answer as a decision in `requirements.md`, removing the answered block from `open_questions.xml`, propagating the answer's implications through both, and committing those edits on their own with the decision's rationale in the commit body — establishing the `Manual-answer:` commit that `/capture-milestone-principle-updates` later reads, alongside `Alternative-answer:` and `Recommendation-answer:` commits, when it distills a milestone's answers into reusable principles: a manual answer is an override signal (a decision the recommender did not make), so its body rationale is what gets distilled. The answer text is recorded **literally**; the one reserved answer text is the retired sentinel `record the recommendation`, which this skill redirects instead of recording (step 2).
 
 ## Usage
 
 ```
-/answer-open-question --milestone <path> <Short Title>. <answer text>
+/answer-open-question --mission <path> <Short Title>. <answer text>
 ```
 
-The `<Short Title>` must match (case-insensitive, against the block's `id`) an existing `<open-question>` block. The `.` character is the separator. Everything after the first `.` is the answer. The required leading `--milestone <path>` names the milestone by its repo-relative path, exactly as the definition tool printed it, trailing slash included, e.g. `milestones/user-guide/`.
+The `<Short Title>` must match (case-insensitive, against the block's `id`) an existing `<open-question>` block. The `.` character is the separator. Everything after the first `.` is the answer. The required leading `--mission <path>` names the milestone by its repo-relative path, exactly as the definition tool printed it, trailing slash included, e.g. `milestones/user-guide/`.
 
 **Example (literal answer):**
 ```
-/answer-open-question --milestone milestones/user-guide/ Getting-started section order. Use approach B — open the "Draft the Getting Started section of the user guide" deliverable with the install-and-run walkthrough, then follow it with the conceptual overview, so a new reader reaches a working setup before the background material.
+/answer-open-question --mission milestones/user-guide/ Getting-started section order. Use approach B — open the "Draft the Getting Started section of the user guide" deliverable with the install-and-run walkthrough, then follow it with the conceptual overview, so a new reader reaches a working setup before the background material.
 ```
 
 **Example (retired sentinel — redirected, records nothing):**
 ```
-/answer-open-question --milestone milestones/user-guide/ Getting-started section order. record the recommendation
+/answer-open-question --mission milestones/user-guide/ Getting-started section order. record the recommendation
 ```
 
 ## Workflow
 
 ### 1. Parse the input
 
-First strip the leading `--milestone <path>` from the skill args by the rule in `~/.gemini/config/plugins/cairn/shared/resolve-milestone.md`, holding its value for step 3, then split the rest on the first `.` character:
+First strip the leading `--mission <path>` from the skill args by the rule in `~/.gemini/config/plugins/cairn/shared/resolve-mission.md`, holding its value for step 3, then split the rest on the first `.` character:
 - Before: the question **Short Title** (trim whitespace)
 - After: the **answer text** (trim whitespace)
 
@@ -44,19 +44,19 @@ Compare the parsed answer text — **trimmed and lowercased** — against the re
 
 ### 3. Find the milestone
 
-Follow `~/.gemini/config/plugins/cairn/shared/resolve-milestone.md` to resolve `<MILESTONE_DIR>`. Never use a hardcoded path. Hold `<MILESTONE_DIR>` — you need it for the delegated recording and the commit.
+Follow `~/.gemini/config/plugins/cairn/shared/resolve-mission.md` to resolve `<MISSION_DIR>`. Never use a hardcoded path. Hold `<MISSION_DIR>` — you need it for the delegated recording and the commit.
 
 ### 4. Record the answer
 
-Read and follow the shared hand-answer procedure at `~/.gemini/config/plugins/cairn/shared/hand-answer-procedure.md`, carrying out every step **yourself, in this conversation**. Pass it the `<MILESTONE_DIR>` resolved in step 3, the **Short Title** parsed in step 1, and the **answer text** resolved in step 2 as its `MILESTONE_DIR`, `SHORT TITLE`, and `ANSWER` inputs, and pass **no `RECORDED OPTION`** — a literal answer lifts no option id, so the recording core forms its one judgment itself: whether the answer plainly settles on one of the answered block's own alternatives.
+Read and follow the shared hand-answer procedure at `~/.gemini/config/plugins/cairn/shared/hand-answer-procedure.md`, carrying out every step **yourself, in this conversation**. Pass it the `<MISSION_DIR>` resolved in step 3, the **Short Title** parsed in step 1, and the **answer text** resolved in step 2 as its `MISSION_DIR`, `SHORT TITLE`, and `ANSWER` inputs, and pass **no `RECORDED OPTION`** — a literal answer lifts no option id, so the recording core forms its one judgment itself: whether the answer plainly settles on one of the answered block's own alternatives.
 
-That procedure names the standing picks on the other open questions that the answer undermines, then delegates the locate / analyse / fold / remove / cascade recording to the shared recording core, handing it those names. Its whole read of `<MILESTONE_DIR>/open_questions.xml` with the file-reading tool is for reasoning only, and every locate, list, lift, and write of that file is a call to the plugin's open-question tool. If the Short Title matches no block, the core's `locate` call fails and it stops without changes — print the fixed line `Answer not recorded — no open question matches the title.` first, then below it relay the tool's `Error:` line, which lists the ids the document holds, so the user can retry.
+That procedure names the standing picks on the other open questions that the answer undermines, then delegates the locate / analyse / fold / remove / cascade recording to the shared recording core, handing it those names. Its whole read of `<MISSION_DIR>/open_questions.xml` with the file-reading tool is for reasoning only, and every locate, list, lift, and write of that file is a call to the plugin's open-question tool. If the Short Title matches no block, the core's `locate` call fails and it stops without changes — print the fixed line `Answer not recorded — no open question matches the title.` first, then below it relay the tool's `Error:` line, which lists the ids the document holds, so the user can retry.
 
 ### 5. Commit the manual answer
 
-Read and follow the shared commit procedure at `~/.gemini/config/plugins/cairn/shared/commit-procedure.md`, running its one commit-tool command yourself as this step's one git tool call. Supply it these three inputs, using the `<MILESTONE_DIR>` resolved in step 3:
+Read and follow the shared commit procedure at `~/.gemini/config/plugins/cairn/shared/commit-procedure.md`, running its one commit-tool command yourself as this step's one git tool call. Supply it these three inputs, using the `<MISSION_DIR>` resolved in step 3:
 
-- **PATHS** — this skill's own edits: `<MILESTONE_DIR>/open_questions.xml` and `<MILESTONE_DIR>/requirements.md`.
+- **PATHS** — this skill's own edits: `<MISSION_DIR>/open_questions.xml` and `<MISSION_DIR>/requirements.md`.
 - **SUBJECT** — exactly `Manual-answer: <Short Title>` (the answered question's handle). The marker is the provenance `/capture-milestone-principle-updates` reads when it walks a milestone's answer commits across all three subjects: `Manual-answer:` and `Alternative-answer:` mark override signals it distills new principles from, while `Recommendation-answer:` marks evidence about existing principles only.
 - **BODY** — the decision's rationale — but record only rationale that genuinely exists in this conversation. Never prompt the user for a rationale and never fabricate one. When `/discuss-open-question` deliberation is in context, the body captures that reasoning. On a cold answer (no deliberation), the body is the literal answer text — recorded verbatim, including any inline "because" clause the user typed; when the answer states no reasoning, the body holds the bare decision. The answer string is itself the cold path's rationale affordance — add no separate rationale prompt.
 

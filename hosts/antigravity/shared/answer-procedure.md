@@ -1,8 +1,8 @@
 # Answer-recording procedure (shared core)
 
 This is the single source of truth for recording an answer to one open question of a
-milestone: the decision lands under `## Decisions` of `<MILESTONE_DIR>/requirements.md` and
-the answered block leaves `<MILESTONE_DIR>/open_questions.xml`. It is followed inline by the
+milestone: the decision lands under `## Decisions` of `<MISSION_DIR>/requirements.md` and
+the answered block leaves `<MISSION_DIR>/open_questions.xml`. It is followed inline by the
 single-question answer skills. The inline answer sweep draws only on its analyse step's
 first two questions and its fold step's rules for what a decision says and the shape it
 takes — never on the rewrites and notes that answer the analyse step's fourth question, nor
@@ -11,7 +11,7 @@ inputs below and wraps the result; this file describes only the recording work i
 locate, analyse, fold, note, remove, cascade.
 
 Every read and write of `open_questions.xml` here is a call to the plugin's open-question
-tool, `python3 ~/.gemini/config/plugins/cairn/tools/open_questions.py <subcommand> <MILESTONE_DIR> …`,
+tool, `python3 ~/.gemini/config/plugins/cairn/tools/open_questions.py <subcommand> <MISSION_DIR> …`,
 written out in full on every call, never through a variable, alias, or function of your own
 defined to stand for the command or any part of it; the tool is that file's sole writer: a
 read prints the bare value asked for, a write prints nothing on
@@ -23,8 +23,8 @@ document left byte-for-byte unchanged. Never edit `open_questions.xml` yourself.
 This procedure records one decision given five inputs the caller supplies, the last two
 optional:
 
-- **MILESTONE_DIR** — the already-resolved directory of the milestone the question belongs
-  to, the `<MILESTONE_DIR>` every path and tool call below uses. The caller resolves it; this
+- **MISSION_DIR** — the already-resolved directory of the milestone the question belongs
+  to, the `<MISSION_DIR>` every path and tool call below uses. The caller resolves it; this
   procedure never looks the milestone up.
 - **SHORT TITLE** — the resolved handle of an existing `<open-question>` block to answer
   (its `id`, compared case-insensitively). The caller has already obtained it; locating the
@@ -50,7 +50,7 @@ optional:
 Run
 
 ```
-python3 ~/.gemini/config/plugins/cairn/tools/open_questions.py locate <MILESTONE_DIR> "<SHORT TITLE>"
+python3 ~/.gemini/config/plugins/cairn/tools/open_questions.py locate <MISSION_DIR> "<SHORT TITLE>"
 ```
 
 On success it prints the matched block verbatim — its `<question>` and, when the recommend
@@ -87,7 +87,7 @@ rather than guessing — never add a brand-new question block to the document.
 
 ### 3. Fold the decision into `## Decisions`
 
-Add a concise statement under `## Decisions` of `<MILESTONE_DIR>/requirements.md` — in the
+Add a concise statement under `## Decisions` of `<MISSION_DIR>/requirements.md` — in the
 relevant existing subsection, or a new subsection if none fits — capturing what was decided
 and any constraint it imposes. Write it as **clean prose with no citation marker**: the
 document records the decision itself, not where it came from. Match the live document's
@@ -113,7 +113,7 @@ always lands first.
 ### 4. Note the contradictions left standing
 
 For each pair step 2 judged not plainly settled, write one note under
-`## Noted contradictions` of `<MILESTONE_DIR>/requirements.md`, the section standing
+`## Noted contradictions` of `<MISSION_DIR>/requirements.md`, the section standing
 directly after `## Decisions` and before `## Out of Scope`. When the file holds no such
 section, insert its heading together with the first note, after the last line of
 `## Decisions` and before the `## Out of Scope` heading; otherwise add the note at the end of
@@ -133,7 +133,7 @@ Write the notes, like the fold, **before** removing the answered block in step 5
 Run
 
 ```
-python3 ~/.gemini/config/plugins/cairn/tools/open_questions.py remove <MILESTONE_DIR> "<SHORT TITLE>" [--option "<OPTION>"] [--undermined "<UNDERMINED SHORT TITLE>" …]
+python3 ~/.gemini/config/plugins/cairn/tools/open_questions.py remove <MISSION_DIR> "<SHORT TITLE>" [--option "<OPTION>"] [--undermined "<UNDERMINED SHORT TITLE>" …]
 ```
 
 whether or not the block carries embedded children, with `--undermined` followed by every
@@ -171,7 +171,7 @@ If the decision moots another entry or forces its answer, fold any implied const
 since nothing was recorded for it:
 
 ```
-python3 ~/.gemini/config/plugins/cairn/tools/open_questions.py remove <MILESTONE_DIR> "<MOOTED SHORT TITLE>"
+python3 ~/.gemini/config/plugins/cairn/tools/open_questions.py remove <MISSION_DIR> "<MOOTED SHORT TITLE>"
 ```
 
 one call per mooted entry. Each call reconciles that entry's dependents itself, so nothing

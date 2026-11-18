@@ -12,10 +12,10 @@ Your job here is **decomposition and coverage**. You split the milestone into hi
 ## Usage
 
 ```
-/derive-tasks --milestone <path>
+/derive-tasks --mission <path>
 ```
 
-The skill reads from and writes to the milestone directory the flag names. The required leading `--milestone <path>` names the milestone by its repo-relative path, exactly as the definition tool printed it, trailing slash included, e.g. `milestones/user-guide/`.
+The skill reads from and writes to the milestone directory the flag names. The required leading `--mission <path>` names the milestone by its repo-relative path, exactly as the definition tool printed it, trailing slash included, e.g. `milestones/user-guide/`.
 
 ## Preconditions
 
@@ -27,18 +27,18 @@ The skill reads from and writes to the milestone directory the flag names. The r
 
 ### 0. Find the milestone
 
-Follow `~/.gemini/config/plugins/cairn/shared/resolve-milestone.md` to resolve `<MILESTONE_DIR>`. Never use a hardcoded task-list path.
+Follow `~/.gemini/config/plugins/cairn/shared/resolve-mission.md` to resolve `<MISSION_DIR>`. Never use a hardcoded task-list path.
 
 ### 1. Check the scope gate
 
-Directly after resolving the milestone, and before anything else, follow `~/.gemini/config/plugins/cairn/shared/check-scope-gate.md` for `<MILESTONE_DIR>`. When the gate is closed, its report is the whole output: read, refresh, write, and commit nothing, and print no line of step 11.
+Directly after resolving the milestone, and before anything else, follow `~/.gemini/config/plugins/cairn/shared/check-scope-gate.md` for `<MISSION_DIR>`. When the gate is closed, its report is the whole output: read, refresh, write, and commit nothing, and print no line of step 11.
 
 ### 2. Refresh a stale starting state
 
 Before reading the documents you decompose, check whether other milestones' work has landed in the scope since this milestone's starting state was recorded. Run, from the workspace root, the plugin's missions tool:
 
 ```
-python3 ~/.gemini/config/plugins/cairn/tools/missions.py since <MILESTONE_DIR> --missions
+python3 ~/.gemini/config/plugins/cairn/tools/missions.py since <MISSION_DIR> --missions
 ```
 
 Its first line, when it prints one, is the anchor, the commit that last recorded this milestone's starting state; every line beneath it is another milestone's task or finish commit that landed in the scope after it. Read its print as exactly one of three outcomes:
@@ -47,7 +47,7 @@ Its first line, when it prints one, is the anchor, the commit that last recorded
 - **Anything beyond the anchor** — the ground moved under the section: refresh it before deriving anything, as below.
 - **The call failed** — any non-zero exit, whatever its `Error:` line says: stop the whole run, reading, writing, and committing nothing. Report the starting-state procedure's fixed line `Starting state stopped — a milestones-tool read failed.` first, then below it the call's `Error:` line from stderr, verbatim, and print no line of step 11.
 
-To refresh, read and follow the shared starting-state procedure at `~/.gemini/config/plugins/cairn/shared/starting-state-procedure.md` in place, with `<MILESTONE_DIR>` as its input. It ends in exactly one of three ways:
+To refresh, read and follow the shared starting-state procedure at `~/.gemini/config/plugins/cairn/shared/starting-state-procedure.md` in place, with `<MISSION_DIR>` as its input. It ends in exactly one of three ways:
 
 - **The anchor alone** — its step 1 found the ground unmoved, so it explored, edited, and cleared nothing. Make no commit and go on to step 3.
 - **A stop** — it stopped on one of its two fixed lines, `Starting state stopped — a milestones-tool read failed.` or `Starting state stopped — clearing the undermined picks failed.`, with the detail the procedure gives beneath it. That report, as the procedure states it, is this run's whole output: write no task list, commit nothing, and print no line of step 11.
@@ -55,8 +55,8 @@ To refresh, read and follow the shared starting-state procedure at `~/.gemini/co
 
 Commit the handed-back change as a commit of its own, before any read of step 3, by reading and following the shared commit procedure at `~/.gemini/config/plugins/cairn/shared/commit-procedure.md`, running its one commit-tool command yourself as one git tool call, with these two inputs:
 
-- **PATHS** — `<MILESTONE_DIR>/requirements.md`, and `<MILESTONE_DIR>/open_questions.xml` beside it only when the procedure's step 6 cleared a pick, so a refresh and the picks it cleared are one commit.
-- **SUBJECT** — `Starting-state: <MILESTONE_DIR>`, the milestone path exactly as resolved, trailing slash included.
+- **PATHS** — `<MISSION_DIR>/requirements.md`, and `<MISSION_DIR>/open_questions.xml` beside it only when the procedure's step 6 cleared a pick, so a refresh and the picks it cleared are one commit.
+- **SUBJECT** — `Starting-state: <MISSION_DIR>`, the milestone path exactly as resolved, trailing slash included.
 
 The refresh commit prints no line of its own in this run's report: whether it landed (the commit tool printed nothing) or found nothing to commit (it printed `Nothing committed — none of the paths changed.`, the exploration having left the section as it stood), go on to step 3. If the commit tool prints an `Error:` line instead, stop the whole run, writing and committing nothing further: report the fixed line `Cannot derive tasks: the starting-state refresh could not be committed.` first, then the `Error:` line quoted verbatim below it, and print no line of step 11.
 
@@ -64,7 +64,7 @@ The refresh commit prints no line of its own in this run's report: whether it la
 
 Read `AGENTS.md` at the workspace root for the project's domain context, working conventions, available tools, and how work is verified as done. If it lacks that context, suggest the user run `/init` first, then proceed.
 
-Read `<MILESTONE_DIR>/requirements.md` in full, plus any files referenced in its **Relevant starting state** section, so you understand the exact starting point.
+Read `<MISSION_DIR>/requirements.md` in full, plus any files referenced in its **Relevant starting state** section, so you understand the exact starting point.
 
 Read the shared task format at `~/.gemini/config/plugins/cairn/shared/task-format.md`. That file owns the shape of every task section you write in step 10 — its template and authoring guidelines.
 
@@ -73,10 +73,10 @@ Read the shared task format at `~/.gemini/config/plugins/cairn/shared/task-forma
 Run
 
 ```
-python3 ~/.gemini/config/plugins/cairn/tools/open_questions.py list <MILESTONE_DIR>
+python3 ~/.gemini/config/plugins/cairn/tools/open_questions.py list <MISSION_DIR>
 ```
 
-It prints the Short Title of every `<open-question>` block still in `<MILESTONE_DIR>/open_questions.xml`, one per line. If it prints nothing, the precondition holds — proceed. If it prints anything, stop immediately and output, with the printed lines as the bullets verbatim:
+It prints the Short Title of every `<open-question>` block still in `<MISSION_DIR>/open_questions.xml`, one per line. If it prints nothing, the precondition holds — proceed. If it prints anything, stop immediately and output, with the printed lines as the bullets verbatim:
 
 ```
 Cannot derive tasks: the following open questions must be resolved first:
@@ -98,14 +98,14 @@ Apply these rules:
 - **One area per brief** — group by the natural boundary or area of the work, as defined by the project's organization in `AGENTS.md`. Do not mix distinct areas unless they are inseparable.
 - **No "nice to have" briefs** — only what the spec states. Do not pad the task list.
 
-**Conflicting decisions.** Where two `## Decisions` entries cannot both hold as written, the later-recorded entry governs the brief; an entry that only refines, narrows, or extends another is no conflict. Take every pair listed under `## Noted contradictions`, when that section stands, as conflicting as noted, without re-judging it, and resolve any other pair you find conflicting yourself, here or while building step 6's matrix, the same way. To tell which entry is later, find the commit that added each entry's lines by `git blame` or a pickaxe search (`git log -S`), path-scoped to `<MILESTONE_DIR>/requirements.md`: the entry from the newer commit is the later-recorded one (where an entry's lines came from more than one commit, the newest dates it). Never order a pair by its position in the file, and never take the order from the note. Flag nothing for either kind of pair, neither in step 8's plan nor in step 11's report: the brief simply follows the later entry. A noted contradiction never blocks the run, since step 4's `list` call stays the whole precondition on the requirements.
+**Conflicting decisions.** Where two `## Decisions` entries cannot both hold as written, the later-recorded entry governs the brief; an entry that only refines, narrows, or extends another is no conflict. Take every pair listed under `## Noted contradictions`, when that section stands, as conflicting as noted, without re-judging it, and resolve any other pair you find conflicting yourself, here or while building step 6's matrix, the same way. To tell which entry is later, find the commit that added each entry's lines by `git blame` or a pickaxe search (`git log -S`), path-scoped to `<MISSION_DIR>/requirements.md`: the entry from the newer commit is the later-recorded one (where an entry's lines came from more than one commit, the newest dates it). Never order a pair by its position in the file, and never take the order from the note. Flag nothing for either kind of pair, neither in step 8's plan nor in step 11's report: the brief simply follows the later entry. A noted contradiction never blocks the run, since step 4's `list` call stays the whole precondition on the requirements.
 
 ### 6. Prove coverage (requirement → task matrix)
 
 First run the plugin's missions tool, for the work already recorded as completed in this milestone:
 
 ```
-python3 ~/.gemini/config/plugins/cairn/tools/missions.py tasks <MILESTONE_DIR> --with-body
+python3 ~/.gemini/config/plugins/cairn/tools/missions.py tasks <MISSION_DIR> --with-body
 ```
 
 It prints, newest first, one tab-separated line per task completed in the milestone (the commit's abbreviated hash, its date, the milestone directory, and the task title), with the task's verified bar indented beneath it, and prints nothing when no task has been completed, which is no failure. If the call fails, stop and report it, writing and committing nothing: the fixed line `Cannot derive tasks: the completed-task read failed.` first, then its one `Error: <reason>` line from stderr verbatim below it, and print no line of step 11.
@@ -137,16 +137,16 @@ If the run derived no brief at all — every requirement is already satisfied �
 
 ### 9. Check the scope gate again
 
-Directly ahead of the write, follow `~/.gemini/config/plugins/cairn/shared/check-scope-gate.md` for `<MILESTONE_DIR>` a second time, since another milestone may have started in the scope while this run read and decomposed. When the gate is closed, its report is the whole output: write and commit no task list, and print no line of step 11. A refresh commit step 2 already landed stays committed. The write call in step 10 checks no gate of its own.
+Directly ahead of the write, follow `~/.gemini/config/plugins/cairn/shared/check-scope-gate.md` for `<MISSION_DIR>` a second time, since another milestone may have started in the scope while this run read and decomposed. When the gate is closed, its report is the whole output: write and commit no task list, and print no line of step 11. A refresh commit step 2 already landed stays committed. The write call in step 10 checks no gate of its own.
 
 ### 10. Write and commit the task list in one shell call
 
 Write every brief as one task section, using the template and the authoring guidelines from `~/.gemini/config/plugins/cairn/shared/task-format.md` exactly: its `##` title heading, its description, and its trailing `---`. The brief you decomposed in step 5 *is* the task body; writing it down is a transcription into that format, not a second authoring pass that adds detail.
 
-Then run this one fixed shell call, written out in full exactly as shown, with only `<MILESTONE_DIR>` (in the subject too, the milestone path exactly as resolved, trailing slash included) and the sections replaced — every brief's section in the heredoc, **in dependency order**, so the finished file reads top-to-bottom in that order:
+Then run this one fixed shell call, written out in full exactly as shown, with only `<MISSION_DIR>` (in the subject too, the milestone path exactly as resolved, trailing slash included) and the sections replaced — every brief's section in the heredoc, **in dependency order**, so the finished file reads top-to-bottom in that order:
 
 ```
-python3 ~/.gemini/config/plugins/cairn/tools/task_list.py initialize <MILESTONE_DIR> <<'EOF' &&
+python3 ~/.gemini/config/plugins/cairn/tools/task_list.py initialize <MISSION_DIR> <<'EOF' &&
 ## <Task Title 1>
 
 <1–3 sentence description>
@@ -159,13 +159,13 @@ python3 ~/.gemini/config/plugins/cairn/tools/task_list.py initialize <MILESTONE_
 
 ---
 EOF
-out="$(python3 ~/.gemini/config/plugins/cairn/tools/commit.py --subject "Task-derivation: <MILESTONE_DIR>" -- <MILESTONE_DIR>/TASKS_TODO.md)" &&
+out="$(python3 ~/.gemini/config/plugins/cairn/tools/commit.py --subject "Task-derivation: <MISSION_DIR>" -- <MISSION_DIR>/TASKS_TODO.md)" &&
 if [ -z "$out" ]; then
   echo 'derivation commit landed'
 fi
 ```
 
-The task-list tool replaces `<MILESTONE_DIR>/TASKS_TODO.md` with its heading followed by the whole list in the order given, or, refusing anything in it, prints one `Error:` line and leaves the file byte-for-byte unchanged. After the `&&` the call runs the one command of the shared commit procedure at `~/.gemini/config/plugins/cairn/shared/commit-procedure.md`, the plugin's commit tool, with `Task-derivation: <MILESTONE_DIR>` as its subject, no body, and this skill's own change set, `<MILESTONE_DIR>/TASKS_TODO.md`, as its one path, written out on the command line and never held in a shell variable. The tool runs the dirty-own-path guard over the file, stages exactly it, and commits it with it as the commit's pathspec, so nothing else the index holds — a change another run has staged included — rides in the derivation's commit, and it repeats a git write another process's lock refused before giving up. Its stdout is captured in `out`: empty when the commit landed, its fixed no-op line when the file did not change, so `derivation commit landed` is printed only when `out` is empty and a no-op commits and prints nothing. `out` is one quoted value set and used within this one call, never a tool command or a path list. Never write the briefs into the file any other way, one at a time or by editing it.
+The task-list tool replaces `<MISSION_DIR>/TASKS_TODO.md` with its heading followed by the whole list in the order given, or, refusing anything in it, prints one `Error:` line and leaves the file byte-for-byte unchanged. After the `&&` the call runs the one command of the shared commit procedure at `~/.gemini/config/plugins/cairn/shared/commit-procedure.md`, the plugin's commit tool, with `Task-derivation: <MISSION_DIR>` as its subject, no body, and this skill's own change set, `<MISSION_DIR>/TASKS_TODO.md`, as its one path, written out on the command line and never held in a shell variable. The tool runs the dirty-own-path guard over the file, stages exactly it, and commits it with it as the commit's pathspec, so nothing else the index holds — a change another run has staged included — rides in the derivation's commit, and it repeats a git write another process's lock refused before giving up. Its stdout is captured in `out`: empty when the commit landed, its fixed no-op line when the file did not change, so `derivation commit landed` is printed only when `out` is empty and a no-op commits and prints nothing. `out` is one quoted value set and used within this one call, never a tool command or a path list. Never write the briefs into the file any other way, one at a time or by editing it.
 
 What the call prints is the whole outcome: `derivation commit landed` when the commit landed; nothing when the commit tool found the file unchanged (the list matched what it already held); otherwise one `Error:` line — the task-list tool's, with `TASKS_TODO.md` unchanged and nothing committed, or, once the list has been written, the commit tool's, naming the git command that failed and carrying git's own message, with nothing committed.
 
@@ -173,7 +173,7 @@ On the task-list tool's `Error:` line — two briefs whose titles fold to the sa
 
 ### 11. Verify coverage and report
 
-Re-read the finished `<MILESTONE_DIR>/TASKS_TODO.md` and confirm every brief from the matrix produced a task section.
+Re-read the finished `<MISSION_DIR>/TASKS_TODO.md` and confirm every brief from the matrix produced a task section.
 
 On the success path — the call printed `derivation commit landed` — print exactly one fixed terse status line for the whole run — `Tasks derived.` — with no list of the ordered task titles and no next-step pointer. **Alongside** that terse line, keep the one git-absent advisory this step owns: explicitly flag any requirement you could not trace to a task (flag as a gap — never silently omit).
 

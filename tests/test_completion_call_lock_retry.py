@@ -42,7 +42,7 @@ EMPTY_BAR_TEST = [
 ]
 ACCEPTANCE_BAR_EMPTY = "acceptance bar empty\n"
 
-# <MILESTONE_DIR> as the runner fills it: the --milestone path, its trailing slash included.
+# <MISSION_DIR> as the runner fills it: the --mission path, its trailing slash included.
 MILESTONE = "milestones/milestone_03_lock-retry-fixture/"
 TODO = MILESTONE + "TASKS_TODO.md"
 
@@ -118,7 +118,7 @@ def completion_call(bar=BAR):
     assert call.count(PATHS_PLACEHOLDER) == 1
     call = (
         call.replace(PATHS_PLACEHOLDER, f"{EDITED} {CREATED}")
-        .replace("<MILESTONE_DIR>", MILESTONE)
+        .replace("<MISSION_DIR>", MILESTONE)
         .replace("<Task Title>", TASK_TITLE)
     )
     assert not re.search(r"<[A-Za-z][^<>\n]*>", call), "a placeholder is left unfilled"
@@ -205,12 +205,12 @@ def test_the_call_captures_and_tests_the_bar_then_chains_the_removal_with_the_co
     assert eof == 1 + sum(line.startswith(BAR_PLACEHOLDER) for line in lines)
     assert lines[eof + 1 : eof + 1 + len(EMPTY_BAR_TEST)] == EMPTY_BAR_TEST
     remove_line = lines[eof + 1 + len(EMPTY_BAR_TEST)]
-    assert remove_line == 'python3 ${CLAUDE_PLUGIN_ROOT}/tools/task_list.py remove <MILESTONE_DIR> "<Task Title>" &&'
+    assert remove_line == 'python3 ${CLAUDE_PLUGIN_ROOT}/tools/task_list.py remove <MISSION_DIR> "<Task Title>" &&'
     commit_line = lines[eof + 2 + len(EMPTY_BAR_TEST)]
     assert COMMIT_COMMAND in commit_line
     assert commit_line == (
         'out="$(python3 ${CLAUDE_PLUGIN_ROOT}/tools/commit.py --subject "Task-completion: <Task Title>" --body "$bar" -- '
-        f'{PATHS_PLACEHOLDER} <MILESTONE_DIR>/TASKS_TODO.md)" &&'
+        f'{PATHS_PLACEHOLDER} <MISSION_DIR>/TASKS_TODO.md)" &&'
     )
     assert "<<'EOF'" not in remove_line, "the removal reads a heredoc"
     assert text.count("<<'EOF'") == 1

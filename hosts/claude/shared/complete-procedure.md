@@ -40,12 +40,12 @@ kind of work.
 ### 1. Find and read the task
 
 When your runner supplies an already-resolved milestone directory, take it as given as
-`<MILESTONE_DIR>`, with no resolution of your own. Only when none is supplied, the inline
-`complete-task` skill's case, follow `${CLAUDE_PLUGIN_ROOT}/shared/resolve-milestone.md` to
-resolve `<MILESTONE_DIR>`, with the `--milestone <path>` value the runner holds as that
+`<MISSION_DIR>`, with no resolution of your own. Only when none is supplied, the inline
+`complete-task` skill's case, follow `${CLAUDE_PLUGIN_ROOT}/shared/resolve-mission.md` to
+resolve `<MISSION_DIR>`, with the `--mission <path>` value the runner holds as that
 procedure's input.
 
-Read `<MILESTONE_DIR>/TASKS_TODO.md`. Locate the `##` section whose heading matches the
+Read `<MISSION_DIR>/TASKS_TODO.md`. Locate the `##` section whose heading matches the
 given task name (case-insensitive, partial match is fine). If no section matches, **stop
 without changing anything** and report it with the fixed line `No task matches the given name.`
 first, then the available `##` headings below it, one per line, so the caller can retry. Do
@@ -65,7 +65,7 @@ Read the workspace root `CLAUDE.md` and hold in context:
 - Available tools — what tools exist and what they are for.
 - How work is verified as done — the checks that confirm a deliverable meets its bar.
 
-Read `<MILESTONE_DIR>/requirements.md` and hold in context the milestone's goal, its
+Read `<MISSION_DIR>/requirements.md` and hold in context the milestone's goal, its
 relevant starting state, and its recorded decisions. This is what tells you what "done"
 means for this task beyond the brief's own sentences — a decision recorded there is binding
 on the work, and any value, name, or threshold it fixes is authoritative.
@@ -197,7 +197,7 @@ tool, the sole writer of that file, which removes the located section — its he
 and `---` — and nothing else:
 
 ```
-python3 ${CLAUDE_PLUGIN_ROOT}/tools/task_list.py remove <MILESTONE_DIR> "<Task Title>"
+python3 ${CLAUDE_PLUGIN_ROOT}/tools/task_list.py remove <MISSION_DIR> "<Task Title>"
 ```
 
 `<Task Title>` is the full heading step 1 located. The tool reads no bar, prints nothing on

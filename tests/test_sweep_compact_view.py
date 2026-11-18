@@ -1,6 +1,6 @@
 """The answer sweep's compact view call, as the committed Claude Code tree renders it: the one
 fenced block of the sweep file holding `list` with its `--with-question` flag, with
-<MILESTONE_DIR> replaced by the path of a copy of the golden compact-view fixture milestone and
+<MISSION_DIR> replaced by the path of a copy of the golden compact-view fixture milestone and
 the call run under bash with the tree's plugin-root variable exported to the tree root. The
 call writes nothing, so no git repository is needed. Its print is asserted exactly: every
 block's id, a tab, and its question text in document order, recommendation-less blocks
@@ -27,7 +27,7 @@ FIXTURE = Path(__file__).resolve().parent / "fixtures" / "compact_view"
 LIST_COMMAND = "/tools/open_questions.py list --with-question "
 FOLD_COMMAND = "/tools/requirements.py fold "
 
-# <MILESTONE_DIR> as the runner fills it: the --milestone path, its trailing slash included.
+# <MISSION_DIR> as the runner fills it: the --mission path, its trailing slash included.
 MILESTONE = "milestones/milestone_09_golden-compact-view/"
 
 # The fixture holds three recommendation-bearing blocks (one a dependent of another, one
@@ -82,8 +82,8 @@ def compact_view_call():
 
 
 def filled(lines, milestone):
-    """The call written out with only <MILESTONE_DIR> replaced."""
-    return "\n".join(lines).replace("<MILESTONE_DIR>", milestone) + "\n"
+    """The call written out with only <MISSION_DIR> replaced."""
+    return "\n".join(lines).replace("<MISSION_DIR>", milestone) + "\n"
 
 
 # --- the environment and the run --------------------------------------------------------------
@@ -136,7 +136,7 @@ def test_the_call_is_the_one_fence_holding_list_with_its_question_flag_and_names
     call = "\n".join(lines)
     assert FOLD_COMMAND not in call
     assert f"${{{PLUGIN_ROOT_VARIABLE}}}/tools/open_questions.py " in call
-    assert "<MILESTONE_DIR>" in call
+    assert "<MISSION_DIR>" in call
     assert not re.search(r"<[A-Za-z][A-Za-z_ ]*>", filled(lines, MILESTONE)), "a placeholder is left unfilled"
 
 

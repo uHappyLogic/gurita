@@ -13,11 +13,11 @@ For completing the whole task list unattended, use `/complete-all-tasks` instead
 ## Invocation
 
 ```
-/complete-task --milestone <path> <task name>
+/complete-task --mission <path> <task name>
 ```
 
 `<task name>` is the full or partial text of a `##` heading in the named milestone's
-`TASKS_TODO.md`. The required leading `--milestone <path>` names the milestone by its
+`TASKS_TODO.md`. The required leading `--mission <path>` names the milestone by its
 repo-relative path, exactly as the definition tool printed it, trailing slash included, e.g.
 `milestones/user-guide/`.
 
@@ -25,8 +25,8 @@ repo-relative path, exactly as the definition tool printed it, trailing slash in
 
 ### 1. Run the shared procedure inline
 
-First strip the leading `--milestone <path>` from the invocation text by the rule in
-`~/.gemini/config/plugins/cairn/shared/resolve-milestone.md`, holding its value as the input of the
+First strip the leading `--mission <path>` from the invocation text by the rule in
+`~/.gemini/config/plugins/cairn/shared/resolve-mission.md`, holding its value as the input of the
 procedure's milestone resolution and reading only the rest as the task name. Read and follow
 the shared procedure at
 `~/.gemini/config/plugins/cairn/shared/complete-procedure.md`, carrying out every step **yourself, in this conversation**,
@@ -35,16 +35,16 @@ shell call step 3 shows. Never spawn the `complete-task` agent.
 
 ### 2. Check the scope gate
 
-Once the procedure's step 1 has resolved `<MILESTONE_DIR>` and located the task, and before its
+Once the procedure's step 1 has resolved `<MISSION_DIR>` and located the task, and before its
 step 2 loads anything or its step 3 changes anything, follow
-`~/.gemini/config/plugins/cairn/shared/check-scope-gate.md` for `<MILESTONE_DIR>`. When the gate is closed,
+`~/.gemini/config/plugins/cairn/shared/check-scope-gate.md` for `<MISSION_DIR>`. When the gate is closed,
 its report is the whole output: carry out nothing of the task, remove and commit nothing, and
 print no line of step 4.
 
 ### 3. Remove and commit the completion in one shell call
 
 Run the procedure's step 5 removal as this one fixed shell call, written out in full exactly
-as shown, with only `<MILESTONE_DIR>`, `<Task Title>`, the bar's bullets, and the paths
+as shown, with only `<MISSION_DIR>`, `<Task Title>`, the bar's bullets, and the paths
 replaced:
 
 ```
@@ -56,8 +56,8 @@ if ! printf '%s\n' "$bar" | grep -q '[^[:space:]]'; then
   echo 'acceptance bar empty'
   false
 fi &&
-python3 ~/.gemini/config/plugins/cairn/tools/task_list.py remove <MILESTONE_DIR> "<Task Title>" &&
-out="$(python3 ~/.gemini/config/plugins/cairn/tools/commit.py --subject "Task-completion: <Task Title>" --body "$bar" -- <recorded path 1> <recorded path 2> <MILESTONE_DIR>/TASKS_TODO.md)" &&
+python3 ~/.gemini/config/plugins/cairn/tools/task_list.py remove <MISSION_DIR> "<Task Title>" &&
+out="$(python3 ~/.gemini/config/plugins/cairn/tools/commit.py --subject "Task-completion: <Task Title>" --body "$bar" -- <recorded path 1> <recorded path 2> <MISSION_DIR>/TASKS_TODO.md)" &&
 if [ -z "$out" ]; then
   echo 'completion commit landed'
 fi
@@ -74,7 +74,7 @@ the one command of the shared commit procedure at `~/.gemini/config/plugins/cair
 the plugin's commit tool, with `Task-completion: <Task Title>`, the full `##` heading the
 procedure located, as its subject, the bar as its body, and this skill's own change set as
 its paths: the exact paths the completion procedure recorded as it created or edited files
-while carrying out the task, plus the milestone's task list `<MILESTONE_DIR>/TASKS_TODO.md`
+while carrying out the task, plus the milestone's task list `<MISSION_DIR>/TASKS_TODO.md`
 (the task left it), every path written out on the command line after `--` as its own argument
 and none held in a shell variable. The tool runs the dirty-own-path guard over those paths,
 stages exactly them (never `git add -A`), and commits them with them as the commit's

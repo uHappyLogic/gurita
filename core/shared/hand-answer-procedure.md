@@ -18,10 +18,10 @@ hand, and cleared in the same write that removes the answered block.
 This procedure records one hand answer given four inputs the caller supplies, the last
 optional:
 
-- **MILESTONE_DIR** — the already-resolved directory of the milestone the question belongs
-  to, the `<MILESTONE_DIR>` every path below uses. The caller resolves it; this procedure
+- **MISSION_DIR** — the already-resolved directory of the milestone the question belongs
+  to, the `<MISSION_DIR>` every path below uses. The caller resolves it; this procedure
   never looks the milestone up, and hands it on to the recording core as that core's own
-  `MILESTONE_DIR` input.
+  `MISSION_DIR` input.
 - **SHORT TITLE** — the resolved handle of an existing `<open-question>` block to answer
   (its `id`, compared case-insensitively). The caller has already obtained it.
 - **ANSWER** — the answer text for that question, as the caller will have it recorded.
@@ -36,7 +36,7 @@ The UNDERMINED PICKS input of the recording core is **not** an input here — th
 
 ### 1. Read the standing picks
 
-Read `<MILESTONE_DIR>/open_questions.xml` whole with the file-reading tool. The read shows
+Read `<MISSION_DIR>/open_questions.xml` whole with the file-reading tool. The read shows
 every block with its `<alternative>`, `<applied-principle>`, `<depends-on>`, and
 `<recommendation>` children. That whole read is for reasoning only: every locate, list,
 lift, and write is a call to the plugin's open-question tool, and the recording core makes
@@ -85,7 +85,7 @@ are **UNDERMINED PICKS**. When no pick is undermined there is none to pass.
 
 ### 3. Delegate to the recording core
 
-Hand the given **MILESTONE_DIR**, **SHORT TITLE**, and **ANSWER**, the **RECORDED OPTION**
+Hand the given **MISSION_DIR**, **SHORT TITLE**, and **ANSWER**, the **RECORDED OPTION**
 when the caller supplied one, and the **UNDERMINED PICKS** named in step 2 (nothing for that
 input when step 2 named none) to `{{PLUGIN_ROOT}}/shared/answer-procedure.md` and follow it
 unchanged. That procedure owns the recording work (locate, analyse, fold, remove, cascade)

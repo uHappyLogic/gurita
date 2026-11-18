@@ -2,7 +2,7 @@
 
 This is the single source of truth for the scope gate, the check that lets only one started
 milestone at a time take task work in a scope. Its one input is the resolved
-`<MILESTONE_DIR>`. Every runner that enters a task into a milestone's list or completes one
+`<MISSION_DIR>`. Every runner that enters a task into a milestone's list or completes one
 runs it as a step of its own, before its work, at the point its own file names. The check
 changes nothing.
 
@@ -26,7 +26,7 @@ finished.
 Run, from the workspace root, the plugin's missions tool:
 
 ```
-python3 ${PLUGIN_ROOT}/tools/missions.py gate <MILESTONE_DIR>
+python3 ${PLUGIN_ROOT}/tools/missions.py gate <MISSION_DIR>
 ```
 
 It prints the path of every milestone holding the scope, one per line, and nothing when none

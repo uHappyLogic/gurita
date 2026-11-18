@@ -43,7 +43,7 @@ Part of that grounding is the project-wide answering-principle store
 any one milestone. Read it in place and note any confirmed principle that bears on this
 question. Presence of a principle in that file means it is user-confirmed.
 
-Reading `<MILESTONE_DIR>/open_questions.xml` whole — with the file-reading tool, exactly as
+Reading `<MISSION_DIR>/open_questions.xml` whole — with the file-reading tool, exactly as
 `requirements.md` is read beside it — surfaces the sibling questions with their own
 alternative sets, and a recommendation already attached to a sibling that is itself still
 unanswered, or the one you are forming for it in the same pass, is legitimate input to this
@@ -52,7 +52,7 @@ its alternatives, disclose that dependency: name the sibling (its Short Title) a
 you assumed it will settle on, by that option's label in the sibling's own set. The caller
 decides how that disclosure is rendered. That whole read is for reasoning only: every locate,
 list, or lift of a block is a call to the plugin's open-question tool,
-`python3 ${CLAUDE_PLUGIN_ROOT}/tools/open_questions.py <subcommand> <MILESTONE_DIR> …`, never a
+`python3 ${CLAUDE_PLUGIN_ROOT}/tools/open_questions.py <subcommand> <MISSION_DIR> …`, never a
 search over the file.
 
 ### 2. Recommend one

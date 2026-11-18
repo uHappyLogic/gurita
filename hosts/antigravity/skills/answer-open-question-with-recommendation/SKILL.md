@@ -15,13 +15,13 @@ To record **every** recommendation-bearing question unattended instead, use
 ## Invocation
 
 ```
-/answer-open-question-with-recommendation --milestone <path> <Short Title>
+/answer-open-question-with-recommendation --mission <path> <Short Title>
 ```
 
 `<Short Title>` must match (case-insensitive, against the block's `id`) an existing
-`<open-question>` block in `<MILESTONE_DIR>/open_questions.xml` that the
+`<open-question>` block in `<MISSION_DIR>/open_questions.xml` that the
 `/recommend-all-open-questions` sweep has already annotated with a `<recommendation>`
-element. The required leading `--milestone <path>` names the milestone by its repo-relative
+element. The required leading `--mission <path>` names the milestone by its repo-relative
 path, exactly as the definition tool printed it, trailing slash included, e.g.
 `milestones/user-guide/`; nothing else needs to be looked up first.
 
@@ -29,18 +29,18 @@ path, exactly as the definition tool printed it, trailing slash included, e.g.
 
 ### 1. Find the milestone
 
-First strip the leading `--milestone <path>` from the invocation text by the rule in
-`~/.gemini/config/plugins/cairn/shared/resolve-milestone.md`, reading only the rest as `<Short Title>`.
-Follow `~/.gemini/config/plugins/cairn/shared/resolve-milestone.md` to resolve `<MILESTONE_DIR>`. Never
-use a hardcoded path. Hold `<MILESTONE_DIR>` — you need it for the delegated recording and
+First strip the leading `--mission <path>` from the invocation text by the rule in
+`~/.gemini/config/plugins/cairn/shared/resolve-mission.md`, reading only the rest as `<Short Title>`.
+Follow `~/.gemini/config/plugins/cairn/shared/resolve-mission.md` to resolve `<MISSION_DIR>`. Never
+use a hardcoded path. Hold `<MISSION_DIR>` — you need it for the delegated recording and
 the commit.
 
 ### 2. Run the shared lift-then-delegate procedure inline
 
 Read and follow the shared procedure at
 `~/.gemini/config/plugins/cairn/shared/answer-with-recommendation-procedure.md`, carrying out every step
-**yourself, in this conversation**. Pass it the `<MILESTONE_DIR>` from step 1 and the
-`<Short Title>` from the invocation as its `MILESTONE_DIR` and `SHORT TITLE` inputs. That
+**yourself, in this conversation**. Pass it the `<MISSION_DIR>` from step 1 and the
+`<Short Title>` from the invocation as its `MISSION_DIR` and `SHORT TITLE` inputs. That
 procedure owns the lift → delegate work, composing over
 `~/.gemini/config/plugins/cairn/shared/answer-procedure.md`, which owns the
 locate/analyse/fold/remove/cascade recording; every read and write of `open_questions.xml`
@@ -61,11 +61,11 @@ question gets an embedded recommendation), or to record a literal answer via
 
 Read and follow the shared commit procedure at
 `~/.gemini/config/plugins/cairn/shared/commit-procedure.md`, running its one commit-tool command yourself as
-this step's one git tool call. Supply it these three inputs, using the `<MILESTONE_DIR>` from
+this step's one git tool call. Supply it these three inputs, using the `<MISSION_DIR>` from
 step 1:
 
-- **PATHS** — this skill's own edits: `<MILESTONE_DIR>/open_questions.xml` and
-  `<MILESTONE_DIR>/requirements.md`.
+- **PATHS** — this skill's own edits: `<MISSION_DIR>/open_questions.xml` and
+  `<MISSION_DIR>/requirements.md`.
 - **SUBJECT** — exactly `Recommendation-answer: <Short Title>` (the answered question's
   handle). This distinct subject marks an accepted recommendation: when
   `/capture-milestone-principle-updates` walks a milestone's answer commits across all three

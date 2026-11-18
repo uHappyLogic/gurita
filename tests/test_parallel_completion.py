@@ -59,8 +59,8 @@ MEETING_TIMEOUT = 60
 
 
 class Milestone(NamedTuple):
-    """One milestone's run: its fixture and where it is seeded (<MILESTONE_DIR> as the runner
-    fills it, the --milestone path with its trailing slash), the task its top section names and
+    """One milestone's run: its fixture and where it is seeded (<MISSION_DIR> as the runner
+    fills it, the --mission path with its trailing slash), the task its top section names and
     that task's bar as verified, the tracked file the task edits (its seeded and edited bytes),
     and the file it creates."""
 
@@ -183,7 +183,7 @@ def agent_call(milestone, scratch, bar=None):
     lines = replace_run(lines, PATH_PLACEHOLDER, milestone.recorded)
     return filled(
         lines,
-        {"<MILESTONE_DIR>": milestone.directory, "<Task Title>": milestone.title, "<scratch dir>": str(scratch)},
+        {"<MISSION_DIR>": milestone.directory, "<Task Title>": milestone.title, "<scratch dir>": str(scratch)},
     )
 
 
@@ -202,12 +202,12 @@ def test_the_agent_call_writes_the_two_files_the_orchestrator_call_commits_from(
     assert eof == 1 + sum(line.startswith(BAR_PLACEHOLDER) for line in agent)
     assert agent[eof + 1 : eof + 1 + len(EMPTY_BAR_TEST)] == EMPTY_BAR_TEST
     remove_line, body_line, path_file_line = agent[eof + 1 + len(EMPTY_BAR_TEST) : eof + 4 + len(EMPTY_BAR_TEST)]
-    assert remove_line == 'python3 ${CLAUDE_PLUGIN_ROOT}/tools/task_list.py remove <MILESTONE_DIR> "<Task Title>" &&'
+    assert remove_line == 'python3 ${CLAUDE_PLUGIN_ROOT}/tools/task_list.py remove <MISSION_DIR> "<Task Title>" &&'
     assert body_line == f'printf \'%s\\n\' "$bar" > "<scratch dir>/{BODY_FILE}" &&'
     assert path_file_line == f'cat > "<scratch dir>/{PATH_FILE}" <<\'EOF\''
     path_lines = agent[agent.index(path_file_line) + 1 :]
     assert path_lines[-1] == "EOF"
-    assert path_lines[-2] == "<MILESTONE_DIR>/TASKS_TODO.md"
+    assert path_lines[-2] == "<MISSION_DIR>/TASKS_TODO.md"
     assert all(line.startswith(PATH_PLACEHOLDER) for line in path_lines[:-2])
     assert not any(re.search(r"\bgit\b", line) for line in agent), "the agent's call runs git"
 

@@ -10,28 +10,28 @@ Facilitates a deliberation on a named `<open-question>` block in the named miles
 ## Usage
 
 ```
-/discuss-open-question --milestone <path> <Short Title>
+/discuss-open-question --mission <path> <Short Title>
 ```
 
-The `<Short Title>` must match (case-insensitive) the `id` of an existing `<open-question>` block in `<MILESTONE_DIR>/open_questions.xml`. The required leading `--milestone <path>` names the milestone by its repo-relative path, exactly as the definition tool printed it, trailing slash included, e.g. `milestones/user-guide/`.
+The `<Short Title>` must match (case-insensitive) the `id` of an existing `<open-question>` block in `<MISSION_DIR>/open_questions.xml`. The required leading `--mission <path>` names the milestone by its repo-relative path, exactly as the definition tool printed it, trailing slash included, e.g. `milestones/user-guide/`.
 
 **Example:**
 ```
-/discuss-open-question --milestone milestones/user-guide/ Getting-started section order
+/discuss-open-question --mission milestones/user-guide/ Getting-started section order
 ```
 
 ## Workflow
 
 ### 0. Find the milestone
 
-First strip the leading `--milestone <path>` from the invocation text by the rule in `${PLUGIN_ROOT}/shared/resolve-milestone.md`, reading only the rest as the `<Short Title>`. Follow `${PLUGIN_ROOT}/shared/resolve-milestone.md` to resolve `<MILESTONE_DIR>`. Never use a hardcoded task-list path.
+First strip the leading `--mission <path>` from the invocation text by the rule in `${PLUGIN_ROOT}/shared/resolve-mission.md`, reading only the rest as the `<Short Title>`. Follow `${PLUGIN_ROOT}/shared/resolve-mission.md` to resolve `<MISSION_DIR>`. Never use a hardcoded task-list path.
 
 ### 1. Locate the question
 
-Locating a block by its handle is a deterministic lookup, so it is a call to the plugin's open-question tool — the sole writer of `<MILESTONE_DIR>/open_questions.xml`, and the only way this skill ever locates, lists, or lifts a block:
+Locating a block by its handle is a deterministic lookup, so it is a call to the plugin's open-question tool — the sole writer of `<MISSION_DIR>/open_questions.xml`, and the only way this skill ever locates, lists, or lifts a block:
 
 ```
-python3 ${PLUGIN_ROOT}/tools/open_questions.py locate <MILESTONE_DIR> "<Short Title>"
+python3 ${PLUGIN_ROOT}/tools/open_questions.py locate <MISSION_DIR> "<Short Title>"
 ```
 
 On success it prints the **whole matched block** verbatim — its `<question>` text plus whatever the two annotating passes have embedded so far: the `<alternative>` elements (each with its `id`, what-it-is text, `<advantage>`, and `<drawback>`), and any `<applied-principle>`, `<depends-on>`, and `<recommendation>` children. That block is the question context the deliberation runs on and the **QUESTION** you carry into step 3, and what it holds fixes the block's state for step 3: a block with `<alternative>` elements carries a **frozen alternative set**; one with none is **bare**; a `<recommendation option="…">` element, when present, is the sweep's **standing pick**.
@@ -40,7 +40,7 @@ If it fails — no block's `id` matches the title — stop and report the mismat
 
 ### 2. Gather context
 
-Before forming a view, read any project artifacts — deliverables, documents, or design notes — that bear on the question. Prefer reading the real project state over reasoning from memory. Read `<MILESTONE_DIR>/requirements.md` (the goal, relevant starting state, and recorded decisions) and `<MILESTONE_DIR>/open_questions.xml` (the sibling blocks, with whatever the annotating passes have embedded in them) **whole** with the file-reading tool, as you read the bearing artifacts. A whole read is for reasoning only; a locate, list, or lift of a block is the tool's job, as in step 1.
+Before forming a view, read any project artifacts — deliverables, documents, or design notes — that bear on the question. Prefer reading the real project state over reasoning from memory. Read `<MISSION_DIR>/requirements.md` (the goal, relevant starting state, and recorded decisions) and `<MISSION_DIR>/open_questions.xml` (the sibling blocks, with whatever the annotating passes have embedded in them) **whole** with the file-reading tool, as you read the bearing artifacts. A whole read is for reasoning only; a locate, list, or lift of a block is the tool's job, as in step 1.
 
 ### 3. Present the discussion
 

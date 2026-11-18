@@ -17,7 +17,7 @@ the ground and nothing else.
 
 ## Input
 
-- **MILESTONE_DIR** — the already-resolved directory of the milestone whose starting state is
+- **MISSION_DIR** — the already-resolved directory of the milestone whose starting state is
   written, its path exactly as resolved, trailing slash included. The runner resolves it; this
   procedure never looks the milestone up.
 
@@ -42,7 +42,7 @@ clearing, and anything your runner would do next. Report the fixed line
 Run:
 
 ```
-python3 ${CLAUDE_PLUGIN_ROOT}/tools/missions.py since <MILESTONE_DIR>
+python3 ${CLAUDE_PLUGIN_ROOT}/tools/missions.py since <MISSION_DIR>
 ```
 
 Its first line, when it prints one, is the anchor: the commit that last recorded this
@@ -60,7 +60,7 @@ as exactly one of three outcomes:
 
 ### 2. Read the goal and the project's environment
 
-Read `<MILESTONE_DIR>/requirements.md` in full. Its `## Goal` is the lens for everything that
+Read `<MISSION_DIR>/requirements.md` in full. Its `## Goal` is the lens for everything that
 follows: surface only starting state directly relevant to achieving or building on that goal.
 On a refresh, hold the `## Relevant starting state` section as it stands, subsection by
 subsection: it is what step 5 edits.
@@ -99,7 +99,7 @@ where they are relevant.
 Read the record of finished and live work in two tiers. First the overview of the scope:
 
 ```
-python3 ${CLAUDE_PLUGIN_ROOT}/tools/missions.py missions --mission <MILESTONE_DIR>
+python3 ${CLAUDE_PLUGIN_ROOT}/tools/missions.py missions --mission <MISSION_DIR>
 ```
 
 Then, for each finished milestone whose overview line bears on the goal, a deeper read: its
@@ -112,7 +112,7 @@ the summaries already carry.
 Then what is in flight, the other live milestones whose scope overlaps this one's:
 
 ```
-python3 ${CLAUDE_PLUGIN_ROOT}/tools/missions.py live <MILESTONE_DIR>
+python3 ${CLAUDE_PLUGIN_ROOT}/tools/missions.py live <MISSION_DIR>
 ```
 
 For each line it prints, note the milestone by path, whether it is `started`, and its goal in a
@@ -125,7 +125,7 @@ listed by its goal alone, since nothing of it is settled.
 
 ### 5. Edit the section
 
-Edit `## Relevant starting state` in `<MILESTONE_DIR>/requirements.md` in place, structured as
+Edit `## Relevant starting state` in `<MISSION_DIR>/requirements.md` in place, structured as
 named subsections, one per relevant system or area:
 
 ```markdown
@@ -156,9 +156,9 @@ in the same stale window explores again, a repeat accepted as the cost of keepin
 
 A changed starting state is a premise change: a standing pick — the `<recommendation>` element
 an open question carries — formed against the old facts would otherwise be recorded as given.
-Read `<MILESTONE_DIR>/open_questions.xml` whole with the file-reading tool; that whole read is for
+Read `<MISSION_DIR>/open_questions.xml` whole with the file-reading tool; that whole read is for
 reasoning only, and every change to the document is a call to the plugin's open-question tool,
-`python3 ${CLAUDE_PLUGIN_ROOT}/tools/open_questions.py <subcommand> <MILESTONE_DIR> …`, written out in
+`python3 ${CLAUDE_PLUGIN_ROOT}/tools/open_questions.py <subcommand> <MISSION_DIR> …`, written out in
 full on every call and never through a variable, alias, or function of your own. Never edit the
 file yourself.
 
@@ -185,7 +185,7 @@ When at least one pick is undermined, clear them all with one call, every named 
 Title (its `id` as the document holds it) its own quoted argument:
 
 ```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/tools/open_questions.py strip --recommendation <MILESTONE_DIR> "<Short Title>" …
+python3 ${CLAUDE_PLUGIN_ROOT}/tools/open_questions.py strip --recommendation <MISSION_DIR> "<Short Title>" …
 ```
 
 It clears each named block's pick and keeps its `<alternative>` children, touching no other
@@ -201,6 +201,6 @@ call's `Error:` line verbatim and that the section edit stands uncommitted in
 
 ### 7. Hand back the change
 
-The procedure ends with `<MILESTONE_DIR>/requirements.md` edited, or left as it stood, and with
-`<MILESTONE_DIR>/open_questions.xml` changed exactly when step 6 cleared a pick. Your runner's own
+The procedure ends with `<MISSION_DIR>/requirements.md` edited, or left as it stood, and with
+`<MISSION_DIR>/open_questions.xml` changed exactly when step 6 cleared a pick. Your runner's own
 file states what it does with them.

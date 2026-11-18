@@ -35,11 +35,11 @@ staged included, stays out of it.
 ## Usage
 
 ```
-/answer-all-open-questions-with-recommendation --milestone <path>
+/answer-all-open-questions-with-recommendation --mission <path>
 ```
 
 It sweeps every `<open-question>` block in the named milestone's `open_questions.xml` that
-contains a `<recommendation>` element. The required leading `--milestone <path>` names the
+contains a `<recommendation>` element. The required leading `--mission <path>` names the
 milestone by its repo-relative path, exactly as the definition tool printed it, trailing slash
 included, e.g. `milestones/user-guide/`.
 
@@ -47,22 +47,22 @@ included, e.g. `milestones/user-guide/`.
 
 ### 0. Find the milestone, once
 
-Follow `${PLUGIN_ROOT}/shared/resolve-milestone.md` to resolve `<MILESTONE_DIR>`. Never use
+Follow `${PLUGIN_ROOT}/shared/resolve-mission.md` to resolve `<MISSION_DIR>`. Never use
 a hardcoded path. Resolve it **once per run** and hold it: every tool call, every recorded
 answer, and every commit below uses this one directory, the one the run walked.
 
 ### 1. Gather, order, and view the questions in one fixed shell call
 
 Run this one fixed shell call, written out in full exactly as shown, with only
-`<MILESTONE_DIR>` replaced:
+`<MISSION_DIR>` replaced:
 
 ```
-python3 ${PLUGIN_ROOT}/tools/open_questions.py list --with-question <MILESTONE_DIR> &&
-python3 ${PLUGIN_ROOT}/tools/open_questions.py walk <MILESTONE_DIR> | while IFS= read -r id; do
+python3 ${PLUGIN_ROOT}/tools/open_questions.py list --with-question <MISSION_DIR> &&
+python3 ${PLUGIN_ROOT}/tools/open_questions.py walk <MISSION_DIR> | while IFS= read -r id; do
   printf '%s\n' "$id"
-  if pick="$(python3 ${PLUGIN_ROOT}/tools/open_questions.py lift <MILESTONE_DIR> "$id" 2>&1)"; then
+  if pick="$(python3 ${PLUGIN_ROOT}/tools/open_questions.py lift <MISSION_DIR> "$id" 2>&1)"; then
     printf '%s\n' "$pick"
-    python3 ${PLUGIN_ROOT}/tools/open_questions.py lift --alternative "${pick%% — *}" <MILESTONE_DIR> "$id"
+    python3 ${PLUGIN_ROOT}/tools/open_questions.py lift --alternative "${pick%% — *}" <MISSION_DIR> "$id"
   else
     printf '%s\n' "$pick"
   fi
@@ -99,7 +99,7 @@ blocks or strips their picks, so the order never gains a question under you.
 
 ### 2. Read `requirements.md` whole, in the same turn as step 1's call
 
-Read `<MILESTONE_DIR>/requirements.md` **whole**, once, with the file-reading tool, never
+Read `<MISSION_DIR>/requirements.md` **whole**, once, with the file-reading tool, never
 through shell output. Neither this read nor step 1's call needs the other's output, so send
 the two in the same turn, as two independent tool calls.
 
@@ -167,29 +167,29 @@ flag. Telling a conflict question by its opening and rewriting its losing entry 
 recording the pick as given: no contradiction is judged and no pick is weighed.
 
 **b. Run the call.** Run this one fixed shell call, written out in full exactly as shown, with
-only `<MILESTONE_DIR>` and each question section's `<Short Title>`, `<Heading>`, decision, and
+only `<MISSION_DIR>` and each question section's `<Short Title>`, `<Heading>`, decision, and
 `<Option>` replaced, and each conflict question's section written as the conflict section
 shown after it:
 
 ```
-if [ -n "$(git status --porcelain -- <MILESTONE_DIR>/open_questions.xml <MILESTONE_DIR>/requirements.md)" ]; then
+if [ -n "$(git status --porcelain -- <MISSION_DIR>/open_questions.xml <MISSION_DIR>/requirements.md)" ]; then
   echo 'dirty before start'
-  git status --porcelain -- <MILESTONE_DIR>/open_questions.xml <MILESTONE_DIR>/requirements.md
+  git status --porcelain -- <MISSION_DIR>/open_questions.xml <MISSION_DIR>/requirements.md
   false
 fi &&
-if pick="$(python3 ${PLUGIN_ROOT}/tools/open_questions.py lift <MILESTONE_DIR> "<Short Title>" 2>/dev/null)"; then
-  python3 ${PLUGIN_ROOT}/tools/requirements.py fold <MILESTONE_DIR> --section "<Heading>" <<'EOF' &&
+if pick="$(python3 ${PLUGIN_ROOT}/tools/open_questions.py lift <MISSION_DIR> "<Short Title>" 2>/dev/null)"; then
+  python3 ${PLUGIN_ROOT}/tools/requirements.py fold <MISSION_DIR> --section "<Heading>" <<'EOF' &&
 <the decision>
 EOF
-  python3 ${PLUGIN_ROOT}/tools/open_questions.py remove <MILESTONE_DIR> "<Short Title>" --option "<Option>" &&
-  out="$(python3 ${PLUGIN_ROOT}/tools/commit.py --subject "Recommendation-answer: <Short Title>" --body "$pick" -- <MILESTONE_DIR>/open_questions.xml <MILESTONE_DIR>/requirements.md)" &&
+  python3 ${PLUGIN_ROOT}/tools/open_questions.py remove <MISSION_DIR> "<Short Title>" --option "<Option>" &&
+  out="$(python3 ${PLUGIN_ROOT}/tools/commit.py --subject "Recommendation-answer: <Short Title>" --body "$pick" -- <MISSION_DIR>/open_questions.xml <MISSION_DIR>/requirements.md)" &&
   if [ -z "$out" ]; then
     echo 'answer commit landed'
   fi ||
   { printf 'stopped at\t%s\n' "<Short Title>"; false; }
 fi &&
 echo 'completeness walk' &&
-python3 ${PLUGIN_ROOT}/tools/open_questions.py walk <MILESTONE_DIR>
+python3 ${PLUGIN_ROOT}/tools/open_questions.py walk <MISSION_DIR>
 ```
 
 **The question section** — the lines from `if pick=` through the column-0 `fi &&` that closes
@@ -210,12 +210,12 @@ for the one `replace` call standing where the `fold` call stands, its heredoc ca
 body:
 
 ```
-if pick="$(python3 ${PLUGIN_ROOT}/tools/open_questions.py lift <MILESTONE_DIR> "<Short Title>" 2>/dev/null)"; then
-  python3 ${PLUGIN_ROOT}/tools/requirements.py replace <MILESTONE_DIR> --section "<Heading>" <<'EOF' &&
+if pick="$(python3 ${PLUGIN_ROOT}/tools/open_questions.py lift <MISSION_DIR> "<Short Title>" 2>/dev/null)"; then
+  python3 ${PLUGIN_ROOT}/tools/requirements.py replace <MISSION_DIR> --section "<Heading>" <<'EOF' &&
 <the new body>
 EOF
-  python3 ${PLUGIN_ROOT}/tools/open_questions.py remove <MILESTONE_DIR> "<Short Title>" --option "<Option>" &&
-  out="$(python3 ${PLUGIN_ROOT}/tools/commit.py --subject "Recommendation-answer: <Short Title>" --body "$pick" -- <MILESTONE_DIR>/open_questions.xml <MILESTONE_DIR>/requirements.md)" &&
+  python3 ${PLUGIN_ROOT}/tools/open_questions.py remove <MISSION_DIR> "<Short Title>" --option "<Option>" &&
+  out="$(python3 ${PLUGIN_ROOT}/tools/commit.py --subject "Recommendation-answer: <Short Title>" --body "$pick" -- <MISSION_DIR>/open_questions.xml <MISSION_DIR>/requirements.md)" &&
   if [ -z "$out" ]; then
     echo 'answer commit landed'
   fi ||

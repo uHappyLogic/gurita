@@ -15,15 +15,15 @@ review → (discuss) → answer → review → answer → … → converged → 
 
 Each pass does three jobs: **reconcile** the existing questions against what's now decided, **surface** the new gaps, and report whether the requirements have **converged**.
 
-Every write this skill makes to `open_questions.xml`, and every listing of its blocks, is a call to the plugin's open-question tool, `python3 {{PLUGIN_ROOT}}/tools/open_questions.py <subcommand> <MILESTONE_DIR> …`, written out in full on every call, never through a variable, alias, or function of your own defined to stand for the command or any part of it — the tool is that file's sole writer and owns the document's escaping and layout: a mutator prints nothing on success, `list` prints bare ids one per line, and any failure is one `Error: <reason>` line on stderr with a non-zero exit and the document left unchanged. Reading the document whole to reason over it is the one thing done directly, with the file-reading tool. Never edit `open_questions.xml` yourself.
+Every write this skill makes to `open_questions.xml`, and every listing of its blocks, is a call to the plugin's open-question tool, `python3 {{PLUGIN_ROOT}}/tools/open_questions.py <subcommand> <MISSION_DIR> …`, written out in full on every call, never through a variable, alias, or function of your own defined to stand for the command or any part of it — the tool is that file's sole writer and owns the document's escaping and layout: a mutator prints nothing on success, `list` prints bare ids one per line, and any failure is one `Error: <reason>` line on stderr with a non-zero exit and the document left unchanged. Reading the document whole to reason over it is the one thing done directly, with the file-reading tool. Never edit `open_questions.xml` yourself.
 
 ## review-milestone-requirements
 
 ```
-/review-milestone-requirements --milestone <path>
+/review-milestone-requirements --mission <path>
 ```
 
-The required leading `--milestone <path>` names the milestone by its repo-relative path, exactly as the definition tool printed it, trailing slash included, e.g. `milestones/user-guide/`.
+The required leading `--mission <path>` names the milestone by its repo-relative path, exactly as the definition tool printed it, trailing slash included, e.g. `milestones/user-guide/`.
 
 ## Milestone requirements document structure
 
@@ -54,17 +54,17 @@ The required leading `--milestone <path>` names the milestone by its repo-relati
 
 `## Noted contradictions` is present only while a note stands: a single-question answer skill inserts the heading with its first note, and step 4 of this pass turns each note into an open question or drops it, deleting the heading with the last note.
 
-The open questions live beside it in `<MILESTONE_DIR>/open_questions.xml` — one `<open-question id="Short Title">` block per question under a single root, each holding a `<question>` child and, once the recommend sweep has annotated it, `<alternative>`, `<applied-principle>`, `<depends-on>`, and `<recommendation>` children. No question block is ever placed inline in `requirements.md`.
+The open questions live beside it in `<MISSION_DIR>/open_questions.xml` — one `<open-question id="Short Title">` block per question under a single root, each holding a `<question>` child and, once the recommend sweep has annotated it, `<alternative>`, `<applied-principle>`, `<depends-on>`, and `<recommendation>` children. No question block is ever placed inline in `requirements.md`.
 
 ## Workflow
 
 ### 0. Find the milestone
 
-Follow `{{PLUGIN_ROOT}}/shared/resolve-milestone.md` to resolve `<MILESTONE_DIR>`. Never use a hardcoded path.
+Follow `{{PLUGIN_ROOT}}/shared/resolve-mission.md` to resolve `<MISSION_DIR>`. Never use a hardcoded path.
 
 ### 1. Read the documents and take inventory
 
-Read `<MILESTONE_DIR>/requirements.md` and `<MILESTONE_DIR>/open_questions.xml` in full with the file-reading tool. The whole read of `open_questions.xml` is for reasoning only — every listing of the blocks and every change to the question document below is a tool call. Build a mental inventory of four things, because the rest of the pass plays them against each other:
+Read `<MISSION_DIR>/requirements.md` and `<MISSION_DIR>/open_questions.xml` in full with the file-reading tool. The whole read of `open_questions.xml` is for reasoning only — every listing of the blocks and every change to the question document below is a tool call. Build a mental inventory of four things, because the rest of the pass plays them against each other:
 
 - the **Decisions** already recorded (what's settled),
 - the **notes** under `## Noted contradictions`, when that section stands (pairs of decisions an answer found conflicting, not yet asked),
@@ -74,7 +74,7 @@ Read `<MILESTONE_DIR>/requirements.md` and `<MILESTONE_DIR>/open_questions.xml` 
 Beside the two documents, read the overview of the milestones around this one's scope, on every pass, with this one fixed call run from the workspace root, written out in full and never through a variable, alias, or function of your own defined to stand for the command or any part of it:
 
 ```
-python3 {{PLUGIN_ROOT}}/tools/missions.py missions --mission <MILESTONE_DIR> --last 10
+python3 {{PLUGIN_ROOT}}/tools/missions.py missions --mission <MISSION_DIR> --last 10
 ```
 
 It prints one tab-separated line per milestone whose scope overlaps this one's, live or finished: its state, its finish date (`-` while live), its path, and its title, every live line and the ten most recently finished. Read it as context for the inventory, not as a fifth thing to reconcile: only where you judge a listed milestone's line to bear on a gap or on a pair of decisions, read that milestone more deeply, its finish summary through `python3 {{PLUGIN_ROOT}}/tools/missions.py summary <path>` or its recorded decisions through `python3 {{PLUGIN_ROOT}}/tools/missions.py show <path>`, `<path>` the milestone path exactly as the overview printed it, each written out in full the same way; a line that bears on nothing gets no deeper read.
@@ -92,7 +92,7 @@ This is the step that makes the skill loop-aware: the documents have been edited
 Each removal, on either path, is one bare call — no `--option`, since a prune or dedup records nothing:
 
 ```
-python3 {{PLUGIN_ROOT}}/tools/open_questions.py remove <MILESTONE_DIR> "<Short Title>"
+python3 {{PLUGIN_ROOT}}/tools/open_questions.py remove <MISSION_DIR> "<Short Title>"
 ```
 
 In that one write the tool deletes the block and strips every block whose embedded pick depended on it — and every block that depended on those in turn — of its `<recommendation>`, `<depends-on>`, and `<applied-principle>` children, keeping its `<alternative>` children, so no `<depends-on>` tag is left naming a removed or stripped block; a stripped block stays in the document as a live question, its alternatives intact, for the next `/recommend-all-open-questions` pass to re-pick. Stripping decides nothing, records nothing under `## Decisions`, and adds nothing to the step-6 report — the committed diff is its record.
@@ -114,7 +114,7 @@ Add only genuinely new questions — don't re-raise anything already present (yo
 Author each new finding as one `add` call, the question text as its heredoc body:
 
 ```
-python3 {{PLUGIN_ROOT}}/tools/open_questions.py add <MILESTONE_DIR> "<Short Title>" <<'EOF'
+python3 {{PLUGIN_ROOT}}/tools/open_questions.py add <MISSION_DIR> "<Short Title>" <<'EOF'
 <Question text here.>
 EOF
 ```
@@ -151,8 +151,8 @@ Neither path resolves a conflict: never edit, reword, or remove either `## Decis
 
 Read and follow the shared commit procedure at `{{PLUGIN_ROOT}}/shared/commit-procedure.md`, running its one commit-tool command yourself as this step's one git tool call. Supply it these two inputs:
 
-- **PATHS** — this skill's own change set, the milestone's two requirements documents: `<MILESTONE_DIR>/open_questions.xml` (where every prune, dedup, and new block of this pass landed) and `<MILESTONE_DIR>/requirements.md` (where step 4's note deletions landed).
-- **SUBJECT** — `Requirements-review: <MILESTONE_DIR>`, the milestone path exactly as resolved, trailing slash included.
+- **PATHS** — this skill's own change set, the milestone's two requirements documents: `<MISSION_DIR>/open_questions.xml` (where every prune, dedup, and new block of this pass landed) and `<MISSION_DIR>/requirements.md` (where step 4's note deletions landed).
+- **SUBJECT** — `Requirements-review: <MISSION_DIR>`, the milestone path exactly as resolved, trailing slash included.
 
 The commit tool runs the dirty-own-path guard, the path-scoped staging, and the commit. Its guard covers this skill's no-op case: a pass that reconciled, pruned, and surfaced nothing and found no note to handle leaves both files unchanged, so the tool prints `Nothing committed — none of the paths changed.` and nothing is staged or committed; a pass that reshaped the question set or deleted a note commits that change.
 
@@ -161,7 +161,7 @@ The commit tool runs the dirty-own-path guard, the path-scoped staging, and the 
 Run
 
 ```
-python3 {{PLUGIN_ROOT}}/tools/open_questions.py list <MILESTONE_DIR>
+python3 {{PLUGIN_ROOT}}/tools/open_questions.py list <MISSION_DIR>
 ```
 
 It prints the Short Title of every `<open-question>` block still in the document, one per line in document order; empty output is a converged document. That print — not your recollection of the pass — is what the two items below are read from.

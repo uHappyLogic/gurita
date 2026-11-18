@@ -17,12 +17,12 @@ use `/discuss-new-task` first.
 ## Invocation
 
 ```
-/submit-task --milestone <path> <issue description>
+/submit-task --mission <path> <issue description>
 ```
 
 `<issue description>` is a free-form description of a problem or gap discovered during
 development, specific enough that the affected system, desired behavior, and how to verify
-it are clear. The required leading `--milestone <path>` names the milestone by its
+it are clear. The required leading `--mission <path>` names the milestone by its
 repo-relative path, exactly as the definition tool printed it, trailing slash included, e.g.
 `milestones/user-guide/`.
 
@@ -30,12 +30,12 @@ repo-relative path, exactly as the definition tool printed it, trailing slash in
 
 ### 0. Find the milestone
 
-First strip the leading `--milestone <path>` from the invocation text by the rule in `${CLAUDE_PLUGIN_ROOT}/shared/resolve-milestone.md`, reading only the rest as the issue description. Follow `${CLAUDE_PLUGIN_ROOT}/shared/resolve-milestone.md` to resolve `<MILESTONE_DIR>`. Never use a hardcoded task-list path.
+First strip the leading `--mission <path>` from the invocation text by the rule in `${CLAUDE_PLUGIN_ROOT}/shared/resolve-mission.md`, reading only the rest as the issue description. Follow `${CLAUDE_PLUGIN_ROOT}/shared/resolve-mission.md` to resolve `<MISSION_DIR>`. Never use a hardcoded task-list path.
 
 ### 1. Check the scope gate
 
 Directly after resolving the milestone, and before anything else, follow
-`${CLAUDE_PLUGIN_ROOT}/shared/check-scope-gate.md` for `<MILESTONE_DIR>`. When the gate is closed,
+`${CLAUDE_PLUGIN_ROOT}/shared/check-scope-gate.md` for `<MISSION_DIR>`. When the gate is closed,
 its report is the whole output: read, refresh, insert, and commit nothing, and print no line
 of step 9.
 
@@ -46,7 +46,7 @@ scope since this milestone's starting state was recorded. Run, from the workspac
 plugin's missions tool:
 
 ```
-python3 ${CLAUDE_PLUGIN_ROOT}/tools/missions.py since <MILESTONE_DIR> --missions
+python3 ${CLAUDE_PLUGIN_ROOT}/tools/missions.py since <MISSION_DIR> --missions
 ```
 
 Its first line, when it prints one, is the anchor, the commit that last recorded this
@@ -65,7 +65,7 @@ commit that landed in the scope after it. Read its print as exactly one of three
   the call's `Error:` line from stderr, verbatim, and print no line of step 9.
 
 To refresh, read and follow the shared starting-state procedure at
-`${CLAUDE_PLUGIN_ROOT}/shared/starting-state-procedure.md` in place, with `<MILESTONE_DIR>` as its
+`${CLAUDE_PLUGIN_ROOT}/shared/starting-state-procedure.md` in place, with `<MISSION_DIR>` as its
 input; its pick judgment applies here in full, since this milestone's questions may carry
 standing picks. It ends in exactly one of three ways:
 
@@ -85,10 +85,10 @@ authoring, by reading and following the shared commit procedure at
 `${CLAUDE_PLUGIN_ROOT}/shared/commit-procedure.md`, running its one commit-tool command yourself as
 one git tool call, with these two inputs:
 
-- **PATHS** — `<MILESTONE_DIR>/requirements.md`, and `<MILESTONE_DIR>/open_questions.xml`
+- **PATHS** — `<MISSION_DIR>/requirements.md`, and `<MISSION_DIR>/open_questions.xml`
   beside it only when the procedure's step 6 cleared a pick, so a refresh and the picks it
   cleared are one commit.
-- **SUBJECT** — `Starting-state: <MILESTONE_DIR>`, the milestone path exactly as resolved,
+- **SUBJECT** — `Starting-state: <MISSION_DIR>`, the milestone path exactly as resolved,
   trailing slash included.
 
 The refresh commit prints no line of its own in this run's report: whether it landed (the
@@ -102,12 +102,12 @@ run, inserting and committing nothing further: report the fixed line
 ### 3. Read context for triage
 
 In parallel, as independent tool calls:
-- Read `<MILESTONE_DIR>/requirements.md` — to confirm the issue fits the milestone's scope.
-- Read `<MILESTONE_DIR>/TASKS_TODO.md` — existing pending tasks, for duplicate-detection and positioning.
+- Read `<MISSION_DIR>/requirements.md` — to confirm the issue fits the milestone's scope.
+- Read `<MISSION_DIR>/TASKS_TODO.md` — existing pending tasks, for duplicate-detection and positioning.
 - Run the plugin's missions tool — completed work, to catch issues already addressed:
 
   ```
-  python3 ${CLAUDE_PLUGIN_ROOT}/tools/missions.py tasks <MILESTONE_DIR> --with-body
+  python3 ${CLAUDE_PLUGIN_ROOT}/tools/missions.py tasks <MISSION_DIR> --with-body
   ```
 
   It prints, newest first, one tab-separated line per task completed in the milestone (the
@@ -147,7 +147,7 @@ than re-reading.)
 ### 7. Check the scope gate again
 
 Directly ahead of the insert, follow `${CLAUDE_PLUGIN_ROOT}/shared/check-scope-gate.md` for
-`<MILESTONE_DIR>` a second time, since another milestone may have started in the scope while
+`<MISSION_DIR>` a second time, since another milestone may have started in the scope while
 this run read, triaged, and authored. When the gate is closed, its report is the whole output:
 insert and commit no task, and print no line of step 9. A refresh commit step 2 already landed
 stays committed. The call in step 8 checks no gate of its own.
@@ -164,13 +164,13 @@ the position step 5 decided onto exactly one flag:
 - **`after: <Task Title>`** — `--after "<Task Title>"`.
 
 Then run this one fixed shell call, written out in full exactly as shown, with only
-`<MILESTONE_DIR>`, `<New Task Title>`, `<position flag>`, and the body replaced:
+`<MISSION_DIR>`, `<New Task Title>`, `<position flag>`, and the body replaced:
 
 ```
-python3 ${CLAUDE_PLUGIN_ROOT}/tools/task_list.py insert <MILESTONE_DIR> "<New Task Title>" <position flag> <<'EOF' &&
+python3 ${CLAUDE_PLUGIN_ROOT}/tools/task_list.py insert <MISSION_DIR> "<New Task Title>" <position flag> <<'EOF' &&
 <the 1–3 sentence description>
 EOF
-out="$(python3 ${CLAUDE_PLUGIN_ROOT}/tools/commit.py --subject "Task-submission: <New Task Title>" -- <MILESTONE_DIR>/TASKS_TODO.md)" &&
+out="$(python3 ${CLAUDE_PLUGIN_ROOT}/tools/commit.py --subject "Task-submission: <New Task Title>" -- <MISSION_DIR>/TASKS_TODO.md)" &&
 if [ -z "$out" ]; then
   echo 'submission commit landed'
 fi
@@ -181,7 +181,7 @@ double quotes, with any `"`, `$`, `` ` ``, or `\` it holds escaped by a backslas
 `&&` the call runs the one command of the shared commit procedure at
 `${CLAUDE_PLUGIN_ROOT}/shared/commit-procedure.md`, the plugin's commit tool, with
 `Task-submission: <New Task Title>` as its subject, no body, and this skill's own change set,
-`<MILESTONE_DIR>/TASKS_TODO.md`, as its one path, written out on the command line and never
+`<MISSION_DIR>/TASKS_TODO.md`, as its one path, written out on the command line and never
 held in a shell variable. The tool runs the dirty-own-path guard over the file, stages exactly
 it, and commits it with it as the commit's pathspec, so nothing else the index holds — a change
 another run has staged included — rides in the submission's commit, and it repeats a git write

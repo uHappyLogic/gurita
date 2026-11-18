@@ -10,25 +10,25 @@ Writes the `## Relevant starting state` section of the named milestone's `requir
 ## Usage
 
 ```
-/specify-milestone-starting-state --milestone <path>
+/specify-milestone-starting-state --mission <path>
 ```
 
-The required leading `--milestone <path>` names the milestone by its repo-relative path, exactly as the definition tool printed it, trailing slash included, e.g. `milestones/user-guide/`.
+The required leading `--mission <path>` names the milestone by its repo-relative path, exactly as the definition tool printed it, trailing slash included, e.g. `milestones/user-guide/`.
 
 **Example:**
 ```
-/specify-milestone-starting-state --milestone milestones/user-guide/
+/specify-milestone-starting-state --mission milestones/user-guide/
 ```
 
 ## Workflow
 
 ### 1. Find the milestone
 
-Follow `${PLUGIN_ROOT}/shared/resolve-milestone.md` to resolve `<MILESTONE_DIR>`. Never use a hardcoded path.
+Follow `${PLUGIN_ROOT}/shared/resolve-mission.md` to resolve `<MISSION_DIR>`. Never use a hardcoded path.
 
 ### 2. Write the starting state
 
-Read and follow the shared starting-state procedure at `${PLUGIN_ROOT}/shared/starting-state-procedure.md`, with `<MILESTONE_DIR>` as its input. It serves a first run and a refresh alike, so take the section as it finds it, empty or filled. Its step 1 decides which run this is, and the procedure then ends in exactly one of three ways:
+Read and follow the shared starting-state procedure at `${PLUGIN_ROOT}/shared/starting-state-procedure.md`, with `<MISSION_DIR>` as its input. It serves a first run and a refresh alike, so take the section as it finds it, empty or filled. Its step 1 decides which run this is, and the procedure then ends in exactly one of three ways:
 
 - **The anchor alone** — its step 1 found the ground unmoved, so it explored, edited, and cleared nothing. Make no commit and skip to step 4.
 - **A stop** — it stopped on one of its two fixed lines, `Starting state stopped — a milestones-tool read failed.` or `Starting state stopped — clearing the undermined picks failed.`, with the detail the procedure gives beneath it. That report, as the procedure states it, is this skill's whole report: make no commit, print nothing further, and end the run.
@@ -38,8 +38,8 @@ Read and follow the shared starting-state procedure at `${PLUGIN_ROOT}/shared/st
 
 Read and follow the shared commit procedure at `${PLUGIN_ROOT}/shared/commit-procedure.md`, running its one commit-tool command yourself as this step's one git tool call. Supply it these two inputs:
 
-- **PATHS** — this skill's own change set: `<MILESTONE_DIR>/requirements.md` (the file whose `## Relevant starting state` section the procedure wrote), and `<MILESTONE_DIR>/open_questions.xml` beside it only when the procedure's step 6 cleared a pick, so a refresh and the picks it cleared are one commit.
-- **SUBJECT** — `Starting-state: <MILESTONE_DIR>`, the milestone path exactly as resolved, trailing slash included.
+- **PATHS** — this skill's own change set: `<MISSION_DIR>/requirements.md` (the file whose `## Relevant starting state` section the procedure wrote), and `<MISSION_DIR>/open_questions.xml` beside it only when the procedure's step 6 cleared a pick, so a refresh and the picks it cleared are one commit.
+- **SUBJECT** — `Starting-state: <MISSION_DIR>`, the milestone path exactly as resolved, trailing slash included.
 
 The commit tool runs the dirty-own-path guard, the path-scoped staging, and the commit.
 

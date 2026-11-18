@@ -10,26 +10,26 @@ Replaces the `## Goal` of the named milestone's `requirements.md` with a revised
 ## Usage
 
 ```
-/modify-milestone-goal --milestone <path> <new or revised goal text>
+/modify-milestone-goal --mission <path> <new or revised goal text>
 ```
 
-- `--milestone <path>`: required and leading; names the milestone by its repo-relative path, exactly as the definition tool printed it, trailing slash included, e.g. `milestones/user-guide/`.
+- `--mission <path>`: required and leading; names the milestone by its repo-relative path, exactly as the definition tool printed it, trailing slash included, e.g. `milestones/user-guide/`.
 - `<new or revised goal text>`: either a complete replacement goal statement, or a described change to fold into the existing one (e.g. "also cover a quick-reference section"). If it is a delta, integrate it against the current Goal rather than discarding what is still true.
 
 **Example:**
 ```
-/modify-milestone-goal --milestone milestones/user-guide/ Broaden the getting-started guide to walk a new user through their first week, not only their first session.
+/modify-milestone-goal --mission milestones/user-guide/ Broaden the getting-started guide to walk a new user through their first week, not only their first session.
 ```
 
 ## Workflow
 
 ### 0. Find the milestone
 
-First strip the leading `--milestone <path>` from the invocation text by the rule in `{{PLUGIN_ROOT}}/shared/resolve-milestone.md`, reading only the rest as the goal text. Follow `{{PLUGIN_ROOT}}/shared/resolve-milestone.md` to resolve `<MILESTONE_DIR>`. Never use a hardcoded path.
+First strip the leading `--mission <path>` from the invocation text by the rule in `{{PLUGIN_ROOT}}/shared/resolve-mission.md`, reading only the rest as the goal text. Follow `{{PLUGIN_ROOT}}/shared/resolve-mission.md` to resolve `<MISSION_DIR>`. Never use a hardcoded path.
 
 ### 1. Read the current Goal
 
-Read `<MILESTONE_DIR>/requirements.md` and locate the `## Goal` section. Show the user the current goal text so the change is reviewable against what it replaces.
+Read `<MISSION_DIR>/requirements.md` and locate the `## Goal` section. Show the user the current goal text so the change is reviewable against what it replaces.
 
 ### 2. Determine the revised Goal
 
@@ -45,7 +45,7 @@ If the intended change is genuinely ambiguous, state the revised wording you pro
 Reason about what the new goal may have invalidated. Do **not** write this analysis into the document and do **not** edit those sections — it informs your own reasoning, and its one consequence in the files is the pick clearing of step 5:
 
 - Which `## Decisions` entries the new goal contradicts, moots, or leaves dangling.
-- Which open questions it newly settles, newly opens, or makes irrelevant — read `<MILESTONE_DIR>/open_questions.xml` whole with the file-reading tool for this, as you read `requirements.md` in step 1; that whole read is for reasoning only, and every locate, list, lift, and write is a call to the plugin's open-question tool, `python3 {{PLUGIN_ROOT}}/tools/open_questions.py <subcommand> <MILESTONE_DIR> …`. Never edit the file yourself.
+- Which open questions it newly settles, newly opens, or makes irrelevant — read `<MISSION_DIR>/open_questions.xml` whole with the file-reading tool for this, as you read `requirements.md` in step 1; that whole read is for reasoning only, and every locate, list, lift, and write is a call to the plugin's open-question tool, `python3 {{PLUGIN_ROOT}}/tools/open_questions.py <subcommand> <MISSION_DIR> …`. Never edit the file yourself.
 - Which standing picks the revision undermines. A standing pick is the `<recommendation>` element an open question carries; it was formed under the goal being replaced. For each block carrying one, hold two texts from the read: the what-it-is text of the `<alternative>` its `<recommendation option="…">` names, and the one-line rationale that is the `<recommendation>` element's own text. Read them against the revised Goal and what it directly entails. The pick is **undermined** when either holds:
   - **The option can no longer be carried out.** The recommended alternative, as its what-it-is text reads, cannot be carried out alongside the revised Goal.
   - **The stated reason no longer holds.** The rationale states or plainly presupposes something the revision changed — a fact about the project, a constraint, the scope or aim of the milestone, a sibling's expected outcome — so the reason no longer holds as written, even though the option itself could still be carried out.
@@ -63,7 +63,7 @@ Replace the body of the `## Goal` section with the revised goal text. Touch noth
 When step 3 named at least one undermined pick, clear them all with one call to the open-question tool, passing every named block's Short Title (its `id` as the document holds it), each as its own quoted argument:
 
 ```bash
-python3 {{PLUGIN_ROOT}}/tools/open_questions.py strip --recommendation <MILESTONE_DIR> "<Short Title>" …
+python3 {{PLUGIN_ROOT}}/tools/open_questions.py strip --recommendation <MISSION_DIR> "<Short Title>" …
 ```
 
 The call deletes each named block's `<recommendation>`, `<depends-on>`, and `<applied-principle>` children and keeps its `<alternative>` children, so the block stays a live question for the next `/recommend-all-open-questions` run to re-pick under the revised goal. It touches no other block: a block whose `<depends-on>` names a cleared block keeps its pick and its tag. Do not follow such tags and do not add those blocks to the call — the clearing is not transitive.
@@ -76,8 +76,8 @@ If the call exits non-zero, stop and do not commit: print the fixed line `Goal r
 
 Read and follow the shared commit procedure at `{{PLUGIN_ROOT}}/shared/commit-procedure.md`, running its one commit-tool command yourself as this step's one git tool call. Supply it these two inputs:
 
-- **PATHS** — this skill's own change set: `<MILESTONE_DIR>/requirements.md` (the file whose `## Goal` section it just revised) and `<MILESTONE_DIR>/open_questions.xml` (the document step 5 clears picks from), so a goal revision and the picks it cleared are one commit.
-- **SUBJECT** — `Goal-revision: <MILESTONE_DIR>`, the milestone path exactly as resolved, trailing slash included.
+- **PATHS** — this skill's own change set: `<MISSION_DIR>/requirements.md` (the file whose `## Goal` section it just revised) and `<MISSION_DIR>/open_questions.xml` (the document step 5 clears picks from), so a goal revision and the picks it cleared are one commit.
+- **SUBJECT** — `Goal-revision: <MISSION_DIR>`, the milestone path exactly as resolved, trailing slash included.
 
 The commit tool runs the dirty-own-path guard, the path-scoped staging, and the commit.
 

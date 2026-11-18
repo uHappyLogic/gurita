@@ -39,7 +39,7 @@ NEW_BODY_PLACEHOLDER = "<the new body>"
 # The opening the review pass gives every conflict question and the sweep tests by exact prefix.
 CONFLICT_OPENING = "Which conflicting decision stands:"
 
-# <MILESTONE_DIR> as the runner fills it: the --milestone path, its trailing slash included.
+# <MISSION_DIR> as the runner fills it: the --mission path, its trailing slash included.
 MILESTONE = "milestones/milestone_07_golden-sweep-fixture/"
 DOCUMENT = MILESTONE + "open_questions.xml"
 REQUIREMENTS = MILESTONE + "requirements.md"
@@ -190,7 +190,7 @@ def compose(questions):
                     .replace("<Option>", double_quoted(option))
                 )
     lines.extend(footer)
-    call = "\n".join(lines).replace("<MILESTONE_DIR>", MILESTONE) + "\n"
+    call = "\n".join(lines).replace("<MISSION_DIR>", MILESTONE) + "\n"
     assert not re.search(r"<[A-Za-z][A-Za-z_ ]*>", call), "a placeholder is left unfilled"
     return call
 
@@ -296,9 +296,9 @@ def test_the_call_splits_into_opening_section_and_footer_with_every_placeholder(
     lines = batched_call()
     opening, section, footer = split_call(lines)
     assert opening + section + footer == lines
-    assert opening and footer[0].startswith(FOOTER_HEADER) and footer[-1].endswith("walk <MILESTONE_DIR>")
+    assert opening and footer[0].startswith(FOOTER_HEADER) and footer[-1].endswith("walk <MISSION_DIR>")
     section_text = "\n".join(section)
-    for placeholder in ("<MILESTONE_DIR>", "<Short Title>", "<Heading>", "<Option>"):
+    for placeholder in ("<MISSION_DIR>", "<Short Title>", "<Heading>", "<Option>"):
         assert placeholder in section_text
     assert section.count(DECISION_PLACEHOLDER) == 1
     assert FOLD_COMMAND in section_text
@@ -312,7 +312,7 @@ def test_the_conflict_section_holds_one_replace_where_the_question_section_folds
     assert not any(FOLD_COMMAND in line for line in section)
     assert section.count(NEW_BODY_PLACEHOLDER) == 1 and DECISION_PLACEHOLDER not in section
     section_text = "\n".join(section)
-    for placeholder in ("<MILESTONE_DIR>", "<Short Title>", "<Heading>", "<Option>"):
+    for placeholder in ("<MISSION_DIR>", "<Short Title>", "<Heading>", "<Option>"):
         assert placeholder in section_text
     _, ordinary, _ = split_call(batched_call())
     assert len(section) == len(ordinary)

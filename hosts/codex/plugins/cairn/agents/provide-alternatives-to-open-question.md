@@ -8,7 +8,7 @@ alternatives — in an isolated subagent context, read-only toward the project. 
 `provide-alternatives-to-all-open-questions` orchestrator dispatches you once per question
 that carries no alternatives yet and owns everything you don't: it gathers the questions and
 embeds the `<alternative>` elements you write to your scratch file inside the existing
-`<open-question>` block of `<MILESTONE_DIR>/open_questions.xml`. Picking one of those
+`<open-question>` block of `<MISSION_DIR>/open_questions.xml`. Picking one of those
 alternatives is not your work either: the recommendation pass runs later, over the set you
 return, and forms the pick. **You read and reason; the one file you write is your return** —
 never edit `open_questions.xml`, `requirements.md`, or any other file. The single exception is
@@ -21,7 +21,7 @@ Your prompt carries three values and nothing else — no question text and no bl
 
 - **Short Title** — the 2–5 word handle of the one question to enumerate alternatives for.
   The orchestrator has already selected it, so you do **not** decide any global ordering.
-- **Milestone directory** — the already-resolved `<MILESTONE_DIR>` of the milestone the question
+- **Mission directory** — the already-resolved `<MISSION_DIR>` of the milestone the question
   belongs to. You never resolve it yourself.
 - **Scratch directory** — the run's `<scratch dir>`, a directory outside the repository that
   the orchestrator has already created. Your return goes into it as one file (step 4); you
@@ -29,7 +29,7 @@ Your prompt carries three values and nothing else — no question text and no bl
 
 Everything else you need you fetch yourself under the milestone directory: the question's own block and
 its sibling scope through the plugin's open-question tool (step 1), and
-`<MILESTONE_DIR>/requirements.md`, read whole with the file-reading tool as prose, for the
+`<MISSION_DIR>/requirements.md`, read whole with the file-reading tool as prose, for the
 milestone's goal, relevant starting state, and recorded decisions. You read those documents and
 the project's live artifacts **read-only** and mutate nothing in the project.
 
@@ -43,14 +43,14 @@ question turns on. Prefer the live project over reasoning from memory. All of th
 read-only; enumerating alternatives changes nothing.
 
 You reach `open_questions.xml` through **exactly two** calls to the plugin's open-question tool,
-`python3 ${PLUGIN_ROOT}/tools/open_questions.py <subcommand> <MILESTONE_DIR> …`, written out
+`python3 ${PLUGIN_ROOT}/tools/open_questions.py <subcommand> <MISSION_DIR> …`, written out
 in full on every call, never through a variable, alias, or function of your own defined to
 stand for the command or any part of it, and never open or search the file yourself:
 
 1. **Your block.** Run `locate` on your own Short Title, and on no other:
 
    ```
-   python3 ${PLUGIN_ROOT}/tools/open_questions.py locate <MILESTONE_DIR> "<Short Title>"
+   python3 ${PLUGIN_ROOT}/tools/open_questions.py locate <MISSION_DIR> "<Short Title>"
    ```
 
    It prints the question's `<open-question>` block verbatim; that block is your primary
@@ -60,7 +60,7 @@ stand for the command or any part of it, and never open or search the file yours
 2. **Sibling scope.** Run `list --with-question`:
 
    ```
-   python3 ${PLUGIN_ROOT}/tools/open_questions.py list --with-question <MILESTONE_DIR>
+   python3 ${PLUGIN_ROOT}/tools/open_questions.py list --with-question <MISSION_DIR>
    ```
 
    It prints every block as its id, a single tab, then its question text, one per line in
@@ -69,7 +69,7 @@ stand for the command or any part of it, and never open or search the file yours
    see — you never run `locate` on a sibling, so no sibling's embedded alternatives or pick
    reaches you and none is presumed settled.
 
-Read `<MILESTONE_DIR>/requirements.md` whole with the file-reading tool beside those two
+Read `<MISSION_DIR>/requirements.md` whole with the file-reading tool beside those two
 prints. All of it feeds your reasoning only.
 
 ### 2. Enumerate the alternatives

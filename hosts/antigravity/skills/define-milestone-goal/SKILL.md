@@ -5,7 +5,7 @@ description: Create a new milestone directory with its three starting files from
 
 # define-milestone-goal
 
-Creates a new milestone directory at `<scope>/mission_<slug>/`, directly in the scope you name, holding the three files every milestone starts with — `requirements.md`, `open_questions.xml`, and `TASKS_TODO.md` — all created by the plugin's milestone-definition tool, which also derives the directory name from the title. Your work is checking the workflow's two runtime prerequisites, choosing the milestone's title, handing the tool's output to the commit procedure, and reporting the result; the files are filled in by the skills that follow (`/specify-milestone-starting-state`, `/review-milestone-requirements`, etc.). This skill never updates `AGENTS.md`, and it activates nothing: every later skill is aimed at the new milestone by being given the path the tool printed as its `--milestone <path>`.
+Creates a new milestone directory at `<scope>/mission_<slug>/`, directly in the scope you name, holding the three files every milestone starts with — `requirements.md`, `open_questions.xml`, and `TASKS_TODO.md` — all created by the plugin's milestone-definition tool, which also derives the directory name from the title. Your work is checking the workflow's two runtime prerequisites, choosing the milestone's title, handing the tool's output to the commit procedure, and reporting the result; the files are filled in by the skills that follow (`/specify-milestone-starting-state`, `/review-milestone-requirements`, etc.). This skill never updates `AGENTS.md`, and it activates nothing: every later skill is aimed at the new milestone by being given the path the tool printed as its `--mission <path>`.
 
 ## Usage
 

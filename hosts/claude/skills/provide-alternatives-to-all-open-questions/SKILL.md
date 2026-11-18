@@ -12,7 +12,7 @@ them per block against that frozen set. Per question it dispatches a subagent, r
 toward the project, that writes the `<alternative>` elements — the block's XML sub-elements —
 to one file in the run's scratch directory outside the repository and ends with the bare token
 `DONE`, so a return never travels through the orchestrator's context. The orchestrator is the
-only party in this pass that changes the question document, `<MILESTONE_DIR>/open_questions.xml`
+only party in this pass that changes the question document, `<MISSION_DIR>/open_questions.xml`
 — every read and write it makes of that document is a call to the plugin's open-question tool,
 `list` to gather and check and `embed` to write, never a direct read or edit, every commit of
 it is a call to the plugin's commit tool, never a git write of its own, and each call is
@@ -28,18 +28,18 @@ alternatives the recommendation pass reads.
 ## Usage
 
 ```
-/provide-alternatives-to-all-open-questions --milestone <path>
+/provide-alternatives-to-all-open-questions --mission <path>
 ```
 
 It sweeps every `<open-question>` block in the named milestone's `open_questions.xml`. The
-required leading `--milestone <path>` names the milestone by its repo-relative path, exactly as
+required leading `--mission <path>` names the milestone by its repo-relative path, exactly as
 the definition tool printed it, trailing slash included, e.g. `milestones/user-guide/`.
 
 ## Workflow
 
 ### 0. Find the milestone
 
-Follow `${CLAUDE_PLUGIN_ROOT}/shared/resolve-milestone.md` to resolve `<MILESTONE_DIR>`.
+Follow `${CLAUDE_PLUGIN_ROOT}/shared/resolve-mission.md` to resolve `<MISSION_DIR>`.
 Never use a hardcoded path.
 
 ### 1. Gather the questions once, in two tool calls
@@ -47,7 +47,7 @@ Never use a hardcoded path.
 **a. Every question.** Run
 
 ```
-python3 ${CLAUDE_PLUGIN_ROOT}/tools/open_questions.py list <MILESTONE_DIR>
+python3 ${CLAUDE_PLUGIN_ROOT}/tools/open_questions.py list <MISSION_DIR>
 ```
 
 It prints the `id` (Short Title) of every `<open-question>` block, one per line in document
@@ -59,7 +59,7 @@ fixed line `Alternatives pass stopped — the question list failed.` first, then
 **b. The ones without alternatives.** Run
 
 ```
-python3 ${CLAUDE_PLUGIN_ROOT}/tools/open_questions.py list --without-alternatives <MILESTONE_DIR>
+python3 ${CLAUDE_PLUGIN_ROOT}/tools/open_questions.py list --without-alternatives <MISSION_DIR>
 ```
 
 It prints, in document order, the ids of the blocks carrying no `<alternative>` element — the
@@ -87,7 +87,7 @@ pass, which picks against it. The primary re-run motive is exactly the bare set 
 **Escape hatch for a stale alternative set:** to force a fresh set on a block, run
 
 ```
-python3 ${CLAUDE_PLUGIN_ROOT}/tools/open_questions.py strip <MILESTONE_DIR> "<Short Title>" …
+python3 ${CLAUDE_PLUGIN_ROOT}/tools/open_questions.py strip <MISSION_DIR> "<Short Title>" …
 ```
 
 (one or more Short Titles), then re-run this skill. The bare `strip` deletes every child of
@@ -134,7 +134,7 @@ that path, written out in full.
 Use the `Agent` tool with `subagent_type` set to the namespaced registry name of the
 `provide-alternatives-to-open-question` agent (singular — the per-question subagent) under this
 plugin's namespace, `cairn:provide-alternatives-to-open-question` — one dispatch per surviving
-question. Pass it that question's **Short Title**, the `<MILESTONE_DIR>` resolved in step 0, and
+question. Pass it that question's **Short Title**, the `<MISSION_DIR>` resolved in step 0, and
 the `<scratch dir>` created in sub-step **a**, and nothing else — the three values the
 orchestrator already holds:
 
@@ -143,7 +143,7 @@ Enumerate the alternatives for this single open question.
 
 Short Title: <Short Title>
 
-Milestone directory: <MILESTONE_DIR>
+Mission directory: <MISSION_DIR>
 
 Scratch directory: <scratch dir>
 ```
@@ -177,14 +177,14 @@ to embed, and a question whose file never landed is caught by the closing check 
 **d. Embed and commit every landed file in one batch call.** Each time the paragraph opening
 this step has you batch — once its wait returns, or each time you wake with landed returns —
 run this one fixed shell call, written out in full exactly as shown, with only `<scratch dir>`
-and `<MILESTONE_DIR>` replaced by their paths:
+and `<MISSION_DIR>` replaced by their paths:
 
 ```
 mkdir -p "<scratch dir>/processed"
 find "<scratch dir>" -maxdepth 1 -type f -name '*.xml' | while IFS= read -r f; do
   t="${f##*/}"; t="${t%.xml}"
-  if err="$(python3 ${CLAUDE_PLUGIN_ROOT}/tools/open_questions.py embed --alternatives <MILESTONE_DIR> "$t" < "$f" 2>&1)"; then
-    out="$(python3 ${CLAUDE_PLUGIN_ROOT}/tools/commit.py --subject "Alternatives-annotation: $t" -- <MILESTONE_DIR>/open_questions.xml 2>&1)" ||
+  if err="$(python3 ${CLAUDE_PLUGIN_ROOT}/tools/open_questions.py embed --alternatives <MISSION_DIR> "$t" < "$f" 2>&1)"; then
+    out="$(python3 ${CLAUDE_PLUGIN_ROOT}/tools/commit.py --subject "Alternatives-annotation: $t" -- <MISSION_DIR>/open_questions.xml 2>&1)" ||
       printf '%s\tcommit failed: %s\n' "$t" "$out"
   else
     printf '%s\t%s\n' "$t" "$err"
@@ -200,7 +200,7 @@ the file's `<alternative>` elements into the existing block in canonical form or
 with one `Error:` line and the document unchanged. Each question the tool accepted is then
 committed by the one command of the shared commit procedure at
 `${CLAUDE_PLUGIN_ROOT}/shared/commit-procedure.md`, the plugin's commit tool, with
-`<MILESTONE_DIR>/open_questions.xml` alone as its path and a subject-only commit under
+`<MISSION_DIR>/open_questions.xml` alone as its path and a subject-only commit under
 `Alternatives-annotation: <Short Title>` with **no body**: the tool runs the dirty-own-path
 guard over the one document, stages exactly it, and commits it with it as the commit's
 pathspec, so nothing else the index holds — a change another run has staged included — rides
@@ -289,7 +289,7 @@ inspection.
 **g. Closing check.** After the last batch call, run once
 
 ```
-python3 ${CLAUDE_PLUGIN_ROOT}/tools/open_questions.py list --without-alternatives <MILESTONE_DIR>
+python3 ${CLAUDE_PLUGIN_ROOT}/tools/open_questions.py list --without-alternatives <MISSION_DIR>
 ```
 
 Every id it prints that is among the ids step 1b gathered and is not already noted for the

@@ -14,8 +14,8 @@ Your prompt carries three values and nothing else:
 
 - **Task name** — the `Complete the task named: "<TASK_NAME>"` line, the `##` heading text of
   the one task to complete.
-- **Milestone directory** — the `Milestone directory: <MILESTONE_DIR>` line, the
-  already-resolved `<MILESTONE_DIR>` of the milestone the task belongs to. Use it as given,
+- **Mission directory** — the `Mission directory: <MISSION_DIR>` line, the
+  already-resolved `<MISSION_DIR>` of the milestone the task belongs to. Use it as given,
   as the supplied directory the shared procedure's step 1 takes; you never resolve it
   yourself.
 - **Scratch directory** — the `Scratch directory: <scratch dir>` line, the run's
@@ -40,7 +40,7 @@ file** `<scratch dir>/paths.txt`, in the same shell call as the procedure's step
 and stage none of it: the orchestrator commits your task with the body file's content as the
 commit's body and the path file as its only pathspec, so its commit carries exactly your bar
 and exactly the paths the file names. Run step 5 as this one fixed shell call, written out in
-full exactly as shown, with only `<MILESTONE_DIR>`, `<Task Title>`, the bar's bullets, the
+full exactly as shown, with only `<MISSION_DIR>`, `<Task Title>`, the bar's bullets, the
 recorded paths, and `<scratch dir>` replaced:
 
 ```
@@ -52,12 +52,12 @@ if ! printf '%s\n' "$bar" | grep -q '[^[:space:]]'; then
   echo 'acceptance bar empty'
   false
 fi &&
-python3 ${CLAUDE_PLUGIN_ROOT}/tools/task_list.py remove <MILESTONE_DIR> "<Task Title>" &&
+python3 ${CLAUDE_PLUGIN_ROOT}/tools/task_list.py remove <MISSION_DIR> "<Task Title>" &&
 printf '%s\n' "$bar" > "<scratch dir>/body.txt" &&
 cat > "<scratch dir>/paths.txt" <<'EOF'
 <recorded path 1>
 <recorded path 2>
-<MILESTONE_DIR>/TASKS_TODO.md
+<MISSION_DIR>/TASKS_TODO.md
 EOF
 ```
 
@@ -71,7 +71,7 @@ or written, so write the bar's bullets into the heredoc and run the call again. 
 command is exactly the one the procedure's step 5 shows. Only after it succeeds does the call
 write `bar` to the body file and then the path file from the second quoted heredoc, which is
 the path file's whole content, one path per line: those recorded created/edited paths
-**plus** the milestone task list `<MILESTONE_DIR>/TASKS_TODO.md` (the task left it), every
+**plus** the milestone task list `<MISSION_DIR>/TASKS_TODO.md` (the task left it), every
 path written out in full on a line of its own, exactly as recorded and with no quoting or
 escaping, since each line is read whole as one path, and none is held in a shell variable.
 The list is the recorded one: never build it from `git status` or any other tree-wide
@@ -98,7 +98,7 @@ and your bar and change set only in the two files.
   paths, not the bar, not a summary: the files are the success return, and the orchestrator
   reads them from the scratch directory, never from your message.
 - `FAILED: <reason>` — the procedure could not complete. Use this for the no-matching-task
-  case too: `FAILED: no task matching "<name>" found in <MILESTONE_DIR>/TASKS_TODO.md`.
+  case too: `FAILED: no task matching "<name>" found in <MISSION_DIR>/TASKS_TODO.md`.
 
 `DONE` or `FAILED` must be the very last line you output. A `FAILED` return writes neither
 file and stages and commits nothing, leaving whatever partial work it managed in the working

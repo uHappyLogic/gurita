@@ -5,30 +5,30 @@ description: Finish a milestone by removing its directory in one commit whose bo
 
 # finish-milestone
 
-Wraps up the milestone named by `--milestone` — verifies that no open question stands and all tasks are done, composes a summary of what the milestone accomplished, and records it as the body of one `Milestone-finish: <MILESTONE_DIR>` commit that removes `<MILESTONE_DIR>` from the project, together with an update to `AGENTS.md` only if the milestone introduced lasting changes to the project's environment context. A milestone is finished exactly when its directory is gone: its files stand at the finish commit's parent, the plugin's missions tool's `summary` and `record` queries print the commit's body back as the milestone's summary, and reverting the finish commit makes the milestone live again. It writes nothing to `milestones/README.md`, touches no pointer, and never invokes `/capture-milestone-principle-updates`. Run this when every open question is answered and all tasks are complete.
+Wraps up the milestone named by `--mission` — verifies that no open question stands and all tasks are done, composes a summary of what the milestone accomplished, and records it as the body of one `Milestone-finish: <MISSION_DIR>` commit that removes `<MISSION_DIR>` from the project, together with an update to `AGENTS.md` only if the milestone introduced lasting changes to the project's environment context. A milestone is finished exactly when its directory is gone: its files stand at the finish commit's parent, the plugin's missions tool's `summary` and `record` queries print the commit's body back as the milestone's summary, and reverting the finish commit makes the milestone live again. It writes nothing to `milestones/README.md`, touches no pointer, and never invokes `/capture-milestone-principle-updates`. Run this when every open question is answered and all tasks are complete.
 
 ## Usage
 
 ```
-/finish-milestone --milestone <path>
+/finish-milestone --mission <path>
 ```
 
-The required leading `--milestone <path>` names the milestone by its repo-relative path, exactly as the definition tool printed it, trailing slash included, e.g. `milestones/user-guide/`.
+The required leading `--mission <path>` names the milestone by its repo-relative path, exactly as the definition tool printed it, trailing slash included, e.g. `milestones/user-guide/`.
 
 ## Workflow
 
 ### 1. Resolve the milestone
 
-Follow `~/.gemini/config/plugins/cairn/shared/resolve-milestone.md` to resolve `<MILESTONE_DIR>` from the required leading `--milestone <path>`. A call naming no milestone, or one that does not match, ends on that procedure's stop, its fixed line opening the report.
+Follow `~/.gemini/config/plugins/cairn/shared/resolve-mission.md` to resolve `<MISSION_DIR>` from the required leading `--mission <path>`. A call naming no milestone, or one that does not match, ends on that procedure's stop, its fixed line opening the report.
 
 ### 2. Read milestone content
 
 In parallel, as two independent tool calls:
-- Read `<MILESTONE_DIR>/requirements.md` — to extract the milestone's title, its **Goal**, and its key decisions. The title is the text of the file's top-level `# ` heading as it stands.
+- Read `<MISSION_DIR>/requirements.md` — to extract the milestone's title, its **Goal**, and its key decisions. The title is the text of the file's top-level `# ` heading as it stands.
 - Run the plugin's missions tool, to list what was concretely built:
 
   ```
-  python3 ~/.gemini/config/plugins/cairn/tools/missions.py tasks <MILESTONE_DIR> --with-body
+  python3 ~/.gemini/config/plugins/cairn/tools/missions.py tasks <MISSION_DIR> --with-body
   ```
 
   It prints, newest first, one tab-separated line per task completed in the milestone (the commit's abbreviated hash, its date, the milestone directory, and the task title), with the task's verified bar indented beneath it, and prints nothing when no task has been completed, which is no failure.
@@ -40,10 +40,10 @@ If the call fails, stop and report it, writing and committing nothing: the fixed
 First check that no open question stands. Run
 
 ```
-python3 ~/.gemini/config/plugins/cairn/tools/open_questions.py list <MILESTONE_DIR>
+python3 ~/.gemini/config/plugins/cairn/tools/open_questions.py list <MISSION_DIR>
 ```
 
-It prints the Short Title of every `<open-question>` block still in `<MILESTONE_DIR>/open_questions.xml`, one per line. If it prints nothing, proceed. If it prints anything, stop immediately, writing and committing nothing whatever tasks step 2's `tasks` call listed, and output, with the printed lines as the bullets verbatim:
+It prints the Short Title of every `<open-question>` block still in `<MISSION_DIR>/open_questions.xml`, one per line. If it prints nothing, proceed. If it prints anything, stop immediately, writing and committing nothing whatever tasks step 2's `tasks` call listed, and output, with the printed lines as the bullets verbatim:
 
 ```
 Cannot finish the milestone: the following open questions must be resolved first:
@@ -55,7 +55,7 @@ Run /answer-open-question for each one, then re-run /finish-milestone.
 
 If the call fails, stop and report it: the fixed line `Cannot finish the milestone: the open-question check failed.` first, then its one `Error: <reason>` line from stderr verbatim below it. This `list` call is the whole check — never read `open_questions.xml` to make it yourself.
 
-Then check that `<MILESTONE_DIR>/TASKS_TODO.md` contains no `##` sections. If tasks remain, stop: print the fixed line `Cannot finish the milestone: tasks remain to be completed.` first, then below it the advice to complete them first (or move them to another milestone).
+Then check that `<MISSION_DIR>/TASKS_TODO.md` contains no `##` sections. If tasks remain, stop: print the fixed line `Cannot finish the milestone: tasks remain to be completed.` first, then below it the advice to complete them first (or move them to another milestone).
 
 ### 4. Compose the completion summary
 
@@ -88,9 +88,9 @@ If nothing in the milestone changes the project's environment context or structu
 
 Read and follow the shared commit procedure at `~/.gemini/config/plugins/cairn/shared/commit-procedure.md`, running its one commit-tool command yourself as this step's one git tool call. Supply it these four inputs:
 
-- **REMOVALS** — `<MILESTONE_DIR>`, exactly as resolved, trailing slash included: the commit tool removes the milestone's directory and records the removal in the same commit.
+- **REMOVALS** — `<MISSION_DIR>`, exactly as resolved, trailing slash included: the commit tool removes the milestone's directory and records the removal in the same commit.
 - **PATHS** — `AGENTS.md` **only on passes where step 5 actually edited it**, and otherwise none, the commit then recording the removal alone. This conditional inclusion is keyed on whether this skill's step 5 edited the file — decided as the edit is (or is not) made, never by diffing or inspecting content.
-- **SUBJECT** — `Milestone-finish: <MILESTONE_DIR>`, the path exactly as resolved, trailing slash included.
+- **SUBJECT** — `Milestone-finish: <MISSION_DIR>`, the path exactly as resolved, trailing slash included.
 - **BODY** — the body step 4 composed.
 
 The commit tool runs the dirty-own-path guard, the removal, the path-scoped staging, and the commit; nothing else is removed, edited, or committed.

@@ -33,7 +33,7 @@
 # - Compact view and requirements read: the milestone the run resolved held two
 #   recommendation-bearing blocks, a third whose <depends-on> assumed an option of the first
 #   other than its pick, and one recommendation-less block. The runner sent step 1's call,
-#   as shown with only <MILESTONE_DIR> replaced, and the whole Read of requirements.md in one
+#   as shown with only <MISSION_DIR> replaced, and the whole Read of requirements.md in one
 #   turn; the call printed every block's id and question text, then each walked id with its
 #   lifted line and its picked alternative's what-it-is line.
 # - Batched call: composed exactly as shown, its guard and footer written once and one section

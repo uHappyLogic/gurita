@@ -21,22 +21,22 @@ recommendation-bearing question at its *recommended* option unattended, use
 ## Invocation
 
 ```
-/answer-open-question-with-alternative --milestone <path> <Short Title>. <Alternative Id>
+/answer-open-question-with-alternative --mission <path> <Short Title>. <Alternative Id>
 ```
 
-First strip the leading `--milestone <path>` from the argument by the rule in
-`{{PLUGIN_ROOT}}/shared/resolve-milestone.md`, holding its value for step 1, then split
+First strip the leading `--mission <path>` from the argument by the rule in
+`{{PLUGIN_ROOT}}/shared/resolve-mission.md`, holding its value for step 1, then split
 the rest on the **first `.`** — exactly as `answer-open-question` does. Everything
 before it is `<Short Title>` (the question handle); everything after it is `<Alternative Id>`
 (the `id` of the `<alternative>` to record). Trim surrounding whitespace from both halves.
 
 - `<Short Title>` must match (case-insensitive, against the block's `id`) an existing
-  `<open-question>` block in `<MILESTONE_DIR>/open_questions.xml` that the
+  `<open-question>` block in `<MISSION_DIR>/open_questions.xml` that the
   `/recommend-all-open-questions` sweep has already annotated with `<alternative>` elements.
 - `<Alternative Id>` must match (case-insensitive, against the `id` attribute) one of that
   block's embedded `<alternative id="...">` elements.
 
-The required leading `--milestone <path>` names the milestone by its repo-relative path,
+The required leading `--mission <path>` names the milestone by its repo-relative path,
 exactly as the definition tool printed it, trailing slash included, e.g.
 `milestones/user-guide/`; nothing else needs to be looked up first.
 
@@ -44,18 +44,18 @@ exactly as the definition tool printed it, trailing slash included, e.g.
 
 ### 1. Find the milestone
 
-Follow `{{PLUGIN_ROOT}}/shared/resolve-milestone.md` to resolve `<MILESTONE_DIR>`. Never use a hardcoded
-task-list path. Hold `<MILESTONE_DIR>` — you need it for the lift, the delegated recording,
+Follow `{{PLUGIN_ROOT}}/shared/resolve-mission.md` to resolve `<MISSION_DIR>`. Never use a hardcoded
+task-list path. Hold `<MISSION_DIR>` — you need it for the lift, the delegated recording,
 and the commit.
 
 ### 2. Lift the chosen alternative into the answer
 
-A whole read of `<MILESTONE_DIR>/open_questions.xml` with the file-reading tool is for
+A whole read of `<MISSION_DIR>/open_questions.xml` with the file-reading tool is for
 reasoning only, and every locate, list, lift, and write of it is a call to the plugin's
 open-question tool, that file's sole writer. Run
 
 ```
-python3 {{PLUGIN_ROOT}}/tools/open_questions.py lift <MILESTONE_DIR> "<Short Title>" --alternative "<Alternative Id>"
+python3 {{PLUGIN_ROOT}}/tools/open_questions.py lift <MISSION_DIR> "<Short Title>" --alternative "<Alternative Id>"
 ```
 
 On success it prints one line, "`<id>` — `<what-it-is>`": the chosen alternative's `id` as the
@@ -78,7 +78,7 @@ below it the tool's `Error:` line quoted verbatim, which names the failed lookup
 
 ### 3. Record the answer via the shared hand-answer procedure
 
-Hand the **`<MILESTONE_DIR>`** from step 1 as its `MILESTONE_DIR` input, the resolved
+Hand the **`<MISSION_DIR>`** from step 1 as its `MISSION_DIR` input, the resolved
 **`<Short Title>`**, the derived **ANSWER**, and the **RECORDED OPTION** from step 2 (the same
 value ANSWER opens with, passed separately so the core hands it to the tool as an exact id
 rather than parsing it out of ANSWER) to `{{PLUGIN_ROOT}}/shared/hand-answer-procedure.md` and
@@ -98,11 +98,11 @@ fixed line `Alternative not recorded — the recording core stopped.` first, the
 
 Read and follow the shared commit procedure at
 `{{PLUGIN_ROOT}}/shared/commit-procedure.md`, running its one commit-tool command yourself as
-this step's one git tool call. Supply it these three inputs, using the `<MILESTONE_DIR>` from
+this step's one git tool call. Supply it these three inputs, using the `<MISSION_DIR>` from
 step 1:
 
-- **PATHS** — this skill's own edits: `<MILESTONE_DIR>/open_questions.xml` and
-  `<MILESTONE_DIR>/requirements.md`.
+- **PATHS** — this skill's own edits: `<MISSION_DIR>/open_questions.xml` and
+  `<MISSION_DIR>/requirements.md`.
 - **SUBJECT** — exactly `Alternative-answer: <Short Title>` (the answered question's handle).
   This distinct subject marks an override of the embedded recommendation: when
   `/capture-milestone-principle-updates` walks a milestone's answer commits across all three

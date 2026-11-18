@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Skills Resolve a Required Mission Flag
-
-Rename the flag and what resolves it across `core/skills`, `core/shared`, `core/agents`, and the six slot value files carrying the placeholder: `--milestone <path>` becomes `--mission <path>` with no alias, `core/shared/resolve-milestone.md` becomes `resolve-mission.md`, `<MILESTONE_DIR>` becomes `<MISSION_DIR>`, and the dispatch line becomes `Mission directory: <MISSION_DIR>`. The four fixed-call tests follow the placeholder, and the fixed-console-lines table names the procedure's new path. Verified by the drift gate and both pytest runs passing and by a search of `core/` and `scripts/hosts/` finding none of the four old forms.
-
----
-
 ## Rename the Nine Skills to Mission
 
 Rename the nine remaining skill directories named with the old word (`ask-in-milestone-context`, `capture-milestone-principle-updates`, `define-milestone-goal`, `discuss-milestone-goal`, `finish-milestone`, `init-milestone-base-workflow`, `modify-milestone-goal`, `review-milestone-requirements`, `specify-milestone-starting-state`) to the same names with `mission`, and update each one's frontmatter name and every reference to them under `core/` and `scripts/hosts/` and in the Source column of the fixed-console-lines table. Verified by the drift gate and both pytest runs passing and by a search of `core/` and `scripts/hosts/` finding no old skill name.
