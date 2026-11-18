@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Record the Rename in the Idea Drafts
-
-Revise `ideas/gurita.md`, `ideas/kepala.md`, and `ideas/vscode_extension.md` in place to record the plugin's rename as carried out, in the form the word's rename used in commit `9f443e9` and as the "Idea drafts after rename" and "Final name lookup" decisions lay out: the plugin-name table's columns becoming "Before the rename" and "Now", the three remaining open questions marked "Answered by the plugin's rename." with their recorded decisions, the collision-check sentence saying no further lookup is made, and neither of the other two drafts still waiting on the rename. It is verified by every Now cell matching the tree and by every Cairn mention left in the three drafts naming the former name or the rename's history.
-
----
-
 ## Run the Host Suite and Record the Re-Check
 
 Run `uv run pytest host_tests --host claude`, then the same for `antigravity` and `codex`, against the renamed build and the installed copies the maintainer brought to it, installing nothing: a run that stops on the suite's prerequisite line waits there for the maintainer. From the passing runs, add to each `scripts/hosts/<host>/settings.toml` check block a dated "Re-checked" sentence naming that run and the installed version and rewrite the Install, Dispatch, and path bullets it covered, leaving the earlier dated sentences and the bullets it did not cover as written under their original names. It is verified by three passing suite runs and a drift gate that still passes after the edit.

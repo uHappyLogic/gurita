@@ -1,6 +1,6 @@
 # Kepala
 
-A draft of the orchestrator's name and of the work it might do, in two parts with two histories. The naming part was split on 2026-11-10 from the draft written 2026-10-30 that named the plugin and the orchestrator together; the plugin's half is `ideas/gurita.md`. The outline was merged in the same day from `ideas/karpathy.md`, the sketch of a multi-mission orchestrator kept until then under the working name Karpathy. The draft names that orchestrator **Kepala**, the head of the octopus whose arms are the plugin, Gurita, and the pair written as one word, **Kepalagurita**, names the whole. The orchestrator itself is still being worked out, so the naming part holds what is settled, why the image holds, which names it rules out, and what was checked for collisions and when, while the outline is a potential shape of the work, not a plan. The draft uses `ideas/gurita.md`'s words throughout, Gurita for the plugin and mission for the unit it works on, and it waits on that draft, which is carried out first.
+A draft of the orchestrator's name and of the work it might do, in two parts with two histories. The naming part was split on 2026-11-10 from the draft written 2026-10-30 that named the plugin and the orchestrator together; the plugin's half is `ideas/gurita.md`. The outline was merged in the same day from `ideas/karpathy.md`, the sketch of a multi-mission orchestrator kept until then under the working name Karpathy. The draft names that orchestrator **Kepala**, the head of the octopus whose arms are the plugin, Gurita, and the pair written as one word, **Kepalagurita**, names the whole. The orchestrator itself is still being worked out, so the naming part holds what is settled, why the image holds, which names it rules out, and what was checked for collisions and when, while the outline is a potential shape of the work, not a plan. The draft uses `ideas/gurita.md`'s words throughout, Gurita for the plugin and mission for the unit it works on, and that draft, which it waited on, has been carried out first: both of its renames shipped as the plugin's 2.0.0 release.
 
 ## Why a name of its own
 
@@ -52,7 +52,7 @@ The octopus words that were ruled out are in `ideas/gurita.md`.
 
 ### Alternatives kept on record
 
-Pairs that merge, in case the chosen one fails a later check. They replace both names, so they are an alternative only until the Gurita rename is released; after that the plugin's half is fixed and only the head word can still change:
+Pairs that merge, in case the chosen one fails a later check. They replace both names, so they were an alternative only until the Gurita rename was released; with the release the plugin's half is fixed and only the head word can still change:
 
 - **Capo and Pulpo, merged Capulpo.** Romance words, the most euphonic merge of all those tried, the two sharing their `p`. Pulpo's collisions are stale. Capo's is live and in-niche, which is why the pair is second.
 - **Rosh and Tamnun, merged Roshtamnun.** Hebrew; `tamnun` is clean, `rosh` nearly so, the merged form clunky.
@@ -60,7 +60,7 @@ Pairs that merge, in case the chosen one fails a later check. They replace both 
 
 ## Potential work outline
 
-What follows is the sketch that stood in `ideas/karpathy.md`, carried over under the new names. It is one possible shape of the work, recorded so the design has a starting point, and none of it is decided. Skill names, flags, commit markers, and console lines are quoted as they stand on `main` today, in the mission word; the plugin's rename to Gurita changes every one that carries the plugin's name, and the outline follows it.
+What follows is the sketch that stood in `ideas/karpathy.md`, carried over under the new names. It is one possible shape of the work, recorded so the design has a starting point, and none of it is decided. Skill names, flags, commit markers, and console lines are quoted as they stand on `main` today, in the mission word and under the plugin's name since its rename to Gurita.
 
 ### Flow
 
@@ -173,12 +173,12 @@ Before any orchestrator exists, the idea document can be split by hand into seve
 
 ## What waits
 
-Nothing here is carried out yet. The plugin's rename lands first and on its own (`ideas/gurita.md`), so that Kepala is born under its name, never refers to the plugin as Cairn, and matches fixed console lines that already say mission. The outline above is where the orchestrator's design starts, and it is settled in the work itself, not in this draft.
+Nothing here is carried out yet, and nothing outside it is waited on. The plugin's rename landed first and on its own (`ideas/gurita.md`), shipped as 2.0.0, so Kepala is born under its name, never refers to the plugin as Cairn, and matches fixed console lines that already say mission. The outline above is where the orchestrator's design starts, and it is settled in the work itself, not in this draft.
 
 ## Open questions
 
-- **Where Kepalagurita lands.** The table says organisation or umbrella and does not choose between them. The Gurita rename keeps the distribution repositories under `uHappyLogic`, so an organisation created afterwards moves them a second time, their redirects and the traffic token's repository list with them, while an umbrella that is only a name moves nothing.
-- **Whether the head word survives Gurita going first.** Once the plugin is released as Gurita the pairs above are closed, and a Kepala that fails its repeated collision check is replaced by another head word that joins Gurita, of which none is on record.
+- **Where Kepalagurita lands.** The table says organisation or umbrella and does not choose between them. The Gurita rename kept the repositories under `uHappyLogic`, renaming the source repository and creating the distribution repositories anew, so an organisation created now moves them all, the source repository a second time, their redirects and the traffic token's repository list with them, while an umbrella that is only a name moves nothing.
+- **Whether the head word survives Gurita going first.** With the plugin released as Gurita the pairs above are closed, and a Kepala that fails its repeated collision check is replaced by another head word that joins Gurita, of which none is on record.
 
 ## Sources
 
