@@ -341,65 +341,6 @@
       <drawback>Needs a goal revision against the goal&apos;s explicit &quot;publish the result as the last task&quot;, and leaves the breaking release, the step that carries the rename to users, tracked by no mission at all; how its notes then treat this mission&apos;s finish is a condition on the sibling questions about the notes and the finish.</drawback>
     </alternative>
   </open-question>
-  <open-question id="Final name lookup">
-    <question>Is the lookup of the name gurita that is owed before publication a gate on the release or a record only? The naming draft&apos;s direct lookup on 2026-11-10 found an npm placeholder package, the small tool bjpop/gurita, and two taken GitHub owner names, held none of them to block the rename, and left one more lookup to be made before anything is published, without saying what new finding, if any, would hold the release or where the result is recorded.</question>
-    <recommendation option="Any-new gate, draft">The lookup is owed so that nothing new about the name goes public unseen, and a release is always attended, so the maintainer rules on what was actually found instead of on criteria written before anything is known. The dated result replaces the draft&apos;s owed-lookup sentence in the one section that holds the name&apos;s collision history.</recommendation>
-    <alternative id="Any-new gate, draft">
-      The lookup is made once, immediately before publication, and it is a gate. Any exact-slug use not among the four recorded on 2026-11-10 (the npm package, bjpop/gurita, the owner names gurita and gurita-dev) holds the release until the maintainer rules: either the name stands and the release proceeds, or the goal is reshaped. The result, including any ruling, is entered in the naming draft&apos;s collision check in ideas/gurita.md as a dated entry, and the task&apos;s bar names it.
-      <advantage>Nothing new about the name reaches publication without the maintainer having seen it, and it costs no criteria to write now. The ruling is made against what was actually found, and it is recorded where the earlier findings are.</advantage>
-      <drawback>Every new use stops the release, however harmless it is, and only the maintainer can lift the stop. So the option works only if the maintainer is present at the release, which is a condition on the release-run-actor question. A blocking finding is also first seen after every rename task is already complete.</drawback>
-    </alternative>
-    <alternative id="No further lookup">
-      The owed lookup is dropped. The 2026-11-10 direct lookup is the name&apos;s last collision check, nothing is looked up before publication, nothing can hold the release on the name&apos;s account, and the naming draft&apos;s sentence owing one more lookup is changed to say that none is made.
-      <advantage>It costs no task and no stop. The reason the draft gives for holding the 2026-11-10 uses harmless still applies to any new one: the plugin is published to no package registry and its repositories stay under uHappyLogic. Under the hard cut a new finding would most likely be recorded and passed over anyway.</advantage>
-      <drawback>A use that would matter, such as a plugin or marketplace named gurita appearing in a host&apos;s plugin listing or a uHappyLogic/gurita name taken, goes unseen until after the one breaking release has made the name public. It also drops a check the maintainer&apos;s own draft said was owed.</drawback>
-    </alternative>
-    <alternative id="Record in draft">
-      The lookup is made once, just before publication, over the surfaces of the 2026-11-10 check (npm, PyPI, crates.io, GitHub repositories and owner names). It is a record only: the release goes ahead whatever it finds. The result goes into the naming draft&apos;s collision check in ideas/gurita.md as a dated entry beside the 2026-11-10 findings, replacing the sentence that owes the lookup, and the task&apos;s verified bar names the result.
-      <advantage>The release never waits on a judgment, and the name&apos;s whole collision history stays in the one section that already holds it. The draft no longer promises a lookup that has already been made.</advantage>
-      <drawback>A finding that ought to stop the release is written down but stops nothing. If it is noticed at all, it is noticed only after the rename is public and the old names are cut.</drawback>
-    </alternative>
-    <alternative id="Record in bar only">
-      The lookup is made once, just before publication, over the surfaces of the 2026-11-10 check. It is a record only and the release goes ahead whatever it finds. The result is recorded only in the verified bar of the task that made the lookup, read back through the missions tool&apos;s tasks query. The naming draft is left as it stands.
-      <advantage>The lookup touches no file, so the task&apos;s change set holds nothing beyond what publishing needs, and the result still sits in history where the task record is read.</advantage>
-      <drawback>The draft goes on saying that one more lookup is owed after the lookup has been made, and its collision check stops at 2026-11-10. A reader of the draft never meets the result unless they know to read the task commit. And, as with any record-only option, a finding that ought to stop the release stops nothing.</drawback>
-    </alternative>
-    <alternative id="Any-new gate, bar only">
-      The lookup is made once, immediately before publication, and any exact-slug use not among the four recorded on 2026-11-10 holds the release until the maintainer rules that the name stands or that the goal is reshaped. The result and any ruling are recorded only in the verified bar of the task that made the lookup. The naming draft is left as it stands.
-      <advantage>Nothing new reaches publication without the maintainer having seen it, no criteria have to be written now, and no file beyond the task&apos;s own change set is touched.</advantage>
-      <drawback>Every new use, however harmless, needs the maintainer&apos;s ruling, so the option depends on the maintainer being present at the release (a condition on the release-run-actor question). A blocking finding is first seen after the rename work is done. The draft keeps owing a lookup already made and never shows its result.</drawback>
-    </alternative>
-    <alternative id="Criteria gate, draft">
-      The lookup is made once, immediately before publication, and it is a gate with criteria fixed now. A new use holds the release only if it is in the plugin&apos;s niche (an agent, coding-assistant, or workflow plugin or tool named gurita) or in a namespace the release occupies (uHappyLogic/gurita or a uHappyLogic/gurita-host name taken, or a plugin or marketplace named gurita in a host&apos;s plugin listing). Every other new use is recorded and passed. The result is entered in the naming draft&apos;s collision check in ideas/gurita.md as a dated entry, and the task&apos;s bar names it.
-      <advantage>A runner with no one to ask can apply the gate. It stops on exactly the kinds of collision the draft&apos;s own reasoning says would matter, and lets through the kind it already held harmless. The result sits beside the earlier findings.</advantage>
-      <drawback>The criteria are written before anything is found, so a collision of a kind nobody foresaw passes, and one that only just meets a criterion stops the release with no judgment applied. A blocking finding is first seen after every rename task is already complete.</drawback>
-    </alternative>
-    <alternative id="Criteria gate, bar only">
-      The lookup is made once, immediately before publication, under the same fixed criteria: a new use in the plugin&apos;s niche, or in a namespace the release occupies, holds the release, and every other new use is passed. The result is recorded only in the verified bar of the task that made the lookup. The naming draft is left as it stands.
-      <advantage>The gate can be applied unattended and stops only on the collisions that would matter. It adds no file to the task&apos;s change set.</advantage>
-      <drawback>Criteria fixed in advance can miss an unforeseen kind of collision. A blocking finding is first seen after the rename work is done. The draft keeps owing a lookup already made and its collision check stops at 2026-11-10.</drawback>
-    </alternative>
-    <alternative id="Early any-new gate, draft">
-      The lookup is made twice: once before any rename task, and again immediately before publication. Each time, any exact-slug use not already recorded holds the work until the maintainer rules that the name stands or that the goal is reshaped. Each result is entered as a dated entry in the naming draft&apos;s collision check in ideas/gurita.md, and each lookup task&apos;s bar names its result.
-      <advantage>A finding that sinks the name surfaces before the rename has spent any work, and the lookup at publication still catches anything that appears in between. The maintainer sees every new use.</advantage>
-      <drawback>It takes two lookups and up to two stops, each needing the maintainer. Both stops depend on the maintainer being present when the task runs, and the second on the release-run-actor question. It adds a task ahead of the rename work for a check made only days earlier.</drawback>
-    </alternative>
-    <alternative id="Early any-new gate, bar only">
-      The lookup is made twice, once before any rename task and again immediately before publication. Each time, any exact-slug use not already recorded holds the work until the maintainer rules. Each result is recorded only in the verified bar of the task that made that lookup. The naming draft is left as it stands.
-      <advantage>A name-sinking finding surfaces before any rename work is spent, every new use reaches the maintainer, and no file is touched for the record.</advantage>
-      <drawback>It takes two lookups and up to two maintainer stops, dependent on the maintainer being present (the second on the release-run-actor question). The draft keeps owing a lookup that has been made twice, and shows neither result.</drawback>
-    </alternative>
-    <alternative id="Early criteria gate, draft">
-      The lookup is made twice, once before any rename task and again immediately before publication, under criteria fixed now. A new use holds the work only if it is in the plugin&apos;s niche or in a namespace the release occupies, and every other new use is recorded and passed. Each result is entered as a dated entry in the naming draft&apos;s collision check in ideas/gurita.md, and each lookup task&apos;s bar names its result.
-      <advantage>A disqualifying collision stops the mission before the rename spends any work, the check at publication covers the gap, and both gates can be applied by an unattended runner. The whole history stays in the draft&apos;s collision check.</advantage>
-      <drawback>It costs an extra task ahead of the rename for a check made days earlier. Criteria fixed in advance can let an unforeseen kind of collision through, or stop on a borderline one with no judgment applied.</drawback>
-    </alternative>
-    <alternative id="Early criteria gate, bar only">
-      The lookup is made twice, once before any rename task and again immediately before publication, under the same fixed criteria (a new use in the plugin&apos;s niche or in a namespace the release occupies holds the work, and every other new use is passed). Each result is recorded only in the verified bar of the task that made that lookup. The naming draft is left as it stands.
-      <advantage>A disqualifying collision surfaces before the rename work is spent, both gates run unattended, and no file is touched for the record.</advantage>
-      <drawback>It costs an extra task for a recent check, the fixed criteria can miss an unforeseen kind of collision, and the draft keeps owing a lookup already made, with its collision check stopping at 2026-11-10.</drawback>
-    </alternative>
-  </open-question>
   <open-question id="README tagline">
     <question>Does the README&apos;s tagline, &quot;Mark the path first, then hand off the walk.&quot;, stay under the new name? It stands directly under the title, above the one-sentence pitch, and draws on the image the old name carried, a pile of stones marking a path, which the name Gurita, Indonesian for octopus, does not carry.</question>
     <recommendation option="Remove the tagline">The line belongs to the stone image the rename retires, as the unit&apos;s old word did, and the pitch below it already says everything it said, so deleting it removes the stale image with no new copy to write or judge.</recommendation>

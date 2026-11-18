@@ -52,5 +52,9 @@ At `42878df` on 2026-11-18 the drift gate passes (`uv run scripts/build_hosts.py
 
 ## Decisions
 
+### Final name lookup
+
+The lookup of the name `gurita` that the naming draft owed before publication is dropped. The direct lookup of 2026-11-10 is the name's last collision check: nothing is looked up before publication, and nothing can hold the release on the name's account. The sentence in the collision check of `ideas/gurita.md` that owes one more lookup before anything is published is changed to say that none is made.
+
 ## Out of Scope
 
