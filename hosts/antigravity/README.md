@@ -1,42 +1,42 @@
 <p align="center">
-  <a href="https://github.com/uHappyLogic/cairn-antigravity/tree/traffic-data">
-    <img alt="unique views" src="https://raw.githubusercontent.com/uHappyLogic/cairn-antigravity/traffic-data/views-unique.svg" />
+  <a href="https://github.com/uHappyLogic/gurita-antigravity/tree/traffic-data">
+    <img alt="unique views" src="https://raw.githubusercontent.com/uHappyLogic/gurita-antigravity/traffic-data/views-unique.svg" />
   </a>
-  <a href="https://github.com/uHappyLogic/cairn-antigravity/tree/traffic-data">
-    <img alt="unique clones" src="https://raw.githubusercontent.com/uHappyLogic/cairn-antigravity/traffic-data/clones-unique.svg" />
+  <a href="https://github.com/uHappyLogic/gurita-antigravity/tree/traffic-data">
+    <img alt="unique clones" src="https://raw.githubusercontent.com/uHappyLogic/gurita-antigravity/traffic-data/clones-unique.svg" />
   </a>
 </p>
 
-# Cairn for Antigravity
+# Gurita for Antigravity
 
-Cairn brings all the important questions up to be decided upfront, so you can hand long-running execution to your agent confidently.
+Gurita brings all the important questions up to be decided upfront, so you can hand long-running execution to your agent confidently.
 
-This repository is the Google Antigravity distribution of [Cairn](https://github.com/uHappyLogic/cairn). It carries the built Antigravity plugin tree exactly as a Cairn release published it: the `plugin.json` manifest beside the plugin's skills, agents, and shared procedures, laid out to be extracted into the global `~/.gemini/config/plugins/cairn/` directory that Antigravity loads the plugin from.
+This repository is the Google Antigravity distribution of [Gurita](https://github.com/uHappyLogic/gurita). It carries the built Antigravity plugin tree exactly as a Gurita release published it: the `plugin.json` manifest beside the plugin's skills, agents, and shared procedures, laid out to be extracted into the global `~/.gemini/config/plugins/gurita/` directory that Antigravity loads the plugin from.
 
-> **Generated — do not edit.** Every file on `main`, this README included, is rendered from the sources of [uHappyLogic/cairn](https://github.com/uHappyLogic/cairn) by its host build and published verbatim by each Cairn release; nothing here is edited by hand, and a change made here would be overwritten by the next release. The repository's only other branch, `traffic-data`, is not built from anything and no release touches it — the traffic workflow this tree carries, which runs only in this repository and never in an installed copy, writes its per-day data file and badge SVGs there daily for the two badges above this page's title as well as for the adoption table in the root repository's README, and its own daily fetch of that branch counts as one unique clone a day in the clones badge. Issues are disabled in this repository on purpose — report problems and propose changes as issues and pull requests at [uHappyLogic/cairn](https://github.com/uHappyLogic/cairn), never here.
+> **Generated — do not edit.** Every file on `main`, this README included, is rendered from the sources of [uHappyLogic/gurita](https://github.com/uHappyLogic/gurita) by its host build and published verbatim by each Gurita release; nothing here is edited by hand, and a change made here would be overwritten by the next release. The repository's only other branch, `traffic-data`, is not built from anything and no release touches it — the traffic workflow this tree carries, which runs only in this repository and never in an installed copy, writes its per-day data file and badge SVGs there daily for the two badges above this page's title as well as for the adoption table in the root repository's README, and its own daily fetch of that branch counts as one unique clone a day in the clones badge. Issues are disabled in this repository on purpose — report problems and propose changes as issues and pull requests at [uHappyLogic/gurita](https://github.com/uHappyLogic/gurita), never here.
 
 ## Installation
 
-Cairn has two runtime prerequisites: **git**, with your project root inside a git work tree that every skill commits into, and a **Python 3.9 or later** interpreter that answers as `python3` on your PATH. The skills drive the plugin's stdlib-only Python tools with it (no packages to install), and `/define-mission-goal` checks both each time it defines a mission, git first, stopping with the remedy before anything is written when either is missing.
+Gurita has two runtime prerequisites: **git**, with your project root inside a git work tree that every skill commits into, and a **Python 3.9 or later** interpreter that answers as `python3` on your PATH. The skills drive the plugin's stdlib-only Python tools with it (no packages to install), and `/define-mission-goal` checks both each time it defines a mission, git first, stopping with the remedy before anything is written when either is missing.
 
 ### Antigravity
 
-Extract the latest release into `~/.gemini/config/plugins/cairn`, the global path Antigravity loads the plugin from in every project:
+Extract the latest release into `~/.gemini/config/plugins/gurita`, the global path Antigravity loads the plugin from in every project:
 
 ```bash
-mkdir -p ~/.gemini/config/plugins/cairn
-curl -sL https://github.com/uHappyLogic/cairn-antigravity/archive/refs/heads/main.tar.gz | tar -xz --strip-components=1 -C ~/.gemini/config/plugins/cairn
+mkdir -p ~/.gemini/config/plugins/gurita
+curl -sL https://github.com/uHappyLogic/gurita-antigravity/archive/refs/heads/main.tar.gz | tar -xz --strip-components=1 -C ~/.gemini/config/plugins/gurita
 ```
 
 Antigravity discovers a new plugin directory only on startup, so restart any running `agy` session after the extract.
 
-**Extracted Cairn into a project under an earlier release?** From that project's root, remove the old copy, since Antigravity discovers it beside the global one and it predates the subagents' write and shell tools:
+**Extracted Gurita into a project under an earlier release?** From that project's root, remove the old copy, since Antigravity discovers it beside the global one and it predates the subagents' write and shell tools:
 
 ```bash
-rm -rf .agents/plugins/cairn
+rm -rf .agents/plugins/gurita
 ```
 
-The `main` archive is always the latest release, since `main` advances only by release snapshots. To pin a release instead of tracking the latest, swap `refs/heads/main` in the extract command's URL for `refs/tags/<tag>`, using a tag from the [releases page](https://github.com/uHappyLogic/cairn-antigravity/releases).
+The `main` archive is always the latest release, since `main` advances only by release snapshots. To pin a release instead of tracking the latest, swap `refs/heads/main` in the extract command's URL for `refs/tags/<tag>`, using a tag from the [releases page](https://github.com/uHappyLogic/gurita-antigravity/releases).
 
 ### Bootstrap your project
 
@@ -50,7 +50,7 @@ Document your project — its domain context, working conventions, available too
 
 ## Source
 
-Built from [uHappyLogic/cairn](https://github.com/uHappyLogic/cairn) at release tag [`1.9.0`](https://github.com/uHappyLogic/cairn/releases/tag/1.9.0), whose release page carries the notes for this version. The exact source commit this tree was built from is recorded in the body of this repository's `Release: 1.9.0` commit.
+Built from [uHappyLogic/gurita](https://github.com/uHappyLogic/gurita) at release tag [`1.9.0`](https://github.com/uHappyLogic/gurita/releases/tag/1.9.0), whose release page carries the notes for this version. The exact source commit this tree was built from is recorded in the body of this repository's `Release: 1.9.0` commit.
 
 ## License
 

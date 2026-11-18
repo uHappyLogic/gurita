@@ -1,4 +1,4 @@
-# This workflow runs only in the uHappyLogic/cairn-claude repository and does nothing in an
+# This workflow runs only in the uHappyLogic/gurita-claude repository and does nothing in an
 # installed copy of this plugin.
 
 name: traffic-badges

@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Rename the Host README and Pointer Templates
-
-Give each host's README, CONTRIBUTING pointer, and traffic-workflow template under `scripts/hosts/<host>/` a plain substitution of the new name with no mention of the former name: the install commands, plugin ids, invocation forms, install paths, badge URLs, and the `uHappyLogic/gurita` and `uHappyLogic/gurita-<host>` repository links. Remove the Claude Code README's "Migrating from the old marketplace" section and its lead-in line, and rebuild `hosts/` in the same change. It is verified by the drift gate and a search finding no old name in those templates or their rendered copies.
-
----
-
 ## Rename the Remaining Single-Line Source Sites
 
 Rename the plugin at the source sites that hold its name once: the "right cairn skill" prose in `core/skills/ask-in-mission-context/SKILL.md`, with `hosts/` rebuilt in the same change, and the `Cairn Test` git identity in `tests/conftest.py`. Delete the `.cairn/daemon.toml` line from `.gitignore` under neither name, nothing replacing it, so the other six entries stay as they are and `.scratchpad.md` becomes the first line. It is verified by the drift gate and both test runs.
