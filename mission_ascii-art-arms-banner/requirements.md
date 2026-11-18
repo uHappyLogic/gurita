@@ -44,5 +44,9 @@ The banner does not exist in any form: there is no character drawing of the arms
 
 One SVG is committed once in the source repository, at a root location such as an `assets/` directory, and the root README references it by a relative path. `scripts/build_hosts.py` is changed to copy that one file into every host tree at the tree root, beside the README, byte for byte as it copies the root `LICENSE`, and each host README template references its tree's copy by a relative path, so every page loads the banner from its own repository. No copy is kept by hand in a definition directory, and no README references the file by absolute URL. The build's tests are extended to cover the new copy, and `--check` holds every host copy equal to the one source file.
 
+### Banner source of truth
+
+The source of truth is a plain-text drawing of the arms, committed together with whatever colour mapping it needs. A new standalone script under `scripts/`, run by hand like `set_version.py`, reads the drawing and writes the SVG. The generated SVG is committed as derived output, never hand-edited, and is regenerated whenever the drawing changes.
+
 ## Out of Scope
 
