@@ -2,6 +2,17 @@
 
 Each entry is the notes of that version's [GitHub release](https://github.com/uHappyLogic/gurita/releases), verbatim, newest first.
 
+## 2.0.0 — 2026-11-18
+
+### Rename Cairn to Gurita
+
+- The plugin is now **Gurita**. Up to 1.9.0 it was published as Cairn. The monorepo is `uHappyLogic/gurita`, and each host installs from its own distribution repository: `uHappyLogic/gurita-claude`, `uHappyLogic/gurita-antigravity`, and `uHappyLogic/gurita-codex`.
+- Every identifier carries the new name: the `gurita` plugin and marketplace names, the `gurita:` agent namespace, the Antigravity plugin root `~/.gemini/config/plugins/gurita`, and the Codex plugin directory `plugins/gurita`. No `cairn` alias is kept.
+- To upgrade from Cairn, finish any live milestones under the old copy, remove it (each host's README gives the removal steps), install Gurita, and re-run the bootstrap. `docs/workflow.md` describes the order.
+- The headless-chain guide moved to `docs/ways-of-using.md`.
+
+**Full Changelog**: https://github.com/uHappyLogic/gurita/compare/1.9.0...2.0.0
+
 ## 1.9.0 — 2026-10-26
 
 ### Uniform milestone resolution with an override flag (milestone 50)

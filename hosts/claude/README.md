@@ -40,7 +40,7 @@ Run `/init` to document your project — its domain context, working conventions
 
 ## Source
 
-Built from [uHappyLogic/gurita](https://github.com/uHappyLogic/gurita) at release tag [`1.9.0`](https://github.com/uHappyLogic/gurita/releases/tag/1.9.0), whose release page carries the notes for this version. The exact source commit this tree was built from is recorded in the body of this repository's `Release: 1.9.0` commit.
+Built from [uHappyLogic/gurita](https://github.com/uHappyLogic/gurita) at release tag [`2.0.0`](https://github.com/uHappyLogic/gurita/releases/tag/2.0.0), whose release page carries the notes for this version. The exact source commit this tree was built from is recorded in the body of this repository's `Release: 2.0.0` commit.
 
 ## License
 
