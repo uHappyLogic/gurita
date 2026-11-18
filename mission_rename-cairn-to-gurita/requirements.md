@@ -88,5 +88,9 @@ Every existing CHANGELOG entry, 1.9.0 back to 0.9.0, stays byte-for-byte as publ
 
 Both files drop the plugin's name and keep the rest of their stem: `docs/ways-of-using-cairn.md` becomes `docs/ways-of-using.md` and `ideas/benchmark_for_cairn.md` becomes `ideas/benchmark.md`, each moved with `git mv`. Every in-tree reference is rewritten to the new path: the README's link, the CLAUDE.md layout line and its two invariant mentions, `docs/skill-reference.md`, `docs/workflow.md`, and the drafts `ideas/gurita.md`, `ideas/kepala.md`, and `ideas/vscode_extension.md`.
 
+### Host suite timing
+
+The host suite is run as a task of this mission as well as in the release's pre-flight. One task, ordered after the last task that changes any host's trigger set (its definition directory under `scripts/hosts/`, `core/agents/*.md`, `scripts/build_hosts.py`, `host_tests/`) and before the release task, runs `uv run pytest host_tests --host claude`, then the same for `antigravity` and `codex`, against the renamed build. The release's pre-flight still runs the suite again, as its step 2g requires.
+
 ## Out of Scope
 
