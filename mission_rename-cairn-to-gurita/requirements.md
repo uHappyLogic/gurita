@@ -116,5 +116,9 @@ The root README carries one sentence near its title and pitch saying that Gurita
 
 Each host gets a re-check of the name-dependent points only: install under the new marketplace and plugin id, the `gurita:` namespace or invocation form, agent dispatch by the new names, and the install and cache paths. It is taken from a host suite run against the renamed installed copy, in the form the 2026-11-09 re-checks already used. In each `settings.toml` block a dated "Re-checked" sentence naming that run and the installed version is added, and the bullets it covered (Install, Dispatch, and the paths) are rewritten from it; the earlier dated sentences and the bullets it did not cover stay as written, carried forward under their original names.
 
+### GitHub-side changes actor
+
+The maintainer makes every GitHub-side change by hand, outside the task list, at any time before the release: renaming the source repository, the distribution-repository transition, descriptions and topics, the local `origin` URL, and any extension, regeneration, and re-setting of `TRAFFIC_TOKEN`. No task of this mission records or checks the changes. The release pre-flight's existing check, with only its repository names changed to the new form, is the one gate, and it prints commands for a missing repository without running them, as it does now.
+
 ## Out of Scope
 
