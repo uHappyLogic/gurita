@@ -147,7 +147,7 @@ def test_the_file_end_seam(run_requirements, requirements_dir, original, expecte
 
 
 def test_a_file_ending_without_a_newline_keeps_its_bytes_as_an_exact_prefix(run_requirements, requirements_dir):
-    original = b"# Milestone 1: Tail\n\n## Decisions\n\n### Kept\n\nLast line has no ending."
+    original = b"# Tail\n\n## Decisions\n\n### Kept\n\nLast line has no ending."
     target = requirements_dir(original)
     result = fold(run_requirements, target, "Kept", b"New.\n")
     assert result == original + b"\n\nNew."
@@ -215,7 +215,7 @@ def test_the_bullet_list_seam(run_requirements, requirements_dir, original, expe
 
 
 def test_a_crlf_file_gets_crlf_inserted_lines_and_keeps_every_other_byte(run_requirements, requirements_dir):
-    original = b"# Milestone 1: CRLF\r\n\r\n## Decisions\r\n\r\n### Kept\r\n\r\nPara.\r\n\r\n## Out of Scope\r\n"
+    original = b"# CRLF\r\n\r\n## Decisions\r\n\r\n### Kept\r\n\r\nPara.\r\n\r\n## Out of Scope\r\n"
     target = requirements_dir(original)
     result = fold(run_requirements, target, "Kept", b"New line one.\nNew line two.\n")
     offset = after_line(original, b"Para.\r\n")

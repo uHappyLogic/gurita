@@ -2,7 +2,7 @@
 whitespace-folded, case-folded match) taken out of the list, its heading, body, and "---"
 together, with the rest of the file rendered in the canonical layout; it reads nothing from
 standard input, renders the removed section nowhere, and never reads or writes the done file
-a milestone completed before the bar moved into commits keeps beside its list; silent on
+a mission completed before the bar moved into commits keeps beside its list; silent on
 success; a partial, shared, or unknown title refused with one Error line and the list
 byte-for-byte unchanged."""
 
@@ -22,7 +22,7 @@ FIRST = "Build The Parser First"
 SECOND = "Keep A Body Separator Line"
 THIRD = "Render Unicode — Text As Given"
 
-# The done file a milestone completed before the bar moved into commits keeps beside its list,
+# The done file a mission completed before the bar moved into commits keeps beside its list,
 # named as the list is with DONE for TODO, in the form its entries were written in.
 DONE_NAME = task_list.TODO_NAME.replace("TODO", "DONE")
 STANDING_DONE = (

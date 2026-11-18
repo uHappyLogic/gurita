@@ -46,7 +46,7 @@ def test_an_empty_heading_is_refused(run_requirements, requirements_dir, section
 @pytest.mark.parametrize(
     "original",
     [
-        b"# Milestone 1: None\n\n## Goal\n\nShip it.\n\n## Out of Scope\n",
+        b"# None\n\n## Goal\n\nShip it.\n\n## Out of Scope\n",
         b"## Goal\n\n ## Decisions\n\nAn indented heading is not a section.\n",
         b"## Goal\n\n### Decisions\n\nA subsection is not the section.\n",
         b"## Goal\n\n## Decision\n\nThe singular is another title.\n",

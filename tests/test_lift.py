@@ -9,8 +9,8 @@ from open_questions import Alternative, Document, Question, Recommendation
 ENTITIES_TITLE = "Ampersand & angle <brackets>, \"quotes\", 'apostrophes'"
 
 
-def test_lift_prints_the_recommendation_as_option_em_dash_rationale(run_tool, milestone_dir):
-    result = run_tool("lift", str(milestone_dir("annotated")), "Root element form")
+def test_lift_prints_the_recommendation_as_option_em_dash_rationale(run_tool, mission_dir):
+    result = run_tool("lift", str(mission_dir("annotated")), "Root element form")
     assert (result.returncode, result.stderr) == (0, b"")
     assert result.stdout.decode("utf-8") == (
         "Self-closing root — The serializer already writes every empty element self-closing, and the "
@@ -19,22 +19,22 @@ def test_lift_prints_the_recommendation_as_option_em_dash_rationale(run_tool, mi
     )
 
 
-def test_lift_prints_exactly_one_line(run_tool, milestone_dir):
-    result = run_tool("lift", str(milestone_dir("annotated")), "Escape hatch under sole writer")
+def test_lift_prints_exactly_one_line(run_tool, mission_dir):
+    result = run_tool("lift", str(mission_dir("annotated")), "Escape hatch under sole writer")
     assert result.returncode == 0
     text = result.stdout.decode("utf-8")
     assert text.count("\n") == 1 and text.endswith("\n")
     assert text.startswith("Strip subcommand — The goal gives the tool every deterministic edit")
 
 
-def test_lift_un_escapes_the_option_and_the_rationale(run_tool, milestone_dir):
-    result = run_tool("lift", str(milestone_dir("entities")), ENTITIES_TITLE)
+def test_lift_un_escapes_the_option_and_the_rationale(run_tool, mission_dir):
+    result = run_tool("lift", str(mission_dir("entities")), ENTITIES_TITLE)
     assert (result.returncode, result.stderr) == (0, b"")
     assert result.stdout.decode("utf-8") == "A & B — One rule for text & attributes: <, >, \", '.\n"
 
 
-def test_lift_alternative_prints_id_em_dash_what_it_is(run_tool, milestone_dir):
-    result = run_tool("lift", str(milestone_dir("annotated")), "Root element form", "--alternative", "Open and close pair")
+def test_lift_alternative_prints_id_em_dash_what_it_is(run_tool, mission_dir):
+    result = run_tool("lift", str(mission_dir("annotated")), "Root element form", "--alternative", "Open and close pair")
     assert (result.returncode, result.stderr) == (0, b"")
     assert result.stdout.decode("utf-8") == (
         "Open and close pair — A two-line `<open-questions>` … `</open-questions>` document with "
@@ -42,8 +42,8 @@ def test_lift_alternative_prints_id_em_dash_what_it_is(run_tool, milestone_dir):
     )
 
 
-def test_lift_alternative_excludes_the_advantage_and_drawback_children(run_tool, milestone_dir):
-    result = run_tool("lift", str(milestone_dir("annotated")), "Root element form", "--alternative", "Self-closing root")
+def test_lift_alternative_excludes_the_advantage_and_drawback_children(run_tool, mission_dir):
+    result = run_tool("lift", str(mission_dir("annotated")), "Root element form", "--alternative", "Self-closing root")
     text = result.stdout.decode("utf-8")
     assert text == (
         "Self-closing root — The one rule for an element that holds nothing & needs no body: write it "
@@ -53,39 +53,39 @@ def test_lift_alternative_excludes_the_advantage_and_drawback_children(run_tool,
     assert "rewrites the root line" not in text
 
 
-def test_lift_alternative_un_escapes_the_id_and_the_what_it_is_text(run_tool, milestone_dir):
-    result = run_tool("lift", str(milestone_dir("entities")), ENTITIES_TITLE, "--alternative", "A & B")
+def test_lift_alternative_un_escapes_the_id_and_the_what_it_is_text(run_tool, mission_dir):
+    result = run_tool("lift", str(mission_dir("entities")), ENTITIES_TITLE, "--alternative", "A & B")
     assert (result.returncode, result.stderr) == (0, b"")
     assert result.stdout.decode("utf-8") == "A & B — What <it> is & isn't, \"quoted\".\n"
 
 
-def test_lift_matches_the_short_title_case_folded(run_tool, milestone_dir):
-    target = str(milestone_dir("annotated"))
+def test_lift_matches_the_short_title_case_folded(run_tool, mission_dir):
+    target = str(mission_dir("annotated"))
     assert run_tool("lift", target, "ROOT ELEMENT FORM").stdout == run_tool("lift", target, "Root element form").stdout
     assert run_tool("lift", target, "ROOT ELEMENT FORM").returncode == 0
 
 
-def test_lift_alternative_matches_case_folded_and_prints_the_stored_id(run_tool, milestone_dir):
-    result = run_tool("lift", str(milestone_dir("annotated")), "root ELEMENT form", "--alternative", "OPEN and close PAIR")
+def test_lift_alternative_matches_case_folded_and_prints_the_stored_id(run_tool, mission_dir):
+    result = run_tool("lift", str(mission_dir("annotated")), "root ELEMENT form", "--alternative", "OPEN and close PAIR")
     assert result.returncode == 0
     assert result.stdout.decode("utf-8").startswith("Open and close pair — A two-line")
 
 
-def test_lift_compares_ids_un_escaped_not_as_stored(run_tool, milestone_dir):
-    target = str(milestone_dir("entities"))
+def test_lift_compares_ids_un_escaped_not_as_stored(run_tool, mission_dir):
+    target = str(mission_dir("entities"))
     assert run_tool("lift", target, ENTITIES_TITLE, "--alternative", "a & b").returncode == 0
     assert run_tool("lift", target, ENTITIES_TITLE, "--alternative", "A &amp; B").returncode == 1
 
 
-def test_lift_fails_when_the_block_carries_no_recommendation(run_tool, milestone_dir):
-    result = run_tool("lift", str(milestone_dir("annotated")), "Fixture bare block")
+def test_lift_fails_when_the_block_carries_no_recommendation(run_tool, mission_dir):
+    result = run_tool("lift", str(mission_dir("annotated")), "Fixture bare block")
     assert result.returncode == 1
     assert result.stdout == b""
     assert result.stderr == b'Error: <open-question id="Fixture bare block"> carries no <recommendation> element\n'
 
 
-def test_lift_fails_when_no_block_has_the_id_naming_the_ids_the_document_holds(run_tool, milestone_dir):
-    result = run_tool("lift", str(milestone_dir("annotated")), "Missing question")
+def test_lift_fails_when_no_block_has_the_id_naming_the_ids_the_document_holds(run_tool, mission_dir):
+    result = run_tool("lift", str(mission_dir("annotated")), "Missing question")
     assert result.returncode == 1
     assert result.stdout == b""
     assert result.stderr.decode("utf-8") == (
@@ -94,22 +94,22 @@ def test_lift_fails_when_no_block_has_the_id_naming_the_ids_the_document_holds(r
     )
 
 
-def test_lift_alternative_fails_when_no_block_has_the_id(run_tool, milestone_dir):
-    result = run_tool("lift", str(milestone_dir("bare")), "Missing", "--alternative", "X")
+def test_lift_alternative_fails_when_no_block_has_the_id(run_tool, mission_dir):
+    result = run_tool("lift", str(mission_dir("bare")), "Missing", "--alternative", "X")
     assert result.returncode == 1
     assert result.stdout == b""
     assert result.stderr.startswith(b'Error: no <open-question> block has the id "Missing"')
 
 
-def test_lift_alternative_fails_when_the_block_carries_no_alternatives(run_tool, milestone_dir):
-    result = run_tool("lift", str(milestone_dir("bare")), "First bare question", "--alternative", "Anything")
+def test_lift_alternative_fails_when_the_block_carries_no_alternatives(run_tool, mission_dir):
+    result = run_tool("lift", str(mission_dir("bare")), "First bare question", "--alternative", "Anything")
     assert result.returncode == 1
     assert result.stdout == b""
     assert result.stderr == b'Error: <open-question id="First bare question"> carries no <alternative> elements\n'
 
 
-def test_lift_alternative_fails_when_no_alternative_matches_naming_the_ids_it_carries(run_tool, milestone_dir):
-    result = run_tool("lift", str(milestone_dir("annotated")), "Root element form", "--alternative", "Third way")
+def test_lift_alternative_fails_when_no_alternative_matches_naming_the_ids_it_carries(run_tool, mission_dir):
+    result = run_tool("lift", str(mission_dir("annotated")), "Root element form", "--alternative", "Third way")
     assert result.returncode == 1
     assert result.stdout == b""
     assert result.stderr.decode("utf-8") == (
@@ -118,8 +118,8 @@ def test_lift_alternative_fails_when_no_alternative_matches_naming_the_ids_it_ca
     )
 
 
-def test_lift_on_an_empty_document_fails_saying_it_holds_no_blocks(run_tool, milestone_dir):
-    result = run_tool("lift", str(milestone_dir("empty")), "Anything")
+def test_lift_on_an_empty_document_fails_saying_it_holds_no_blocks(run_tool, mission_dir):
+    result = run_tool("lift", str(mission_dir("empty")), "Anything")
     assert result.returncode == 1
     assert result.stdout == b""
     assert result.stderr == b'Error: no <open-question> block has the id "Anything"; the document holds no blocks\n'
@@ -132,22 +132,22 @@ def test_lift_fails_when_the_document_is_missing(run_tool, tmp_path):
     assert result.stderr == f"Error: {tmp_path / open_questions.DOCUMENT_NAME} does not exist\n".encode("utf-8")
 
 
-def test_lift_requires_a_short_title(run_tool, milestone_dir):
-    result = run_tool("lift", str(milestone_dir("bare")))
+def test_lift_requires_a_short_title(run_tool, mission_dir):
+    result = run_tool("lift", str(mission_dir("bare")))
     assert result.returncode == 2
     assert result.stdout == b""
     assert b"SHORT_TITLE" in result.stderr
 
 
-def test_lift_alternative_requires_a_value(run_tool, milestone_dir):
-    result = run_tool("lift", str(milestone_dir("annotated")), "Root element form", "--alternative")
+def test_lift_alternative_requires_a_value(run_tool, mission_dir):
+    result = run_tool("lift", str(mission_dir("annotated")), "Root element form", "--alternative")
     assert result.returncode == 2
     assert result.stdout == b""
     assert b"--alternative" in result.stderr
 
 
-def test_lift_leaves_the_document_unchanged(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_lift_leaves_the_document_unchanged(run_tool, mission_dir):
+    target = mission_dir("annotated")
     document = target / open_questions.DOCUMENT_NAME
     before = document.read_bytes()
     run_tool("lift", str(target), "Root element form")

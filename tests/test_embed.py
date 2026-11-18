@@ -140,10 +140,10 @@ def give_alternatives(target, short_title, *alternative_ids):
     return target
 
 
-def prepared(milestone_dir, shape, short_title=FIRST):
+def prepared(mission_dir, shape, short_title=FIRST):
     """A copy of the bare fixture whose named block is in the state the shape writes into:
     bare for --alternatives, carrying the alternatives "A" and "B" for --recommendation."""
-    target = milestone_dir("bare")
+    target = mission_dir("bare")
     if shape == "--recommendation":
         give_alternatives(target, short_title, "A", "B")
     return target
@@ -189,8 +189,8 @@ def assert_refused(result, target, before, reason):
 # --- the shape flag -------------------------------------------------------------------
 
 
-def test_embed_requires_exactly_one_shape_flag(run_tool, milestone_dir):
-    target = milestone_dir("bare")
+def test_embed_requires_exactly_one_shape_flag(run_tool, mission_dir):
+    target = mission_dir("bare")
     before = document_of(target)
     neither = run_tool("embed", str(target), FIRST, stdin=ONLY_ALTERNATIVE.encode("utf-8"))
     assert neither.returncode == 2
@@ -204,8 +204,8 @@ def test_embed_requires_exactly_one_shape_flag(run_tool, milestone_dir):
     assert document_of(target) == before
 
 
-def test_embed_accepts_the_shape_flag_before_or_after_the_positional_arguments(run_tool, milestone_dir):
-    target = milestone_dir("bare")
+def test_embed_accepts_the_shape_flag_before_or_after_the_positional_arguments(run_tool, mission_dir):
+    target = mission_dir("bare")
     assert_ok(run_tool("embed", "--alternatives", str(target), FIRST, stdin=ONLY_ALTERNATIVE.encode("utf-8")))
     assert_ok(run_tool("embed", str(target), FIRST, "--recommendation", stdin=ONLY_RECOMMENDATION.encode("utf-8")))
     assert_ok(run_tool("embed", str(target), "--alternatives", SECOND, stdin=ONLY_ALTERNATIVE.encode("utf-8")))
@@ -216,8 +216,8 @@ def test_embed_accepts_the_shape_flag_before_or_after_the_positional_arguments(r
 # --- a clean --alternatives message ---------------------------------------------------
 
 
-def test_embed_alternatives_writes_the_alternatives_as_the_block_children_in_canonical_form(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_embed_alternatives_writes_the_alternatives_as_the_block_children_in_canonical_form(run_tool, mission_dir):
+    target = mission_dir("annotated")
     before = read_fixture("annotated")
     assert_ok(embed_alternatives(run_tool, target, BARE, ALTERNATIVES))
     after = document_of(target).decode("utf-8")
@@ -227,8 +227,8 @@ def test_embed_alternatives_writes_the_alternatives_as_the_block_children_in_can
     assert after == open_questions.render_document(load(target))
 
 
-def test_embed_alternatives_then_recommendation_reproduces_a_stripped_block_byte_for_byte(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_embed_alternatives_then_recommendation_reproduces_a_stripped_block_byte_for_byte(run_tool, mission_dir):
+    target = mission_dir("annotated")
     fixture = read_fixture("annotated")
     for short_title in (HATCH, ROOT_FORM):
         alternatives, recommendation = halves_of(fixture, short_title)
@@ -240,8 +240,8 @@ def test_embed_alternatives_then_recommendation_reproduces_a_stripped_block_byte
         assert document_of(target).decode("utf-8") == fixture
 
 
-def test_embed_recommendation_alone_reproduces_a_partially_stripped_block_byte_for_byte(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_embed_recommendation_alone_reproduces_a_partially_stripped_block_byte_for_byte(run_tool, mission_dir):
+    target = mission_dir("annotated")
     fixture = read_fixture("annotated")
     _, recommendation = halves_of(fixture, ROOT_FORM)
     assert run_tool("strip", "--recommendation", str(target), ROOT_FORM).returncode == 0
@@ -250,10 +250,10 @@ def test_embed_recommendation_alone_reproduces_a_partially_stripped_block_byte_f
     assert document_of(target).decode("utf-8") == fixture
 
 
-def test_embed_of_the_entities_block_halves_reproduces_the_fixture(run_tool, milestone_dir):
+def test_embed_of_the_entities_block_halves_reproduces_the_fixture(run_tool, mission_dir):
     # The <depends-on> of this block names a block the document does not hold, so it is left
     # out of the recommendation half; the entities themselves are what the round trip checks.
-    target = milestone_dir("entities")
+    target = mission_dir("entities")
     fixture = read_fixture("entities")
     alternatives, recommendation = halves_of(fixture, ENTITIES_TITLE)
     without_dependency = "\n".join(line for line in recommendation.split("\n") if "<depends-on" not in line)
@@ -273,8 +273,8 @@ def test_extract_fragment_is_the_identity_on_a_clean_message_of_either_shape():
     assert open_questions.extract_fragment(RECOMMENDATION + "\n", RECOMMENDATION_SHAPE) == RECOMMENDATION
 
 
-def test_embed_alternatives_the_minimal_fragment(run_tool, milestone_dir):
-    target = milestone_dir("bare")
+def test_embed_alternatives_the_minimal_fragment(run_tool, mission_dir):
+    target = mission_dir("bare")
     assert_ok(embed_alternatives(run_tool, target, FIRST, ONLY_ALTERNATIVE))
     assert by_id(target, FIRST) == Question(
         id=FIRST,
@@ -291,8 +291,8 @@ def test_embed_alternatives_the_minimal_fragment(run_tool, milestone_dir):
     ]
 
 
-def test_embed_alternatives_makes_the_block_leave_the_without_alternatives_list(run_tool, milestone_dir):
-    target = milestone_dir("bare")
+def test_embed_alternatives_makes_the_block_leave_the_without_alternatives_list(run_tool, mission_dir):
+    target = mission_dir("bare")
     assert run_tool("list", "--without-alternatives", str(target)).stdout == b"First bare question\nSecond bare question\n"
     assert_ok(embed_alternatives(run_tool, target, SECOND, ONLY_ALTERNATIVE))
     assert run_tool("list", "--without-alternatives", str(target)).stdout == b"First bare question\n"
@@ -325,16 +325,16 @@ def test_embed_alternatives_writes_only_the_alternatives_and_leaves_the_other_ha
     )
 
 
-def test_embed_alternatives_discards_a_recommendation_half_below_the_last_alternative_line(run_tool, milestone_dir):
+def test_embed_alternatives_discards_a_recommendation_half_below_the_last_alternative_line(run_tool, mission_dir):
     # A whole two-half message piped to --alternatives embeds the alternatives alone: the
     # slice closes on the last </alternative> line and the shape writes only its own half.
-    target = milestone_dir("annotated")
+    target = mission_dir("annotated")
     assert_ok(embed_alternatives(run_tool, target, BARE, ALTERNATIVES + "\n" + RECOMMENDATION + "\n"))
     assert block_lines(document_of(target).decode("utf-8"), BARE) == BARE_HEAD + ALTERNATIVE_LINES + ["  </open-question>"]
 
 
-def test_embed_matches_the_short_title_case_folded_and_un_escaped(run_tool, milestone_dir):
-    target = milestone_dir("entities")
+def test_embed_matches_the_short_title_case_folded_and_un_escaped(run_tool, mission_dir):
+    target = mission_dir("entities")
     assert run_tool("strip", str(target), ENTITIES_TITLE).returncode == 0
     before = document_of(target)
     escaped = embed_alternatives(run_tool, target, "Ampersand &amp; angle &lt;brackets&gt;, &quot;quotes&quot;, &apos;apostrophes&apos;", ONLY_ALTERNATIVE)
@@ -351,8 +351,8 @@ def test_embed_matches_the_short_title_case_folded_and_un_escaped(run_tool, mile
 # --- a clean --recommendation message -------------------------------------------------
 
 
-def test_embed_recommendation_writes_its_half_and_leaves_the_alternatives_frozen(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_embed_recommendation_writes_its_half_and_leaves_the_alternatives_frozen(run_tool, mission_dir):
+    target = mission_dir("annotated")
     before = read_fixture("annotated")
     assert_ok(embed_alternatives(run_tool, target, BARE, ALTERNATIVES))
     frozen = document_of(target)
@@ -365,8 +365,8 @@ def test_embed_recommendation_writes_its_half_and_leaves_the_alternatives_frozen
     assert after == open_questions.render_document(load(target))
 
 
-def test_embed_recommendation_promotes_the_named_alternative_and_keeps_the_set_frozen(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_embed_recommendation_promotes_the_named_alternative_and_keeps_the_set_frozen(run_tool, mission_dir):
+    target = mission_dir("annotated")
     assert_ok(embed_alternatives(run_tool, target, BARE, ALTERNATIVES))
     assert_ok(embed_recommendation(run_tool, target, BARE, RECOMMENDATION.replace('option="Option A"', 'option="option b"')))
     after = block_lines(document_of(target).decode("utf-8"), BARE)
@@ -375,8 +375,8 @@ def test_embed_recommendation_promotes_the_named_alternative_and_keeps_the_set_f
     assert [alternative.id for alternative in by_id(target, BARE).alternatives] == ["Option B", "Option A"]
 
 
-def test_embed_recommendation_the_minimal_fragment(run_tool, milestone_dir):
-    target = milestone_dir("bare")
+def test_embed_recommendation_the_minimal_fragment(run_tool, mission_dir):
+    target = mission_dir("bare")
     assert_ok(embed_alternatives(run_tool, target, FIRST, ONLY_ALTERNATIVE))
     assert_ok(embed_recommendation(run_tool, target, FIRST, ONLY_RECOMMENDATION))
     assert by_id(target, FIRST) == Question(
@@ -396,8 +396,8 @@ def test_embed_recommendation_the_minimal_fragment(run_tool, milestone_dir):
     ]
 
 
-def test_embed_recommendation_keeps_several_principles_and_dependencies(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_embed_recommendation_keeps_several_principles_and_dependencies(run_tool, mission_dir):
+    target = mission_dir("annotated")
     assert_ok(embed_alternatives(run_tool, target, BARE, '<alternative id="X">x</alternative>'))
     body = (
         "<applied-principle>First</applied-principle>\n"
@@ -417,8 +417,8 @@ def test_embed_recommendation_keeps_several_principles_and_dependencies(run_tool
     assert block.recommendation == Recommendation(option="X", rationale="x it is")
 
 
-def test_embed_recommendation_makes_the_block_annotated_for_list_lift_and_walk(run_tool, milestone_dir):
-    target = milestone_dir("bare")
+def test_embed_recommendation_makes_the_block_annotated_for_list_lift_and_walk(run_tool, mission_dir):
+    target = mission_dir("bare")
     assert_ok(embed_alternatives(run_tool, target, SECOND, ONLY_ALTERNATIVE))
     assert run_tool("list", "--without-recommendation", str(target)).stdout == b"First bare question\nSecond bare question\n"
     assert run_tool("walk", str(target)).stdout == b""
@@ -429,18 +429,18 @@ def test_embed_recommendation_makes_the_block_annotated_for_list_lift_and_walk(r
     assert run_tool("walk", str(target)).stdout == b"Second bare question\n"
 
 
-def test_embed_recommendation_compares_the_option_against_the_block_alternatives_un_escaped_and_case_folded(run_tool, milestone_dir):
-    target = milestone_dir("bare")
+def test_embed_recommendation_compares_the_option_against_the_block_alternatives_un_escaped_and_case_folded(run_tool, mission_dir):
+    target = mission_dir("bare")
     assert_ok(embed_alternatives(run_tool, target, FIRST, '<alternative id="A &amp; B">a</alternative>'))
     assert_ok(embed_recommendation(run_tool, target, FIRST, '<recommendation option="a &amp; b">r</recommendation>'))
     assert by_id(target, FIRST).recommendation == Recommendation(option="a & b", rationale="r")
 
 
-def test_embed_recommendation_discards_alternative_lines_above_the_first_anchor_line(run_tool, milestone_dir):
+def test_embed_recommendation_discards_alternative_lines_above_the_first_anchor_line(run_tool, mission_dir):
     # A whole two-half message piped to --recommendation embeds the recommendation half alone:
     # the slice opens on the first line of that half, and the block's own alternatives — not
     # the message's — are what the option is checked against.
-    target = milestone_dir("annotated")
+    target = mission_dir("annotated")
     give_alternatives(target, BARE, "Option A", "Option B")
     frozen = block_lines(document_of(target).decode("utf-8"), BARE)
     assert_ok(embed_recommendation(run_tool, target, BARE, ALTERNATIVES + "\n" + RECOMMENDATION))
@@ -452,8 +452,8 @@ def test_embed_recommendation_discards_alternative_lines_above_the_first_anchor_
 # --- a prose-wrapped message ----------------------------------------------------------
 
 
-def test_embed_discards_a_grounding_summary_above_and_a_closing_remark_below(run_tool, milestone_dir, tmp_path):
-    clean = milestone_dir("annotated")
+def test_embed_discards_a_grounding_summary_above_and_a_closing_remark_below(run_tool, mission_dir, tmp_path):
+    clean = mission_dir("annotated")
     assert_ok(embed_alternatives(run_tool, clean, BARE, ALTERNATIVES))
     assert_ok(embed_recommendation(run_tool, clean, BARE, RECOMMENDATION))
     target = tmp_path / "wrapped"
@@ -480,8 +480,8 @@ def test_embed_discards_a_grounding_summary_above_and_a_closing_remark_below(run
     assert document_of(target) == document_of(clean)
 
 
-def test_embed_discards_a_returned_wrapper_and_question_outside_the_fragment(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_embed_discards_a_returned_wrapper_and_question_outside_the_fragment(run_tool, mission_dir):
+    target = mission_dir("annotated")
     wrapped = (
         '<open-question id="Fixture bare block">\n'
         "  <question>Does a bare block sit beside annotated siblings without change?</question>\n"
@@ -494,8 +494,8 @@ def test_embed_discards_a_returned_wrapper_and_question_outside_the_fragment(run
     assert by_id(target, BARE).recommendation == Recommendation(option="Option A", rationale="A wins because of one stated reason.")
 
 
-def test_embed_reads_a_message_with_crlf_line_ends(run_tool, milestone_dir):
-    target = milestone_dir("bare")
+def test_embed_reads_a_message_with_crlf_line_ends(run_tool, mission_dir):
+    target = mission_dir("bare")
     alternatives = ("Summary.\r\n" + ALTERNATIVES.replace("\n", "\r\n") + "\r\nRemark.\r\n").encode("utf-8")
     assert_ok(embed_alternatives(run_tool, target, FIRST, alternatives))
     assert [alternative.id for alternative in by_id(target, FIRST).alternatives] == ["Option A", "Option B"]
@@ -529,8 +529,8 @@ def test_extract_fragment_alternatives_shape_slices_past_a_recommendation_half_b
 # --- a misordered fragment ------------------------------------------------------------
 
 
-def test_embed_groups_misordered_children_by_kind(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_embed_groups_misordered_children_by_kind(run_tool, mission_dir):
+    target = mission_dir("annotated")
     # Complete but misordered: the extraction anchors of each half hold, and everything between
     # them is out of the canonical sequence, the children inside each alternative included.
     alternatives = (
@@ -574,10 +574,10 @@ def test_embed_groups_misordered_children_by_kind(run_tool, milestone_dir):
     ]
 
 
-def test_embed_recommendation_takes_the_recommendation_before_its_siblings(run_tool, milestone_dir):
+def test_embed_recommendation_takes_the_recommendation_before_its_siblings(run_tool, mission_dir):
     # The slice opens on the first of the half's three start tags, whichever it is, and the
     # recommendation need not come last: the closing anchor is the last </recommendation> line.
-    target = milestone_dir("annotated")
+    target = mission_dir("annotated")
     assert_ok(embed_alternatives(run_tool, target, BARE, ALTERNATIVES))
     body = (
         '<recommendation option="Option B">B after all.</recommendation>\n'
@@ -604,8 +604,8 @@ def test_extract_fragment_anchors_on_a_misordered_fragment_first_opening_and_las
     assert open_questions.extract_fragment(message, ALTERNATIVES_SHAPE) == '<alternative id="A">a</alternative>\n<alternative id="B">b</alternative>'
 
 
-def test_embed_normalizes_indentation_escaping_and_folded_text(run_tool, milestone_dir):
-    target = milestone_dir("bare")
+def test_embed_normalizes_indentation_escaping_and_folded_text(run_tool, mission_dir):
+    target = mission_dir("bare")
     alternatives = (
         '\t\t<alternative id="Tabs &amp; spaces">\n'
         "\t\t\t\tWhat it\n"
@@ -638,8 +638,8 @@ def test_embed_normalizes_indentation_escaping_and_folded_text(run_tool, milesto
 # --- <depends-on> resolution ----------------------------------------------------------
 
 
-def test_embed_resolves_a_dependency_against_a_block_with_alternatives_un_escaped_and_case_folded(run_tool, milestone_dir):
-    target = milestone_dir("entities")
+def test_embed_resolves_a_dependency_against_a_block_with_alternatives_un_escaped_and_case_folded(run_tool, mission_dir):
+    target = mission_dir("entities")
     document = load(target)
     document.questions.append(Question(id="Dependent", question="Does it resolve?", alternatives=[Alternative(id="Yes", text="It does.")]))
     open_questions.save_document(str(target), document)
@@ -651,10 +651,10 @@ def test_embed_resolves_a_dependency_against_a_block_with_alternatives_un_escape
     assert by_id(target, "Dependent").depends_on == [Dependency(question=ENTITIES_TITLE.upper(), option="a & b")]
 
 
-def test_embed_resolves_a_dependency_on_a_sibling_carrying_alternatives_and_no_recommendation(run_tool, milestone_dir):
+def test_embed_resolves_a_dependency_on_a_sibling_carrying_alternatives_and_no_recommendation(run_tool, mission_dir):
     # The dropped half of the check: the target need not carry a <recommendation>, so the
     # recommendation pass may write its blocks in any order.
-    target = milestone_dir("annotated")
+    target = mission_dir("annotated")
     assert_ok(embed_alternatives(run_tool, target, BARE, ALTERNATIVES))
     assert run_tool("strip", "--recommendation", str(target), ROOT_FORM).returncode == 0
     assert by_id(target, BARE).recommendation is None
@@ -664,10 +664,10 @@ def test_embed_resolves_a_dependency_on_a_sibling_carrying_alternatives_and_no_r
     assert run_tool("walk", str(target)).stdout == b"Escape hatch under sole writer\nRoot element form\n"
 
 
-def test_embed_resolves_one_hop_only_and_follows_no_tag_of_the_target(run_tool, milestone_dir):
+def test_embed_resolves_one_hop_only_and_follows_no_tag_of_the_target(run_tool, mission_dir):
     # The entities block's own <depends-on> names a block the document does not hold; a
     # dependency on that block still resolves, because the target's tags are not followed.
-    target = milestone_dir("entities")
+    target = mission_dir("entities")
     document = load(target)
     assert document.questions[0].depends_on[0].question == 'Some "other" question & more'
     document.questions.append(Question(id="Dependent", question="One hop?", alternatives=[Alternative(id="Yes")]))
@@ -691,8 +691,8 @@ def test_embed_tolerates_a_dependency_cycle(run_tool, tmp_path):
 
 
 @pytest.mark.parametrize("question", ["No such block", "Fixture bare block"])
-def test_embed_refuses_a_dependency_on_a_missing_block_or_one_without_alternatives(run_tool, milestone_dir, question):
-    target = milestone_dir("annotated")
+def test_embed_refuses_a_dependency_on_a_missing_block_or_one_without_alternatives(run_tool, mission_dir, question):
+    target = mission_dir("annotated")
     assert run_tool("strip", "--recommendation", str(target), ROOT_FORM).returncode == 0
     before = document_of(target)
     body = f'<depends-on question="{question}" option="Y"/>\n<recommendation option="Self-closing root">r</recommendation>'
@@ -706,8 +706,8 @@ def test_embed_refuses_a_dependency_on_a_missing_block_or_one_without_alternativ
     )
 
 
-def test_embed_refuses_a_dependency_on_a_bare_sibling_when_no_other_block_has_alternatives(run_tool, milestone_dir):
-    target = milestone_dir("bare")
+def test_embed_refuses_a_dependency_on_a_bare_sibling_when_no_other_block_has_alternatives(run_tool, mission_dir):
+    target = mission_dir("bare")
     give_alternatives(target, FIRST, "X")
     before = document_of(target)
     body = '<depends-on question="Second bare question" option="Y"/>\n<recommendation option="X">r</recommendation>'
@@ -720,8 +720,8 @@ def test_embed_refuses_a_dependency_on_a_bare_sibling_when_no_other_block_has_al
     )
 
 
-def test_embed_refuses_a_dependency_whose_option_names_none_of_the_target_alternatives(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_embed_refuses_a_dependency_whose_option_names_none_of_the_target_alternatives(run_tool, mission_dir):
+    target = mission_dir("annotated")
     give_alternatives(target, BARE, "X")
     before = document_of(target)
     body = '<depends-on question="root element FORM" option="Neither"/>\n<recommendation option="X">r</recommendation>'
@@ -735,8 +735,8 @@ def test_embed_refuses_a_dependency_whose_option_names_none_of_the_target_altern
     )
 
 
-def test_embed_refuses_a_dependency_on_the_block_being_embedded(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_embed_refuses_a_dependency_on_the_block_being_embedded(run_tool, mission_dir):
+    target = mission_dir("annotated")
     give_alternatives(target, BARE, "X")
     before = document_of(target)
     body = '<depends-on question="Fixture bare block" option="X"/>\n<recommendation option="X">r</recommendation>'
@@ -750,8 +750,8 @@ def test_embed_refuses_a_dependency_on_the_block_being_embedded(run_tool, milest
 
 
 @pytest.mark.parametrize("short_title", [HATCH, ROOT_FORM])
-def test_embed_alternatives_refuses_a_block_already_carrying_alternatives(run_tool, milestone_dir, short_title):
-    target = milestone_dir("annotated")
+def test_embed_alternatives_refuses_a_block_already_carrying_alternatives(run_tool, mission_dir, short_title):
+    target = mission_dir("annotated")
     assert run_tool("strip", "--recommendation", str(target), ROOT_FORM).returncode == 0
     before = document_of(target)
     result = embed_alternatives(run_tool, target, short_title.upper(), ONLY_ALTERNATIVE)
@@ -763,8 +763,8 @@ def test_embed_alternatives_refuses_a_block_already_carrying_alternatives(run_to
     )
 
 
-def test_embed_recommendation_refuses_a_block_carrying_no_alternatives(run_tool, milestone_dir):
-    target = milestone_dir("bare")
+def test_embed_recommendation_refuses_a_block_carrying_no_alternatives(run_tool, mission_dir):
+    target = mission_dir("bare")
     before = document_of(target)
     result = embed_recommendation(run_tool, target, "first BARE question", ONLY_RECOMMENDATION)
     assert_refused(
@@ -775,8 +775,8 @@ def test_embed_recommendation_refuses_a_block_carrying_no_alternatives(run_tool,
     )
 
 
-def test_embed_recommendation_refuses_a_block_already_carrying_a_recommendation(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_embed_recommendation_refuses_a_block_already_carrying_a_recommendation(run_tool, mission_dir):
+    target = mission_dir("annotated")
     before = document_of(target)
     result = embed_recommendation(run_tool, target, "root ELEMENT form", '<recommendation option="Self-closing root">r</recommendation>')
     assert_refused(
@@ -787,8 +787,8 @@ def test_embed_recommendation_refuses_a_block_already_carrying_a_recommendation(
     )
 
 
-def test_embed_checks_the_block_state_before_reading_the_message(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_embed_checks_the_block_state_before_reading_the_message(run_tool, mission_dir):
+    target = mission_dir("annotated")
     before = document_of(target)
     # An unpiped, closed stdin would be its own refusal; the block's state is reported first.
     alternatives = run_tool("embed", "--alternatives", str(target), HATCH, stdin=b"")
@@ -811,8 +811,8 @@ def test_embed_checks_the_block_state_before_reading_the_message(run_tool, miles
         b"The word &lt;alternative escaped is not a line to extract from.\n</alternative>\n",
     ],
 )
-def test_embed_alternatives_refuses_a_message_with_no_alternative_line(run_tool, milestone_dir, body):
-    target = milestone_dir("bare")
+def test_embed_alternatives_refuses_a_message_with_no_alternative_line(run_tool, mission_dir, body):
+    target = mission_dir("bare")
     before = document_of(target)
     assert_refused(embed_alternatives(run_tool, target, FIRST, body), target, before, "no <alternative> line to extract from")
 
@@ -825,14 +825,14 @@ def test_embed_alternatives_refuses_a_message_with_no_alternative_line(run_tool,
         b'<alternative id="A">a\n<recommendation option="A">r</recommendation>\n',
     ],
 )
-def test_embed_alternatives_refuses_a_message_with_no_closing_alternative_line(run_tool, milestone_dir, body):
-    target = milestone_dir("bare")
+def test_embed_alternatives_refuses_a_message_with_no_closing_alternative_line(run_tool, mission_dir, body):
+    target = mission_dir("bare")
     before = document_of(target)
     assert_refused(embed_alternatives(run_tool, target, FIRST, body), target, before, "no </alternative> line to extract to")
 
 
-def test_embed_alternatives_refuses_a_closing_alternative_line_above_the_first_alternative_line(run_tool, milestone_dir):
-    target = milestone_dir("bare")
+def test_embed_alternatives_refuses_a_closing_alternative_line_above_the_first_alternative_line(run_tool, mission_dir):
+    target = mission_dir("bare")
     before = document_of(target)
     body = b'</alternative>\n<alternative id="A">a\n'
     assert_refused(
@@ -853,8 +853,8 @@ def test_embed_alternatives_refuses_a_closing_alternative_line_above_the_first_a
         b"The word &lt;recommendation escaped is not a line to extract from.\n</recommendation>\n",
     ],
 )
-def test_embed_recommendation_refuses_a_message_with_no_opening_line_of_its_half(run_tool, milestone_dir, body):
-    target = prepared(milestone_dir, "--recommendation")
+def test_embed_recommendation_refuses_a_message_with_no_opening_line_of_its_half(run_tool, mission_dir, body):
+    target = prepared(mission_dir, "--recommendation")
     before = document_of(target)
     assert_refused(
         embed_recommendation(run_tool, target, FIRST, body),
@@ -873,14 +873,14 @@ def test_embed_recommendation_refuses_a_message_with_no_opening_line_of_its_half
         b'<recommendation option="A"/>\n',
     ],
 )
-def test_embed_recommendation_refuses_a_message_with_no_closing_recommendation_line(run_tool, milestone_dir, body):
-    target = prepared(milestone_dir, "--recommendation")
+def test_embed_recommendation_refuses_a_message_with_no_closing_recommendation_line(run_tool, mission_dir, body):
+    target = prepared(mission_dir, "--recommendation")
     before = document_of(target)
     assert_refused(embed_recommendation(run_tool, target, FIRST, body), target, before, "no </recommendation> line to extract to")
 
 
-def test_embed_recommendation_refuses_a_closing_recommendation_line_above_the_first_opening_line(run_tool, milestone_dir):
-    target = prepared(milestone_dir, "--recommendation")
+def test_embed_recommendation_refuses_a_closing_recommendation_line_above_the_first_opening_line(run_tool, mission_dir):
+    target = prepared(mission_dir, "--recommendation")
     before = document_of(target)
     body = b'</recommendation>\n<applied-principle>P</applied-principle>\n<recommendation option="A">r\n'
     assert_refused(
@@ -906,8 +906,8 @@ def test_embed_recommendation_refuses_a_closing_recommendation_line_above_the_fi
         ("  </open-question>  ", "</open-question>", "a"),
     ],
 )
-def test_embed_refuses_a_wrapper_or_question_line_inside_the_fragment(run_tool, milestone_dir, shape, line, tag, article):
-    target = prepared(milestone_dir, shape)
+def test_embed_refuses_a_wrapper_or_question_line_inside_the_fragment(run_tool, mission_dir, shape, line, tag, article):
+    target = prepared(mission_dir, shape)
     before = document_of(target)
     assert_refused(
         embed(run_tool, target, FIRST, framed(shape, line), shape),
@@ -919,8 +919,8 @@ def test_embed_refuses_a_wrapper_or_question_line_inside_the_fragment(run_tool, 
 
 
 @pytest.mark.parametrize("shape", SHAPES)
-def test_embed_does_not_mistake_a_longer_tag_or_escaped_text_for_a_question_line(run_tool, milestone_dir, shape):
-    target = prepared(milestone_dir, shape)
+def test_embed_does_not_mistake_a_longer_tag_or_escaped_text_for_a_question_line(run_tool, mission_dir, shape):
+    target = prepared(mission_dir, shape)
     before = document_of(target)
     body = framed(shape, "<questionable>x &lt;question&gt; in text</questionable>")
     result = embed(run_tool, target, FIRST, body, shape)
@@ -935,8 +935,8 @@ def test_embed_does_not_mistake_a_longer_tag_or_escaped_text_for_a_question_line
         ("--recommendation", "Cited: <applied-principle>P</applied-principle>\n" + '<recommendation option="A">r</recommendation>', "text precedes <applied-principle> on the fragment's opening line"),
     ],
 )
-def test_embed_refuses_text_preceding_the_first_element(run_tool, milestone_dir, shape, body, reason):
-    target = prepared(milestone_dir, shape)
+def test_embed_refuses_text_preceding_the_first_element(run_tool, mission_dir, shape, body, reason):
+    target = prepared(mission_dir, shape)
     before = document_of(target)
     assert_refused(embed(run_tool, target, FIRST, body, shape), target, before, reason)
 
@@ -948,15 +948,15 @@ def test_embed_refuses_text_preceding_the_first_element(run_tool, milestone_dir,
         ("--recommendation", '<recommendation option="A">r</recommendation> That is all.', "text trails </recommendation> on the fragment's closing line"),
     ],
 )
-def test_embed_refuses_text_trailing_the_last_element(run_tool, milestone_dir, shape, body, reason):
-    target = prepared(milestone_dir, shape)
+def test_embed_refuses_text_trailing_the_last_element(run_tool, mission_dir, shape, body, reason):
+    target = prepared(mission_dir, shape)
     before = document_of(target)
     assert_refused(embed(run_tool, target, FIRST, body, shape), target, before, reason)
 
 
 @pytest.mark.parametrize("shape", SHAPES)
-def test_embed_refuses_text_between_the_elements(run_tool, milestone_dir, shape):
-    target = prepared(milestone_dir, shape)
+def test_embed_refuses_text_between_the_elements(run_tool, mission_dir, shape):
+    target = prepared(mission_dir, shape)
     before = document_of(target)
     body = framed(shape, "A note between the elements.")
     assert_refused(embed(run_tool, target, FIRST, body, shape), target, before, "the fragment carries text between its elements")
@@ -987,8 +987,8 @@ def test_embed_refuses_text_between_the_elements(run_tool, milestone_dir, shape)
         ),
     ],
 )
-def test_embed_refuses_a_fragment_that_is_not_well_formed_xml(run_tool, milestone_dir, shape, body, reason):
-    target = prepared(milestone_dir, shape)
+def test_embed_refuses_a_fragment_that_is_not_well_formed_xml(run_tool, mission_dir, shape, body, reason):
+    target = prepared(mission_dir, shape)
     before = document_of(target)
     assert_refused(embed(run_tool, target, FIRST, body, shape), target, before, f"the fragment is not well-formed XML: {reason}")
 
@@ -1002,21 +1002,21 @@ def test_embed_refuses_a_fragment_that_is_not_well_formed_xml(run_tool, mileston
         ("--recommendation", "<applied-principle>P</applied-principle>\n<!-- </recommendation> -->", "the fragment contains no <recommendation> element"),
     ],
 )
-def test_embed_refuses_a_fragment_without_the_required_element(run_tool, milestone_dir, shape, body, reason):
-    target = prepared(milestone_dir, shape)
+def test_embed_refuses_a_fragment_without_the_required_element(run_tool, mission_dir, shape, body, reason):
+    target = prepared(mission_dir, shape)
     before = document_of(target)
     assert_refused(embed(run_tool, target, FIRST, body, shape), target, before, reason)
 
 
-def test_embed_recommendation_refuses_two_recommendation_elements(run_tool, milestone_dir):
-    target = prepared(milestone_dir, "--recommendation")
+def test_embed_recommendation_refuses_two_recommendation_elements(run_tool, mission_dir):
+    target = prepared(mission_dir, "--recommendation")
     before = document_of(target)
     body = '<recommendation option="A">r</recommendation>\n<recommendation option="A">again</recommendation>'
     assert_refused(embed_recommendation(run_tool, target, FIRST, body), target, before, "the fragment carries 2 <recommendation> elements")
 
 
-def test_embed_recommendation_refuses_an_option_naming_none_of_the_block_alternatives(run_tool, milestone_dir):
-    target = prepared(milestone_dir, "--recommendation")
+def test_embed_recommendation_refuses_an_option_naming_none_of_the_block_alternatives(run_tool, mission_dir):
+    target = prepared(mission_dir, "--recommendation")
     before = document_of(target)
     body = '<recommendation option="C">r</recommendation>'
     assert_refused(
@@ -1057,8 +1057,8 @@ def test_embed_recommendation_refuses_an_option_naming_none_of_the_block_alterna
         ),
     ],
 )
-def test_embed_refuses_an_element_of_the_other_half(run_tool, milestone_dir, shape, body, reason):
-    target = prepared(milestone_dir, shape)
+def test_embed_refuses_an_element_of_the_other_half(run_tool, mission_dir, shape, body, reason):
+    target = prepared(mission_dir, shape)
     before = document_of(target)
     assert_refused(embed(run_tool, target, FIRST, body, shape), target, before, reason)
 
@@ -1098,8 +1098,8 @@ def test_embed_refuses_an_element_of_the_other_half(run_tool, milestone_dir, sha
         ),
     ],
 )
-def test_embed_refuses_an_element_of_an_unknown_kind(run_tool, milestone_dir, shape, body, reason):
-    target = prepared(milestone_dir, shape)
+def test_embed_refuses_an_element_of_an_unknown_kind(run_tool, mission_dir, shape, body, reason):
+    target = prepared(mission_dir, shape)
     before = document_of(target)
     assert_refused(embed(run_tool, target, FIRST, body, shape), target, before, reason)
 
@@ -1149,8 +1149,8 @@ def test_embed_refuses_an_element_of_an_unknown_kind(run_tool, milestone_dir, sh
         ),
     ],
 )
-def test_embed_refuses_a_malformed_attribute(run_tool, milestone_dir, shape, body, reason):
-    target = prepared(milestone_dir, shape)
+def test_embed_refuses_a_malformed_attribute(run_tool, mission_dir, shape, body, reason):
+    target = prepared(mission_dir, shape)
     before = document_of(target)
     assert_refused(embed(run_tool, target, FIRST, body, shape), target, before, reason)
 
@@ -1159,8 +1159,8 @@ def test_embed_refuses_a_malformed_attribute(run_tool, milestone_dir, shape, bod
 
 
 @pytest.mark.parametrize("shape", SHAPES)
-def test_embed_refuses_an_unknown_short_title(run_tool, milestone_dir, shape):
-    target = milestone_dir("bare")
+def test_embed_refuses_an_unknown_short_title(run_tool, mission_dir, shape):
+    target = mission_dir("bare")
     before = document_of(target)
     result = embed(run_tool, target, "Missing", minimal(shape), shape)
     assert_refused(
@@ -1172,15 +1172,15 @@ def test_embed_refuses_an_unknown_short_title(run_tool, milestone_dir, shape):
 
 
 @pytest.mark.parametrize("shape", SHAPES)
-def test_embed_refuses_an_unknown_short_title_on_an_empty_document(run_tool, milestone_dir, shape):
-    target = milestone_dir("empty")
+def test_embed_refuses_an_unknown_short_title_on_an_empty_document(run_tool, mission_dir, shape):
+    target = mission_dir("empty")
     result = embed(run_tool, target, "Anything", minimal(shape), shape)
     assert_refused(result, target, b"<open-questions/>\n", 'no <open-question> block has the id "Anything"; the document holds no blocks')
 
 
 @pytest.mark.parametrize("shape", SHAPES)
-def test_embed_requires_a_short_title(run_tool, milestone_dir, shape):
-    result = run_tool("embed", shape, str(milestone_dir("bare")), stdin=minimal(shape).encode("utf-8"))
+def test_embed_requires_a_short_title(run_tool, mission_dir, shape):
+    result = run_tool("embed", shape, str(mission_dir("bare")), stdin=minimal(shape).encode("utf-8"))
     assert result.returncode == 2
     assert result.stdout == b""
     assert b"SHORT_TITLE" in result.stderr
@@ -1211,9 +1211,9 @@ def test_embed_fails_on_a_malformed_document_and_leaves_it_unchanged(run_tool, t
 
 
 @pytest.mark.parametrize("shape", SHAPES)
-def test_embed_refuses_a_terminal_stdin_without_blocking(milestone_dir, shape):
+def test_embed_refuses_a_terminal_stdin_without_blocking(mission_dir, shape):
     pty = pytest.importorskip("pty")
-    target = prepared(milestone_dir, shape)
+    target = prepared(mission_dir, shape)
     before = document_of(target)
     master, slave = pty.openpty()
     try:
@@ -1237,8 +1237,8 @@ def test_embed_refuses_a_terminal_stdin_without_blocking(milestone_dir, shape):
 
 
 @pytest.mark.parametrize("shape", SHAPES)
-def test_main_refuses_a_closed_stdin(capsys, monkeypatch, milestone_dir, shape):
-    target = prepared(milestone_dir, shape)
+def test_main_refuses_a_closed_stdin(capsys, monkeypatch, mission_dir, shape):
+    target = prepared(mission_dir, shape)
     before = document_of(target)
     monkeypatch.setattr(sys, "stdin", None)
     assert open_questions.main(["embed", shape, str(target), FIRST]) == 1
@@ -1248,8 +1248,8 @@ def test_main_refuses_a_closed_stdin(capsys, monkeypatch, milestone_dir, shape):
     assert document_of(target) == before
 
 
-def test_main_reads_the_message_from_stdin_buffer_once(capsys, monkeypatch, milestone_dir):
-    target = milestone_dir("bare")
+def test_main_reads_the_message_from_stdin_buffer_once(capsys, monkeypatch, mission_dir):
+    target = mission_dir("bare")
     stream = io.TextIOWrapper(io.BytesIO(("Summary — dashes …\n" + ONLY_ALTERNATIVE + "\n").encode("utf-8")))
     monkeypatch.setattr(sys, "stdin", stream)
     assert open_questions.main(["embed", "--alternatives", str(target), FIRST]) == 0
@@ -1264,15 +1264,15 @@ def test_main_reads_the_message_from_stdin_buffer_once(capsys, monkeypatch, mile
 
 
 @pytest.mark.parametrize("shape", SHAPES)
-def test_embed_refuses_a_non_utf8_message(run_tool, milestone_dir, shape):
-    target = prepared(milestone_dir, shape)
+def test_embed_refuses_a_non_utf8_message(run_tool, mission_dir, shape):
+    target = prepared(mission_dir, shape)
     before = document_of(target)
     result = embed(run_tool, target, FIRST, minimal(shape).encode("utf-8") + b"\n<!-- caf\xe9 -->", shape)
     assert_refused(result, target, before, f"the {shape.lstrip('-')} message on standard input is not UTF-8 text")
 
 
-def test_embed_reads_the_message_verbatim_with_nothing_expanded(run_tool, milestone_dir):
-    target = milestone_dir("bare")
+def test_embed_reads_the_message_verbatim_with_nothing_expanded(run_tool, mission_dir):
+    target = mission_dir("bare")
     alternatives = '<alternative id="A">Does `code`, ${VAR}, $(cmd), and a literal &amp;apos; travel untouched?</alternative>'
     assert_ok(embed_alternatives(run_tool, target, FIRST, alternatives))
     assert by_id(target, FIRST).alternatives[0].text == "Does `code`, ${VAR}, $(cmd), and a literal &apos; travel untouched?"
@@ -1284,14 +1284,14 @@ def test_embed_reads_the_message_verbatim_with_nothing_expanded(run_tool, milest
 # --- the single write -----------------------------------------------------------------
 
 
-def test_embed_writes_exactly_once_on_success_and_never_on_a_refusal(monkeypatch, milestone_dir):
-    target = milestone_dir("annotated")
+def test_embed_writes_exactly_once_on_success_and_never_on_a_refusal(monkeypatch, mission_dir):
+    target = mission_dir("annotated")
     calls = []
     original = open_questions.save_document
 
-    def counting(milestone_dir, document):
-        calls.append(milestone_dir)
-        original(milestone_dir, document)
+    def counting(mission_dir, document):
+        calls.append(mission_dir)
+        original(mission_dir, document)
 
     monkeypatch.setattr(open_questions, "save_document", counting)
     monkeypatch.setattr(sys, "stdin", io.TextIOWrapper(io.BytesIO(ALTERNATIVES.encode("utf-8"))))
@@ -1313,8 +1313,8 @@ def test_embed_writes_exactly_once_on_success_and_never_on_a_refusal(monkeypatch
     assert calls == []
 
 
-def test_embed_leaves_no_temporary_file_behind(run_tool, milestone_dir):
-    target = milestone_dir("bare")
+def test_embed_leaves_no_temporary_file_behind(run_tool, mission_dir):
+    target = mission_dir("bare")
     embed_alternatives(run_tool, target, FIRST, ONLY_ALTERNATIVE)
     embed_alternatives(run_tool, target, FIRST, ONLY_ALTERNATIVE)
     embed_recommendation(run_tool, target, FIRST, ONLY_RECOMMENDATION)

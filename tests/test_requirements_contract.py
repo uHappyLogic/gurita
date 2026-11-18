@@ -52,10 +52,10 @@ def test_unknown_subcommand_is_a_usage_error(run_requirements, requirements_dir)
     assert (target / NAME).read_bytes() == before
 
 
-def test_a_missing_milestone_dir_is_a_usage_error(run_requirements):
+def test_a_missing_mission_dir_is_a_usage_error(run_requirements):
     result = run_requirements("fold", "--section", SECTION, stdin=DECISION)
     assert_usage_error(result)
-    assert b"MILESTONE_DIR" in result.stderr
+    assert b"MISSION_DIR" in result.stderr
 
 
 def test_a_missing_section_flag_is_a_usage_error_with_the_file_unchanged(run_requirements, requirements_dir):
@@ -95,7 +95,7 @@ def test_help_exits_zero_and_lists_the_fold_subcommand(run_requirements):
 def test_fold_help_names_its_required_section_flag(run_requirements):
     result = run_requirements("fold", "--help")
     assert result.returncode == 0
-    assert b"MILESTONE_DIR" in result.stdout
+    assert b"MISSION_DIR" in result.stdout
     assert b"--section HEADING" in result.stdout
     assert result.stderr == b""
 
@@ -104,7 +104,7 @@ def test_fold_help_names_its_required_section_flag(run_requirements):
 
 
 def test_a_failure_is_exactly_one_error_line_with_the_file_unchanged(run_requirements, requirements_dir):
-    target = requirements_dir(b"# Milestone 1: No decisions\n\n## Goal\n\nShip it.\n")
+    target = requirements_dir(b"# No decisions\n\n## Goal\n\nShip it.\n")
     before = (target / NAME).read_bytes()
     result = run_requirements("fold", str(target), "--section", SECTION, stdin=DECISION)
     assert_one_error_line(result)
@@ -112,7 +112,7 @@ def test_a_failure_is_exactly_one_error_line_with_the_file_unchanged(run_require
 
 
 def test_a_missing_requirements_file_is_refused_and_nothing_is_created(run_requirements, tmp_path):
-    target = tmp_path / "milestone"
+    target = tmp_path / "mission"
     target.mkdir()
     result = run_requirements("fold", str(target), "--section", SECTION, stdin=DECISION)
     assert_one_error_line(result)
@@ -129,7 +129,7 @@ def test_an_operating_system_failure_is_an_error_line_not_a_traceback(run_requir
 
 
 def test_a_non_utf8_requirements_file_is_refused(run_requirements, requirements_dir):
-    target = requirements_dir(b"# Milestone 1: Bad \xff bytes\n\n## Decisions\n")
+    target = requirements_dir(b"# Bad \xff bytes\n\n## Decisions\n")
     before = (target / NAME).read_bytes()
     result = run_requirements("fold", str(target), "--section", SECTION, stdin=DECISION)
     assert_one_error_line(result)

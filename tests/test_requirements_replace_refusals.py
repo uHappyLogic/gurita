@@ -89,7 +89,7 @@ def test_an_empty_heading_is_refused(run_requirements, requirements_dir, section
 
 
 def test_a_missing_requirements_file_is_refused_and_nothing_is_created(run_requirements, tmp_path):
-    target = tmp_path / "milestone"
+    target = tmp_path / "mission"
     target.mkdir()
     result = run_requirements("replace", str(target), "--section", "Prose decision", stdin=b"A new body.\n")
     assert_refused(result, "does not exist")
@@ -97,7 +97,7 @@ def test_a_missing_requirements_file_is_refused_and_nothing_is_created(run_requi
 
 
 def test_a_non_utf8_requirements_file_is_refused(run_requirements, requirements_dir):
-    original = b"# Milestone 1: Bad \xff bytes\n\n## Decisions\n\n### Kept\n\nPara.\n"
+    original = b"# Bad \xff bytes\n\n## Decisions\n\n### Kept\n\nPara.\n"
     target = requirements_dir(original)
     result = run_requirements("replace", str(target), "--section", "Kept", stdin=b"A new body.\n")
     assert_refused(result, "is not UTF-8 text")
@@ -110,7 +110,7 @@ def test_a_non_utf8_requirements_file_is_refused(run_requirements, requirements_
 @pytest.mark.parametrize(
     "original",
     [
-        b"# Milestone 1: None\n\n## Goal\n\nShip it.\n\n### Kept\n\nPara.\n\n## Out of Scope\n",
+        b"# None\n\n## Goal\n\nShip it.\n\n### Kept\n\nPara.\n\n## Out of Scope\n",
         b"## Goal\n\n ## Decisions\n\n### Kept\n\nAn indented heading is not a section.\n",
         b"## Goal\n\n### Decisions\n\n### Kept\n\nA subsection is not the section.\n",
         b"## Goal\n\n## Decision\n\n### Kept\n\nThe singular is another title.\n",

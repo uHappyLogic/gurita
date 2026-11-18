@@ -110,8 +110,8 @@ def tags_naming(document, block_id):
 # --- the removal itself ---------------------------------------------------------------
 
 
-def test_remove_deletes_the_named_block_and_keeps_every_other_line(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_remove_deletes_the_named_block_and_keeps_every_other_line(run_tool, mission_dir):
+    target = mission_dir("annotated")
     before = read_fixture("annotated")
     result = run_tool("remove", str(target), BARE)
     assert (result.returncode, result.stdout, result.stderr) == (0, b"", b"")
@@ -122,15 +122,15 @@ def test_remove_deletes_the_named_block_and_keeps_every_other_line(run_tool, mil
     assert block_lines(after, ROOT_FORM) == block_lines(before, ROOT_FORM)
 
 
-def test_remove_of_the_last_block_leaves_the_empty_document(run_tool, milestone_dir):
-    target = milestone_dir("entities")
+def test_remove_of_the_last_block_leaves_the_empty_document(run_tool, mission_dir):
+    target = mission_dir("entities")
     result = run_tool("remove", str(target), ENTITIES_TITLE)
     assert (result.returncode, result.stdout, result.stderr) == (0, b"", b"")
     assert document_of(target) == b"<open-questions/>\n"
 
 
-def test_remove_matches_the_short_title_case_folded_and_un_escaped(run_tool, milestone_dir):
-    target = milestone_dir("entities")
+def test_remove_matches_the_short_title_case_folded_and_un_escaped(run_tool, mission_dir):
+    target = mission_dir("entities")
     before = document_of(target)
     escaped = run_tool("remove", str(target), "Ampersand &amp; angle &lt;brackets&gt;, &quot;quotes&quot;, &apos;apostrophes&apos;")
     assert escaped.returncode == 1
@@ -140,15 +140,15 @@ def test_remove_matches_the_short_title_case_folded_and_un_escaped(run_tool, mil
     assert load(target) == Document()
 
 
-def test_remove_keeps_the_document_canonical(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_remove_keeps_the_document_canonical(run_tool, mission_dir):
+    target = mission_dir("annotated")
     run_tool("remove", str(target), HATCH, "--option", "Strip subcommand")
     text = document_of(target).decode("utf-8")
     assert open_questions.render_document(open_questions.parse_document(text)) == text
 
 
-def test_remove_with_an_option_and_no_dependents_just_deletes_the_block(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_remove_with_an_option_and_no_dependents_just_deletes_the_block(run_tool, mission_dir):
+    target = mission_dir("annotated")
     before = read_fixture("annotated")
     result = run_tool("remove", str(target), ROOT_FORM, "--option", "Self-closing root")
     assert (result.returncode, result.stdout, result.stderr) == (0, b"", b"")
@@ -161,8 +161,8 @@ def test_remove_with_an_option_and_no_dependents_just_deletes_the_block(run_tool
 # --- tag-drop: the dependent assumed the recorded option ------------------------------
 
 
-def test_remove_with_the_recorded_option_drops_only_the_agreeing_tag(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_remove_with_the_recorded_option_drops_only_the_agreeing_tag(run_tool, mission_dir):
+    target = mission_dir("annotated")
     before = read_fixture("annotated")
     result = run_tool("remove", str(target), HATCH, "--option", "Strip subcommand")
     assert (result.returncode, result.stdout, result.stderr) == (0, b"", b"")
@@ -185,8 +185,8 @@ def test_remove_with_the_recorded_option_drops_only_the_agreeing_tag(run_tool, m
     assert block_lines(after, BARE) == block_lines(before, BARE)
 
 
-def test_remove_compares_the_recorded_option_case_folded(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_remove_compares_the_recorded_option_case_folded(run_tool, mission_dir):
+    target = mission_dir("annotated")
     result = run_tool("remove", str(target), HATCH, "--option", "strip SUBCOMMAND")
     assert (result.returncode, result.stdout, result.stderr) == (0, b"", b"")
     dependent = by_id(load(target), ROOT_FORM)
@@ -240,8 +240,8 @@ def test_remove_drops_every_agreeing_tag_a_dependent_carries_for_the_removed_blo
 # --- the partial strip: no option, a differing option, or doubt ------------------------
 
 
-def test_remove_without_an_option_strips_every_dependent_keeping_its_alternatives(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_remove_without_an_option_strips_every_dependent_keeping_its_alternatives(run_tool, mission_dir):
+    target = mission_dir("annotated")
     before = read_fixture("annotated")
     result = run_tool("remove", str(target), HATCH)
     assert (result.returncode, result.stdout, result.stderr) == (0, b"", b"")
@@ -261,8 +261,8 @@ def test_remove_without_an_option_strips_every_dependent_keeping_its_alternative
     assert (root_form.principles, root_form.depends_on, root_form.recommendation) == ([], [], None)
 
 
-def test_remove_with_a_differing_option_strips_the_dependent(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_remove_with_a_differing_option_strips_the_dependent(run_tool, mission_dir):
+    target = mission_dir("annotated")
     result = run_tool("remove", str(target), HATCH, "--option", "Documented hand-edit exception")
     assert (result.returncode, result.stdout, result.stderr) == (0, b"", b"")
     document = load(target)
@@ -479,8 +479,8 @@ def test_remove_terminates_on_a_self_dependent_block(run_tool, tmp_path):
         (BARE,),
     ],
 )
-def test_no_removal_on_the_annotated_fixture_leaves_a_dangling_tag(run_tool, milestone_dir, arguments):
-    target = milestone_dir("annotated")
+def test_no_removal_on_the_annotated_fixture_leaves_a_dangling_tag(run_tool, mission_dir, arguments):
+    target = mission_dir("annotated")
     before = load(target)
     result = run_tool("remove", str(target), *arguments)
     assert result.returncode == 0
@@ -531,8 +531,8 @@ def test_no_removal_on_a_dependency_web_leaves_a_dangling_tag(tmp_path):
 # --- the rejected option ---------------------------------------------------------------
 
 
-def test_remove_rejects_an_option_naming_none_of_the_blocks_alternatives(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_remove_rejects_an_option_naming_none_of_the_blocks_alternatives(run_tool, mission_dir):
+    target = mission_dir("annotated")
     before = document_of(target)
     result = run_tool("remove", str(target), HATCH, "--option", "Missing option")
     assert result.returncode == 1
@@ -545,8 +545,8 @@ def test_remove_rejects_an_option_naming_none_of_the_blocks_alternatives(run_too
     assert document_of(target) == before
 
 
-def test_remove_rejects_an_option_on_a_block_with_no_alternatives(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_remove_rejects_an_option_on_a_block_with_no_alternatives(run_tool, mission_dir):
+    target = mission_dir("annotated")
     before = document_of(target)
     result = run_tool("remove", str(target), BARE, "--option", "Anything")
     assert result.returncode == 1
@@ -558,9 +558,9 @@ def test_remove_rejects_an_option_on_a_block_with_no_alternatives(run_tool, mile
     assert document_of(target) == before
 
 
-def test_remove_rejects_an_option_naming_a_dependents_option_rather_than_the_blocks_own(run_tool, milestone_dir):
+def test_remove_rejects_an_option_naming_a_dependents_option_rather_than_the_blocks_own(run_tool, mission_dir):
     # "Self-closing root" is Root element form's alternative, not the escape hatch's.
-    target = milestone_dir("annotated")
+    target = mission_dir("annotated")
     before = document_of(target)
     result = run_tool("remove", str(target), HATCH, "--option", "Self-closing root")
     assert result.returncode == 1
@@ -568,8 +568,8 @@ def test_remove_rejects_an_option_naming_a_dependents_option_rather_than_the_blo
     assert document_of(target) == before
 
 
-def test_remove_rejects_an_escaped_option_and_accepts_the_un_escaped_one(run_tool, milestone_dir):
-    target = milestone_dir("entities")
+def test_remove_rejects_an_escaped_option_and_accepts_the_un_escaped_one(run_tool, mission_dir):
+    target = mission_dir("entities")
     before = document_of(target)
     escaped = run_tool("remove", str(target), ENTITIES_TITLE, "--option", "A &amp; B")
     assert escaped.returncode == 1
@@ -580,8 +580,8 @@ def test_remove_rejects_an_escaped_option_and_accepts_the_un_escaped_one(run_too
     assert document_of(target) == b"<open-questions/>\n"
 
 
-def test_remove_rejects_an_empty_option(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_remove_rejects_an_empty_option(run_tool, mission_dir):
+    target = mission_dir("annotated")
     before = document_of(target)
     result = run_tool("remove", str(target), HATCH, "--option", "")
     assert result.returncode == 1
@@ -607,8 +607,8 @@ def test_a_rejected_option_strips_nothing_even_with_dependents_present(run_tool,
 # --- the other clean stops -------------------------------------------------------------
 
 
-def test_remove_of_an_unknown_id_fails_naming_the_ids_the_document_holds(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_remove_of_an_unknown_id_fails_naming_the_ids_the_document_holds(run_tool, mission_dir):
+    target = mission_dir("annotated")
     before = document_of(target)
     result = run_tool("remove", str(target), "Missing question")
     assert result.returncode == 1
@@ -620,8 +620,8 @@ def test_remove_of_an_unknown_id_fails_naming_the_ids_the_document_holds(run_too
     assert document_of(target) == before
 
 
-def test_remove_of_an_unknown_id_with_an_option_fails_on_the_id_first(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_remove_of_an_unknown_id_with_an_option_fails_on_the_id_first(run_tool, mission_dir):
+    target = mission_dir("annotated")
     before = document_of(target)
     result = run_tool("remove", str(target), "Missing question", "--option", "Whatever")
     assert result.returncode == 1
@@ -629,8 +629,8 @@ def test_remove_of_an_unknown_id_with_an_option_fails_on_the_id_first(run_tool, 
     assert document_of(target) == before
 
 
-def test_remove_on_an_empty_document_fails_saying_it_holds_no_blocks(run_tool, milestone_dir):
-    target = milestone_dir("empty")
+def test_remove_on_an_empty_document_fails_saying_it_holds_no_blocks(run_tool, mission_dir):
+    target = mission_dir("empty")
     result = run_tool("remove", str(target), "Anything")
     assert result.returncode == 1
     assert result.stdout == b""
@@ -638,8 +638,8 @@ def test_remove_on_an_empty_document_fails_saying_it_holds_no_blocks(run_tool, m
     assert document_of(target) == b"<open-questions/>\n"
 
 
-def test_remove_takes_exactly_one_short_title(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_remove_takes_exactly_one_short_title(run_tool, mission_dir):
+    target = mission_dir("annotated")
     before = document_of(target)
     none = run_tool("remove", str(target))
     assert none.returncode == 2
@@ -671,8 +671,8 @@ def test_remove_fails_on_a_malformed_document_and_leaves_it_unchanged(run_tool, 
     assert document.read_text(encoding="utf-8") == "<open-questions>"
 
 
-def test_remove_leaves_no_temporary_file_behind(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_remove_leaves_no_temporary_file_behind(run_tool, mission_dir):
+    target = mission_dir("annotated")
     run_tool("remove", str(target), HATCH, "--option", "Strip subcommand")
     run_tool("remove", str(target), ROOT_FORM, "--option", "Missing")
     run_tool("remove", str(target), "Missing")
@@ -682,14 +682,14 @@ def test_remove_leaves_no_temporary_file_behind(run_tool, milestone_dir):
 # --- the single write ------------------------------------------------------------------
 
 
-def test_remove_writes_the_document_exactly_once(monkeypatch, milestone_dir):
-    target = milestone_dir("annotated")
+def test_remove_writes_the_document_exactly_once(monkeypatch, mission_dir):
+    target = mission_dir("annotated")
     writes = []
     real_save = open_questions.save_document
 
-    def counting_save(milestone_dir, document):
+    def counting_save(mission_dir, document):
         writes.append(open_questions.render_document(document))
-        real_save(milestone_dir, document)
+        real_save(mission_dir, document)
 
     monkeypatch.setattr(open_questions, "save_document", counting_save)
     assert open_questions.main(["remove", str(target), HATCH]) == 0
@@ -698,8 +698,8 @@ def test_remove_writes_the_document_exactly_once(monkeypatch, milestone_dir):
     assert pick_stripped(by_id(open_questions.parse_document(writes[0]), ROOT_FORM))
 
 
-def test_a_rejected_option_never_reaches_the_write(monkeypatch, milestone_dir, capsys):
-    target = milestone_dir("annotated")
+def test_a_rejected_option_never_reaches_the_write(monkeypatch, mission_dir, capsys):
+    target = mission_dir("annotated")
     before = document_of(target)
     writes = []
     monkeypatch.setattr(open_questions, "save_document", lambda *arguments: writes.append(arguments))
@@ -709,8 +709,8 @@ def test_a_rejected_option_never_reaches_the_write(monkeypatch, milestone_dir, c
     assert document_of(target) == before
 
 
-def test_main_removes_in_process_silently(capsys, milestone_dir):
-    target = milestone_dir("annotated")
+def test_main_removes_in_process_silently(capsys, mission_dir):
+    target = mission_dir("annotated")
     assert open_questions.main(["remove", str(target), HATCH, "--option", "Strip subcommand"]) == 0
     assert capsys.readouterr() == ("", "")
     document = load(target)
@@ -939,9 +939,9 @@ def test_remove_with_undermined_blocks_writes_the_document_exactly_once(monkeypa
     writes = []
     real_save = open_questions.save_document
 
-    def counting_save(milestone_dir, document):
+    def counting_save(mission_dir, document):
         writes.append(open_questions.render_document(document))
-        real_save(milestone_dir, document)
+        real_save(mission_dir, document)
 
     monkeypatch.setattr(open_questions, "save_document", counting_save)
     assert open_questions.main(["remove", str(target), "Target", "--undermined", "Undermined"]) == 0
@@ -969,7 +969,7 @@ def test_remove_help_and_docstring_state_the_undermined_contract(run_tool):
     assert "resolved before anything changes" in text
     assert "carrying no <recommendation> is left as it stands" in text
     docstring = " ".join(open_questions.__doc__.split())
-    assert "remove MILESTONE_DIR SHORT_TITLE [--option RECORDED_OPTION] [--undermined SHORT_TITLE...]" in docstring
+    assert "remove MISSION_DIR SHORT_TITLE [--option RECORDED_OPTION] [--undermined SHORT_TITLE...]" in docstring
     assert "naming the removed block itself, refuses the call with the document unchanged" in docstring
     assert "is left exactly as it stands" in docstring
 

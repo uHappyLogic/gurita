@@ -7,7 +7,7 @@ Usage: python3 <plugin root>/tools/commit.py --subject SUBJECT [--body BODY] [--
        python3 <plugin root>/tools/commit.py --subject SUBJECT [--body BODY] --remove PATH [--remove PATH ...]
 
 Unlike the document writers beside it, which touch no git, this module exists to run git: it
-reads or writes no milestone file and takes no milestone directory. It runs git in the
+reads or writes no mission file and takes no mission directory. It runs git in the
 working directory it is started from, so git reads every PATH relative to that directory, as
 a path of the repository holding it.
 

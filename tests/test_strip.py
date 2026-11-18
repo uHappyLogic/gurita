@@ -40,8 +40,8 @@ def bare_block(short_title, question):
     ]
 
 
-def test_strip_leaves_only_the_wrapper_and_the_question(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_strip_leaves_only_the_wrapper_and_the_question(run_tool, mission_dir):
+    target = mission_dir("annotated")
     result = run_tool("strip", str(target), "Escape hatch under sole writer")
     assert (result.returncode, result.stdout, result.stderr) == (0, b"", b"")
     after = document_of(target).decode("utf-8")
@@ -52,8 +52,8 @@ def test_strip_leaves_only_the_wrapper_and_the_question(run_tool, milestone_dir)
     )
 
 
-def test_strip_deletes_every_kind_of_child(run_tool, milestone_dir):
-    target = milestone_dir("entities")
+def test_strip_deletes_every_kind_of_child(run_tool, mission_dir):
+    target = mission_dir("entities")
     before = open_questions.load_document(str(target)).questions[0]
     assert before.alternatives and before.principles and before.depends_on and before.recommendation is not None
     result = run_tool("strip", str(target), ENTITIES_TITLE)
@@ -70,8 +70,8 @@ def test_strip_deletes_every_kind_of_child(run_tool, milestone_dir):
     )
 
 
-def test_strip_touches_no_dependent_and_no_depends_on_tag_naming_the_block(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_strip_touches_no_dependent_and_no_depends_on_tag_naming_the_block(run_tool, mission_dir):
+    target = mission_dir("annotated")
     before = read_fixture("annotated")
     result = run_tool("strip", str(target), "Escape hatch under sole writer")
     assert result.returncode == 0
@@ -83,8 +83,8 @@ def test_strip_touches_no_dependent_and_no_depends_on_tag_naming_the_block(run_t
     assert block_lines(after, "Fixture bare block") == block_lines(before, "Fixture bare block")
 
 
-def test_strip_keeps_every_other_line_of_the_document(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_strip_keeps_every_other_line_of_the_document(run_tool, mission_dir):
+    target = mission_dir("annotated")
     before = read_fixture("annotated")
     run_tool("strip", str(target), "Escape hatch under sole writer")
     after = document_of(target).decode("utf-8")
@@ -96,15 +96,15 @@ def test_strip_keeps_every_other_line_of_the_document(run_tool, milestone_dir):
     assert after == expected
 
 
-def test_strip_keeps_the_document_canonical(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_strip_keeps_the_document_canonical(run_tool, mission_dir):
+    target = mission_dir("annotated")
     run_tool("strip", str(target), "Root element form")
     text = document_of(target).decode("utf-8")
     assert open_questions.render_document(open_questions.parse_document(text)) == text
 
 
-def test_strip_of_several_blocks_strips_each(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_strip_of_several_blocks_strips_each(run_tool, mission_dir):
+    target = mission_dir("annotated")
     result = run_tool("strip", str(target), "Root element form", "Escape hatch under sole writer")
     assert (result.returncode, result.stdout, result.stderr) == (0, b"", b"")
     document = open_questions.load_document(str(target))
@@ -119,8 +119,8 @@ def test_strip_of_several_blocks_strips_each(run_tool, milestone_dir):
     )
 
 
-def test_strip_of_a_block_named_twice_strips_it_once(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_strip_of_a_block_named_twice_strips_it_once(run_tool, mission_dir):
+    target = mission_dir("annotated")
     result = run_tool("strip", str(target), "Root element form", "ROOT element FORM")
     assert (result.returncode, result.stdout, result.stderr) == (0, b"", b"")
     document = open_questions.load_document(str(target))
@@ -128,15 +128,15 @@ def test_strip_of_a_block_named_twice_strips_it_once(run_tool, milestone_dir):
     assert not open_questions.is_bare(document.questions[0])
 
 
-def test_strip_matches_the_short_title_case_folded(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_strip_matches_the_short_title_case_folded(run_tool, mission_dir):
+    target = mission_dir("annotated")
     result = run_tool("strip", str(target), "root ELEMENT form")
     assert result.returncode == 0
     assert open_questions.is_bare(open_questions.load_document(str(target)).questions[1])
 
 
-def test_strip_matches_the_short_title_against_the_un_escaped_id(run_tool, milestone_dir):
-    target = milestone_dir("entities")
+def test_strip_matches_the_short_title_against_the_un_escaped_id(run_tool, mission_dir):
+    target = mission_dir("entities")
     before = document_of(target)
     escaped = run_tool("strip", str(target), "Ampersand &amp; angle &lt;brackets&gt;, &quot;quotes&quot;, &apos;apostrophes&apos;")
     assert escaped.returncode == 1
@@ -146,8 +146,8 @@ def test_strip_matches_the_short_title_against_the_un_escaped_id(run_tool, miles
     assert open_questions.is_bare(open_questions.load_document(str(target)).questions[0])
 
 
-def test_strip_of_a_bare_block_does_nothing(run_tool, milestone_dir):
-    target = milestone_dir("bare")
+def test_strip_of_a_bare_block_does_nothing(run_tool, mission_dir):
+    target = mission_dir("bare")
     document = target / open_questions.DOCUMENT_NAME
     before = document.read_bytes()
     stat_before = document.stat()
@@ -158,8 +158,8 @@ def test_strip_of_a_bare_block_does_nothing(run_tool, milestone_dir):
     assert document.stat().st_mtime_ns == stat_before.st_mtime_ns
 
 
-def test_strip_of_a_bare_block_beside_an_annotated_one_strips_only_the_annotated(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_strip_of_a_bare_block_beside_an_annotated_one_strips_only_the_annotated(run_tool, mission_dir):
+    target = mission_dir("annotated")
     before = read_fixture("annotated")
     result = run_tool("strip", str(target), "Fixture bare block", "Root element form")
     assert result.returncode == 0
@@ -171,8 +171,8 @@ def test_strip_of_a_bare_block_beside_an_annotated_one_strips_only_the_annotated
     )
 
 
-def test_strip_of_an_unknown_id_fails_naming_the_ids_the_document_holds(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_strip_of_an_unknown_id_fails_naming_the_ids_the_document_holds(run_tool, mission_dir):
+    target = mission_dir("annotated")
     before = document_of(target)
     result = run_tool("strip", str(target), "Missing question")
     assert result.returncode == 1
@@ -184,8 +184,8 @@ def test_strip_of_an_unknown_id_fails_naming_the_ids_the_document_holds(run_tool
     assert document_of(target) == before
 
 
-def test_strip_with_one_unknown_id_among_known_ones_strips_nothing(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_strip_with_one_unknown_id_among_known_ones_strips_nothing(run_tool, mission_dir):
+    target = mission_dir("annotated")
     before = document_of(target)
     result = run_tool("strip", str(target), "Root element form", "Missing", "Escape hatch under sole writer")
     assert result.returncode == 1
@@ -195,8 +195,8 @@ def test_strip_with_one_unknown_id_among_known_ones_strips_nothing(run_tool, mil
     assert document_of(target) == before
 
 
-def test_strip_on_an_empty_document_fails_saying_it_holds_no_blocks(run_tool, milestone_dir):
-    target = milestone_dir("empty")
+def test_strip_on_an_empty_document_fails_saying_it_holds_no_blocks(run_tool, mission_dir):
+    target = mission_dir("empty")
     result = run_tool("strip", str(target), "Anything")
     assert result.returncode == 1
     assert result.stdout == b""
@@ -204,8 +204,8 @@ def test_strip_on_an_empty_document_fails_saying_it_holds_no_blocks(run_tool, mi
     assert document_of(target) == b"<open-questions/>\n"
 
 
-def test_strip_requires_at_least_one_short_title(run_tool, milestone_dir):
-    result = run_tool("strip", str(milestone_dir("annotated")))
+def test_strip_requires_at_least_one_short_title(run_tool, mission_dir):
+    result = run_tool("strip", str(mission_dir("annotated")))
     assert result.returncode == 2
     assert result.stdout == b""
     assert b"SHORT_TITLE" in result.stderr
@@ -230,15 +230,15 @@ def test_strip_fails_on_a_malformed_document_and_leaves_it_unchanged(run_tool, t
     assert document.read_text(encoding="utf-8") == "<open-questions>"
 
 
-def test_strip_leaves_no_temporary_file_behind(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_strip_leaves_no_temporary_file_behind(run_tool, mission_dir):
+    target = mission_dir("annotated")
     run_tool("strip", str(target), "Root element form")
     run_tool("strip", str(target), "Missing")
     assert sorted(path.name for path in target.iterdir()) == [open_questions.DOCUMENT_NAME]
 
 
-def test_main_strips_in_process_silently(capsys, milestone_dir):
-    target = milestone_dir("annotated")
+def test_main_strips_in_process_silently(capsys, mission_dir):
+    target = mission_dir("annotated")
     assert open_questions.main(["strip", str(target), "Escape hatch under sole writer"]) == 0
     assert capsys.readouterr() == ("", "")
     assert open_questions.is_bare(open_questions.load_document(str(target)).questions[0])
@@ -289,8 +289,8 @@ def without_recommendation_half(lines):
     return [line for line in lines if not line.lstrip().startswith(RECOMMENDATION_HALF)]
 
 
-def test_strip_recommendation_keeps_the_alternatives_and_deletes_the_rest(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_strip_recommendation_keeps_the_alternatives_and_deletes_the_rest(run_tool, mission_dir):
+    target = mission_dir("annotated")
     before = open_questions.load_document(str(target)).questions[1]
     assert before.alternatives and before.principles and before.depends_on and before.recommendation is not None
     result = run_tool("strip", str(target), "--recommendation", "Root element form")
@@ -304,8 +304,8 @@ def test_strip_recommendation_keeps_the_alternatives_and_deletes_the_rest(run_to
     assert not any(line.lstrip().startswith(RECOMMENDATION_HALF) for line in block)
 
 
-def test_strip_recommendation_deletes_the_three_kinds_and_keeps_the_escaped_alternative(run_tool, milestone_dir):
-    target = milestone_dir("entities")
+def test_strip_recommendation_deletes_the_three_kinds_and_keeps_the_escaped_alternative(run_tool, mission_dir):
+    target = mission_dir("entities")
     result = run_tool("strip", str(target), "--recommendation", ENTITIES_TITLE)
     assert (result.returncode, result.stdout, result.stderr) == (0, b"", b"")
     assert document_of(target).decode("utf-8") == (
@@ -322,8 +322,8 @@ def test_strip_recommendation_deletes_the_three_kinds_and_keeps_the_escaped_alte
     )
 
 
-def test_strip_recommendation_touches_no_dependent_and_no_depends_on_tag_naming_the_block(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_strip_recommendation_touches_no_dependent_and_no_depends_on_tag_naming_the_block(run_tool, mission_dir):
+    target = mission_dir("annotated")
     before = read_fixture("annotated")
     result = run_tool("strip", str(target), "--recommendation", "Escape hatch under sole writer")
     assert result.returncode == 0
@@ -334,8 +334,8 @@ def test_strip_recommendation_touches_no_dependent_and_no_depends_on_tag_naming_
     assert block_lines(after, "Fixture bare block") == block_lines(before, "Fixture bare block")
 
 
-def test_strip_recommendation_keeps_every_other_line_of_the_document(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_strip_recommendation_keeps_every_other_line_of_the_document(run_tool, mission_dir):
+    target = mission_dir("annotated")
     before = read_fixture("annotated")
     run_tool("strip", str(target), "--recommendation", "Escape hatch under sole writer")
     stripped = block_lines(before, "Escape hatch under sole writer")
@@ -367,15 +367,15 @@ def test_strip_recommendation_keeps_the_reordered_alternative_order(run_tool, tm
     ]
 
 
-def test_strip_recommendation_keeps_the_document_canonical(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_strip_recommendation_keeps_the_document_canonical(run_tool, mission_dir):
+    target = mission_dir("annotated")
     run_tool("strip", str(target), "--recommendation", "Root element form")
     text = document_of(target).decode("utf-8")
     assert open_questions.render_document(open_questions.parse_document(text)) == text
 
 
-def test_strip_recommendation_of_several_blocks_strips_each(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_strip_recommendation_of_several_blocks_strips_each(run_tool, mission_dir):
+    target = mission_dir("annotated")
     before = open_questions.load_document(str(target))
     result = run_tool("strip", str(target), "--recommendation", "Root element form", "Escape hatch under sole writer")
     assert (result.returncode, result.stdout, result.stderr) == (0, b"", b"")
@@ -389,14 +389,14 @@ def test_strip_recommendation_of_several_blocks_strips_each(run_tool, milestone_
     )
 
 
-def test_strip_recommendation_accepts_the_flag_in_any_position(run_tool, milestone_dir):
+def test_strip_recommendation_accepts_the_flag_in_any_position(run_tool, mission_dir):
     documents = []
     for arguments in (
         ("--recommendation", "{dir}", "Root element form", "Escape hatch under sole writer"),
         ("{dir}", "--recommendation", "Root element form", "Escape hatch under sole writer"),
         ("{dir}", "Root element form", "Escape hatch under sole writer", "--recommendation"),
     ):
-        target = milestone_dir("annotated")
+        target = mission_dir("annotated")
         result = run_tool("strip", *(argument.format(dir=str(target)) for argument in arguments))
         assert (result.returncode, result.stdout, result.stderr) == (0, b"", b"")
         documents.append(document_of(target))
@@ -407,8 +407,8 @@ def test_strip_recommendation_accepts_the_flag_in_any_position(run_tool, milesto
     assert b"<alternative" in documents[0]
 
 
-def test_strip_recommendation_of_a_block_carrying_only_alternatives_does_nothing(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_strip_recommendation_of_a_block_carrying_only_alternatives_does_nothing(run_tool, mission_dir):
+    target = mission_dir("annotated")
     document = target / open_questions.DOCUMENT_NAME
     assert run_tool("strip", str(target), "--recommendation", "Root element form").returncode == 0
     before = document.read_bytes()
@@ -420,8 +420,8 @@ def test_strip_recommendation_of_a_block_carrying_only_alternatives_does_nothing
     assert document.stat().st_mtime_ns == stat_before.st_mtime_ns
 
 
-def test_strip_recommendation_of_a_bare_block_does_nothing(run_tool, milestone_dir):
-    target = milestone_dir("bare")
+def test_strip_recommendation_of_a_bare_block_does_nothing(run_tool, mission_dir):
+    target = mission_dir("bare")
     document = target / open_questions.DOCUMENT_NAME
     before = document.read_bytes()
     stat_before = document.stat()
@@ -432,8 +432,8 @@ def test_strip_recommendation_of_a_bare_block_does_nothing(run_tool, milestone_d
     assert document.stat().st_mtime_ns == stat_before.st_mtime_ns
 
 
-def test_strip_recommendation_of_an_unknown_id_fails_naming_the_ids_the_document_holds(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_strip_recommendation_of_an_unknown_id_fails_naming_the_ids_the_document_holds(run_tool, mission_dir):
+    target = mission_dir("annotated")
     before = document_of(target)
     result = run_tool("strip", str(target), "--recommendation", "Root element form", "Missing question")
     assert result.returncode == 1
@@ -445,8 +445,8 @@ def test_strip_recommendation_of_an_unknown_id_fails_naming_the_ids_the_document
     assert document_of(target) == before
 
 
-def test_bare_strip_after_strip_recommendation_clears_the_alternatives_too(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_bare_strip_after_strip_recommendation_clears_the_alternatives_too(run_tool, mission_dir):
+    target = mission_dir("annotated")
     assert run_tool("strip", str(target), "--recommendation", "Root element form").returncode == 0
     assert not open_questions.is_bare(open_questions.load_document(str(target)).questions[1])
     result = run_tool("strip", str(target), "Root element form")
@@ -456,8 +456,8 @@ def test_bare_strip_after_strip_recommendation_clears_the_alternatives_too(run_t
     )
 
 
-def test_main_strips_the_recommendation_half_in_process_silently(capsys, milestone_dir):
-    target = milestone_dir("annotated")
+def test_main_strips_the_recommendation_half_in_process_silently(capsys, mission_dir):
+    target = mission_dir("annotated")
     assert open_questions.main(["strip", str(target), "--recommendation", "Escape hatch under sole writer"]) == 0
     assert capsys.readouterr() == ("", "")
     question = open_questions.load_document(str(target)).questions[0]

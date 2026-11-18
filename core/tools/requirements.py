@@ -1,27 +1,27 @@
-"""The fold and replace commands for a milestone's requirements.md: fold splices one decision
+"""The fold and replace commands for a mission's requirements.md: fold splices one decision
 under ## Decisions, and replace rewrites the body of one existing subsection of it.
 
-Usage: python3 <plugin root>/tools/requirements.py fold MILESTONE_DIR --section HEADING
+Usage: python3 <plugin root>/tools/requirements.py fold MISSION_DIR --section HEADING
        (the decision on standard input)
-       python3 <plugin root>/tools/requirements.py replace MILESTONE_DIR --section HEADING
+       python3 <plugin root>/tools/requirements.py replace MISSION_DIR --section HEADING
        (the subsection's new body on standard input)
 
-define_mission.py creates requirements.md with its milestone directory, and the file keeps
+define_mission.py creates requirements.md with its mission directory, and the file keeps
 being written by hand and by other writers afterwards: this module is not its only writer and
 writes one place of it only, so a call changes no byte it did not write. Each subcommand takes
-the already-resolved milestone directory as its first argument and acts on the requirements.md
+the already-resolved mission directory as its first argument and acts on the requirements.md
 inside it, which must already exist: the call never creates it. The caller resolves the
-milestone; this module never reads milestones/README.md, and it touches no git.
+mission, and this module touches no git.
 
 Subcommands:
-  fold MILESTONE_DIR --section HEADING
+  fold MISSION_DIR --section HEADING
       read one decision from standard input and splice it into the "## Decisions" section of
       requirements.md: at the end of the "### " subsection whose heading is HEADING, or, when
       no subsection carries that heading, under a new "### HEADING" line (HEADING folded to
       one line) added at the end of the section, just before the next "## " heading. The
       --section flag is required on every call, so there is no form of the call that lands a
       decision under no subsection
-  replace MILESTONE_DIR --section HEADING
+  replace MISSION_DIR --section HEADING
       read a subsection's new body from standard input and write it in place of the body of
       the "### " subsection of "## Decisions" whose heading is HEADING, keeping that heading
       line and every byte outside the subsection's body. It never creates a subsection: when
@@ -161,8 +161,8 @@ def decision_lines(text):
 # --- the file -------------------------------------------------------------------------
 
 
-def requirements_path(milestone_dir):
-    return os.path.join(milestone_dir, REQUIREMENTS_NAME)
+def requirements_path(mission_dir):
+    return os.path.join(mission_dir, REQUIREMENTS_NAME)
 
 
 def read_text(path):
@@ -343,7 +343,7 @@ def cmd_fold(args):
     heading = fold(args.section)
     if not heading:
         raise ToolError("the subsection heading given as --section is empty")
-    path = requirements_path(args.milestone_dir)
+    path = requirements_path(args.mission_dir)
     lines = split_lines(read_text(path))
     decisions = find_decisions(lines, path)
     decision = decision_lines(read_body("the decision"))
@@ -357,7 +357,7 @@ def cmd_replace(args):
     heading = fold(args.section)
     if not heading:
         raise ToolError("the subsection heading given as --section is empty")
-    path = requirements_path(args.milestone_dir)
+    path = requirements_path(args.mission_dir)
     lines = split_lines(read_text(path))
     decisions = find_decisions(lines, path)
     body = decision_lines(read_body("the new subsection body"))
@@ -374,7 +374,7 @@ def build_parser():
     parser = argparse.ArgumentParser(
         prog="requirements.py",
         description=(
-            "Fold a decision into the ## Decisions section of a milestone's existing "
+            "Fold a decision into the ## Decisions section of a mission's existing "
             "requirements.md, or replace the body of one of its existing subsections."
         ),
     )
@@ -387,9 +387,9 @@ def build_parser():
     )
     fold_parser = subcommands.add_parser("fold", help=fold_help, description=fold_help)
     fold_parser.add_argument(
-        "milestone_dir",
-        metavar="MILESTONE_DIR",
-        help="the resolved milestone directory holding requirements.md",
+        "mission_dir",
+        metavar="MISSION_DIR",
+        help="the resolved mission directory holding requirements.md",
     )
     fold_parser.add_argument(
         "--section",
@@ -406,9 +406,9 @@ def build_parser():
     )
     replace_parser = subcommands.add_parser("replace", help=replace_help, description=replace_help)
     replace_parser.add_argument(
-        "milestone_dir",
-        metavar="MILESTONE_DIR",
-        help="the resolved milestone directory holding requirements.md",
+        "mission_dir",
+        metavar="MISSION_DIR",
+        help="the resolved mission directory holding requirements.md",
     )
     replace_parser.add_argument(
         "--section",

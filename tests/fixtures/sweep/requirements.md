@@ -1,4 +1,4 @@
-# Milestone 7: Golden sweep fixture
+# Golden sweep fixture
 
 ## Goal
 

@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Remaining Tools and Suite Say Mission
-
-Carry the rename through the open-question, task-list, fold, and commit tools, where the word stands only in docstrings, help text, the `MILESTONE_DIR` metavar, and the `milestone_dir` argument name, and through their tests, the golden fixtures, and the shared fixture names of `tests/conftest.py`, with fixture paths in the `mission_<slug>/` form. No tool's behaviour changes, and the four fixed-call tests are left to the task that renames the placeholder they extract. Verified by the drift gate and both pytest runs passing and by a search finding the old word nowhere in those four tools or their tests.
-
----
-
 ## Skills Resolve a Required Mission Flag
 
 Rename the flag and what resolves it across `core/skills`, `core/shared`, `core/agents`, and the six slot value files carrying the placeholder: `--milestone <path>` becomes `--mission <path>` with no alias, `core/shared/resolve-milestone.md` becomes `resolve-mission.md`, `<MILESTONE_DIR>` becomes `<MISSION_DIR>`, and the dispatch line becomes `Mission directory: <MISSION_DIR>`. The four fixed-call tests follow the placeholder, and the fixed-console-lines table names the procedure's new path. Verified by the drift gate and both pytest runs passing and by a search of `core/` and `scripts/hosts/` finding none of the four old forms.

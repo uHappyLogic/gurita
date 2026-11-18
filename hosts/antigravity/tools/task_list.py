@@ -1,30 +1,29 @@
-"""The only writer of a milestone's existing TASKS_TODO.md, the task list.
+"""The only writer of a mission's existing TASKS_TODO.md, the task list.
 
-Usage: python3 <plugin root>/tools/task_list.py <subcommand> MILESTONE_DIR [...]
+Usage: python3 <plugin root>/tools/task_list.py <subcommand> MISSION_DIR [...]
 
-define_mission.py creates the task list together with its milestone directory; from then
-on this module is its only writer. Every subcommand takes the already-resolved milestone
+define_mission.py creates the task list together with its mission directory; from then
+on this module is its only writer. Every subcommand takes the already-resolved mission
 directory as its first argument and acts on the TASKS_TODO.md inside it, which must already
 exist: no subcommand creates it, and no other file in the directory is ever read or written.
-The caller resolves the milestone; this module never reads milestones/README.md, and it
-touches no git.
+The caller resolves the mission, and this module touches no git.
 
 Subcommands:
-  initialize MILESTONE_DIR
+  initialize MISSION_DIR
       replace TASKS_TODO.md with its heading followed by the whole ordered list read from
       standard input, written in the file's own form: each section a "## <Task Title>"
       heading line, its body, and a trailing "---" line. Every section is validated before
       anything is written, so the list lands whole and in the order given or the file is
       left byte-for-byte as it was; whatever the file held before is replaced, with no flag
       and no refusal for it
-  insert MILESTONE_DIR TASK_TITLE (--end | --before TASK_TITLE | --after TASK_TITLE)
+  insert MISSION_DIR TASK_TITLE (--end | --before TASK_TITLE | --after TASK_TITLE)
       put one new section into TASKS_TODO.md whose heading is TASK_TITLE (folded to one
       line) and whose body is read from standard input, at exactly the one position the
       required flag names: after the last section, ahead of the named section, or behind
       the named section. The tool composes the heading, the body, and the "---" itself, so
       a body line reading as a "---" separator or a "## " heading is written verbatim as
       body text by this call
-  remove MILESTONE_DIR TASK_TITLE
+  remove MISSION_DIR TASK_TITLE
       remove the TASKS_TODO.md section whose heading is TASK_TITLE, its heading, body, and
       "---" together, and nothing else. It reads nothing from standard input and renders
       the removed section nowhere
@@ -193,8 +192,8 @@ def render_file(task_file):
 # --- the files ------------------------------------------------------------------------
 
 
-def todo_path(milestone_dir):
-    return os.path.join(milestone_dir, TODO_NAME)
+def todo_path(mission_dir):
+    return os.path.join(mission_dir, TODO_NAME)
 
 
 def read_file_bytes(path):
@@ -205,9 +204,9 @@ def read_file_bytes(path):
         raise ToolError(f"{path} does not exist")
 
 
-def load_todo(milestone_dir):
-    """The parsed TASKS_TODO.md of the milestone, its preamble discarded."""
-    path = todo_path(milestone_dir)
+def load_todo(mission_dir):
+    """The parsed TASKS_TODO.md of the mission, its preamble discarded."""
+    path = todo_path(mission_dir)
     try:
         text = read_file_bytes(path).decode("utf-8")
     except UnicodeDecodeError:
@@ -295,7 +294,7 @@ def check_new_title(task_file, path, title):
 
 
 def cmd_initialize(args):
-    path = todo_path(args.milestone_dir)
+    path = todo_path(args.mission_dir)
     read_file_bytes(path)
     text = read_body("the task list")
     preamble, sections = parse_sections(text)
@@ -324,8 +323,8 @@ def cmd_insert(args):
     title = fold(args.task_title)
     if not title:
         raise ToolError("the task title is empty")
-    path = todo_path(args.milestone_dir)
-    task_file = load_todo(args.milestone_dir)
+    path = todo_path(args.mission_dir)
+    task_file = load_todo(args.mission_dir)
     body = trimmed(lines_of(read_body("the task body")))
     if not body:
         raise ToolError("the task body on standard input is empty")
@@ -342,8 +341,8 @@ def cmd_insert(args):
 
 
 def cmd_remove(args):
-    path = todo_path(args.milestone_dir)
-    task_file = load_todo(args.milestone_dir)
+    path = todo_path(args.mission_dir)
+    task_file = load_todo(args.mission_dir)
     position = find_section(task_file, path, args.task_title)
     del task_file.sections[position]
     save_task_file(path, task_file)
@@ -356,16 +355,16 @@ def cmd_remove(args):
 def build_parser():
     parser = argparse.ArgumentParser(
         prog="task_list.py",
-        description="Write a milestone's existing TASKS_TODO.md, the task list this tool writes.",
+        description="Write a mission's existing TASKS_TODO.md, the task list this tool writes.",
     )
     subcommands = parser.add_subparsers(dest="subcommand", metavar="<subcommand>", required=True)
 
     def add_subcommand(name, func, help_text):
         subparser = subcommands.add_parser(name, help=help_text, description=help_text)
         subparser.add_argument(
-            "milestone_dir",
-            metavar="MILESTONE_DIR",
-            help="the resolved milestone directory holding TASKS_TODO.md",
+            "mission_dir",
+            metavar="MISSION_DIR",
+            help="the resolved mission directory holding TASKS_TODO.md",
         )
         subparser.set_defaults(func=func)
         return subparser
@@ -411,7 +410,7 @@ def build_parser():
         "remove",
         cmd_remove,
         "remove the TASKS_TODO.md section with the given title, its heading, body, and \"---\" "
-        "together, reading nothing from standard input and no other file of the milestone directory",
+        "together, reading nothing from standard input and no other file of the mission directory",
     )
     remove_parser.add_argument(
         "task_title",

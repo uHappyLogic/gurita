@@ -48,8 +48,8 @@ def run_tool():
 
 
 @pytest.fixture
-def milestone_dir(tmp_path):
-    """A fresh copy of a named fixture directory: milestone_dir("annotated") -> Path."""
+def mission_dir(tmp_path):
+    """A fresh copy of a named fixture directory: mission_dir("annotated") -> Path."""
 
     def copy(name):
         destination = tmp_path / name
@@ -115,10 +115,10 @@ def run_task_list():
 
 @pytest.fixture
 def task_list_dir(tmp_path):
-    """A fresh milestone directory holding the task list: by default a copy of the golden
+    """A fresh mission directory holding the task list: by default a copy of the golden
     task-list fixture, or the given bytes (task_list_dir(todo=b"# TASKS TODO\\n\\n")) -> Path."""
 
-    def build(todo=None, name="milestone"):
+    def build(todo=None, name="mission"):
         destination = tmp_path / name
         destination.mkdir()
         todo_bytes = (FIXTURES / "task_list_todo.md").read_bytes() if todo is None else todo
@@ -147,10 +147,10 @@ def run_requirements():
 
 @pytest.fixture
 def requirements_dir(tmp_path):
-    """A fresh milestone directory holding requirements.md: by default a copy of the golden
+    """A fresh mission directory holding requirements.md: by default a copy of the golden
     requirements fixture, or the given bytes (requirements_dir(b"## Decisions\\n")) -> Path."""
 
-    def build(requirements=None, name="milestone"):
+    def build(requirements=None, name="mission"):
         destination = tmp_path / name
         destination.mkdir()
         data = (FIXTURES / "requirements.md").read_bytes() if requirements is None else requirements
@@ -303,21 +303,21 @@ def run_call():
 @pytest.fixture
 def repo(tmp_path, environment):
     """A fresh git repository under tmp_path whose one commit holds copies of the named fixture
-    milestones and the given files: repo({"milestones/milestone_07_slug/": "sweep"},
+    missions and the given files: repo({"mission_slug/": "sweep"},
     files={"README.md": b"..."}) -> the repository Path, each fixture directory copied to the
     path it is keyed by and each file written with its bytes."""
 
-    def build(milestones, files=None):
+    def build(missions, files=None):
         files = {} if files is None else files
         root = tmp_path / "repo"
         root.mkdir()
-        for destination, name in milestones.items():
+        for destination, name in missions.items():
             shutil.copytree(FIXTURES / name, root / destination)
         for path, data in files.items():
             (root / path).parent.mkdir(parents=True, exist_ok=True)
             (root / path).write_bytes(data)
         run_git(root, environment, "init", "-q")
-        run_git(root, environment, "add", "--", *milestones, *files)
+        run_git(root, environment, "add", "--", *missions, *files)
         run_git(root, environment, "commit", "-q", "-m", "Initial commit")
         return root
 

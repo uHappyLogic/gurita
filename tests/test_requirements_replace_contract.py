@@ -56,10 +56,10 @@ def test_a_section_flag_without_its_heading_is_a_usage_error(run_requirements, r
     assert (target / NAME).read_bytes() == before
 
 
-def test_a_missing_milestone_dir_is_a_usage_error(run_requirements):
+def test_a_missing_mission_dir_is_a_usage_error(run_requirements):
     result = run_requirements("replace", "--section", SECTION, stdin=BODY)
     assert_usage_error(result)
-    assert b"MILESTONE_DIR" in result.stderr
+    assert b"MISSION_DIR" in result.stderr
 
 
 def test_a_stray_argument_is_a_usage_error(run_requirements, requirements_dir):
@@ -89,7 +89,7 @@ def test_replace_help_names_its_required_section_flag(run_requirements):
     result = run_requirements("replace", "--help")
     assert result.returncode == 0
     assert result.stdout.startswith(b"usage: requirements.py replace")
-    assert b"MILESTONE_DIR" in result.stdout
+    assert b"MISSION_DIR" in result.stdout
     assert b"--section HEADING" in result.stdout
     assert result.stderr == b""
 

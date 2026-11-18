@@ -20,11 +20,11 @@ def test_unknown_subcommand_is_a_usage_error(run_tool, tmp_path):
     assert b"invalid choice: 'frobnicate'" in result.stderr
 
 
-def test_missing_milestone_dir_is_a_usage_error(run_tool):
+def test_missing_mission_dir_is_a_usage_error(run_tool):
     result = run_tool("list")
     assert result.returncode == 2
     assert result.stdout == b""
-    assert b"MILESTONE_DIR" in result.stderr
+    assert b"MISSION_DIR" in result.stderr
 
 
 def test_help_exits_zero_and_lists_the_subcommands(run_tool):
@@ -36,8 +36,8 @@ def test_help_exits_zero_and_lists_the_subcommands(run_tool):
     assert result.stderr == b""
 
 
-def test_a_failure_is_exactly_one_error_line_on_stderr(run_tool, milestone_dir):
-    result = run_tool("locate", str(milestone_dir("empty")), "No such question")
+def test_a_failure_is_exactly_one_error_line_on_stderr(run_tool, mission_dir):
+    result = run_tool("locate", str(mission_dir("empty")), "No such question")
     assert result.returncode == 1
     assert result.stdout == b""
     lines = result.stderr.decode("utf-8").split("\n")
@@ -65,8 +65,8 @@ def test_main_reports_a_tool_error_as_one_line_and_exit_one(capsys, tmp_path):
     assert captured.err == f"Error: {tmp_path / open_questions.DOCUMENT_NAME} does not exist\n"
 
 
-def test_main_returns_zero_and_prints_nothing_for_a_mutator(capsys, milestone_dir):
-    target = milestone_dir("annotated")
+def test_main_returns_zero_and_prints_nothing_for_a_mutator(capsys, mission_dir):
+    target = mission_dir("annotated")
     document = target / open_questions.DOCUMENT_NAME
     before = document.read_bytes()
     assert open_questions.main(["strip", str(target), "Escape hatch under sole writer"]) == 0

@@ -1,16 +1,15 @@
-"""The only writer of a milestone's existing open_questions.xml, the open-question document.
+"""The only writer of a mission's existing open_questions.xml, the open-question document.
 
-Usage: python3 <plugin root>/tools/open_questions.py <subcommand> MILESTONE_DIR [...]
+Usage: python3 <plugin root>/tools/open_questions.py <subcommand> MISSION_DIR [...]
 
-define_mission.py creates the empty document together with its milestone directory; from
+define_mission.py creates the empty document together with its mission directory; from
 then on this module is the document's only writer. Every subcommand takes the
-already-resolved milestone directory as its first argument and acts on the one file this
-module writes inside it, MILESTONE_DIR/open_questions.xml, which must already exist: no
-subcommand creates it. The caller resolves the milestone; this module never reads
-milestones/README.md.
+already-resolved mission directory as its first argument and acts on the one file this
+module writes inside it, MISSION_DIR/open_questions.xml, which must already exist: no
+subcommand creates it. The caller resolves the mission.
 
 Subcommands:
-  list MILESTONE_DIR [--without-alternatives] [--without-recommendation] [--with-question]
+  list MISSION_DIR [--without-alternatives] [--without-recommendation] [--with-question]
       print the id of every <open-question> block, one per line in document order;
       --without-alternatives keeps only the blocks carrying no <alternative> element and
       --without-recommendation only the blocks carrying no <recommendation> element, a
@@ -18,17 +17,17 @@ Subcommands:
       only the line shape, printing each selected block as its id, a single tab, then its
       <question> text, and composes with either filter or both, which select exactly as
       they do without it
-  locate MILESTONE_DIR SHORT_TITLE...
+  locate MISSION_DIR SHORT_TITLE...
       print each named block verbatim, as the document holds it, in the order named
-  lift MILESTONE_DIR SHORT_TITLE [--alternative ALTERNATIVE_ID]
+  lift MISSION_DIR SHORT_TITLE [--alternative ALTERNATIVE_ID]
       print the block's answer text on one line: "<option> — <rationale>" from its
       <recommendation option="…">, or with --alternative "<id> — <what-it-is>" from the
       named <alternative id="…"> with its <advantage>/<drawback> children excluded
-  add MILESTONE_DIR SHORT_TITLE
+  add MISSION_DIR SHORT_TITLE
       append a bare block — the wrapper and its one <question> child — whose id is the
       Short Title and whose question text is the body read from standard input; an id an
       existing block already carries is refused
-  strip MILESTONE_DIR [--recommendation] SHORT_TITLE...
+  strip MISSION_DIR [--recommendation] SHORT_TITLE...
       delete every child but <question> from each named block — its <alternative>,
       <applied-principle>, <depends-on>, and <recommendation> elements — leaving the
       wrapper and <question> intact; with --recommendation delete only the <recommendation>,
@@ -36,7 +35,7 @@ Subcommands:
       standing; either way no other block is touched, so a <depends-on> tag that names a
       stripped block stays where it is, and a block holding nothing the call would delete is
       left as it is
-  embed MILESTONE_DIR SHORT_TITLE (--alternatives | --recommendation)
+  embed MISSION_DIR SHORT_TITLE (--alternatives | --recommendation)
       put one half of a block's children into the named block, the half the required flag
       names: the whole message carrying them is the body read from standard input, the
       fragment is sliced out of it (the identity on a clean message, discarding a grounding
@@ -58,7 +57,7 @@ Subcommands:
       <depends-on question="…" option="…"/> must resolve one hop to another block of the
       document that carries <alternative> elements and to one of that block's <alternative>
       ids — so the alternative set the first shape embedded stays frozen under the second
-  remove MILESTONE_DIR SHORT_TITLE [--option RECORDED_OPTION] [--undermined SHORT_TITLE...]
+  remove MISSION_DIR SHORT_TITLE [--option RECORDED_OPTION] [--undermined SHORT_TITLE...]
       delete the named block and, before the one write, reconcile the blocks that depend on
       it: with --option (the option recorded as the answer, which must be one of the removed
       block's own <alternative> ids or the call is refused with the document unchanged) a
@@ -76,7 +75,7 @@ Subcommands:
       strip, whatever its own tags say and transitively in the same way, except that a named
       block holding nothing the strip would delete (one carrying no <recommendation>) is left
       exactly as it stands and no block depending on it is stripped on its account
-  walk MILESTONE_DIR
+  walk MISSION_DIR
       print the id of every block carrying a <recommendation>, one per line in the order the
       answer sweep dispatches them: those blocks are gathered in document order, each one's
       <depends-on question="…"> values are edges to the gathered block that id names (an edge
@@ -85,7 +84,7 @@ Subcommands:
       whose every edge names a block already placed, same-depth ties in document order, a
       stranded remainder (a cycle) broken by promoting its document-order-first block to an
       origin; a document with no such block prints nothing
-  sort MILESTONE_DIR
+  sort MISSION_DIR
       rewrite the document with the blocks carrying a <recommendation> first, in exactly the
       order walk prints them, and every block carrying none last, in its prior document
       order — so on a sorted document walk prints exactly the annotated prefix of list; a
@@ -436,13 +435,13 @@ def _element_lines(depth, tag, attributes, text, children, text_inline=True):
 # --- the file -------------------------------------------------------------------------
 
 
-def document_path(milestone_dir):
-    return os.path.join(milestone_dir, DOCUMENT_NAME)
+def document_path(mission_dir):
+    return os.path.join(mission_dir, DOCUMENT_NAME)
 
 
-def load_document(milestone_dir):
-    """The parsed document of a milestone directory."""
-    path = document_path(milestone_dir)
+def load_document(mission_dir):
+    """The parsed document of a mission directory."""
+    path = document_path(mission_dir)
     try:
         with open(path, "rb") as handle:
             data = handle.read()
@@ -455,9 +454,9 @@ def load_document(milestone_dir):
     return parse_document(text)
 
 
-def save_document(milestone_dir, document):
-    """Write the document's canonical form as the milestone's one file, replacing it whole."""
-    _write_bytes(document_path(milestone_dir), render_document(document).encode("utf-8"))
+def save_document(mission_dir, document):
+    """Write the document's canonical form as the mission's one file, replacing it whole."""
+    _write_bytes(document_path(mission_dir), render_document(document).encode("utf-8"))
 
 
 def _write_bytes(path, data):
@@ -932,7 +931,7 @@ def embed_fragment(document, question, fragment, shape):
 
 
 def cmd_list(args):
-    document = load_document(args.milestone_dir)
+    document = load_document(args.mission_dir)
     for question in document.questions:
         if args.without_alternatives and question.alternatives:
             continue
@@ -946,7 +945,7 @@ def cmd_list(args):
 
 
 def cmd_locate(args):
-    document = load_document(args.milestone_dir)
+    document = load_document(args.mission_dir)
     for question in find_questions(document, args.short_titles):
         # The document is always the serializer's own output, so the block's canonical
         # lines at its depth inside the root are the very lines the file holds.
@@ -956,7 +955,7 @@ def cmd_locate(args):
 
 
 def cmd_lift(args):
-    document = load_document(args.milestone_dir)
+    document = load_document(args.mission_dir)
     question = find_question(document, args.short_title)
     if args.alternative is None:
         if question.recommendation is None:
@@ -973,7 +972,7 @@ def cmd_add(args):
     short_title = fold(args.short_title)
     if not short_title:
         raise ToolError("the Short Title is empty")
-    document = load_document(args.milestone_dir)
+    document = load_document(args.mission_dir)
     wanted = id_key(short_title)
     for question in document.questions:
         if id_key(question.id) == wanted:
@@ -982,56 +981,56 @@ def cmd_add(args):
     if not text:
         raise ToolError("the question text on standard input is empty")
     document.questions.append(Question(id=short_title, question=text))
-    save_document(args.milestone_dir, document)
+    save_document(args.mission_dir, document)
     return 0
 
 
 def cmd_strip(args):
-    document = load_document(args.milestone_dir)
+    document = load_document(args.mission_dir)
     strip = strip_recommendation if args.recommendation else strip_question
     changed = False
     for question in find_questions(document, args.short_titles):
         changed = strip(question) or changed
     if changed:
-        save_document(args.milestone_dir, document)
+        save_document(args.mission_dir, document)
     return 0
 
 
 def cmd_embed(args):
     shape = args.shape
-    document = load_document(args.milestone_dir)
+    document = load_document(args.mission_dir)
     question = find_question(document, args.short_title)
     check_block_state(question, shape)
     fragment = parse_fragment(extract_fragment(read_body(f"the {shape.name} message"), shape), shape)
     embed_fragment(document, question, fragment, shape)
-    save_document(args.milestone_dir, document)
+    save_document(args.mission_dir, document)
     return 0
 
 
 def cmd_remove(args):
-    document = load_document(args.milestone_dir)
+    document = load_document(args.mission_dir)
     question = find_question(document, args.short_title)
     if args.option is not None:
         check_recorded_option(question, args.option)
     undermined = find_undermined(document, question, args.undermined or [])
     remove_question(document, question, args.option, undermined)
-    save_document(args.milestone_dir, document)
+    save_document(args.mission_dir, document)
     return 0
 
 
 def cmd_walk(args):
-    document = load_document(args.milestone_dir)
+    document = load_document(args.mission_dir)
     for question in walk_order(document):
         print(question.id)
     return 0
 
 
 def cmd_sort(args):
-    document = load_document(args.milestone_dir)
+    document = load_document(args.mission_dir)
     ordered = sort_order(document)
     if any(placed is not held for placed, held in zip(ordered, document.questions)):
         document.questions = ordered
-        save_document(args.milestone_dir, document)
+        save_document(args.mission_dir, document)
     return 0
 
 
@@ -1041,16 +1040,16 @@ def cmd_sort(args):
 def build_parser():
     parser = argparse.ArgumentParser(
         prog="open_questions.py",
-        description="Read and write a milestone's existing open_questions.xml, the one file this tool writes.",
+        description="Read and write a mission's existing open_questions.xml, the one file this tool writes.",
     )
     subcommands = parser.add_subparsers(dest="subcommand", metavar="<subcommand>", required=True)
 
     def add_subcommand(name, func, help_text):
         subparser = subcommands.add_parser(name, help=help_text, description=help_text)
         subparser.add_argument(
-            "milestone_dir",
-            metavar="MILESTONE_DIR",
-            help="the resolved milestone directory holding open_questions.xml",
+            "mission_dir",
+            metavar="MISSION_DIR",
+            help="the resolved mission directory holding open_questions.xml",
         )
         subparser.set_defaults(func=func)
         return subparser

@@ -107,9 +107,9 @@ def test_a_path_holding_a_glob_character_names_that_one_file_only(run_commit, pr
 def test_the_subject_and_the_body_are_recorded_as_given(run_commit, project, git, environment):
     (project / "README.md").write_bytes(b"# An edited project\n")
     body = "First option — its rationale.\nSecond option — another rationale."
-    result = run_commit(project, "--subject", "Recommendation-annotation: milestone_07_slug", "--body", body, "--", "README.md")
+    result = run_commit(project, "--subject", "Recommendation-annotation: mission_slug/", "--body", body, "--", "README.md")
     assert_landed(result)
-    assert message(git, project, environment) == "Recommendation-annotation: milestone_07_slug\n\n" + body + "\n"
+    assert message(git, project, environment) == "Recommendation-annotation: mission_slug/\n\n" + body + "\n"
 
 
 @pytest.mark.parametrize("body", [None, "", "  \n "], ids=["absent", "empty", "whitespace"])

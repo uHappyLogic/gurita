@@ -187,10 +187,10 @@ def test_the_file_end_seam(run_requirements, requirements_dir, original, expecte
 
 
 def test_a_file_ending_without_a_newline_keeps_ending_without_one(run_requirements, requirements_dir):
-    original = b"# Milestone 1: Tail\n\n## Decisions\n\n### Kept\n\nLast line has no ending."
+    original = b"# Tail\n\n## Decisions\n\n### Kept\n\nLast line has no ending."
     target = requirements_dir(original)
     result = replace(run_requirements, target, "Kept", b"Line one.\nLine two.\n")
-    assert result == b"# Milestone 1: Tail\n\n## Decisions\n\n### Kept\n\nLine one.\nLine two."
+    assert result == b"# Tail\n\n## Decisions\n\n### Kept\n\nLine one.\nLine two."
 
 
 @pytest.mark.parametrize(
@@ -228,7 +228,7 @@ def test_an_empty_subsection_takes_the_body_as_a_fold_places_a_block(run_require
 
 
 def test_a_crlf_file_gets_crlf_body_lines_and_keeps_every_other_byte(run_requirements, requirements_dir):
-    original = b"# Milestone 1: CRLF\r\n\r\n## Decisions\r\n\r\n### Kept\r\n\r\nPara.\r\n\r\n## Out of Scope\r\n"
+    original = b"# CRLF\r\n\r\n## Decisions\r\n\r\n### Kept\r\n\r\nPara.\r\n\r\n## Out of Scope\r\n"
     target = requirements_dir(original)
     result = replace(run_requirements, target, "Kept", b"New line one.\nNew line two.\n")
     assert result == swapped(original, b"Para.\r\n", b"New line one.\r\nNew line two.\r\n")

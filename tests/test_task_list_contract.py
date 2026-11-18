@@ -48,11 +48,11 @@ def test_unknown_subcommand_is_a_usage_error(run_task_list, tmp_path):
 
 
 @pytest.mark.parametrize("subcommand", ["initialize", "insert", "remove"])
-def test_missing_milestone_dir_is_a_usage_error(run_task_list, subcommand):
+def test_missing_mission_dir_is_a_usage_error(run_task_list, subcommand):
     result = run_task_list(subcommand)
     assert result.returncode == 2
     assert result.stdout == b""
-    assert b"MILESTONE_DIR" in result.stderr
+    assert b"MISSION_DIR" in result.stderr
 
 
 def test_insert_without_a_position_flag_is_a_usage_error(run_task_list, task_list_dir):

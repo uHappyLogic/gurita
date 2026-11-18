@@ -50,24 +50,24 @@ def printed(result):
 # --- the gather ------------------------------------------------------------------------
 
 
-def test_walk_prints_only_the_annotated_blocks_of_the_fixture_in_dispatch_order(run_tool, milestone_dir):
-    result = run_tool("walk", str(milestone_dir("annotated")))
+def test_walk_prints_only_the_annotated_blocks_of_the_fixture_in_dispatch_order(run_tool, mission_dir):
+    result = run_tool("walk", str(mission_dir("annotated")))
     assert printed(result) == [HATCH, ROOT_FORM]
     assert BARE not in result.stdout.decode("utf-8")
 
 
-def test_walk_prints_ids_un_escaped(run_tool, milestone_dir):
-    result = run_tool("walk", str(milestone_dir("entities")))
+def test_walk_prints_ids_un_escaped(run_tool, mission_dir):
+    result = run_tool("walk", str(mission_dir("entities")))
     assert printed(result) == [ENTITIES_TITLE]
 
 
-def test_walk_of_an_empty_document_prints_nothing_and_exits_zero(run_tool, milestone_dir):
-    result = run_tool("walk", str(milestone_dir("empty")))
+def test_walk_of_an_empty_document_prints_nothing_and_exits_zero(run_tool, mission_dir):
+    result = run_tool("walk", str(mission_dir("empty")))
     assert (result.returncode, result.stdout, result.stderr) == (0, b"", b"")
 
 
-def test_walk_of_a_document_with_no_annotated_block_prints_nothing_and_exits_zero(run_tool, milestone_dir):
-    result = run_tool("walk", str(milestone_dir("bare")))
+def test_walk_of_a_document_with_no_annotated_block_prints_nothing_and_exits_zero(run_tool, mission_dir):
+    result = run_tool("walk", str(mission_dir("bare")))
     assert (result.returncode, result.stdout, result.stderr) == (0, b"", b"")
 
 
@@ -148,8 +148,8 @@ def test_walk_keeps_the_resolvable_edges_of_a_block_whose_other_edge_is_dropped(
     assert order_of(annotated("B", ["Gone", "A"]), bare("U"), annotated("A", ["U"])) == ["A", "B"]
 
 
-def test_walk_drops_the_edge_of_the_entities_fixture_to_its_absent_target(milestone_dir):
-    document = open_questions.load_document(str(milestone_dir("entities")))
+def test_walk_drops_the_edge_of_the_entities_fixture_to_its_absent_target(mission_dir):
+    document = open_questions.load_document(str(mission_dir("entities")))
     (question,) = document.questions
     assert [dependency.question for dependency in question.depends_on] == ['Some "other" question & more']
     assert [placed.id for placed in open_questions.walk_order(document)] == [ENTITIES_TITLE]
@@ -255,8 +255,8 @@ def test_walk_order_after_an_answer_omits_the_dependents_its_cascade_stripped(ru
 # --- the contract -----------------------------------------------------------------------
 
 
-def test_walk_leaves_the_document_unchanged_and_writes_nothing(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_walk_leaves_the_document_unchanged_and_writes_nothing(run_tool, mission_dir):
+    target = mission_dir("annotated")
     document = target / open_questions.DOCUMENT_NAME
     before = document.read_bytes()
     stat_before = document.stat()
@@ -285,21 +285,21 @@ def test_walk_fails_on_a_malformed_document_as_one_error_line(run_tool, tmp_path
     assert b"Traceback" not in result.stderr
 
 
-def test_walk_rejects_an_extra_argument_as_a_usage_error(run_tool, milestone_dir):
-    result = run_tool("walk", str(milestone_dir("annotated")), HATCH)
+def test_walk_rejects_an_extra_argument_as_a_usage_error(run_tool, mission_dir):
+    result = run_tool("walk", str(mission_dir("annotated")), HATCH)
     assert result.returncode == 2
     assert result.stdout == b""
     assert b"unrecognized arguments" in result.stderr
 
 
-def test_walk_without_a_milestone_dir_is_a_usage_error(run_tool):
+def test_walk_without_a_mission_dir_is_a_usage_error(run_tool):
     result = run_tool("walk")
     assert result.returncode == 2
     assert result.stdout == b""
-    assert b"MILESTONE_DIR" in result.stderr
+    assert b"MISSION_DIR" in result.stderr
 
 
-def test_main_walks_in_process(capsys, milestone_dir):
-    assert open_questions.main(["walk", str(milestone_dir("annotated"))]) == 0
+def test_main_walks_in_process(capsys, mission_dir):
+    assert open_questions.main(["walk", str(mission_dir("annotated"))]) == 0
     captured = capsys.readouterr()
     assert (captured.out, captured.err) == (f"{HATCH}\n{ROOT_FORM}\n", "")

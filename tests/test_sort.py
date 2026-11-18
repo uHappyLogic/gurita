@@ -102,8 +102,8 @@ def test_sort_places_dependents_by_depth_with_same_depth_ties_in_prior_order(run
     assert ids_of(target) == ["A", "C", "B", "D"]
 
 
-def test_sort_moves_a_bare_block_that_sat_between_a_target_and_its_dependent_to_the_end(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_sort_moves_a_bare_block_that_sat_between_a_target_and_its_dependent_to_the_end(run_tool, mission_dir):
+    target = mission_dir("annotated")
     text = document_of(target).decode("utf-8")
     hatch, root_form, bare_block = (block_lines(text, short_title) for short_title in (HATCH, ROOT_FORM, BARE))
     shuffled = "<open-questions>\n" + "\n".join(bare_block + root_form + hatch) + "\n</open-questions>\n"
@@ -176,8 +176,8 @@ def test_sort_takes_its_annotated_order_from_walk_order_itself(monkeypatch, tmp_
 
 
 @pytest.mark.parametrize("name", FIXTURE_NAMES)
-def test_sort_is_the_identity_on_every_golden_fixture(run_tool, milestone_dir, name):
-    target = milestone_dir(name)
+def test_sort_is_the_identity_on_every_golden_fixture(run_tool, mission_dir, name):
+    target = mission_dir(name)
     document = target / open_questions.DOCUMENT_NAME
     before = document.read_bytes()
     stat_before = document.stat()
@@ -188,8 +188,8 @@ def test_sort_is_the_identity_on_every_golden_fixture(run_tool, milestone_dir, n
     assert sorted(path.name for path in target.iterdir()) == names_before
 
 
-def test_sort_is_the_identity_on_the_annotated_fixture_and_walk_is_its_annotated_prefix(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_sort_is_the_identity_on_the_annotated_fixture_and_walk_is_its_annotated_prefix(run_tool, mission_dir):
+    target = mission_dir("annotated")
     before = document_of(target)
     silent(run_tool("sort", str(target)))
     assert document_of(target) == before
@@ -303,8 +303,8 @@ def test_sort_fails_on_a_malformed_document_as_one_error_line_and_leaves_it_unch
     assert sorted(path.name for path in tmp_path.iterdir()) == [open_questions.DOCUMENT_NAME]
 
 
-def test_sort_rejects_an_extra_argument_as_a_usage_error(run_tool, milestone_dir):
-    target = milestone_dir("annotated")
+def test_sort_rejects_an_extra_argument_as_a_usage_error(run_tool, mission_dir):
+    target = mission_dir("annotated")
     before = document_of(target)
     result = run_tool("sort", str(target), HATCH)
     assert result.returncode == 2
@@ -313,11 +313,11 @@ def test_sort_rejects_an_extra_argument_as_a_usage_error(run_tool, milestone_dir
     assert document_of(target) == before
 
 
-def test_sort_without_a_milestone_dir_is_a_usage_error(run_tool):
+def test_sort_without_a_mission_dir_is_a_usage_error(run_tool):
     result = run_tool("sort")
     assert result.returncode == 2
     assert result.stdout == b""
-    assert b"MILESTONE_DIR" in result.stderr
+    assert b"MISSION_DIR" in result.stderr
 
 
 def test_main_sorts_in_process(capsys, tmp_path):

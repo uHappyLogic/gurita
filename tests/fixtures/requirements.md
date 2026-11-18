@@ -1,4 +1,4 @@
-# Milestone 9: Golden requirements fixture
+# Golden requirements fixture
 
 ## Goal
 
