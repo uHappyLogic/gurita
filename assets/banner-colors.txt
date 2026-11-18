@@ -1,0 +1,14 @@
+v #a855f7
+d #9333ea
+s #64748b
+
+               dddddd                  dddddd      dddddd                  dddddd
+              d dddd d                d dddd d    d dddd d                d dddd d
+    dddddd   d d    d d     dddddd   d d    d d  d d    d d   dddddd     d d    d d   dddddd
+   d dddd d   d d  ddd     d dddd d   d d  ddd    ddd  d d   d dddd d     ddd  d d   d dddd d
+  d d    d d   v v        d d    d d   v v            v v   d d    d d        v v   d d    d d
+   d d  ddd   v s v        d d  ddd   v s v          v s v   ddd  d d        v s v   ddd  d d
+    v v      v   v          v v      v   v            v   v      v v          v   v      v v
+   v s v    v s v          v s v    v s v              v s v    v s v          v s v    v s v
+  v   v      v   v        v   v      v   v            v   v      v   v        v   v      v   v
+sv s vs      sv s vs    sv s vs      sv s vs        sv s vs      sv s vs    sv s vs      sv s vs

@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Draw the Eight-Arm Banner Art
-
-Draw the banner's plain-text source under `assets/` with the colour mapping it needs, and commit beside it the SVG the generator script writes from it, as derived output that is never hand-edited: exactly eight octopus arms, each curling up from the bottom edge, in a strip of about 80 to 100 character columns by about 8 to 12 rows with an aspect of roughly 4:1 to 6:1, using only the 95 printable 7-bit ASCII characters (U+0020 to U+007E) and only the palette violet `#a855f7`, slate `#64748b`, and darker violet `#9333ea`. The art lands on the executing agent's own judgment, with no approval step. It is verified by counting the arms, checking the grid size, the character range, and the colours, and rendering the SVG locally to PNGs on the white light background and the `#0d1117` dark background with a renderer already on the machine, such as `qlmanage`, inspecting them before the task completes and committing nothing for that check.
-
----
-
 ## Copy the Banner Into Host Trees
 
 Change `scripts/build_hosts.py` to copy the one banner SVG under `assets/` into every host tree at the tree root, beside the README, byte for byte as it copies the root `LICENSE`, so each host page can load the banner from its own repository and no copy is kept by hand in a definition directory. Extend the build's tests to cover the new copy and commit the rebuilt `hosts/` trees with the change. It is verified by both pytest runs passing, `uv run scripts/build_hosts.py --check` passing, and every host tree's copy being byte-identical to the source file.
