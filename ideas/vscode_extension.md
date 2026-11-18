@@ -1,12 +1,12 @@
 # VS Code extension
 
-A draft, written 2026-11-17, for work not yet defined: a Visual Studio Code extension that puts a UX layer over the plugin. It replaces two pieces of hand work, copying command lines into a terminal and reading `open_questions.xml` as raw XML, with buttons and a rendered view. It runs the host CLIs' own command lines and writes no milestone file itself, so everything it does can still be done by hand. The draft records the hand work it replaces, what was measured, the parts, how a line is run, what was checked of VS Code and when, what it costs, what is decided, and the questions the work decides. It uses today's vocabulary (Cairn, milestone, `--milestone`); the extension is published after the rename `ideas/gurita.md` describes, under the new words, and has no name of its own yet.
+A draft, written 2026-11-17, for work not yet defined: a Visual Studio Code extension that puts a UX layer over the plugin. It replaces two pieces of hand work, copying command lines into a terminal and reading `open_questions.xml` as raw XML, with buttons and a rendered view. It runs the host CLIs' own command lines and writes no mission file itself, so everything it does can still be done by hand. The draft records the hand work it replaces, what was measured, the parts, how a line is run, what was checked of VS Code and when, what it costs, what is decided, and the questions the work decides. It uses today's vocabulary (Cairn, mission, `--mission`); the extension is published after the plugin's rename `ideas/gurita.md` describes, under the new name, and has no name of its own yet.
 
 ## The hand work
 
-A milestone is driven today from a personal snippet file, untracked, that holds every command line the person runs. It has one placeholder, `<milestone_relative_path>`, and under a heading per host one named, fenced block per situation: a first run (starting state, review, alternatives, recommendation), a requirements iteration (sweep, review, alternatives, recommendation), three execution blocks (normal, critical at a higher effort, and one with a further requirements pass first), a single task, and the finish. Beside them stand the bare slash commands of the conversational and single-question skills, and two shell steps of the person's own: sourcing an environment file to switch to API-key usage, and waiting for the account's usage window to reset.
+A mission is driven today from a personal snippet file, untracked, that holds every command line the person runs. It has one placeholder, the mission's relative path, and under a heading per host one named, fenced block per situation: a first run (starting state, review, alternatives, recommendation), a requirements iteration (sweep, review, alternatives, recommendation), three execution blocks (normal, critical at a higher effort, and one with a further requirements pass first), a single task, and the finish. Beside them stand the bare slash commands of the conversational and single-question skills, and two shell steps of the person's own: sourcing an environment file to switch to API-key usage, and waiting for the account's usage window to reset.
 
-Per milestone the person replaces the placeholder throughout the file, then for each step copies a block and pastes it into a terminal. For a single-question skill they read the Short Title out of the XML, and for `answer-open-question-with-alternative` the alternative's id as well, and type both after the slash command.
+Per mission the person replaces the placeholder throughout the file, then for each step copies a block and pastes it into a terminal. For a single-question skill they read the Short Title out of the XML, and for `answer-open-question-with-alternative` the alternative's id as well, and type both after the slash command.
 
 Three properties of the file shape the design:
 
@@ -20,15 +20,15 @@ The file has the form `docs/ways-of-using-cairn.md` already has: a heading namin
 
 Read from this repository's history on 2026-11-17.
 
-- **The question document is large when it is read.** Taking the largest committed version of `open_questions.xml` in each of the 13 most recent milestones that held questions (`milestone_46` through `rename-milestone-to-mission`), the document held 9 to 41 questions in 56 to 329 KB. Ten of the thirteen held 12 to 18 questions in 90 to 137 KB. That is 6 to 8 KB a question.
+- **The question document is large when it is read.** Taking the largest committed version of `open_questions.xml` in each of the 13 most recent missions that held questions (`milestone_46` through `rename-milestone-to-mission`, directories named before the word's rename), the document held 9 to 41 questions in 56 to 329 KB. Ten of the thirteen held 12 to 18 questions in 90 to 137 KB. That is 6 to 8 KB a question.
 - **It is hard to read as it stands.** The prose is entity-escaped (`&apos;`, `&quot;`, `&lt;`), a block's `<recommendation>` stands above its alternatives and names its option only by id, and a dependency is a bare `<depends-on question option/>` tag.
 - **Most answers are accepted recommendations.** Counted by commit subject over the whole history: 622 `Recommendation-answer:`, 25 `Alternative-answer:`, and 32 `Manual-answer:`. So 57 of 679 answers (8%) were made by hand, and the person's sitting is mostly reading the whole set to find the few to override.
-- **The list of live milestones is short.** Two milestones are live today and `milestones.py live` prints them in two lines. A list alone is not worth an extension.
+- **The list of live missions is short.** Two missions are live today and `missions.py live` prints them in two lines. A list alone is not worth an extension.
 - **Every run's outcome is already a listed line.** The `## Fixed console lines` table of `docs/skill-reference.md` lists 94 lines (17 success, 27 no-op, 49 stop, and the one convergence verdict), and `tests/test_fixed_console_lines.py` checks each against every rendered host tree. CLAUDE.md gives the reason for the convention: a harness running the skills one invocation after another knows how each ended only from its final message.
 
 ## The constraint
 
-The extension runs the command lines a person would type, through the host's own CLI, and writes nothing under a milestone directory. Four things follow.
+The extension runs the command lines a person would type, through the host's own CLI, and writes nothing under a mission directory. Four things follow.
 
 - **Manual use is unchanged.** A run started by a button is the run the pasted line starts. A person without the extension loses nothing, and a button can show the lines it is about to run.
 - **The plugin changes nothing for it.** No new tool, subcommand, output form, or exit code is needed. The two optional exceptions are the tool-side render named under the costs and a runner shipped as a plugin tool, both left to the questions.
@@ -43,13 +43,13 @@ A recipe is a named list of literal command lines with placeholders, the form th
 
 - **Shipped recipes** are the chains of `docs/ways-of-using-cairn.md`, so the page stays the one place a chain is written.
 - **A person's own recipes** are a file in the same form, which adds to the shipped set or replaces a recipe of the same name. Shell steps of the person's own, such as sourcing an environment file, are lines like any other.
-- **The interface fills the placeholders.** `<path>` comes from the selected milestone, `<Short Title>` and `<Alternative Id>` from the question and alternative clicked in the question view, and `<goal>`, `<scope>`, and `<answer text>` from an input box.
+- **The interface fills the placeholders.** `<path>` comes from the selected mission, `<Short Title>` and `<Alternative Id>` from the question and alternative clicked in the question view, and `<goal>`, `<scope>`, and `<answer text>` from an input box.
 
 A chain that holds per-question lines, as the page's "Answering the questions that matter to you" does, is not one button. It splits at the person's sitting: the question view records the hand answers one run at a time, and a button runs the lines after them.
 
 ### Question view
 
-A read-only rendering of one milestone's `open_questions.xml`, opened in place of the XML text. For each question it shows the question text, the pick and its rationale against the alternative it names, every alternative with its what-it-is, advantage, and drawback, each dependency as a link to the sibling and the option it assumes, and the principles applied. It carries the buttons no snippet file can, because the title and the id come from the document:
+A read-only rendering of one mission's `open_questions.xml`, opened in place of the XML text. For each question it shows the question text, the pick and its rationale against the alternative it names, every alternative with its what-it-is, advantage, and drawback, each dependency as a link to the sibling and the option it assumes, and the principles applied. It carries the buttons no snippet file can, because the title and the id come from the document:
 
 - on an alternative, record it (`answer-open-question-with-alternative`);
 - on a question, discuss it (an interactive `discuss-open-question` session), answer it in the person's own words from an input box (`answer-open-question`), or record its recommendation (`answer-open-question-with-recommendation`);
@@ -57,9 +57,9 @@ A read-only rendering of one milestone's `open_questions.xml`, opened in place o
 
 The view re-reads the file after every run, since an answer removes its block and may clear the picks on other questions.
 
-### Milestone list
+### Mission list
 
-A side-bar tree of the live milestones, each with its path, title, and `started` or `defined`, and beneath it its open questions and remaining task headings. As a display it adds little to `milestones.py live`. Its use is as the place the recipe buttons hang and take their `<path>` from, and as the way into the question view.
+A side-bar tree of the live missions, each with its path, title, and `started` or `defined`, and beneath it its open questions and remaining task headings. As a display it adds little to `missions.py live`. Its use is as the place the recipe buttons hang and take their `<path>` from, and as the way into the question view.
 
 ## Running a line
 
@@ -68,7 +68,7 @@ A side-bar tree of the live milestones, each with its path, title, and `started`
 - **Quoting.** A Short Title or a typed answer lands inside the line's quoted prompt. The ways-of-using page asks the person to write no double quote there (no single quote on a Codex line), and `ideas/short_title_characters.md` records the same failure for titles. Where the extension types into a shell it refuses or escapes a value holding a character special in that line's quoting, rather than leaving the person to avoid one.
 - **How long a run lives.** No longer than the editor, by decision (see Decided). The terminal is marked transient, so a restart never starts a chain again, and a runner that is ended ends the line it is running, so nothing a button started keeps running unseen.
 - **Permission flags.** `--dangerously-skip-permissions` and its Codex counterpart are text in a recipe line. The extension never adds one.
-- **Runs side by side.** Two milestones' chains may run at once: every commit takes its own paths as its pathspec, a git write outlasts another run's lock, and the scope gate holds a second milestone in an overlapping scope at task entry. Within one milestone the extension runs one chain at a time.
+- **Runs side by side.** Two missions' chains may run at once: every commit takes its own paths as its pathspec, a git write outlasts another run's lock, and the scope gate holds a second mission in an overlapping scope at task entry. Within one mission the extension runs one chain at a time.
 
 ## What was checked of VS Code
 
@@ -84,34 +84,34 @@ The output read and the argument-list form were left unconfirmed by the first ch
 
 ## Kepala
 
-The runner is the transition engine `ideas/kepala.md` outlines, with a person choosing the edge. Kepala runs the skills through the CLI, reads the coarse state from `milestones.py live` and the fine state from the last fixed first line, and names the `Recommended` state as where the team comes in. The question view is that state's interface. So the recipes, the fixed-line reading, and the state read are kept apart from the VS Code interface, in a part with no dependency on it. Whether Kepala then uses that part is Kepala's question.
+The runner is the transition engine `ideas/kepala.md` outlines, with a person choosing the edge. Kepala runs the skills through the CLI, reads the coarse state from `missions.py live` and the fine state from the last fixed first line, and names the `Recommended` state as where the team comes in. The question view is that state's interface. So the recipes, the fixed-line reading, and the state read are kept apart from the VS Code interface, in a part with no dependency on it. Whether Kepala then uses that part is Kepala's question.
 
 ## What it costs
 
 - **A second toolchain.** TypeScript, Node, packaging, and a marketplace publisher, beside a repository that is stdlib-only Python, Markdown, and one build script under a one-job CI, and a fourth thing to release beside the three host trees.
-- **A copy of the contract.** The extension reads the recipe page and the fixed-line table. Kept in another repository it carries copies of both, which the plugin can outrun. The rename changes every line of either that carries `milestone`.
-- **Little reach.** The plugin has few users, so the first user is the maintainer. The case rests on the maintainer's own hand work, 57 finished milestones and 679 recorded answers, not on new users.
+- **A copy of the contract.** The extension reads the recipe page and the fixed-line table. Kept in another repository it carries copies of both, which the plugin can outrun. The plugin's rename changes every line of either that carries `cairn`.
+- **Little reach.** The plugin has few users, so the first user is the maintainer. The case rests on the maintainer's own hand work, 57 finished missions and 679 recorded answers, not on new users.
 - **A cheaper form of the view exists.** A read-only render of the question document to Markdown or self-contained HTML, as a stdlib tool tested with golden fixtures, gives the reading without the buttons, in every editor and host. It can also be the extension's renderer, the view showing the tool's output, which leaves the Python tool the document's only parser.
 
 ## What waits
 
-Nothing here is carried out yet. Both rename milestones land first (`rename-milestone-to-mission` is started, `rename-cairn-to-gurita` defined), so the extension is published once, under the new name, with recipes and fixed lines that already say mission. The flag, the namespace, and the discovery pattern are data to the extension, so work on it before the rename costs an edit of that data, while a publication before it costs a name that cannot be taken back.
+Nothing here is carried out yet. Both renames land first (the word's rename is carried out on `main`, and the plugin's, `mission_rename-cairn-to-gurita/`, is defined), so the extension is published once, under the new name, with recipes and fixed lines that already say mission. The namespace is data to the extension, as the flag and the discovery pattern are, so work on it before the plugin's rename costs an edit of that data, while a publication before it costs a name that cannot be taken back.
 
 ## Decided
 
 Decided on 2026-11-17.
 
-- **A run lives no longer than the editor.** Every run the extension starts ends when VS Code exits, abruptly if need be, and nothing is built to carry a run across a restart or to pick one up after it. An abrupt end is what closing the terminal under a pasted line already is, and the plugin already answers it: `complete-all-tasks` run again continues from the remaining tasks, each task being committed on its own and a stopped task's partial work continued; the answer sweep stops on its fixed line while a milestone file holds an uncommitted change; and a git lock a killed process left surfaces as git's message.
+- **A run lives no longer than the editor.** Every run the extension starts ends when VS Code exits, abruptly if need be, and nothing is built to carry a run across a restart or to pick one up after it. An abrupt end is what closing the terminal under a pasted line already is, and the plugin already answers it: `complete-all-tasks` run again continues from the remaining tasks, each task being committed on its own and a stopped task's partial work continued; the answer sweep stops on its fixed line while a mission file holds an uncommitted change; and a git lock a killed process left surfaces as git's message.
 - **No local server.** Nothing the extension does runs behind a listener. A server was considered only as a way around limits of the terminal API, and the check found none that needs one: an extension can start a process as a terminal or a task with an argument list and read its exit code, and where shell integration is active it can read what a command prints. A chain is run by the extension itself or by one process per chain that ends with it and keeps no state.
 
 ## Questions for the work
 
 - **Where it lives.** Its own repository, as `ideas/kepala.md` plans for the orchestrator, which keeps this one stdlib-only and makes the copies of the contract explicit. Or a directory here outside `core/`, rendered into no host, which keeps the recipe page and the fixed-line table one checkout away and puts a second toolchain into this repository's CI.
-- **What a recipe file is.** The ways-of-using page parsed as it stands (headings and fenced blocks), which keeps one source and ties the extension to the page's layout. Or a data file the page is written from or checked against. Either way the placeholder set is the page's six, and the snippet file's `<milestone_relative_path>` becomes `<path>`.
+- **What a recipe file is.** The ways-of-using page parsed as it stands (headings and fenced blocks), which keeps one source and ties the extension to the page's layout. Or a data file the page is written from or checked against. Either way the placeholder set is the page's six, and the snippet file's one placeholder becomes `<path>`.
 - **Whether a recipe is only a list.** The requirements iteration is repeated by hand until the review prints its convergence line. A recipe could carry a bounded repeat that ends on that line, the loop CLAUDE.md names as the verdict line's reason, or stay a flat list the person clicks again.
 - **How a headless line runs and how its outcome is read.** In the terminal through shell integration, which hands over a raw stream with escape sequences and works only where the person's shell setup lets shell integration activate. As a child process of the extension, which needs neither and no shell quoting but takes the run out of the terminal. Or under a runner started as the terminal's process, which keeps the run in view, needs no shell integration, and puts the chain logic in a part a person can also start by hand. With it goes what is read: the plain print of a headless line, or the structured output each host offers (`--output-format stream-json` on Claude Code and Antigravity, `--json` on Codex), which `host_tests/conftest.py` already reads for all three and which adds a flag the pasted line does not carry.
 - **What the runner needs, if there is one.** Written in Python and kept stdlib-only it needs the `python3` the plugin already requires and nothing else; `uv` is this repository's development tool, named nowhere under `core/`, and assuming it adds a prerequisite the plugin does not have. It ships inside the extension, found by the extension's own path, or as a plugin tool, which brings back the question of the plugin's installed location. A recipe's shell steps (sourcing an environment file, a shell function of the person's) need a shell, so the runner also settles whether a chain is one shell session and how a substituted value reaches a line without being parsed by it.
-- **Where the live state comes from.** The installed `milestones.py`, which needs the plugin's installed location: Antigravity's is the fixed `~/.gemini/config/plugins/cairn`, and the host suite finds Claude Code's and Codex's through `<cli> plugin list --json`. Or a glob of the discovery pattern in the workspace, which needs no tool and no install but is a second copy of the pattern and cannot tell `started` from `defined`.
+- **Where the live state comes from.** The installed `missions.py`, which needs the plugin's installed location: Antigravity's is the fixed `~/.gemini/config/plugins/cairn`, and the host suite finds Claude Code's and Codex's through `<cli> plugin list --json`. Or a glob of the discovery pattern in the workspace, which needs no tool and no install but is a second copy of the pattern and cannot tell `started` from `defined`.
 - **What renders the question document.** A reader of the XML inside the extension, or the tool-side render under the costs.
 - **Which hosts' lines ship.** The page's chains are Claude Code lines with one mixed-host chain and a legend for moving a line to another host. The extension ships them as written, or also ships each chain per host.
 - **Where it is published.** The Marketplace only, or also a registry the VS Code forks read, which was not checked.

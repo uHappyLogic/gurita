@@ -7,9 +7,9 @@ sweep fixture gets one filled section, the conflict section for the one whose qu
 the view's `list --with-question` prints it, opens with the review pass's fixed phrase, and the
 call is run under bash in a temporary git repository with the tree's plugin-root variable
 exported to the tree root. A clean run makes one Recommendation-answer commit per answered
-question, path-scoped to the milestone's two files, the conflict answer's rewriting only the
+question, path-scoped to the mission's two files, the conflict answer's rewriting only the
 losing entry's subsection body, and skips the dependent whose pick the target's remove stripped
-with no commit and no output; a dirty milestone file stops the call before any write. The stop
+with no commit and no output; a dirty mission file stops the call before any write. The stop
 path after a fold or a replace is left to the hands-on check, so nothing here provokes one."""
 
 import re
@@ -40,9 +40,9 @@ NEW_BODY_PLACEHOLDER = "<the new body>"
 CONFLICT_OPENING = "Which conflicting decision stands:"
 
 # <MISSION_DIR> as the runner fills it: the --mission path, its trailing slash included.
-MILESTONE = "milestones/milestone_07_golden-sweep-fixture/"
-DOCUMENT = MILESTONE + "open_questions.xml"
-REQUIREMENTS = MILESTONE + "requirements.md"
+MISSION = "mission_golden-sweep-fixture/"
+DOCUMENT = MISSION + "open_questions.xml"
+REQUIREMENTS = MISSION + "requirements.md"
 
 STORAGE = "Storage backend"
 EVICTION = "Cache eviction"
@@ -190,7 +190,7 @@ def compose(questions):
                     .replace("<Option>", double_quoted(option))
                 )
     lines.extend(footer)
-    call = "\n".join(lines).replace("<MISSION_DIR>", MILESTONE) + "\n"
+    call = "\n".join(lines).replace("<MISSION_DIR>", MISSION) + "\n"
     assert not re.search(r"<[A-Za-z][A-Za-z_ ]*>", call), "a placeholder is left unfilled"
     return call
 
@@ -203,8 +203,8 @@ def compose(questions):
 @pytest.fixture
 def repo(repo):
     """The conftest's repository factory seeded for the sweep: one commit holding the golden
-    sweep milestone at MILESTONE and an unrelated tracked file."""
-    return repo({MILESTONE: FIXTURE_NAME}, files={"README.md": b"An unrelated tracked file.\n"})
+    sweep mission at MISSION and an unrelated tracked file."""
+    return repo({MISSION: FIXTURE_NAME}, files={"README.md": b"An unrelated tracked file.\n"})
 
 
 def tool(repo, env, *args):
@@ -217,7 +217,7 @@ def tool(repo, env, *args):
 
 def question_texts(repo, env):
     """Each block's id mapped to its question text, as `list --with-question` prints them."""
-    printed = tool(repo, env, "list", "--with-question", MILESTONE).splitlines()
+    printed = tool(repo, env, "list", "--with-question", MISSION).splitlines()
     return dict(line.split("\t", 1) for line in printed)
 
 
@@ -226,10 +226,10 @@ def walked_questions(repo, env):
     with its lifted line, the option as the line's text before its first spaced em dash, and
     its kind, a conflict question being one whose printed question text starts with the fixed
     opening."""
-    order = tool(repo, env, "walk", MILESTONE).splitlines()
+    order = tool(repo, env, "walk", MISSION).splitlines()
     assert order == WALK_ORDER
     texts = question_texts(repo, env)
-    lifted = {title: tool(repo, env, "lift", MILESTONE, title).rstrip("\n") for title in order}
+    lifted = {title: tool(repo, env, "lift", MISSION, title).rstrip("\n") for title in order}
     questions = [
         (title, *COMPOSED[title], lifted[title].split(" — ", 1)[0], texts[title].startswith(CONFLICT_OPENING))
         for title in order
@@ -407,12 +407,12 @@ def test_a_clean_run_commits_each_answer_rewrites_the_losing_entry_and_skips_the
     assert LOSING_BODY not in requirements
     assert "Eviction" not in subsections and "Drop whole file" not in requirements
     assert all(EVICTION not in git(repo, environment, "log", "-1", "--format=%B", commit) for commit in commits)
-    assert tool(repo, environment, "list", MILESTONE).splitlines() == [EVICTION, WARMUP]
-    assert tool(repo, environment, "walk", MILESTONE) == ""
+    assert tool(repo, environment, "list", MISSION).splitlines() == [EVICTION, WARMUP]
+    assert tool(repo, environment, "walk", MISSION) == ""
     assert git(repo, environment, "status", "--porcelain").splitlines() == [" M README.md", "?? notes.txt"]
 
 
-def test_a_dirty_milestone_file_stops_the_call_before_any_write(repo, environment, git, run_call):
+def test_a_dirty_mission_file_stops_the_call_before_any_write(repo, environment, git, run_call):
     questions, _ = walked_questions(repo, environment)
     edited = (FIXTURE / "requirements.md").read_bytes() + b"\nA hand edit left uncommitted.\n"
     (repo / REQUIREMENTS).write_bytes(edited)

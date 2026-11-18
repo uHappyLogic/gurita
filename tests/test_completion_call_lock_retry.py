@@ -1,6 +1,6 @@
 """The inline complete-task skill's fixed call, as the committed Claude Code tree renders it, run
 against another process's .git/index.lock: the one fenced block of the skill file holding the
-task-list tool's remove, filled as the runner fills it (the milestone directory, the task's full
+task-list tool's remove, filled as the runner fills it (the mission directory, the task's full
 heading, its bar as bullets, and the paths the task edited and created), and run under bash in a
 temporary git repository seeded through the conftest factory, with another run's change staged
 and an untracked file beside it. Git's own trace, written to a file, counts the attempts the
@@ -43,8 +43,8 @@ EMPTY_BAR_TEST = [
 ACCEPTANCE_BAR_EMPTY = "acceptance bar empty\n"
 
 # <MISSION_DIR> as the runner fills it: the --mission path, its trailing slash included.
-MILESTONE = "milestones/milestone_03_lock-retry-fixture/"
-TODO = MILESTONE + "TASKS_TODO.md"
+MISSION = "mission_lock-retry-fixture/"
+TODO = MISSION + "TASKS_TODO.md"
 
 # The golden task list's first task, its bar as the runner verified it (an apostrophe and
 # parentheses included, which the group-fed capture must carry through every shell), and the
@@ -118,7 +118,7 @@ def completion_call(bar=BAR):
     assert call.count(PATHS_PLACEHOLDER) == 1
     call = (
         call.replace(PATHS_PLACEHOLDER, f"{EDITED} {CREATED}")
-        .replace("<MISSION_DIR>", MILESTONE)
+        .replace("<MISSION_DIR>", MISSION)
         .replace("<Task Title>", TASK_TITLE)
     )
     assert not re.search(r"<[A-Za-z][^<>\n]*>", call), "a placeholder is left unfilled"
@@ -130,7 +130,7 @@ def completion_call(bar=BAR):
 
 @pytest.fixture
 def project(repo, environment, git):
-    """A repository whose one commit holds the golden task list at MILESTONE, the file the task
+    """A repository whose one commit holds the golden task list at MISSION, the file the task
     edits, and an unrelated tracked file, with the task's edits made and another run's staged
     edit and untracked file in the tree beside them."""
     root = repo(
@@ -249,7 +249,7 @@ def test_a_lock_released_within_the_window_lets_the_commit_land_with_only_its_ow
     todo = git(project, environment, "show", f"HEAD:{TODO}")
     assert f"## {TASK_TITLE}\n" not in todo
     assert todo.startswith("# TASKS TODO\n\n## Keep A Body Separator Line\n")
-    assert sorted(path.name for path in (project / MILESTONE).iterdir()) == ["TASKS_TODO.md"]
+    assert sorted(path.name for path in (project / MISSION).iterdir()) == ["TASKS_TODO.md"]
     assert staged(git, project, environment) == [STAGED_ELSEWHERE]
     assert git(project, environment, "status", "--porcelain").splitlines() == [
         f"M  {STAGED_ELSEWHERE}",

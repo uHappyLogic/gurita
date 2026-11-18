@@ -1,13 +1,13 @@
-"""Two milestones' tasks completed in parallel in one working tree, through the two calls of the
+"""Two missions' tasks completed in parallel in one working tree, through the two calls of the
 completion interface as the committed Claude Code tree renders them: the completion agent's
 step-5 fixed call, the one fenced block of the agent file holding the task-list tool's remove,
 which captures and tests the bar and chains the removal with the writes of the body file and the
 path file, and the orchestrator's commit-from-file call, the one fenced block of the
-complete-all-tasks skill file running the commit tool. Two golden fixture milestones are seeded
+complete-all-tasks skill file running the commit tool. Two golden fixture missions are seeded
 into one temporary git repository through the conftest factory, each run getting its own
-scratch directory as each complete-all-tasks run creates its own. For each milestone a thread
+scratch directory as each complete-all-tasks run creates its own. For each mission a thread
 makes its task's edits (a tracked file edited, a new file created, one of them holding a space),
-runs the agent's call filled as the agent fills it, that milestone's bar and recorded paths
+runs the agent's call filled as the agent fills it, that mission's bar and recorded paths
 substituted, and then runs the orchestrator's call on the two files the agent's call left
 behind; the two threads meet before their agent calls and again before their orchestrator
 calls, so each commit runs with the other run's whole change set uncommitted in the tree. Each
@@ -58,8 +58,8 @@ ACCEPTANCE_BAR_EMPTY = "acceptance bar empty\n"
 MEETING_TIMEOUT = 60
 
 
-class Milestone(NamedTuple):
-    """One milestone's run: its fixture and where it is seeded (<MISSION_DIR> as the runner
+class Mission(NamedTuple):
+    """One mission's run: its fixture and where it is seeded (<MISSION_DIR> as the runner
     fills it, the --mission path with its trailing slash), the task its top section names and
     that task's bar as verified, the tracked file the task edits (its seeded and edited bytes),
     and the file it creates."""
@@ -92,9 +92,9 @@ class Milestone(NamedTuple):
         return f"Task-completion: {self.title}"
 
 
-IMPORT = Milestone(
+IMPORT = Mission(
     fixture="parallel_first",
-    directory="milestones/milestone_01_ledger-import/",
+    directory="mission_ledger-import/",
     title="Add The CSV Importer",
     bar=[
         "- `src/importer.py` reads the sample export's rows into ledger entries (one per row)",
@@ -107,9 +107,9 @@ IMPORT = Milestone(
     creation=b"import csv\n",
 )
 
-REPORT = Milestone(
+REPORT = Mission(
     fixture="parallel_second",
-    directory="milestones/milestone_02_monthly-report/",
+    directory="mission_monthly-report/",
     title="Add The Monthly Report",
     bar=[
         "- `src/report.py` prints the per-category totals of each month",
@@ -122,7 +122,7 @@ REPORT = Milestone(
     creation=b"# Monthly report\n",
 )
 
-MILESTONES = (IMPORT, REPORT)
+MISSIONS = (IMPORT, REPORT)
 
 
 # --- extracting and filling the two calls ---------------------------------------------------
@@ -175,21 +175,21 @@ def filled(lines, values):
     return call
 
 
-def agent_call(milestone, scratch, bar=None):
+def agent_call(mission, scratch, bar=None):
     """The agent's step-5 call as the agent writes it: the bar's bullets replaced by the given bar
-    (the milestone's verified one unless another is given), the recorded-path lines by the
+    (the mission's verified one unless another is given), the recorded-path lines by the
     task's recorded paths, one per line, and every other placeholder by its value."""
-    lines = replace_run(agent_template(), BAR_PLACEHOLDER, milestone.bar if bar is None else list(bar))
-    lines = replace_run(lines, PATH_PLACEHOLDER, milestone.recorded)
+    lines = replace_run(agent_template(), BAR_PLACEHOLDER, mission.bar if bar is None else list(bar))
+    lines = replace_run(lines, PATH_PLACEHOLDER, mission.recorded)
     return filled(
         lines,
-        {"<MISSION_DIR>": milestone.directory, "<Task Title>": milestone.title, "<scratch dir>": str(scratch)},
+        {"<MISSION_DIR>": mission.directory, "<Task Title>": mission.title, "<scratch dir>": str(scratch)},
     )
 
 
-def orchestrator_call(milestone, scratch):
+def orchestrator_call(mission, scratch):
     """The orchestrator's commit call as it writes it, for the task its agent completed."""
-    return filled(orchestrator_template(), {"<scratch dir>": str(scratch), "<TASK_NAME>": milestone.title})
+    return filled(orchestrator_template(), {"<scratch dir>": str(scratch), "<TASK_NAME>": mission.title})
 
 
 # --- the two templates as the rendered tree holds them --------------------------------------
@@ -224,78 +224,78 @@ def test_the_agent_call_writes_the_two_files_the_orchestrator_call_commits_from(
 # --- the two runs in one tree ---------------------------------------------------------------
 
 
-def complete(project, environment, run_call, milestone, scratch, meeting):
+def complete(project, environment, run_call, mission, scratch, meeting):
     """One run's sequence: the task's edits, then the agent's call, then the orchestrator's call
     on the path file the agent's call left, meeting the other run before each call: -> the two
     calls' (exit status, stdout, stderr)."""
     try:
-        (project / milestone.edited).write_bytes(milestone.edit)
-        (project / milestone.created).parent.mkdir(parents=True, exist_ok=True)
-        (project / milestone.created).write_bytes(milestone.creation)
+        (project / mission.edited).write_bytes(mission.edit)
+        (project / mission.created).parent.mkdir(parents=True, exist_ok=True)
+        (project / mission.created).write_bytes(mission.creation)
         meeting.wait()
-        agent = run_call(project, environment, agent_call(milestone, scratch))
+        agent = run_call(project, environment, agent_call(mission, scratch))
         meeting.wait()
-        orchestrator = run_call(project, environment, orchestrator_call(milestone, scratch))
+        orchestrator = run_call(project, environment, orchestrator_call(mission, scratch))
     except BaseException:
         meeting.abort()
         raise
     return agent, orchestrator
 
 
-def test_two_milestones_completed_in_parallel_in_one_tree_commit_only_their_own_paths(
+def test_two_missions_completed_in_parallel_in_one_tree_commit_only_their_own_paths(
     repo, environment, git, run_call, tmp_path
 ):
     project = repo(
-        {milestone.directory: milestone.fixture for milestone in MILESTONES},
-        files={milestone.edited: milestone.seeded for milestone in MILESTONES},
+        {mission.directory: mission.fixture for mission in MISSIONS},
+        files={mission.edited: mission.seeded for mission in MISSIONS},
     )
     initial = git(project, environment, "rev-parse", "HEAD").strip()
     scratches = []
-    for index in range(len(MILESTONES)):
+    for index in range(len(MISSIONS)):
         scratch = tmp_path / f"scratch-{index}"
         scratch.mkdir()
         scratches.append(scratch)
 
-    meeting = threading.Barrier(len(MILESTONES), timeout=MEETING_TIMEOUT)
-    with ThreadPoolExecutor(max_workers=len(MILESTONES)) as pool:
+    meeting = threading.Barrier(len(MISSIONS), timeout=MEETING_TIMEOUT)
+    with ThreadPoolExecutor(max_workers=len(MISSIONS)) as pool:
         runs = [
-            pool.submit(complete, project, environment, run_call, milestone, scratch, meeting)
-            for milestone, scratch in zip(MILESTONES, scratches)
+            pool.submit(complete, project, environment, run_call, mission, scratch, meeting)
+            for mission, scratch in zip(MISSIONS, scratches)
         ]
         results = [run.result() for run in runs]
 
-    for milestone, (agent, orchestrator) in zip(MILESTONES, results):
-        assert agent == (0, "", ""), milestone.title
-        assert orchestrator == (0, COMPLETION_COMMIT_LANDED, ""), milestone.title
+    for mission, (agent, orchestrator) in zip(MISSIONS, results):
+        assert agent == (0, "", ""), mission.title
+        assert orchestrator == (0, COMPLETION_COMMIT_LANDED, ""), mission.title
 
     log = git(project, environment, "log", "--format=%H %P%x09%s", f"{initial}..HEAD").splitlines()
-    assert len(log) == len(MILESTONES), "not one commit per completed task"
+    assert len(log) == len(MISSIONS), "not one commit per completed task"
     commits = {}
     for entry in log:
         hashes, subject = entry.split("\t", 1)
         commit, parents = hashes.split(" ", 1)
         assert len(parents.split()) == 1
         commits[subject] = commit
-    assert sorted(commits) == sorted(milestone.subject for milestone in MILESTONES)
+    assert sorted(commits) == sorted(mission.subject for mission in MISSIONS)
 
-    for milestone in MILESTONES:
-        commit = commits[milestone.subject]
+    for mission in MISSIONS:
+        commit = commits[mission.subject]
         message = git(project, environment, "cat-file", "commit", commit).split("\n\n", 1)[1]
-        assert message == f"{milestone.subject}\n\n" + "\n".join(milestone.bar) + "\n", milestone.title
+        assert message == f"{mission.subject}\n\n" + "\n".join(mission.bar) + "\n", mission.title
         committed = git(project, environment, "show", "--name-only", "--format=", commit).splitlines()
-        assert sorted(committed) == sorted(milestone.own_paths), milestone.title
-        todo = git(project, environment, "show", f"{commit}:{milestone.todo}")
-        assert f"## {milestone.title}\n" not in todo
+        assert sorted(committed) == sorted(mission.own_paths), mission.title
+        todo = git(project, environment, "show", f"{commit}:{mission.todo}")
+        assert f"## {mission.title}\n" not in todo
         assert todo.startswith("# TASKS TODO\n\n## ")
-        assert sorted(path.name for path in (project / milestone.directory).iterdir()) == ["TASKS_TODO.md"]
+        assert sorted(path.name for path in (project / mission.directory).iterdir()) == ["TASKS_TODO.md"]
 
     assert git(project, environment, "status", "--porcelain") == ""
-    for scratch, milestone in zip(scratches, MILESTONES):
+    for scratch, mission in zip(scratches, MISSIONS):
         assert not (scratch / PATH_FILE).exists()
         assert not (scratch / BODY_FILE).exists()
         processed = sorted((scratch / PROCESSED).iterdir())
         assert [path.name.split(".")[0] for path in processed] == ["body", "paths"]
-        assert processed[0].read_text(encoding="utf-8") == "\n".join(milestone.bar) + "\n"
+        assert processed[0].read_text(encoding="utf-8") == "\n".join(mission.bar) + "\n"
 
 
 # --- an empty bar and a missing or empty body file ------------------------------------------
@@ -305,19 +305,19 @@ def test_two_milestones_completed_in_parallel_in_one_tree_commit_only_their_own_
 def test_an_agent_call_with_an_empty_bar_prints_the_one_line_and_removes_writes_and_commits_nothing(
     repo, environment, git, run_call, tmp_path, bar
 ):
-    milestone = IMPORT
-    project = repo({milestone.directory: milestone.fixture}, files={milestone.edited: milestone.seeded})
+    mission = IMPORT
+    project = repo({mission.directory: mission.fixture}, files={mission.edited: mission.seeded})
     initial = git(project, environment, "rev-parse", "HEAD").strip()
-    (project / milestone.edited).write_bytes(milestone.edit)
+    (project / mission.edited).write_bytes(mission.edit)
     scratch = tmp_path / "scratch"
     scratch.mkdir()
-    todo_before = (project / milestone.todo).read_bytes()
+    todo_before = (project / mission.todo).read_bytes()
 
-    status, stdout, stderr = run_call(project, environment, agent_call(milestone, scratch, bar))
+    status, stdout, stderr = run_call(project, environment, agent_call(mission, scratch, bar))
 
     assert status != 0
     assert (stdout, stderr) == (ACCEPTANCE_BAR_EMPTY, "")
-    assert (project / milestone.todo).read_bytes() == todo_before
+    assert (project / mission.todo).read_bytes() == todo_before
     assert list(scratch.iterdir()) == []
     assert git(project, environment, "rev-parse", "HEAD").strip() == initial
     assert git(project, environment, "diff", "--cached", "--name-only") == ""
@@ -331,19 +331,19 @@ def test_an_agent_call_with_an_empty_bar_prints_the_one_line_and_removes_writes_
 def test_the_orchestrator_call_commits_nothing_without_a_bar_in_the_body_file(
     repo, environment, git, run_call, tmp_path, body, printed
 ):
-    milestone = IMPORT
-    project = repo({milestone.directory: milestone.fixture}, files={milestone.edited: milestone.seeded})
+    mission = IMPORT
+    project = repo({mission.directory: mission.fixture}, files={mission.edited: mission.seeded})
     initial = git(project, environment, "rev-parse", "HEAD").strip()
-    (project / milestone.edited).write_bytes(milestone.edit)
+    (project / mission.edited).write_bytes(mission.edit)
     scratch = tmp_path / "scratch"
     scratch.mkdir()
-    (scratch / PATH_FILE).write_text(f"{milestone.edited}\n{milestone.todo}\n", encoding="utf-8")
+    (scratch / PATH_FILE).write_text(f"{mission.edited}\n{mission.todo}\n", encoding="utf-8")
     if body is not None:
         (scratch / BODY_FILE).write_bytes(body)
 
-    status, stdout, stderr = run_call(project, environment, orchestrator_call(milestone, scratch))
+    status, stdout, stderr = run_call(project, environment, orchestrator_call(mission, scratch))
 
     assert (stdout, stderr) == (printed, "")
     assert git(project, environment, "rev-parse", "HEAD").strip() == initial
     assert git(project, environment, "diff", "--cached", "--name-only") == ""
-    assert git(project, environment, "status", "--porcelain").splitlines() == [f" M {milestone.edited}"]
+    assert git(project, environment, "status", "--porcelain").splitlines() == [f" M {mission.edited}"]

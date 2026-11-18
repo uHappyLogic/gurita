@@ -1,6 +1,6 @@
 """The answer sweep's compact view call, as the committed Claude Code tree renders it: the one
 fenced block of the sweep file holding `list` with its `--with-question` flag, with
-<MISSION_DIR> replaced by the path of a copy of the golden compact-view fixture milestone and
+<MISSION_DIR> replaced by the path of a copy of the golden compact-view fixture mission and
 the call run under bash with the tree's plugin-root variable exported to the tree root. The
 call writes nothing, so no git repository is needed. Its print is asserted exactly: every
 block's id, a tab, and its question text in document order, recommendation-less blocks
@@ -28,7 +28,7 @@ LIST_COMMAND = "/tools/open_questions.py list --with-question "
 FOLD_COMMAND = "/tools/requirements.py fold "
 
 # <MISSION_DIR> as the runner fills it: the --mission path, its trailing slash included.
-MILESTONE = "milestones/milestone_09_golden-compact-view/"
+MISSION = "mission_golden-compact-view/"
 
 # The fixture holds three recommendation-bearing blocks (one a dependent of another, one
 # rationale holding a spaced em dash of its own, one option holding an entity) and two
@@ -81,9 +81,9 @@ def compact_view_call():
     return holding[0]
 
 
-def filled(lines, milestone):
+def filled(lines, mission):
     """The call written out with only <MISSION_DIR> replaced."""
-    return "\n".join(lines).replace("<MISSION_DIR>", milestone) + "\n"
+    return "\n".join(lines).replace("<MISSION_DIR>", mission) + "\n"
 
 
 # --- the environment and the run --------------------------------------------------------------
@@ -115,9 +115,9 @@ def environment(tmp_path):
 
 @pytest.fixture
 def project(tmp_path):
-    """A project directory holding a copy of the golden compact-view milestone at MILESTONE."""
+    """A project directory holding a copy of the golden compact-view mission at MISSION."""
     root = tmp_path / "project"
-    shutil.copytree(FIXTURE, root / MILESTONE)
+    shutil.copytree(FIXTURE, root / MISSION)
     return root
 
 
@@ -131,25 +131,25 @@ def run_call(cwd, env, call):
 # --- the template as the rendered tree holds it -----------------------------------------------
 
 
-def test_the_call_is_the_one_fence_holding_list_with_its_question_flag_and_names_only_the_milestone():
+def test_the_call_is_the_one_fence_holding_list_with_its_question_flag_and_names_only_the_mission():
     lines = compact_view_call()
     call = "\n".join(lines)
     assert FOLD_COMMAND not in call
     assert f"${{{PLUGIN_ROOT_VARIABLE}}}/tools/open_questions.py " in call
     assert "<MISSION_DIR>" in call
-    assert not re.search(r"<[A-Za-z][A-Za-z_ ]*>", filled(lines, MILESTONE)), "a placeholder is left unfilled"
+    assert not re.search(r"<[A-Za-z][A-Za-z_ ]*>", filled(lines, MISSION)), "a placeholder is left unfilled"
 
 
 # --- the call run under bash ------------------------------------------------------------------
 
 
 def test_the_call_prints_every_block_then_each_walked_pick_and_its_what_it_is(project, environment):
-    document = project / MILESTONE / "open_questions.xml"
+    document = project / MISSION / "open_questions.xml"
     pristine = document.read_bytes()
 
-    status, stdout, stderr = run_call(project, environment, filled(compact_view_call(), MILESTONE))
+    status, stdout, stderr = run_call(project, environment, filled(compact_view_call(), MISSION))
 
     assert (status, stderr) == (0, "")
     assert stdout == EXPECTED
     assert document.read_bytes() == pristine
-    assert sorted(path.name for path in (project / MILESTONE).iterdir()) == ["open_questions.xml"]
+    assert sorted(path.name for path in (project / MISSION).iterdir()) == ["open_questions.xml"]
