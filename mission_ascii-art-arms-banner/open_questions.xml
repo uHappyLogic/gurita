@@ -1,1 +1,44 @@
-<open-questions/>
+<open-questions>
+  <open-question id="Banner delivery to host pages">
+    <question>Where is the banner SVG committed, and how does it reach the three host landing pages, given that a host README&apos;s relative path resolves only to a file its own host tree carries and that the build copies only the root LICENSE into every tree: is a copy carried in each host tree and referenced by a relative path, or do the host READMEs reference a single file in the source repository by absolute URL? If each tree carries a copy, where does it come from: a file kept by hand in each of the three definition directories under scripts/hosts/, or a build change that copies one shared file into every tree?</question>
+  </open-question>
+  <open-question id="Banner source of truth">
+    <question>What is the source of truth for the banner: is the SVG file written and edited directly, or is the character art kept as a plain-text drawing from which a committed script generates the SVG, the repository holding no such script today?</question>
+  </open-question>
+  <open-question id="Character rendering in SVG">
+    <question>How are the banner&apos;s characters drawn inside the SVG, given that GitHub loads no external font for an SVG shown as an image and a text element is drawn in whatever font the viewer&apos;s system supplies: as text elements relying on a system monospace font stack, as text with a font embedded in the file, or as glyph outlines converted to paths?</question>
+  </open-question>
+  <open-question id="Art character set">
+    <question>Which characters may the banner&apos;s art use: only the printable 7-bit ASCII characters, or also Unicode characters such as box-drawing, block, or braille glyphs?</question>
+  </open-question>
+  <open-question id="Light and dark themes">
+    <question>How does the banner handle GitHub&apos;s light and dark page themes, no README today using a picture element or a theme-specific image variant: one image with a transparent background whose colours must read on both page backgrounds, one image with its own filled background, or separate light and dark variants selected per theme?</question>
+  </open-question>
+  <open-question id="Palette colour values">
+    <question>Which exact colour values make up the banner&apos;s violet and grey-blue palette: the values the root README&apos;s workflow diagram already uses (violet #9333ea and #581c87, slate #94a3b8 and #475569), or values chosen for the banner alone?</question>
+  </open-question>
+  <open-question id="Arm count">
+    <question>How many arms does the banner show, the goal saying only &quot;several&quot;: all eight of an octopus&apos;s arms, or a smaller number?</question>
+  </open-question>
+  <open-question id="Banner size">
+    <question>What size is the banner, given that it sits above everything else on the page and pushes the badges and title down: how many character columns and rows does the art occupy, and at what width is the image displayed, the full width of the README column or a fixed narrower width?</question>
+  </open-question>
+  <open-question id="Drawing author and approval">
+    <question>Who produces the character drawing of the arms, and what decides it is good enough to ship: does the executing agent draw it and accept it on its own judgment against criteria recorded in the requirements, does the agent draw it for the maintainer to approve before it lands in the READMEs, or does the maintainer supply the drawing?</question>
+  </open-question>
+  <open-question id="Rendered look verification">
+    <question>How is the banner&apos;s rendered appearance checked before it is committed, the repository holding no tool that renders an SVG: by rendering the file locally to an image that is inspected, by viewing it on GitHub after a push in both page themes, or by no rendering check beyond the file being a well-formed SVG?</question>
+  </open-question>
+  <open-question id="Banner alt text">
+    <question>What alternative text does the banner image carry in the four READMEs: an empty alt marking the image as decorative, or a short description of the arms, and in that case what wording?</question>
+  </open-question>
+  <open-question id="Release within mission">
+    <question>Does this mission include a release that publishes the banner to the three host landing pages, which change only when a release publishes the host trees, or does it end with the banner committed on main, showing only on the source repository&apos;s page until the next release?</question>
+  </open-question>
+  <open-question id="Host suite run">
+    <question>Is the host suite run on all three hosts as part of this mission, since adding the banner to each host&apos;s README template changes every host&apos;s trigger set and the suite first requires each host&apos;s installed copy to equal the built tree, or is that run left to the next release&apos;s pre-flight?</question>
+  </open-question>
+  <open-question id="Permanent banner check">
+    <question>Does a permanent check guard the banner once it is in place, for example a test that each of the four READMEs opens with the banner image or that every committed copy of the SVG is identical, or is the banner verified once when its tasks are completed, no test reading a README&apos;s content today?</question>
+  </open-question>
+</open-questions>
