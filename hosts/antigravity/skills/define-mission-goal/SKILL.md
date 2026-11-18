@@ -70,7 +70,7 @@ Read `<overall_goal_description>` and choose a short title that names the missio
 From the workspace root, run the tool once, passing the scope and the title each as one quoted argument and `<overall_goal_description>` unchanged on standard input through a **quoted-delimiter heredoc** (`<<'EOF'`, so nothing inside is expanded; pick a delimiter line the goal text does not contain):
 
 ```
-python3 ~/.gemini/config/plugins/cairn/tools/define_mission.py --at "<scope>" --title "<title>" <<'EOF'
+python3 ~/.gemini/config/plugins/gurita/tools/define_mission.py --at "<scope>" --title "<title>" <<'EOF'
 <overall_goal_description>
 EOF
 ```
@@ -81,7 +81,7 @@ If the call fails — the shell cannot find `python3`, or the tool exits non-zer
 
 ### 4. Commit the new mission
 
-Read and follow the shared commit procedure at `~/.gemini/config/plugins/cairn/shared/commit-procedure.md`, running its one commit-tool command yourself as this step's one git tool call. Supply it these two inputs, both exactly as the tool printed them in step 3:
+Read and follow the shared commit procedure at `~/.gemini/config/plugins/gurita/shared/commit-procedure.md`, running its one commit-tool command yourself as this step's one git tool call. Supply it these two inputs, both exactly as the tool printed them in step 3:
 
 - **PATHS** — the mission path, the tool's second line; the directory holds exactly the three files the tool just created.
 - **SUBJECT** — the tool's first line.

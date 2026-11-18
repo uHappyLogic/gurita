@@ -39,7 +39,7 @@ the definition tool printed it, trailing slash included, e.g. `mission_user-guid
 
 ### 0. Find the mission
 
-Follow `~/.gemini/config/plugins/cairn/shared/resolve-mission.md` to resolve `<MISSION_DIR>`.
+Follow `~/.gemini/config/plugins/gurita/shared/resolve-mission.md` to resolve `<MISSION_DIR>`.
 Never use a hardcoded path.
 
 ### 1. Gather the questions once, in two tool calls
@@ -47,7 +47,7 @@ Never use a hardcoded path.
 **a. Every question.** Run
 
 ```
-python3 ~/.gemini/config/plugins/cairn/tools/open_questions.py list <MISSION_DIR>
+python3 ~/.gemini/config/plugins/gurita/tools/open_questions.py list <MISSION_DIR>
 ```
 
 It prints the `id` (Short Title) of every `<open-question>` block, one per line in document
@@ -59,7 +59,7 @@ fixed line `Alternatives pass stopped — the question list failed.` first, then
 **b. The ones without alternatives.** Run
 
 ```
-python3 ~/.gemini/config/plugins/cairn/tools/open_questions.py list --without-alternatives <MISSION_DIR>
+python3 ~/.gemini/config/plugins/gurita/tools/open_questions.py list --without-alternatives <MISSION_DIR>
 ```
 
 It prints, in document order, the ids of the blocks carrying no `<alternative>` element — the
@@ -87,7 +87,7 @@ pass, which picks against it. The primary re-run motive is exactly the bare set 
 **Escape hatch for a stale alternative set:** to force a fresh set on a block, run
 
 ```
-python3 ~/.gemini/config/plugins/cairn/tools/open_questions.py strip <MISSION_DIR> "<Short Title>" …
+python3 ~/.gemini/config/plugins/gurita/tools/open_questions.py strip <MISSION_DIR> "<Short Title>" …
 ```
 
 (one or more Short Titles), then re-run this skill. The bare `strip` deletes every child of
@@ -185,8 +185,8 @@ and `<MISSION_DIR>` replaced by their paths:
 mkdir -p "<scratch dir>/processed"
 find "<scratch dir>" -maxdepth 1 -type f -name '*.xml' | while IFS= read -r f; do
   t="${f##*/}"; t="${t%.xml}"
-  if err="$(python3 ~/.gemini/config/plugins/cairn/tools/open_questions.py embed --alternatives <MISSION_DIR> "$t" < "$f" 2>&1)"; then
-    out="$(python3 ~/.gemini/config/plugins/cairn/tools/commit.py --subject "Alternatives-annotation: $t" -- <MISSION_DIR>/open_questions.xml 2>&1)" ||
+  if err="$(python3 ~/.gemini/config/plugins/gurita/tools/open_questions.py embed --alternatives <MISSION_DIR> "$t" < "$f" 2>&1)"; then
+    out="$(python3 ~/.gemini/config/plugins/gurita/tools/commit.py --subject "Alternatives-annotation: $t" -- <MISSION_DIR>/open_questions.xml 2>&1)" ||
       printf '%s\tcommit failed: %s\n' "$t" "$out"
   else
     printf '%s\t%s\n' "$t" "$err"
@@ -201,7 +201,7 @@ Short Title from the file name and redirects the file into `embed --alternatives
 the file's `<alternative>` elements into the existing block in canonical form or refuses it
 with one `Error:` line and the document unchanged. Each question the tool accepted is then
 committed by the one command of the shared commit procedure at
-`~/.gemini/config/plugins/cairn/shared/commit-procedure.md`, the plugin's commit tool, with
+`~/.gemini/config/plugins/gurita/shared/commit-procedure.md`, the plugin's commit tool, with
 `<MISSION_DIR>/open_questions.xml` alone as its path and a subject-only commit under
 `Alternatives-annotation: <Short Title>` with **no body**: the tool runs the dirty-own-path
 guard over the one document, stages exactly it, and commits it with it as the commit's
@@ -293,7 +293,7 @@ inspection.
 **g. Closing check.** After the last batch call, run once
 
 ```
-python3 ~/.gemini/config/plugins/cairn/tools/open_questions.py list --without-alternatives <MISSION_DIR>
+python3 ~/.gemini/config/plugins/gurita/tools/open_questions.py list --without-alternatives <MISSION_DIR>
 ```
 
 Every id it prints that is among the ids step 1b gathered and is not already noted for the

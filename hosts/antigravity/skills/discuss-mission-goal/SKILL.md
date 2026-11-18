@@ -27,7 +27,7 @@ Facilitates a structured conversation to sharpen a vague or incomplete mission g
 In the same turn, as two independent tool calls, read `AGENTS.md` for the project's domain context and overview, and run, from the workspace root, the plugin's missions tool for the project's whole record — what past missions built and which missions are live:
 
 ```
-python3 ~/.gemini/config/plugins/cairn/tools/missions.py record .
+python3 ~/.gemini/config/plugins/gurita/tools/missions.py record .
 ```
 
 It prints one tab-separated line per mission at column 0 (`live` or `finished`, the finish date or `-` for a live one, the mission's path, and its title; the live ones first, then the finished ones newest first), with that mission's summary bullets, or a live one's goal, and its completed tasks indented beneath it, and prints nothing when the project has no mission yet, which is no failure. Run it once on every invocation, before the conversation opens, whatever the goal names. If the call fails, tell the user in prose that the record read failed, quoting its one `Error: <reason>` line from stderr verbatim, and carry on from the context file, printing no fixed line. Together the two reads ground all questions in the real project state.

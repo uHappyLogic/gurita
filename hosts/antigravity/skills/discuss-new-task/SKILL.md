@@ -42,7 +42,7 @@ Once those are clear, `submit-task` takes over — keep what you produce high-le
 
 ### 0. Find the mission
 
-First strip the leading `--mission <path>` from the invocation text by the rule in `~/.gemini/config/plugins/cairn/shared/resolve-mission.md`, reading only the rest as the issue description. Follow `~/.gemini/config/plugins/cairn/shared/resolve-mission.md` to resolve `<MISSION_DIR>`. Never use a hardcoded task-list path.
+First strip the leading `--mission <path>` from the invocation text by the rule in `~/.gemini/config/plugins/gurita/shared/resolve-mission.md`, reading only the rest as the issue description. Follow `~/.gemini/config/plugins/gurita/shared/resolve-mission.md` to resolve `<MISSION_DIR>`. Never use a hardcoded task-list path.
 
 ### 1. Gather context
 
@@ -53,7 +53,7 @@ In parallel, as independent tool calls, to ground the discussion in the real pro
 - Run the plugin's missions tool — completed work, to catch issues already addressed:
 
   ```
-  python3 ~/.gemini/config/plugins/cairn/tools/missions.py tasks <MISSION_DIR> --with-body
+  python3 ~/.gemini/config/plugins/gurita/tools/missions.py tasks <MISSION_DIR> --with-body
   ```
 
   It prints, newest first, one tab-separated line per task completed in the mission (the commit's abbreviated hash, its date, the mission directory, and the task title), with the task's verified bar indented beneath it, and prints nothing when no task has been completed, which is no failure.

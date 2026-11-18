@@ -47,7 +47,7 @@ included, e.g. `mission_user-guide/`.
 
 ### 0. Find the mission, once
 
-Follow `~/.gemini/config/plugins/cairn/shared/resolve-mission.md` to resolve `<MISSION_DIR>`. Never use
+Follow `~/.gemini/config/plugins/gurita/shared/resolve-mission.md` to resolve `<MISSION_DIR>`. Never use
 a hardcoded path. Resolve it **once per run** and hold it: every tool call, every recorded
 answer, and every commit below uses this one directory, the one the run walked.
 
@@ -57,12 +57,12 @@ Run this one fixed shell call, written out in full exactly as shown, with only
 `<MISSION_DIR>` replaced:
 
 ```
-python3 ~/.gemini/config/plugins/cairn/tools/open_questions.py list --with-question <MISSION_DIR> &&
-python3 ~/.gemini/config/plugins/cairn/tools/open_questions.py walk <MISSION_DIR> | while IFS= read -r id; do
+python3 ~/.gemini/config/plugins/gurita/tools/open_questions.py list --with-question <MISSION_DIR> &&
+python3 ~/.gemini/config/plugins/gurita/tools/open_questions.py walk <MISSION_DIR> | while IFS= read -r id; do
   printf '%s\n' "$id"
-  if pick="$(python3 ~/.gemini/config/plugins/cairn/tools/open_questions.py lift <MISSION_DIR> "$id" 2>&1)"; then
+  if pick="$(python3 ~/.gemini/config/plugins/gurita/tools/open_questions.py lift <MISSION_DIR> "$id" 2>&1)"; then
     printf '%s\n' "$pick"
-    python3 ~/.gemini/config/plugins/cairn/tools/open_questions.py lift --alternative "${pick%% — *}" <MISSION_DIR> "$id"
+    python3 ~/.gemini/config/plugins/gurita/tools/open_questions.py lift --alternative "${pick%% — *}" <MISSION_DIR> "$id"
   else
     printf '%s\n' "$pick"
   fi
@@ -124,7 +124,7 @@ but written before that opening existed, or worded any other way, included: its 
 a new decision, as the three values below describe.
 
 - **The decision** — the statement folded under `## Decisions`, written by the rules
-  `~/.gemini/config/plugins/cairn/shared/answer-procedure.md` sets in its fold step (step 3) for what a
+  `~/.gemini/config/plugins/gurita/shared/answer-procedure.md` sets in its fold step (step 3) for what a
   decision says and the shape its entry takes in the subsection it lands in. To decide what it
   says, ask only the first two questions of that procedure's analyse step (step 2) — whether
   the pick resolves the question completely, and what constraint it imposes — and record the
@@ -177,19 +177,19 @@ if [ -n "$(git status --porcelain -- <MISSION_DIR>/open_questions.xml <MISSION_D
   git status --porcelain -- <MISSION_DIR>/open_questions.xml <MISSION_DIR>/requirements.md
   false
 fi &&
-if pick="$(python3 ~/.gemini/config/plugins/cairn/tools/open_questions.py lift <MISSION_DIR> "<Short Title>" 2>/dev/null)"; then
-  python3 ~/.gemini/config/plugins/cairn/tools/requirements.py fold <MISSION_DIR> --section "<Heading>" <<'EOF' &&
+if pick="$(python3 ~/.gemini/config/plugins/gurita/tools/open_questions.py lift <MISSION_DIR> "<Short Title>" 2>/dev/null)"; then
+  python3 ~/.gemini/config/plugins/gurita/tools/requirements.py fold <MISSION_DIR> --section "<Heading>" <<'EOF' &&
 <the decision>
 EOF
-  python3 ~/.gemini/config/plugins/cairn/tools/open_questions.py remove <MISSION_DIR> "<Short Title>" --option "<Option>" &&
-  out="$(python3 ~/.gemini/config/plugins/cairn/tools/commit.py --subject "Recommendation-answer: <Short Title>" --body "$pick" -- <MISSION_DIR>/open_questions.xml <MISSION_DIR>/requirements.md)" &&
+  python3 ~/.gemini/config/plugins/gurita/tools/open_questions.py remove <MISSION_DIR> "<Short Title>" --option "<Option>" &&
+  out="$(python3 ~/.gemini/config/plugins/gurita/tools/commit.py --subject "Recommendation-answer: <Short Title>" --body "$pick" -- <MISSION_DIR>/open_questions.xml <MISSION_DIR>/requirements.md)" &&
   if [ -z "$out" ]; then
     echo 'answer commit landed'
   fi ||
   { printf 'stopped at\t%s\n' "<Short Title>"; false; }
 fi &&
 echo 'completeness walk' &&
-python3 ~/.gemini/config/plugins/cairn/tools/open_questions.py walk <MISSION_DIR>
+python3 ~/.gemini/config/plugins/gurita/tools/open_questions.py walk <MISSION_DIR>
 ```
 
 **The question section** — the lines from `if pick=` through the column-0 `fi &&` that closes
@@ -210,12 +210,12 @@ for the one `replace` call standing where the `fold` call stands, its heredoc ca
 body:
 
 ```
-if pick="$(python3 ~/.gemini/config/plugins/cairn/tools/open_questions.py lift <MISSION_DIR> "<Short Title>" 2>/dev/null)"; then
-  python3 ~/.gemini/config/plugins/cairn/tools/requirements.py replace <MISSION_DIR> --section "<Heading>" <<'EOF' &&
+if pick="$(python3 ~/.gemini/config/plugins/gurita/tools/open_questions.py lift <MISSION_DIR> "<Short Title>" 2>/dev/null)"; then
+  python3 ~/.gemini/config/plugins/gurita/tools/requirements.py replace <MISSION_DIR> --section "<Heading>" <<'EOF' &&
 <the new body>
 EOF
-  python3 ~/.gemini/config/plugins/cairn/tools/open_questions.py remove <MISSION_DIR> "<Short Title>" --option "<Option>" &&
-  out="$(python3 ~/.gemini/config/plugins/cairn/tools/commit.py --subject "Recommendation-answer: <Short Title>" --body "$pick" -- <MISSION_DIR>/open_questions.xml <MISSION_DIR>/requirements.md)" &&
+  python3 ~/.gemini/config/plugins/gurita/tools/open_questions.py remove <MISSION_DIR> "<Short Title>" --option "<Option>" &&
+  out="$(python3 ~/.gemini/config/plugins/gurita/tools/commit.py --subject "Recommendation-answer: <Short Title>" --body "$pick" -- <MISSION_DIR>/open_questions.xml <MISSION_DIR>/requirements.md)" &&
   if [ -z "$out" ]; then
     echo 'answer commit landed'
   fi ||
@@ -248,7 +248,7 @@ heading line and every byte outside the subsection kept — so the recorded deci
 lands before the block is removed; `remove` deletes the block with `--option` naming the
 recorded option and, in the same write, strips the pick of every block whose `<depends-on>`
 assumed another option of it, keeping their alternatives; and the section runs the one
-command of the shared commit procedure at `~/.gemini/config/plugins/cairn/shared/commit-procedure.md`, the
+command of the shared commit procedure at `~/.gemini/config/plugins/gurita/shared/commit-procedure.md`, the
 plugin's commit tool, with the two mission files as its paths, `Recommendation-answer:
 <Short Title>` as its subject, and the held line as its body. The tool runs the dirty-own-path
 guard over the two files, stages exactly them, and commits them with them as the commit's

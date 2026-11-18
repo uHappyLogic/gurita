@@ -49,7 +49,7 @@ trailing slash included.
 
 ### 0. Find the mission
 
-Follow `~/.gemini/config/plugins/cairn/shared/resolve-mission.md` to resolve `<MISSION_DIR>`.
+Follow `~/.gemini/config/plugins/gurita/shared/resolve-mission.md` to resolve `<MISSION_DIR>`.
 Never use a hardcoded path.
 
 ### 1. Gather the questions once, in three tool calls
@@ -57,7 +57,7 @@ Never use a hardcoded path.
 **a. Every question.** Run
 
 ```
-python3 ~/.gemini/config/plugins/cairn/tools/open_questions.py list <MISSION_DIR>
+python3 ~/.gemini/config/plugins/gurita/tools/open_questions.py list <MISSION_DIR>
 ```
 
 It prints the `id` (Short Title) of every `<open-question>` block, one per line in document
@@ -69,7 +69,7 @@ the fixed line `Recommendation pass stopped — the question list failed.` first
 **b. The ones without alternatives — the stop test.** Run
 
 ```
-python3 ~/.gemini/config/plugins/cairn/tools/open_questions.py list --without-alternatives <MISSION_DIR>
+python3 ~/.gemini/config/plugins/gurita/tools/open_questions.py list --without-alternatives <MISSION_DIR>
 ```
 
 It prints, in document order, the ids of the blocks carrying no `<alternative>` element. If it
@@ -83,7 +83,7 @@ Only when this call prints nothing does the pass continue.
 **c. The ones without a recommendation.** Run
 
 ```
-python3 ~/.gemini/config/plugins/cairn/tools/open_questions.py list --without-recommendation <MISSION_DIR>
+python3 ~/.gemini/config/plugins/gurita/tools/open_questions.py list --without-recommendation <MISSION_DIR>
 ```
 
 It prints, in document order, the ids of the blocks carrying no `<recommendation>` element —
@@ -115,7 +115,7 @@ against, and never revises it.
 **Escape hatch for a stale recommendation:** to force a fresh pick on a block, run
 
 ```
-python3 ~/.gemini/config/plugins/cairn/tools/open_questions.py strip --recommendation <MISSION_DIR> "<Short Title>" …
+python3 ~/.gemini/config/plugins/gurita/tools/open_questions.py strip --recommendation <MISSION_DIR> "<Short Title>" …
 ```
 
 (one or more Short Titles), then re-run this skill. `strip --recommendation` deletes only the
@@ -145,7 +145,7 @@ already standing on it. That whole read is for reasoning only; it changes nothin
 nothing you later write against, since every write names a block by its Short Title.
 
 Then read and follow the shared pick procedure at
-`~/.gemini/config/plugins/cairn/shared/recommend-procedure.md`, carrying out its steps yourself over
+`~/.gemini/config/plugins/gurita/shared/recommend-procedure.md`, carrying out its steps yourself over
 **every question step 1c printed, held in view together as one judgment**. For each such
 question its QUESTION is the block's Short Title and `<question>` text and its ALTERNATIVES
 are the block's own `<alternative>` elements, taken as given — the pick names one of them by
@@ -213,23 +213,23 @@ rendered elements replaced:
 
 ```
 body=''
-if { err="$(python3 ~/.gemini/config/plugins/cairn/tools/open_questions.py embed --recommendation <MISSION_DIR> "<Short Title>" 2>&1)"; } <<'EOF'
+if { err="$(python3 ~/.gemini/config/plugins/gurita/tools/open_questions.py embed --recommendation <MISSION_DIR> "<Short Title>" 2>&1)"; } <<'EOF'
 <the block's rendered elements>
 EOF
 then
   body="${body:+$body
-}$(python3 ~/.gemini/config/plugins/cairn/tools/open_questions.py lift <MISSION_DIR> "<Short Title>")"
+}$(python3 ~/.gemini/config/plugins/gurita/tools/open_questions.py lift <MISSION_DIR> "<Short Title>")"
 else
   printf '%s\t%s\n' "<Short Title>" "$err"
 fi
 if [ -n "$body" ]; then
-  out="$(python3 ~/.gemini/config/plugins/cairn/tools/commit.py --subject "Recommendation-annotation: <MISSION_DIR>" --body "$body" -- <MISSION_DIR>/open_questions.xml)" &&
+  out="$(python3 ~/.gemini/config/plugins/gurita/tools/commit.py --subject "Recommendation-annotation: <MISSION_DIR>" --body "$body" -- <MISSION_DIR>/open_questions.xml)" &&
   if [ -z "$out" ]; then
     echo 'annotation commit landed'
   fi
 fi &&
-python3 ~/.gemini/config/plugins/cairn/tools/open_questions.py sort <MISSION_DIR> &&
-out="$(python3 ~/.gemini/config/plugins/cairn/tools/commit.py --subject "Question-ordering: <MISSION_DIR>" -- <MISSION_DIR>/open_questions.xml)" &&
+python3 ~/.gemini/config/plugins/gurita/tools/open_questions.py sort <MISSION_DIR> &&
+out="$(python3 ~/.gemini/config/plugins/gurita/tools/commit.py --subject "Question-ordering: <MISSION_DIR>" -- <MISSION_DIR>/open_questions.xml)" &&
 if [ -z "$out" ]; then
   echo 'ordering commit landed'
 fi
@@ -263,7 +263,7 @@ reads alike, never `$'\n'` or `echo -e`. On a refusal the call prints the block'
 a tab, and the `Error:` line, and adds no line to `body`.
 
 After the last section the call runs the one command of the shared commit procedure at
-`~/.gemini/config/plugins/cairn/shared/commit-procedure.md`, the plugin's commit tool, with
+`~/.gemini/config/plugins/gurita/shared/commit-procedure.md`, the plugin's commit tool, with
 `<MISSION_DIR>/open_questions.xml` alone as its path, `Recommendation-annotation:
 <MISSION_DIR>` as its subject, and the lifted lines, one per annotated block in section order,
 as its body. That commit is conditioned on a non-empty `body`, so a call that wrote no block

@@ -34,7 +34,7 @@ written out on the command line after `--` as its own argument, none held in a s
 variable:
 
 ```
-python3 ~/.gemini/config/plugins/cairn/tools/commit.py --subject "<SUBJECT>" --body "<BODY>" --remove <REMOVAL> -- <PATHS>
+python3 ~/.gemini/config/plugins/gurita/tools/commit.py --subject "<SUBJECT>" --body "<BODY>" --remove <REMOVAL> -- <PATHS>
 ```
 
 When the caller supplies no BODY, leave out `--body "<BODY>"`, and the commit is

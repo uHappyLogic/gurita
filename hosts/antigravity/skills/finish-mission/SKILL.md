@@ -19,7 +19,7 @@ The required leading `--mission <path>` names the mission by its repo-relative p
 
 ### 1. Resolve the mission
 
-Follow `~/.gemini/config/plugins/cairn/shared/resolve-mission.md` to resolve `<MISSION_DIR>` from the required leading `--mission <path>`. A call naming no mission, or one that does not match, ends on that procedure's stop, its fixed line opening the report.
+Follow `~/.gemini/config/plugins/gurita/shared/resolve-mission.md` to resolve `<MISSION_DIR>` from the required leading `--mission <path>`. A call naming no mission, or one that does not match, ends on that procedure's stop, its fixed line opening the report.
 
 ### 2. Read mission content
 
@@ -28,7 +28,7 @@ In parallel, as two independent tool calls:
 - Run the plugin's missions tool, to list what was concretely built:
 
   ```
-  python3 ~/.gemini/config/plugins/cairn/tools/missions.py tasks <MISSION_DIR> --with-body
+  python3 ~/.gemini/config/plugins/gurita/tools/missions.py tasks <MISSION_DIR> --with-body
   ```
 
   It prints, newest first, one tab-separated line per task completed in the mission (the commit's abbreviated hash, its date, the mission directory, and the task title), with the task's verified bar indented beneath it, and prints nothing when no task has been completed, which is no failure.
@@ -40,7 +40,7 @@ If the call fails, stop and report it, writing and committing nothing: the fixed
 First check that no open question stands. Run
 
 ```
-python3 ~/.gemini/config/plugins/cairn/tools/open_questions.py list <MISSION_DIR>
+python3 ~/.gemini/config/plugins/gurita/tools/open_questions.py list <MISSION_DIR>
 ```
 
 It prints the Short Title of every `<open-question>` block still in `<MISSION_DIR>/open_questions.xml`, one per line. If it prints nothing, proceed. If it prints anything, stop immediately, writing and committing nothing whatever tasks step 2's `tasks` call listed, and output, with the printed lines as the bullets verbatim:
@@ -86,7 +86,7 @@ If nothing in the mission changes the project's environment context or structure
 
 ### 6. Commit the finish
 
-Read and follow the shared commit procedure at `~/.gemini/config/plugins/cairn/shared/commit-procedure.md`, running its one commit-tool command yourself as this step's one git tool call. Supply it these four inputs:
+Read and follow the shared commit procedure at `~/.gemini/config/plugins/gurita/shared/commit-procedure.md`, running its one commit-tool command yourself as this step's one git tool call. Supply it these four inputs:
 
 - **REMOVALS** — `<MISSION_DIR>`, exactly as resolved, trailing slash included: the commit tool removes the mission's directory and records the removal in the same commit.
 - **PATHS** — `AGENTS.md` **only on passes where step 5 actually edited it**, and otherwise none, the commit then recording the removal alone. This conditional inclusion is keyed on whether this skill's step 5 edited the file — decided as the edit is (or is not) made, never by diffing or inspecting content.

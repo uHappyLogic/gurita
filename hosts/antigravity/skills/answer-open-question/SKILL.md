@@ -29,7 +29,7 @@ The `<Short Title>` must match (case-insensitive, against the block's `id`) an e
 
 ### 1. Parse the input
 
-First strip the leading `--mission <path>` from the skill args by the rule in `~/.gemini/config/plugins/cairn/shared/resolve-mission.md`, holding its value for step 3, then split the rest on the first `.` character:
+First strip the leading `--mission <path>` from the skill args by the rule in `~/.gemini/config/plugins/gurita/shared/resolve-mission.md`, holding its value for step 3, then split the rest on the first `.` character:
 - Before: the question **Short Title** (trim whitespace)
 - After: the **answer text** (trim whitespace)
 
@@ -44,17 +44,17 @@ Compare the parsed answer text — **trimmed and lowercased** — against the re
 
 ### 3. Find the mission
 
-Follow `~/.gemini/config/plugins/cairn/shared/resolve-mission.md` to resolve `<MISSION_DIR>`. Never use a hardcoded path. Hold `<MISSION_DIR>` — you need it for the delegated recording and the commit.
+Follow `~/.gemini/config/plugins/gurita/shared/resolve-mission.md` to resolve `<MISSION_DIR>`. Never use a hardcoded path. Hold `<MISSION_DIR>` — you need it for the delegated recording and the commit.
 
 ### 4. Record the answer
 
-Read and follow the shared hand-answer procedure at `~/.gemini/config/plugins/cairn/shared/hand-answer-procedure.md`, carrying out every step **yourself, in this conversation**. Pass it the `<MISSION_DIR>` resolved in step 3, the **Short Title** parsed in step 1, and the **answer text** resolved in step 2 as its `MISSION_DIR`, `SHORT TITLE`, and `ANSWER` inputs, and pass **no `RECORDED OPTION`** — a literal answer lifts no option id, so the recording core forms its one judgment itself: whether the answer plainly settles on one of the answered block's own alternatives.
+Read and follow the shared hand-answer procedure at `~/.gemini/config/plugins/gurita/shared/hand-answer-procedure.md`, carrying out every step **yourself, in this conversation**. Pass it the `<MISSION_DIR>` resolved in step 3, the **Short Title** parsed in step 1, and the **answer text** resolved in step 2 as its `MISSION_DIR`, `SHORT TITLE`, and `ANSWER` inputs, and pass **no `RECORDED OPTION`** — a literal answer lifts no option id, so the recording core forms its one judgment itself: whether the answer plainly settles on one of the answered block's own alternatives.
 
 That procedure names the standing picks on the other open questions that the answer undermines, then delegates the locate / analyse / fold / remove / cascade recording to the shared recording core, handing it those names. Its whole read of `<MISSION_DIR>/open_questions.xml` with the file-reading tool is for reasoning only, and every locate, list, lift, and write of that file is a call to the plugin's open-question tool. If the Short Title matches no block, the core's `locate` call fails and it stops without changes — print the fixed line `Answer not recorded — no open question matches the title.` first, then below it relay the tool's `Error:` line, which lists the ids the document holds, so the user can retry.
 
 ### 5. Commit the manual answer
 
-Read and follow the shared commit procedure at `~/.gemini/config/plugins/cairn/shared/commit-procedure.md`, running its one commit-tool command yourself as this step's one git tool call. Supply it these three inputs, using the `<MISSION_DIR>` resolved in step 3:
+Read and follow the shared commit procedure at `~/.gemini/config/plugins/gurita/shared/commit-procedure.md`, running its one commit-tool command yourself as this step's one git tool call. Supply it these three inputs, using the `<MISSION_DIR>` resolved in step 3:
 
 - **PATHS** — this skill's own edits: `<MISSION_DIR>/open_questions.xml` and `<MISSION_DIR>/requirements.md`.
 - **SUBJECT** — exactly `Manual-answer: <Short Title>` (the answered question's handle). The marker is the provenance `/capture-mission-principle-updates` reads when it walks a mission's answer commits across all three subjects: `Manual-answer:` and `Alternative-answer:` mark override signals it distills new principles from, while `Recommendation-answer:` marks evidence about existing principles only.

@@ -1,14 +1,14 @@
 {
-  "name": "cairn",
+  "name": "gurita",
   "interface": {
-    "displayName": "cairn"
+    "displayName": "gurita"
   },
   "plugins": [
     {
       "name": "{{NAME}}",
       "source": {
         "source": "local",
-        "path": "./plugins/cairn"
+        "path": "./plugins/gurita"
       },
       "policy": {
         "installation": "AVAILABLE",

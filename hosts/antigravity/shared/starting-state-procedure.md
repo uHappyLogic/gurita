@@ -25,7 +25,7 @@ The mission's **scope** is the directory its mission directory stands in: `<scop
 `<scope>/mission_<slug>/`, the workspace root for `mission_<slug>/`.
 
 Every missions-tool call below runs from the workspace root as the full fixed command
-`python3 ~/.gemini/config/plugins/cairn/tools/missions.py <query> …`, written out in full on every call and
+`python3 ~/.gemini/config/plugins/gurita/tools/missions.py <query> …`, written out in full on every call and
 never through a variable, alias, or function of your own defined to stand for the command or any
 part of it. Make every one of them before step 5's edit.
 
@@ -42,7 +42,7 @@ clearing, and anything your runner would do next. Report the fixed line
 Run:
 
 ```
-python3 ~/.gemini/config/plugins/cairn/tools/missions.py since <MISSION_DIR>
+python3 ~/.gemini/config/plugins/gurita/tools/missions.py since <MISSION_DIR>
 ```
 
 Its first line, when it prints one, is the anchor: the commit that last recorded this
@@ -99,12 +99,12 @@ where they are relevant.
 Read the record of finished and live work in two tiers. First the overview of the scope:
 
 ```
-python3 ~/.gemini/config/plugins/cairn/tools/missions.py missions --mission <MISSION_DIR>
+python3 ~/.gemini/config/plugins/gurita/tools/missions.py missions --mission <MISSION_DIR>
 ```
 
 Then, for each finished mission whose overview line bears on the goal, a deeper read: its
-finish summary through `python3 ~/.gemini/config/plugins/cairn/tools/missions.py summary <path>`, or its
-recorded decisions through `python3 ~/.gemini/config/plugins/cairn/tools/missions.py show <path>`, `<path>`
+finish summary through `python3 ~/.gemini/config/plugins/gurita/tools/missions.py summary <path>`, or its
+recorded decisions through `python3 ~/.gemini/config/plugins/gurita/tools/missions.py show <path>`, `<path>`
 the mission path exactly as the overview printed it. Read no verified bar: make no
 `tasks --with-body` call. Past tasks reach the starting state only as the titles the overview and
 the summaries already carry.
@@ -112,7 +112,7 @@ the summaries already carry.
 Then what is in flight, the other live missions whose scope overlaps this one's:
 
 ```
-python3 ~/.gemini/config/plugins/cairn/tools/missions.py live <MISSION_DIR>
+python3 ~/.gemini/config/plugins/gurita/tools/missions.py live <MISSION_DIR>
 ```
 
 For each line it prints, note the mission by path, whether it is `started`, and its goal in a
@@ -158,7 +158,7 @@ A changed starting state is a premise change: a standing pick — the `<recommen
 an open question carries — formed against the old facts would otherwise be recorded as given.
 Read `<MISSION_DIR>/open_questions.xml` whole with the file-reading tool; that whole read is for
 reasoning only, and every change to the document is a call to the plugin's open-question tool,
-`python3 ~/.gemini/config/plugins/cairn/tools/open_questions.py <subcommand> <MISSION_DIR> …`, written out in
+`python3 ~/.gemini/config/plugins/gurita/tools/open_questions.py <subcommand> <MISSION_DIR> …`, written out in
 full on every call and never through a variable, alias, or function of your own. Never edit the
 file yourself.
 
@@ -185,7 +185,7 @@ When at least one pick is undermined, clear them all with one call, every named 
 Title (its `id` as the document holds it) its own quoted argument:
 
 ```bash
-python3 ~/.gemini/config/plugins/cairn/tools/open_questions.py strip --recommendation <MISSION_DIR> "<Short Title>" …
+python3 ~/.gemini/config/plugins/gurita/tools/open_questions.py strip --recommendation <MISSION_DIR> "<Short Title>" …
 ```
 
 It clears each named block's pick and keeps its `<alternative>` children, touching no other

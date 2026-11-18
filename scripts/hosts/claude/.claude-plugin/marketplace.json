@@ -1,5 +1,5 @@
 {
-  "name": "cairn",
+  "name": "gurita",
   "owner": {
     "name": "Lukasz Kosiak"
   },
@@ -7,7 +7,7 @@
     {
       "name": "{{NAME}}",
       "source": ".",
-      "description": "Cairn brings all the important questions up to be decided upfront, so you can hand long-running execution to your agent confidently.",
+      "description": "Gurita brings all the important questions up to be decided upfront, so you can hand long-running execution to your agent confidently.",
       "version": "{{VERSION}}"
     }
   ]

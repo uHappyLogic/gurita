@@ -15,7 +15,7 @@ review → (discuss) → answer → review → answer → … → converged → 
 
 Each pass does three jobs: **reconcile** the existing questions against what's now decided, **surface** the new gaps, and report whether the requirements have **converged**.
 
-Every write this skill makes to `open_questions.xml`, and every listing of its blocks, is a call to the plugin's open-question tool, `python3 ~/.gemini/config/plugins/cairn/tools/open_questions.py <subcommand> <MISSION_DIR> …`, written out in full on every call, never through a variable, alias, or function of your own defined to stand for the command or any part of it — the tool is that file's sole writer and owns the document's escaping and layout: a mutator prints nothing on success, `list` prints bare ids one per line, and any failure is one `Error: <reason>` line on stderr with a non-zero exit and the document left unchanged. Reading the document whole to reason over it is the one thing done directly, with the file-reading tool. Never edit `open_questions.xml` yourself.
+Every write this skill makes to `open_questions.xml`, and every listing of its blocks, is a call to the plugin's open-question tool, `python3 ~/.gemini/config/plugins/gurita/tools/open_questions.py <subcommand> <MISSION_DIR> …`, written out in full on every call, never through a variable, alias, or function of your own defined to stand for the command or any part of it — the tool is that file's sole writer and owns the document's escaping and layout: a mutator prints nothing on success, `list` prints bare ids one per line, and any failure is one `Error: <reason>` line on stderr with a non-zero exit and the document left unchanged. Reading the document whole to reason over it is the one thing done directly, with the file-reading tool. Never edit `open_questions.xml` yourself.
 
 ## review-mission-requirements
 
@@ -60,7 +60,7 @@ The open questions live beside it in `<MISSION_DIR>/open_questions.xml` — one 
 
 ### 0. Find the mission
 
-Follow `~/.gemini/config/plugins/cairn/shared/resolve-mission.md` to resolve `<MISSION_DIR>`. Never use a hardcoded path.
+Follow `~/.gemini/config/plugins/gurita/shared/resolve-mission.md` to resolve `<MISSION_DIR>`. Never use a hardcoded path.
 
 ### 1. Read the documents and take inventory
 
@@ -74,10 +74,10 @@ Read `<MISSION_DIR>/requirements.md` and `<MISSION_DIR>/open_questions.xml` in f
 Beside the two documents, read the overview of the missions around this one's scope, on every pass, with this one fixed call run from the workspace root, written out in full and never through a variable, alias, or function of your own defined to stand for the command or any part of it:
 
 ```
-python3 ~/.gemini/config/plugins/cairn/tools/missions.py missions --mission <MISSION_DIR> --last 10
+python3 ~/.gemini/config/plugins/gurita/tools/missions.py missions --mission <MISSION_DIR> --last 10
 ```
 
-It prints one tab-separated line per mission whose scope overlaps this one's, live or finished: its state, its finish date (`-` while live), its path, and its title, every live line and the ten most recently finished. Read it as context for the inventory, not as a fifth thing to reconcile: only where you judge a listed mission's line to bear on a gap or on a pair of decisions, read that mission more deeply, its finish summary through `python3 ~/.gemini/config/plugins/cairn/tools/missions.py summary <path>` or its recorded decisions through `python3 ~/.gemini/config/plugins/cairn/tools/missions.py show <path>`, `<path>` the mission path exactly as the overview printed it, each written out in full the same way; a line that bears on nothing gets no deeper read.
+It prints one tab-separated line per mission whose scope overlaps this one's, live or finished: its state, its finish date (`-` while live), its path, and its title, every live line and the ten most recently finished. Read it as context for the inventory, not as a fifth thing to reconcile: only where you judge a listed mission's line to bear on a gap or on a pair of decisions, read that mission more deeply, its finish summary through `python3 ~/.gemini/config/plugins/gurita/tools/missions.py summary <path>` or its recorded decisions through `python3 ~/.gemini/config/plugins/gurita/tools/missions.py show <path>`, `<path>` the mission path exactly as the overview printed it, each written out in full the same way; a line that bears on nothing gets no deeper read.
 
 **Any of these missions-tool calls that fails** — any non-zero exit, whatever its `Error:` line says — is one condition: **stop the pass here**, before any prune, dedup, new block, or note deletion. Report the fixed line `Review stopped — the missions record could not be read.` first, then below it the call's `Error:` line from stderr, verbatim. Make no commit, and print neither the still-open list nor the convergence verdict: that is the whole report, and the run ends there.
 
@@ -92,7 +92,7 @@ This is the step that makes the skill loop-aware: the documents have been edited
 Each removal, on either path, is one bare call — no `--option`, since a prune or dedup records nothing:
 
 ```
-python3 ~/.gemini/config/plugins/cairn/tools/open_questions.py remove <MISSION_DIR> "<Short Title>"
+python3 ~/.gemini/config/plugins/gurita/tools/open_questions.py remove <MISSION_DIR> "<Short Title>"
 ```
 
 In that one write the tool deletes the block and strips every block whose embedded pick depended on it — and every block that depended on those in turn — of its `<recommendation>`, `<depends-on>`, and `<applied-principle>` children, keeping its `<alternative>` children, so no `<depends-on>` tag is left naming a removed or stripped block; a stripped block stays in the document as a live question, its alternatives intact, for the next `/recommend-all-open-questions` pass to re-pick. Stripping decides nothing, records nothing under `## Decisions`, and adds nothing to the step-6 report — the committed diff is its record.
@@ -114,7 +114,7 @@ Add only genuinely new questions — don't re-raise anything already present (yo
 Author each new finding as one `add` call, the question text as its heredoc body:
 
 ```
-python3 ~/.gemini/config/plugins/cairn/tools/open_questions.py add <MISSION_DIR> "<Short Title>" <<'EOF'
+python3 ~/.gemini/config/plugins/gurita/tools/open_questions.py add <MISSION_DIR> "<Short Title>" <<'EOF'
 <Question text here.>
 EOF
 ```
@@ -149,7 +149,7 @@ Neither path resolves a conflict: never edit, reword, or remove either `## Decis
 
 ### 5. Commit the reshaped requirements
 
-Read and follow the shared commit procedure at `~/.gemini/config/plugins/cairn/shared/commit-procedure.md`, running its one commit-tool command yourself as this step's one git tool call. Supply it these two inputs:
+Read and follow the shared commit procedure at `~/.gemini/config/plugins/gurita/shared/commit-procedure.md`, running its one commit-tool command yourself as this step's one git tool call. Supply it these two inputs:
 
 - **PATHS** — this skill's own change set, the mission's two requirements documents: `<MISSION_DIR>/open_questions.xml` (where every prune, dedup, and new block of this pass landed) and `<MISSION_DIR>/requirements.md` (where step 4's note deletions landed).
 - **SUBJECT** — `Requirements-review: <MISSION_DIR>`, the mission path exactly as resolved, trailing slash included.
@@ -161,7 +161,7 @@ The commit tool runs the dirty-own-path guard, the path-scoped staging, and the 
 Run
 
 ```
-python3 ~/.gemini/config/plugins/cairn/tools/open_questions.py list <MISSION_DIR>
+python3 ~/.gemini/config/plugins/gurita/tools/open_questions.py list <MISSION_DIR>
 ```
 
 It prints the Short Title of every `<open-question>` block still in the document, one per line in document order; empty output is a converged document. That print — not your recollection of the pass — is what the two items below are read from.

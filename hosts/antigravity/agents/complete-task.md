@@ -37,7 +37,7 @@ Your prompt carries three values and nothing else:
 
 ## How to complete the task
 
-Follow the shared procedure at `~/.gemini/config/plugins/cairn/shared/complete-procedure.md`
+Follow the shared procedure at `~/.gemini/config/plugins/gurita/shared/complete-procedure.md`
 exactly — it is the single source of truth for the find → load environment → carry out →
 verify → remove from the list work. Read it first, then carry out every step against the task
 and the mission directory in your prompt.
@@ -64,7 +64,7 @@ if ! printf '%s\n' "$bar" | grep -q '[^[:space:]]'; then
   echo 'acceptance bar empty'
   false
 fi &&
-python3 ~/.gemini/config/plugins/cairn/tools/task_list.py remove <MISSION_DIR> "<Task Title>" &&
+python3 ~/.gemini/config/plugins/gurita/tools/task_list.py remove <MISSION_DIR> "<Task Title>" &&
 printf '%s\n' "$bar" > "<scratch dir>/body.txt" &&
 cat > "<scratch dir>/paths.txt" <<'EOF'
 <recorded path 1>

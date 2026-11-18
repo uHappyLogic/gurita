@@ -31,7 +31,7 @@ Workflow already bootstrapped — the guidance section is present.
 
 ### 2. Write the workflow guidance into AGENTS.md
 
-Write the `## Mission Workflow` section exactly as `~/.gemini/config/plugins/cairn/shared/workflow-guidance.md` states it, by the one of that file's three cases that applies: **if `AGENTS.md` does not exist**, create it with the minimal content shown there; **if it exists and holds neither heading**, append the section to the end of the file, leaving every existing line untouched; **if it holds the older `## Milestone Workflow` section**, replace that section whole as the third case states, from its heading line down to the line before the next `# ` or `## ` heading or to the end of the file, leaving every line outside it untouched.
+Write the `## Mission Workflow` section exactly as `~/.gemini/config/plugins/gurita/shared/workflow-guidance.md` states it, by the one of that file's three cases that applies: **if `AGENTS.md` does not exist**, create it with the minimal content shown there; **if it exists and holds neither heading**, append the section to the end of the file, leaving every existing line untouched; **if it holds the older `## Milestone Workflow` section**, replace that section whole as the third case states, from its heading line down to the line before the next `# ` or `## ` heading or to the end of the file, leaving every line outside it untouched.
 
 ### 3. Carry the principle store over
 
@@ -45,7 +45,7 @@ Leave the old file in place: step 4's commit removes it, so the move lands in th
 
 ### 4. Commit the bootstrap
 
-Read and follow the shared commit procedure at `~/.gemini/config/plugins/cairn/shared/commit-procedure.md`, running its one commit-tool command yourself as this step's one git tool call. Supply it these inputs:
+Read and follow the shared commit procedure at `~/.gemini/config/plugins/gurita/shared/commit-procedure.md`, running its one commit-tool command yourself as this step's one git tool call. Supply it these inputs:
 
 - **PATHS** — this skill's own change set: `AGENTS.md`, which step 2 created, appended the section to, or replaced the older section in, and also `answer_decision_principles.md` when step 3 copied the store.
 - **REMOVALS** — `milestones/answer_decision_principles.md` when step 3 copied the store, and none otherwise.

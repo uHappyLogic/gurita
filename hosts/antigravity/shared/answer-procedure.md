@@ -11,7 +11,7 @@ inputs below and wraps the result; this file describes only the recording work i
 locate, analyse, fold, note, remove, cascade.
 
 Every read and write of `open_questions.xml` here is a call to the plugin's open-question
-tool, `python3 ~/.gemini/config/plugins/cairn/tools/open_questions.py <subcommand> <MISSION_DIR> …`,
+tool, `python3 ~/.gemini/config/plugins/gurita/tools/open_questions.py <subcommand> <MISSION_DIR> …`,
 written out in full on every call, never through a variable, alias, or function of your own
 defined to stand for the command or any part of it; the tool is that file's sole writer: a
 read prints the bare value asked for, a write prints nothing on
@@ -50,7 +50,7 @@ optional:
 Run
 
 ```
-python3 ~/.gemini/config/plugins/cairn/tools/open_questions.py locate <MISSION_DIR> "<SHORT TITLE>"
+python3 ~/.gemini/config/plugins/gurita/tools/open_questions.py locate <MISSION_DIR> "<SHORT TITLE>"
 ```
 
 On success it prints the matched block verbatim — its `<question>` and, when the recommend
@@ -133,7 +133,7 @@ Write the notes, like the fold, **before** removing the answered block in step 5
 Run
 
 ```
-python3 ~/.gemini/config/plugins/cairn/tools/open_questions.py remove <MISSION_DIR> "<SHORT TITLE>" [--option "<OPTION>"] [--undermined "<UNDERMINED SHORT TITLE>" …]
+python3 ~/.gemini/config/plugins/gurita/tools/open_questions.py remove <MISSION_DIR> "<SHORT TITLE>" [--option "<OPTION>"] [--undermined "<UNDERMINED SHORT TITLE>" …]
 ```
 
 whether or not the block carries embedded children, with `--undermined` followed by every
@@ -171,7 +171,7 @@ If the decision moots another entry or forces its answer, fold any implied const
 since nothing was recorded for it:
 
 ```
-python3 ~/.gemini/config/plugins/cairn/tools/open_questions.py remove <MISSION_DIR> "<MOOTED SHORT TITLE>"
+python3 ~/.gemini/config/plugins/gurita/tools/open_questions.py remove <MISSION_DIR> "<MOOTED SHORT TITLE>"
 ```
 
 one call per mooted entry. Each call reconciles that entry's dependents itself, so nothing

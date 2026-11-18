@@ -8,7 +8,7 @@ the first of these two branches that applies:
   returned — send the corrective message below to **that same agent**. Its context is intact,
   so it rewrites its file from the analysis it already did.
 - **Re-dispatch one fresh agent.** Where the handle is gone, dispatch **one** fresh
-  `cairn:provide-alternatives-to-open-question` agent for that question with the `Agent` tool,
+  `gurita:provide-alternatives-to-open-question` agent for that question with the `Agent` tool,
   in the background like the first dispatches, passing the **same prompt** as the original
   dispatch with the corrective message below appended to it as a shape reminder. This second
   dispatch redoes the analysis, so it is the fallback branch, never the preferred one.

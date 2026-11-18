@@ -9,7 +9,7 @@ available tools, fix it, and retry — never skip a step or record partial work 
 ## The task shape
 
 A task section in `TASKS_TODO.md` is **brief-level** — the format
-`~/.gemini/config/plugins/cairn/shared/task-format.md` defines: a `##` title heading, a 1–3 sentence
+`~/.gemini/config/plugins/gurita/shared/task-format.md` defines: a `##` title heading, a 1–3 sentence
 description of what is to be achieved, why the mission needs it, and how it would be
 verified, then a trailing `---` separator. That is the whole task.
 
@@ -41,7 +41,7 @@ kind of work.
 
 When your runner supplies an already-resolved mission directory, take it as given as
 `<MISSION_DIR>`, with no resolution of your own. Only when none is supplied, the inline
-`complete-task` skill's case, follow `~/.gemini/config/plugins/cairn/shared/resolve-mission.md` to
+`complete-task` skill's case, follow `~/.gemini/config/plugins/gurita/shared/resolve-mission.md` to
 resolve `<MISSION_DIR>`, with the `--mission <path>` value the runner holds as that
 procedure's input.
 
@@ -71,9 +71,9 @@ means for this task beyond the brief's own sentences — a decision recorded the
 on the work, and any value, name, or threshold it fixes is authoritative.
 
 **The past-work read.** Why an existing file is the way it is stands in the project's completed
-tasks, read with `python3 ~/.gemini/config/plugins/cairn/tools/missions.py tasks <path> --with-body` run from
+tasks, read with `python3 ~/.gemini/config/plugins/gurita/tools/missions.py tasks <path> --with-body` run from
 the workspace root, `<path>` the file's path, its whole print taken whatever its length, and
-followed where a printed task bears by `python3 ~/.gemini/config/plugins/cairn/tools/missions.py show <mission path>`
+followed where a printed task bears by `python3 ~/.gemini/config/plugins/gurita/tools/missions.py show <mission path>`
 for that mission's decisions in their own words — every missions-tool call this read makes,
 the `tasks` call on each file it is taken for and each `show` follow-up alike, written out in
 full on every call, never through a variable, alias, or function of your own defined to stand
@@ -197,7 +197,7 @@ tool, the sole writer of that file, which removes the located section — its he
 and `---` — and nothing else:
 
 ```
-python3 ~/.gemini/config/plugins/cairn/tools/task_list.py remove <MISSION_DIR> "<Task Title>"
+python3 ~/.gemini/config/plugins/gurita/tools/task_list.py remove <MISSION_DIR> "<Task Title>"
 ```
 
 `<Task Title>` is the full heading step 1 located. The tool reads no bar, prints nothing on

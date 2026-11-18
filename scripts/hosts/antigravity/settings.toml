@@ -61,13 +61,13 @@
 #   is no command of this host, a print run passing it to the model as plain text.
 
 # The plugin name that fills every {{NAME}} slot in the templates beside this file.
-plugin_name = "cairn"
+plugin_name = "gurita"
 
 # The literal that replaces every {{PLUGIN_ROOT}} placeholder in the rendered core/ files.
 # Antigravity defines no plugin-root variable for skill text, so references become the fixed
 # path of the plugin's global install, written in the tilde form the host's own plugin guide
 # uses for where a plugin lives.
-plugin_root = "~/.gemini/config/plugins/cairn"
+plugin_root = "~/.gemini/config/plugins/gurita"
 
 # The path from this host tree's root to the directory plugin_root stands for at runtime,
 # empty when that directory is the tree root. The dangling-plugin-root check resolves every

@@ -75,7 +75,7 @@ and report that the mission was not found: the fixed line
 the plugin's missions tool, run from the workspace root,
 
 ```
-python3 ~/.gemini/config/plugins/cairn/tools/missions.py missions .
+python3 ~/.gemini/config/plugins/gurita/tools/missions.py missions .
 ```
 
 verbatim — one line per mission, live or finished, its path the third tab-separated field — or,
@@ -528,7 +528,7 @@ no diff after a round either; the user re-reads `git diff`. A reply that is neit
 acceptance nor an explicit rejection is a change request or a question: handle it and ask again.
 There is no round limit; the loop ends only on one of the two answers below.
 
-**On acceptance — commit.** Read and follow the shared commit procedure at `~/.gemini/config/plugins/cairn/shared/commit-procedure.md`, running its one commit-tool command yourself as this step's one git tool call. Supply it these three inputs:
+**On acceptance — commit.** Read and follow the shared commit procedure at `~/.gemini/config/plugins/gurita/shared/commit-procedure.md`, running its one commit-tool command yourself as this step's one git tool call. Supply it these three inputs:
 
 - **PATHS** — this skill's own change set: the fixed-path store `answer_decision_principles.md` (a project-wide artifact, **not** any file under `<path>` — this skill writes only that store).
 - **SUBJECT** — `Principle-capture: <path>`, with `<path>` the argument from step 1 used verbatim, trailing slash included (e.g. `Principle-capture: mission_user-guide/`), the marker naming this skill's distinctive principle-capture function.

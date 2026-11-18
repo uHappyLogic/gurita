@@ -133,7 +133,7 @@ that path, written out in full.
 
 Use the `Agent` tool with `subagent_type` set to the namespaced registry name of the
 `provide-alternatives-to-open-question` agent (singular — the per-question subagent) under this
-plugin's namespace, `cairn:provide-alternatives-to-open-question` — one dispatch per surviving
+plugin's namespace, `gurita:provide-alternatives-to-open-question` — one dispatch per surviving
 question. Pass it that question's **Short Title**, the `<MISSION_DIR>` resolved in step 0, and
 the `<scratch dir>` created in sub-step **a**, and nothing else — the three values the
 orchestrator already holds:
@@ -238,7 +238,7 @@ the first of these two branches that applies:
   returned — send the corrective message below to **that same agent**. Its context is intact,
   so it rewrites its file from the analysis it already did.
 - **Re-dispatch one fresh agent.** Where the handle is gone, dispatch **one** fresh
-  `cairn:provide-alternatives-to-open-question` agent for that question with the `Agent` tool,
+  `gurita:provide-alternatives-to-open-question` agent for that question with the `Agent` tool,
   in the background like the first dispatches, passing the **same prompt** as the original
   dispatch with the corrective message below appended to it as a shape reminder. This second
   dispatch redoes the analysis, so it is the fallback branch, never the preferred one.

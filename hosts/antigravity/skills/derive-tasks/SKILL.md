@@ -27,18 +27,18 @@ The skill reads from and writes to the mission directory the flag names. The req
 
 ### 0. Find the mission
 
-Follow `~/.gemini/config/plugins/cairn/shared/resolve-mission.md` to resolve `<MISSION_DIR>`. Never use a hardcoded task-list path.
+Follow `~/.gemini/config/plugins/gurita/shared/resolve-mission.md` to resolve `<MISSION_DIR>`. Never use a hardcoded task-list path.
 
 ### 1. Check the scope gate
 
-Directly after resolving the mission, and before anything else, follow `~/.gemini/config/plugins/cairn/shared/check-scope-gate.md` for `<MISSION_DIR>`. When the gate is closed, its report is the whole output: read, refresh, write, and commit nothing, and print no line of step 11.
+Directly after resolving the mission, and before anything else, follow `~/.gemini/config/plugins/gurita/shared/check-scope-gate.md` for `<MISSION_DIR>`. When the gate is closed, its report is the whole output: read, refresh, write, and commit nothing, and print no line of step 11.
 
 ### 2. Refresh a stale starting state
 
 Before reading the documents you decompose, check whether other missions' work has landed in the scope since this mission's starting state was recorded. Run, from the workspace root, the plugin's missions tool:
 
 ```
-python3 ~/.gemini/config/plugins/cairn/tools/missions.py since <MISSION_DIR> --missions
+python3 ~/.gemini/config/plugins/gurita/tools/missions.py since <MISSION_DIR> --missions
 ```
 
 Its first line, when it prints one, is the anchor, the commit that last recorded this mission's starting state; every line beneath it is another mission's task or finish commit that landed in the scope after it. Read its print as exactly one of three outcomes:
@@ -47,13 +47,13 @@ Its first line, when it prints one, is the anchor, the commit that last recorded
 - **Anything beyond the anchor** — the ground moved under the section: refresh it before deriving anything, as below.
 - **The call failed** — any non-zero exit, whatever its `Error:` line says: stop the whole run, reading, writing, and committing nothing. Report the starting-state procedure's fixed line `Starting state stopped — a missions-tool read failed.` first, then below it the call's `Error:` line from stderr, verbatim, and print no line of step 11.
 
-To refresh, read and follow the shared starting-state procedure at `~/.gemini/config/plugins/cairn/shared/starting-state-procedure.md` in place, with `<MISSION_DIR>` as its input. It ends in exactly one of three ways:
+To refresh, read and follow the shared starting-state procedure at `~/.gemini/config/plugins/gurita/shared/starting-state-procedure.md` in place, with `<MISSION_DIR>` as its input. It ends in exactly one of three ways:
 
 - **The anchor alone** — its step 1 found the ground unmoved, so it explored, edited, and cleared nothing. Make no commit and go on to step 3.
 - **A stop** — it stopped on one of its two fixed lines, `Starting state stopped — a missions-tool read failed.` or `Starting state stopped — clearing the undermined picks failed.`, with the detail the procedure gives beneath it. That report, as the procedure states it, is this run's whole output: write no task list, commit nothing, and print no line of step 11.
 - **The change handed back** — it ran through its step 7, with `requirements.md` edited or left as it stood, and `open_questions.xml` changed exactly when its step 6 cleared a pick. Commit it, as below, then go on to step 3.
 
-Commit the handed-back change as a commit of its own, before any read of step 3, by reading and following the shared commit procedure at `~/.gemini/config/plugins/cairn/shared/commit-procedure.md`, running its one commit-tool command yourself as one git tool call, with these two inputs:
+Commit the handed-back change as a commit of its own, before any read of step 3, by reading and following the shared commit procedure at `~/.gemini/config/plugins/gurita/shared/commit-procedure.md`, running its one commit-tool command yourself as one git tool call, with these two inputs:
 
 - **PATHS** — `<MISSION_DIR>/requirements.md`, and `<MISSION_DIR>/open_questions.xml` beside it only when the procedure's step 6 cleared a pick, so a refresh and the picks it cleared are one commit.
 - **SUBJECT** — `Starting-state: <MISSION_DIR>`, the mission path exactly as resolved, trailing slash included.
@@ -66,14 +66,14 @@ Read `AGENTS.md` at the workspace root for the project's domain context, working
 
 Read `<MISSION_DIR>/requirements.md` in full, plus any files referenced in its **Relevant starting state** section, so you understand the exact starting point.
 
-Read the shared task format at `~/.gemini/config/plugins/cairn/shared/task-format.md`. That file owns the shape of every task section you write in step 10 — its template and authoring guidelines.
+Read the shared task format at `~/.gemini/config/plugins/gurita/shared/task-format.md`. That file owns the shape of every task section you write in step 10 — its template and authoring guidelines.
 
 ### 4. Check for unresolved open questions
 
 Run
 
 ```
-python3 ~/.gemini/config/plugins/cairn/tools/open_questions.py list <MISSION_DIR>
+python3 ~/.gemini/config/plugins/gurita/tools/open_questions.py list <MISSION_DIR>
 ```
 
 It prints the Short Title of every `<open-question>` block still in `<MISSION_DIR>/open_questions.xml`, one per line. If it prints nothing, the precondition holds — proceed. If it prints anything, stop immediately and output, with the printed lines as the bullets verbatim:
@@ -105,7 +105,7 @@ Apply these rules:
 First run the plugin's missions tool, for the work already recorded as completed in this mission:
 
 ```
-python3 ~/.gemini/config/plugins/cairn/tools/missions.py tasks <MISSION_DIR> --with-body
+python3 ~/.gemini/config/plugins/gurita/tools/missions.py tasks <MISSION_DIR> --with-body
 ```
 
 It prints, newest first, one tab-separated line per task completed in the mission (the commit's abbreviated hash, its date, the mission directory, and the task title), with the task's verified bar indented beneath it, and prints nothing when no task has been completed, which is no failure. If the call fails, stop and report it, writing and committing nothing: the fixed line `Cannot derive tasks: the completed-task read failed.` first, then its one `Error: <reason>` line from stderr verbatim below it, and print no line of step 11.
@@ -137,16 +137,16 @@ If the run derived no brief at all — every requirement is already satisfied �
 
 ### 9. Check the scope gate again
 
-Directly ahead of the write, follow `~/.gemini/config/plugins/cairn/shared/check-scope-gate.md` for `<MISSION_DIR>` a second time, since another mission may have started in the scope while this run read and decomposed. When the gate is closed, its report is the whole output: write and commit no task list, and print no line of step 11. A refresh commit step 2 already landed stays committed. The write call in step 10 checks no gate of its own.
+Directly ahead of the write, follow `~/.gemini/config/plugins/gurita/shared/check-scope-gate.md` for `<MISSION_DIR>` a second time, since another mission may have started in the scope while this run read and decomposed. When the gate is closed, its report is the whole output: write and commit no task list, and print no line of step 11. A refresh commit step 2 already landed stays committed. The write call in step 10 checks no gate of its own.
 
 ### 10. Write and commit the task list in one shell call
 
-Write every brief as one task section, using the template and the authoring guidelines from `~/.gemini/config/plugins/cairn/shared/task-format.md` exactly: its `##` title heading, its description, and its trailing `---`. The brief you decomposed in step 5 *is* the task body; writing it down is a transcription into that format, not a second authoring pass that adds detail.
+Write every brief as one task section, using the template and the authoring guidelines from `~/.gemini/config/plugins/gurita/shared/task-format.md` exactly: its `##` title heading, its description, and its trailing `---`. The brief you decomposed in step 5 *is* the task body; writing it down is a transcription into that format, not a second authoring pass that adds detail.
 
 Then run this one fixed shell call, written out in full exactly as shown, with only `<MISSION_DIR>` (in the subject too, the mission path exactly as resolved, trailing slash included) and the sections replaced — every brief's section in the heredoc, **in dependency order**, so the finished file reads top-to-bottom in that order:
 
 ```
-python3 ~/.gemini/config/plugins/cairn/tools/task_list.py initialize <MISSION_DIR> <<'EOF' &&
+python3 ~/.gemini/config/plugins/gurita/tools/task_list.py initialize <MISSION_DIR> <<'EOF' &&
 ## <Task Title 1>
 
 <1–3 sentence description>
@@ -159,13 +159,13 @@ python3 ~/.gemini/config/plugins/cairn/tools/task_list.py initialize <MISSION_DI
 
 ---
 EOF
-out="$(python3 ~/.gemini/config/plugins/cairn/tools/commit.py --subject "Task-derivation: <MISSION_DIR>" -- <MISSION_DIR>/TASKS_TODO.md)" &&
+out="$(python3 ~/.gemini/config/plugins/gurita/tools/commit.py --subject "Task-derivation: <MISSION_DIR>" -- <MISSION_DIR>/TASKS_TODO.md)" &&
 if [ -z "$out" ]; then
   echo 'derivation commit landed'
 fi
 ```
 
-The task-list tool replaces `<MISSION_DIR>/TASKS_TODO.md` with its heading followed by the whole list in the order given, or, refusing anything in it, prints one `Error:` line and leaves the file byte-for-byte unchanged. After the `&&` the call runs the one command of the shared commit procedure at `~/.gemini/config/plugins/cairn/shared/commit-procedure.md`, the plugin's commit tool, with `Task-derivation: <MISSION_DIR>` as its subject, no body, and this skill's own change set, `<MISSION_DIR>/TASKS_TODO.md`, as its one path, written out on the command line and never held in a shell variable. The tool runs the dirty-own-path guard over the file, stages exactly it, and commits it with it as the commit's pathspec, so nothing else the index holds — a change another run has staged included — rides in the derivation's commit, and it repeats a git write another process's lock refused before giving up. Its stdout is captured in `out`: empty when the commit landed, its fixed no-op line when the file did not change, so `derivation commit landed` is printed only when `out` is empty and a no-op commits and prints nothing. `out` is one quoted value set and used within this one call, never a tool command or a path list. Never write the briefs into the file any other way, one at a time or by editing it.
+The task-list tool replaces `<MISSION_DIR>/TASKS_TODO.md` with its heading followed by the whole list in the order given, or, refusing anything in it, prints one `Error:` line and leaves the file byte-for-byte unchanged. After the `&&` the call runs the one command of the shared commit procedure at `~/.gemini/config/plugins/gurita/shared/commit-procedure.md`, the plugin's commit tool, with `Task-derivation: <MISSION_DIR>` as its subject, no body, and this skill's own change set, `<MISSION_DIR>/TASKS_TODO.md`, as its one path, written out on the command line and never held in a shell variable. The tool runs the dirty-own-path guard over the file, stages exactly it, and commits it with it as the commit's pathspec, so nothing else the index holds — a change another run has staged included — rides in the derivation's commit, and it repeats a git write another process's lock refused before giving up. Its stdout is captured in `out`: empty when the commit landed, its fixed no-op line when the file did not change, so `derivation commit landed` is printed only when `out` is empty and a no-op commits and prints nothing. `out` is one quoted value set and used within this one call, never a tool command or a path list. Never write the briefs into the file any other way, one at a time or by editing it.
 
 What the call prints is the whole outcome: `derivation commit landed` when the commit landed; nothing when the commit tool found the file unchanged (the list matched what it already held); otherwise one `Error:` line — the task-list tool's, with `TASKS_TODO.md` unchanged and nothing committed, or, once the list has been written, the commit tool's, naming the git command that failed and carrying git's own message, with nothing committed.
 

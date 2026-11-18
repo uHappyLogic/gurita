@@ -77,7 +77,7 @@
 #   CLAUDE.md as project instructions.
 
 # The plugin name that fills every {{NAME}} slot in the templates beside this file.
-plugin_name = "cairn"
+plugin_name = "gurita"
 
 # The literal that replaces every {{PLUGIN_ROOT}} placeholder in the rendered core/ files.
 # Claude Code resolves this runtime variable to the installed plugin's root directory.

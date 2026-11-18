@@ -30,19 +30,19 @@ path, exactly as the definition tool printed it, trailing slash included, e.g.
 ### 1. Find the mission
 
 First strip the leading `--mission <path>` from the invocation text by the rule in
-`~/.gemini/config/plugins/cairn/shared/resolve-mission.md`, reading only the rest as `<Short Title>`.
-Follow `~/.gemini/config/plugins/cairn/shared/resolve-mission.md` to resolve `<MISSION_DIR>`. Never
+`~/.gemini/config/plugins/gurita/shared/resolve-mission.md`, reading only the rest as `<Short Title>`.
+Follow `~/.gemini/config/plugins/gurita/shared/resolve-mission.md` to resolve `<MISSION_DIR>`. Never
 use a hardcoded path. Hold `<MISSION_DIR>` — you need it for the delegated recording and
 the commit.
 
 ### 2. Run the shared lift-then-delegate procedure inline
 
 Read and follow the shared procedure at
-`~/.gemini/config/plugins/cairn/shared/answer-with-recommendation-procedure.md`, carrying out every step
+`~/.gemini/config/plugins/gurita/shared/answer-with-recommendation-procedure.md`, carrying out every step
 **yourself, in this conversation**. Pass it the `<MISSION_DIR>` from step 1 and the
 `<Short Title>` from the invocation as its `MISSION_DIR` and `SHORT TITLE` inputs. That
 procedure owns the lift → delegate work, composing over
-`~/.gemini/config/plugins/cairn/shared/answer-procedure.md`, which owns the
+`~/.gemini/config/plugins/gurita/shared/answer-procedure.md`, which owns the
 locate/analyse/fold/remove/cascade recording; every read and write of `open_questions.xml`
 in either is a call to the plugin's open-question tool.
 
@@ -60,7 +60,7 @@ question gets an embedded recommendation), or to record a literal answer via
 ### 3. Commit the recommendation answer
 
 Read and follow the shared commit procedure at
-`~/.gemini/config/plugins/cairn/shared/commit-procedure.md`, running its one commit-tool command yourself as
+`~/.gemini/config/plugins/gurita/shared/commit-procedure.md`, running its one commit-tool command yourself as
 this step's one git tool call. Supply it these three inputs, using the `<MISSION_DIR>` from
 step 1:
 

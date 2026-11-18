@@ -19,7 +19,7 @@ The required leading `--mission <path>` names the mission by its repo-relative p
 
 ### 0. Find the mission
 
-Follow `~/.gemini/config/plugins/cairn/shared/resolve-mission.md` to resolve `<MISSION_DIR>`. Never use a hardcoded task-list path.
+Follow `~/.gemini/config/plugins/gurita/shared/resolve-mission.md` to resolve `<MISSION_DIR>`. Never use a hardcoded task-list path.
 
 ### 1. Read the task list
 
@@ -47,7 +47,7 @@ Re-read `<MISSION_DIR>/TASKS_TODO.md` to get the current top task — the first 
 
 #### 2b. Check the scope gate
 
-Before dispatching the task 2a identified, follow `~/.gemini/config/plugins/cairn/shared/check-scope-gate.md` for `<MISSION_DIR>`, on every pass through the loop, so a mission that started holding the scope while the run was working stops it before its next task. When the gate is closed, end the run there: its report is the whole output, no agent is dispatched for the task, and every task committed earlier in the run stays committed.
+Before dispatching the task 2a identified, follow `~/.gemini/config/plugins/gurita/shared/check-scope-gate.md` for `<MISSION_DIR>`, on every pass through the loop, so a mission that started holding the scope while the run was working stops it before its next task. When the gate is closed, end the run there: its report is the whole output, no agent is dispatched for the task, and every task committed earlier in the run stays committed.
 
 #### 2c. Spawn a subagent to complete the task
 
@@ -83,7 +83,7 @@ else
     echo 'path file empty'
   elif ! grep -q '[^[:space:]]' "<scratch dir>/body.txt"; then
     echo 'body file empty'
-  elif out="$(python3 ~/.gemini/config/plugins/cairn/tools/commit.py --subject "Task-completion: <TASK_NAME>" --body "$(cat "<scratch dir>/body.txt")" --path-file "<scratch dir>/paths.txt")" && [ -z "$out" ]; then
+  elif out="$(python3 ~/.gemini/config/plugins/gurita/tools/commit.py --subject "Task-completion: <TASK_NAME>" --body "$(cat "<scratch dir>/body.txt")" --path-file "<scratch dir>/paths.txt")" && [ -z "$out" ]; then
     echo 'completion commit landed'
   fi
   mkdir -p "<scratch dir>/processed" &&
@@ -92,7 +92,7 @@ else
 fi
 ```
 
-The call first tests the two files: the path file absent (no file under its fixed name) or empty (no line of it naming a path), or the body file absent or empty (no line of it holding anything but whitespace), commits nothing. Otherwise it runs the one command of the shared commit procedure at `~/.gemini/config/plugins/cairn/shared/commit-procedure.md`, the plugin's commit tool, with `Task-completion: <TASK_NAME>` as its subject, the body file's content as its body, and the path file as its only pathspec, given as `--path-file`: the tool reads the file line-exact, one path per line, each line taken whole, runs the dirty-own-path guard over those paths, stages exactly them (never `git add -A`), and commits them with them as the commit's pathspec, so nothing else the index holds — a change another run has staged included — rides in the task's commit, and it repeats a git write another process's lock refused before giving up. The call names no path itself, holds no path list, and types no bar: the path file is the task's whole change set and the body file its whole record. Run no git command of your own beside it — no status check, no `git add`, no `git commit`, and no `--allow-empty`. The tool's stdout is captured in `out`: empty when the commit landed, its fixed no-op line when none of the paths changed, so `completion commit landed` is printed only when `out` is empty. Once both files have been read, whatever the commit's outcome, the call moves each into the scratch directory's `processed` subdirectory under a name `mktemp` makes unique there, so the fixed names are absent when the next agent starts and no file is ever read twice; it deletes nothing. `out` is one quoted value set and used within this one call, never a tool command or a path list.
+The call first tests the two files: the path file absent (no file under its fixed name) or empty (no line of it naming a path), or the body file absent or empty (no line of it holding anything but whitespace), commits nothing. Otherwise it runs the one command of the shared commit procedure at `~/.gemini/config/plugins/gurita/shared/commit-procedure.md`, the plugin's commit tool, with `Task-completion: <TASK_NAME>` as its subject, the body file's content as its body, and the path file as its only pathspec, given as `--path-file`: the tool reads the file line-exact, one path per line, each line taken whole, runs the dirty-own-path guard over those paths, stages exactly them (never `git add -A`), and commits them with them as the commit's pathspec, so nothing else the index holds — a change another run has staged included — rides in the task's commit, and it repeats a git write another process's lock refused before giving up. The call names no path itself, holds no path list, and types no bar: the path file is the task's whole change set and the body file its whole record. Run no git command of your own beside it — no status check, no `git add`, no `git commit`, and no `--allow-empty`. The tool's stdout is captured in `out`: empty when the commit landed, its fixed no-op line when none of the paths changed, so `completion commit landed` is printed only when `out` is empty. Once both files have been read, whatever the commit's outcome, the call moves each into the scratch directory's `processed` subdirectory under a name `mktemp` makes unique there, so the fixed names are absent when the next agent starts and no file is ever read twice; it deletes nothing. `out` is one quoted value set and used within this one call, never a tool command or a path list.
 
 What the call prints is the whole outcome:
 

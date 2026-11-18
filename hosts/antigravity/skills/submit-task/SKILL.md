@@ -30,12 +30,12 @@ repo-relative path, exactly as the definition tool printed it, trailing slash in
 
 ### 0. Find the mission
 
-First strip the leading `--mission <path>` from the invocation text by the rule in `~/.gemini/config/plugins/cairn/shared/resolve-mission.md`, reading only the rest as the issue description. Follow `~/.gemini/config/plugins/cairn/shared/resolve-mission.md` to resolve `<MISSION_DIR>`. Never use a hardcoded task-list path.
+First strip the leading `--mission <path>` from the invocation text by the rule in `~/.gemini/config/plugins/gurita/shared/resolve-mission.md`, reading only the rest as the issue description. Follow `~/.gemini/config/plugins/gurita/shared/resolve-mission.md` to resolve `<MISSION_DIR>`. Never use a hardcoded task-list path.
 
 ### 1. Check the scope gate
 
 Directly after resolving the mission, and before anything else, follow
-`~/.gemini/config/plugins/cairn/shared/check-scope-gate.md` for `<MISSION_DIR>`. When the gate is closed,
+`~/.gemini/config/plugins/gurita/shared/check-scope-gate.md` for `<MISSION_DIR>`. When the gate is closed,
 its report is the whole output: read, refresh, insert, and commit nothing, and print no line
 of step 9.
 
@@ -46,7 +46,7 @@ scope since this mission's starting state was recorded. Run, from the workspace 
 plugin's missions tool:
 
 ```
-python3 ~/.gemini/config/plugins/cairn/tools/missions.py since <MISSION_DIR> --missions
+python3 ~/.gemini/config/plugins/gurita/tools/missions.py since <MISSION_DIR> --missions
 ```
 
 Its first line, when it prints one, is the anchor, the commit that last recorded this
@@ -65,7 +65,7 @@ commit that landed in the scope after it. Read its print as exactly one of three
   the call's `Error:` line from stderr, verbatim, and print no line of step 9.
 
 To refresh, read and follow the shared starting-state procedure at
-`~/.gemini/config/plugins/cairn/shared/starting-state-procedure.md` in place, with `<MISSION_DIR>` as its
+`~/.gemini/config/plugins/gurita/shared/starting-state-procedure.md` in place, with `<MISSION_DIR>` as its
 input; its pick judgment applies here in full, since this mission's questions may carry
 standing picks. It ends in exactly one of three ways:
 
@@ -82,7 +82,7 @@ standing picks. It ends in exactly one of three ways:
 
 Commit the handed-back change as a commit of its own, before any read of step 3 and any
 authoring, by reading and following the shared commit procedure at
-`~/.gemini/config/plugins/cairn/shared/commit-procedure.md`, running its one commit-tool command yourself as
+`~/.gemini/config/plugins/gurita/shared/commit-procedure.md`, running its one commit-tool command yourself as
 one git tool call, with these two inputs:
 
 - **PATHS** — `<MISSION_DIR>/requirements.md`, and `<MISSION_DIR>/open_questions.xml`
@@ -107,7 +107,7 @@ In parallel, as independent tool calls:
 - Run the plugin's missions tool — completed work, to catch issues already addressed:
 
   ```
-  python3 ~/.gemini/config/plugins/cairn/tools/missions.py tasks <MISSION_DIR> --with-body
+  python3 ~/.gemini/config/plugins/gurita/tools/missions.py tasks <MISSION_DIR> --with-body
   ```
 
   It prints, newest first, one tab-separated line per task completed in the mission (the
@@ -133,7 +133,7 @@ You hold the whole task list, so you decide where the task goes:
 
 ### 6. Author the task section inline
 
-Read the shared task format at `~/.gemini/config/plugins/cairn/shared/task-format.md` and write the task section
+Read the shared task format at `~/.gemini/config/plugins/gurita/shared/task-format.md` and write the task section
 **yourself, in this conversation**, following its template and authoring guidelines exactly.
 That file owns the shape of a task section.
 
@@ -146,7 +146,7 @@ than re-reading.)
 
 ### 7. Check the scope gate again
 
-Directly ahead of the insert, follow `~/.gemini/config/plugins/cairn/shared/check-scope-gate.md` for
+Directly ahead of the insert, follow `~/.gemini/config/plugins/gurita/shared/check-scope-gate.md` for
 `<MISSION_DIR>` a second time, since another mission may have started in the scope while
 this run read, triaged, and authored. When the gate is closed, its report is the whole output:
 insert and commit no task, and print no line of step 9. A refresh commit step 2 already landed
@@ -167,10 +167,10 @@ Then run this one fixed shell call, written out in full exactly as shown, with o
 `<MISSION_DIR>`, `<New Task Title>`, `<position flag>`, and the body replaced:
 
 ```
-python3 ~/.gemini/config/plugins/cairn/tools/task_list.py insert <MISSION_DIR> "<New Task Title>" <position flag> <<'EOF' &&
+python3 ~/.gemini/config/plugins/gurita/tools/task_list.py insert <MISSION_DIR> "<New Task Title>" <position flag> <<'EOF' &&
 <the 1–3 sentence description>
 EOF
-out="$(python3 ~/.gemini/config/plugins/cairn/tools/commit.py --subject "Task-submission: <New Task Title>" -- <MISSION_DIR>/TASKS_TODO.md)" &&
+out="$(python3 ~/.gemini/config/plugins/gurita/tools/commit.py --subject "Task-submission: <New Task Title>" -- <MISSION_DIR>/TASKS_TODO.md)" &&
 if [ -z "$out" ]; then
   echo 'submission commit landed'
 fi
@@ -179,7 +179,7 @@ fi
 Every title in the call (the new title in both places, and any anchor) is written inside
 double quotes, with any `"`, `$`, `` ` ``, or `\` it holds escaped by a backslash. After the
 `&&` the call runs the one command of the shared commit procedure at
-`~/.gemini/config/plugins/cairn/shared/commit-procedure.md`, the plugin's commit tool, with
+`~/.gemini/config/plugins/gurita/shared/commit-procedure.md`, the plugin's commit tool, with
 `Task-submission: <New Task Title>` as its subject, no body, and this skill's own change set,
 `<MISSION_DIR>/TASKS_TODO.md`, as its one path, written out on the command line and never
 held in a shell variable. The tool runs the dirty-own-path guard over the file, stages exactly

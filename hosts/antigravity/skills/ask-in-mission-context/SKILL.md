@@ -31,18 +31,18 @@ When the answer surfaces a concrete next step, this skill names the right cairn 
 
 ### 0. Find the mission
 
-First strip the leading `--mission <path>` from the invocation text by the rule in `~/.gemini/config/plugins/cairn/shared/resolve-mission.md`, reading only the rest as the question. Follow `~/.gemini/config/plugins/cairn/shared/resolve-mission.md` to resolve `<MISSION_DIR>`. Never use a hardcoded task-list path. A call that resolves no mission stops as that procedure says, with no answer and no fallback: this skill answers only within a named mission.
+First strip the leading `--mission <path>` from the invocation text by the rule in `~/.gemini/config/plugins/gurita/shared/resolve-mission.md`, reading only the rest as the question. Follow `~/.gemini/config/plugins/gurita/shared/resolve-mission.md` to resolve `<MISSION_DIR>`. Never use a hardcoded task-list path. A call that resolves no mission stops as that procedure says, with no answer and no fallback: this skill answers only within a named mission.
 
 ### 1. Gather context
 
 In parallel, as independent tool calls, so the answer rests on the real state rather than memory:
 
 - Read `<MISSION_DIR>/requirements.md` — the goal, relevant starting state, and recorded decisions.
-- Read `<MISSION_DIR>/open_questions.xml` — any remaining open questions, each an `<open-question>` block carrying whatever alternatives and recommendation the recommend sweep has embedded. Read it whole with the file-reading tool, exactly as you read `requirements.md`; that whole read is for reasoning only, and a locate, list, or lift of one block is a call to the plugin's open-question tool, `python3 ~/.gemini/config/plugins/cairn/tools/open_questions.py <subcommand> <MISSION_DIR> …`, never a search of your own over the file.
+- Read `<MISSION_DIR>/open_questions.xml` — any remaining open questions, each an `<open-question>` block carrying whatever alternatives and recommendation the recommend sweep has embedded. Read it whole with the file-reading tool, exactly as you read `requirements.md`; that whole read is for reasoning only, and a locate, list, or lift of one block is a call to the plugin's open-question tool, `python3 ~/.gemini/config/plugins/gurita/tools/open_questions.py <subcommand> <MISSION_DIR> …`, never a search of your own over the file.
 - Run the plugin's missions tool — completed tasks:
 
   ```
-  python3 ~/.gemini/config/plugins/cairn/tools/missions.py tasks <MISSION_DIR> --with-body
+  python3 ~/.gemini/config/plugins/gurita/tools/missions.py tasks <MISSION_DIR> --with-body
   ```
 
   It prints, newest first, one tab-separated line per task completed in the mission (the commit's abbreviated hash, its date, the mission directory, and the task title), with the task's verified bar indented beneath it, and prints nothing when no task has been completed, which is no failure. Each task's title and verified bar tell you *what the task was meant to achieve* — the intent behind the deliverable that now exists — and its brief stands in its commit's diff, as the section removed from `TASKS_TODO.md`, which `git show <hash>` pulls up.
@@ -51,7 +51,7 @@ In parallel, as independent tool calls, so the answer rests on the real state ra
 - When the question concerns past work — what an earlier mission built, when or why something landed, a finished mission — run the plugin's missions tool for the project's composed record, at your own discretion and scoped to the question: the path the question concerns (a file or directory), the mission's scope (the directory its mission directory stands in, `.` for one at `mission_<slug>/`) for the work around this mission, or `.` for a project-wide question:
 
   ```
-  python3 ~/.gemini/config/plugins/cairn/tools/missions.py record <PATH>
+  python3 ~/.gemini/config/plugins/gurita/tools/missions.py record <PATH>
   ```
 
   It prints one tab-separated line at column 0 for each mission, live or finished, that changed PATH or whose scope overlaps it (`live` or `finished`, the finish date or `-` for a live one, the mission's path, and its title; the live ones first, then the finished ones newest first), with its summary bullets, or a live one's goal, and its tasks that changed PATH indented beneath it. A finished mission, its directory removed, resolves under no `--mission`, so it is answered from this read, scoped as wide as `.` when nothing narrower lists it.

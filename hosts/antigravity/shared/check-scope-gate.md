@@ -26,7 +26,7 @@ finished.
 Run, from the workspace root, the plugin's missions tool:
 
 ```
-python3 ~/.gemini/config/plugins/cairn/tools/missions.py gate <MISSION_DIR>
+python3 ~/.gemini/config/plugins/gurita/tools/missions.py gate <MISSION_DIR>
 ```
 
 It prints the path of every mission holding the scope, one per line, and nothing when none

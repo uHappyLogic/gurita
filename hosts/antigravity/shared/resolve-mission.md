@@ -32,7 +32,7 @@ value found there is the input the resolution below uses.
    changing anything**. Run, from the workspace root, the plugin's missions tool:
 
    ```
-   python3 ~/.gemini/config/plugins/cairn/tools/missions.py live
+   python3 ~/.gemini/config/plugins/gurita/tools/missions.py live
    ```
 
    It prints one tab-separated line per live mission — its path, `started` or `defined`, and

@@ -25,7 +25,7 @@ recommendation-bearing question at its *recommended* option unattended, use
 ```
 
 First strip the leading `--mission <path>` from the argument by the rule in
-`~/.gemini/config/plugins/cairn/shared/resolve-mission.md`, holding its value for step 1, then split
+`~/.gemini/config/plugins/gurita/shared/resolve-mission.md`, holding its value for step 1, then split
 the rest on the **first `.`** — exactly as `answer-open-question` does. Everything
 before it is `<Short Title>` (the question handle); everything after it is `<Alternative Id>`
 (the `id` of the `<alternative>` to record). Trim surrounding whitespace from both halves.
@@ -44,7 +44,7 @@ exactly as the definition tool printed it, trailing slash included, e.g.
 
 ### 1. Find the mission
 
-Follow `~/.gemini/config/plugins/cairn/shared/resolve-mission.md` to resolve `<MISSION_DIR>`. Never use a hardcoded
+Follow `~/.gemini/config/plugins/gurita/shared/resolve-mission.md` to resolve `<MISSION_DIR>`. Never use a hardcoded
 task-list path. Hold `<MISSION_DIR>` — you need it for the lift, the delegated recording,
 and the commit.
 
@@ -55,7 +55,7 @@ reasoning only, and every locate, list, lift, and write of it is a call to the p
 open-question tool, that file's sole writer. Run
 
 ```
-python3 ~/.gemini/config/plugins/cairn/tools/open_questions.py lift <MISSION_DIR> "<Short Title>" --alternative "<Alternative Id>"
+python3 ~/.gemini/config/plugins/gurita/tools/open_questions.py lift <MISSION_DIR> "<Short Title>" --alternative "<Alternative Id>"
 ```
 
 On success it prints one line, "`<id>` — `<what-it-is>`": the chosen alternative's `id` as the
@@ -81,7 +81,7 @@ below it the tool's `Error:` line quoted verbatim, which names the failed lookup
 Hand the **`<MISSION_DIR>`** from step 1 as its `MISSION_DIR` input, the resolved
 **`<Short Title>`**, the derived **ANSWER**, and the **RECORDED OPTION** from step 2 (the same
 value ANSWER opens with, passed separately so the core hands it to the tool as an exact id
-rather than parsing it out of ANSWER) to `~/.gemini/config/plugins/cairn/shared/hand-answer-procedure.md` and
+rather than parsing it out of ANSWER) to `~/.gemini/config/plugins/gurita/shared/hand-answer-procedure.md` and
 follow it unchanged **yourself, in this conversation**. That procedure reads
 `open_questions.xml` whole, names the standing picks on the other open questions that the
 answer undermines, and delegates the recording work to the shared recording core, handing it
@@ -97,7 +97,7 @@ fixed line `Alternative not recorded — the recording core stopped.` first, the
 ### 4. Commit the alternative answer
 
 Read and follow the shared commit procedure at
-`~/.gemini/config/plugins/cairn/shared/commit-procedure.md`, running its one commit-tool command yourself as
+`~/.gemini/config/plugins/gurita/shared/commit-procedure.md`, running its one commit-tool command yourself as
 this step's one git tool call. Supply it these three inputs, using the `<MISSION_DIR>` from
 step 1:
 

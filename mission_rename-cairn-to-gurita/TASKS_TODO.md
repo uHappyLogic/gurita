@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Rename Plugin Identifiers in the Host Definitions
-
-Rename every identifier that carries the plugin's name in the three host definitions under `scripts/hosts/` and in the root `.claude-plugin/marketplace.json` to `gurita`: `plugin_name`, the marketplace names, the Codex `displayName`, source path, template directory, `plugin_dir`, and four `[layout]` paths as `plugins/gurita`, Antigravity's `plugin_root` as `~/.gemini/config/plugins/gurita`, the `gurita:`-namespaced agent names in the three Claude Code slot values, and the description sentence opening with "Gurita". Each `settings.toml`'s dated hands-on check block and the README, CONTRIBUTING, and traffic-workflow templates are left to their own tasks, and `hosts/` is rebuilt in the same change. It is verified by the drift gate, both test runs, and the rendered trees carrying the new name at each of those sites, the host suite run being a later task's.
-
----
-
 ## Rename the Host README and Pointer Templates
 
 Give each host's README, CONTRIBUTING pointer, and traffic-workflow template under `scripts/hosts/<host>/` a plain substitution of the new name with no mention of the former name: the install commands, plugin ids, invocation forms, install paths, badge URLs, and the `uHappyLogic/gurita` and `uHappyLogic/gurita-<host>` repository links. Remove the Claude Code README's "Migrating from the old marketplace" section and its lead-in line, and rebuild `hosts/` in the same change. It is verified by the drift gate and a search finding no old name in those templates or their rendered copies.

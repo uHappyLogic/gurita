@@ -51,7 +51,7 @@ Before dispatching the task 2a identified, follow `${CLAUDE_PLUGIN_ROOT}/shared/
 
 #### 2c. Spawn a subagent to complete the task
 
-Use the `Agent` tool with `subagent_type` set to the namespaced registry name of the `complete-task` agent under this plugin's namespace, `cairn:complete-task`, and a prompt carrying the task name, the mission directory, and the scratch directory and nothing else, substituting `<TASK_NAME>` with the exact `##` heading text (without the `##` prefix), `<MISSION_DIR>` with the directory resolved in step 0, and `<scratch dir>` with the directory created at the start of step 2:
+Use the `Agent` tool with `subagent_type` set to the namespaced registry name of the `complete-task` agent under this plugin's namespace, `gurita:complete-task`, and a prompt carrying the task name, the mission directory, and the scratch directory and nothing else, substituting `<TASK_NAME>` with the exact `##` heading text (without the `##` prefix), `<MISSION_DIR>` with the directory resolved in step 0, and `<scratch dir>` with the directory created at the start of step 2:
 
 ```
 Complete the task named: "<TASK_NAME>"

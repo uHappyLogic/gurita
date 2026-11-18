@@ -1,13 +1,13 @@
 {
-  "name": "cairn",
+  "name": "gurita",
   "owner": {
     "name": "Lukasz Kosiak"
   },
   "plugins": [
     {
-      "name": "cairn",
+      "name": "gurita",
       "source": "./hosts/claude",
-      "description": "Cairn brings all the important questions up to be decided upfront, so you can hand long-running execution to your agent confidently.",
+      "description": "Gurita brings all the important questions up to be decided upfront, so you can hand long-running execution to your agent confidently.",
       "version": "1.9.0"
     }
   ]
