@@ -98,7 +98,11 @@ No task of this mission installs anything. The maintainer brings each host's ins
 
 ### Plugin copy running mission
 
-A copy of the plugin frozen under the name cairn runs every task of this mission and its finish. Before the first rename task, the cairn directory marketplace is pointed at the `hosts/claude` of a separate checkout or worktree held at the commit just before that task; the worktree at `/Users/lucask/workspace/cairn-old-word`, still standing at `04ebaec` from the previous rename, can be moved forward for this. The working tree's `hosts/` is rebuilt with every change as usual, so every commit passes `--check`, and nothing loads from it during the mission. After the finish, the marketplace is re-added from the working tree's `hosts/claude` under the name gurita and the stale copy is dropped.
+A copy of the plugin frozen under the name cairn runs every task of this mission after the setup task that puts it in place, and its finish. Before the first rename task, the cairn directory marketplace is pointed at the `hosts/claude` of a separate checkout or worktree held at the commit just before that task; the worktree at `/Users/lucask/workspace/cairn-old-word`, still standing at `04ebaec` from the previous rename, can be moved forward for this. The working tree's `hosts/` is rebuilt with every change as usual, so every commit passes `--check`, and nothing loads from it during the mission. After the finish, the marketplace is re-added from the working tree's `hosts/claude` under the name gurita and the stale copy is dropped.
+
+### Frozen copy setup
+
+The frozen copy is put in place by a task, the first of the list `derive-tasks` writes and ahead of every rename task: it moves the worktree to the commit standing when it runs and re-points the cairn directory marketplace at that worktree's `hosts/claude`. The maintainer completes it inline with `/complete-task`, as the release task is completed, then opens a fresh Claude Code session and starts `complete-all-tasks` there for the rest of the list, so nothing relies on a running session picking up the re-pointed marketplace.
 
 ### Release run actor
 
