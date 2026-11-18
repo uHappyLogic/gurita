@@ -56,5 +56,9 @@ At `42878df` on 2026-11-18 the drift gate passes (`uv run scripts/build_hosts.py
 
 The lookup of the name `gurita` that the naming draft owed before publication is dropped. The direct lookup of 2026-11-10 is the name's last collision check: nothing is looked up before publication, and nothing can hold the release on the name's account. The sentence in the collision check of `ideas/gurita.md` that owes one more lookup before anything is published is changed to say that none is made.
 
+### README tagline
+
+The README's bold tagline, "Mark the path first, then hand off the walk.", is replaced by a new tagline drawn from the image the new name carries: the arms that each carry a mission out on their own once its questions are decided, for example a line on deciding first and letting the arms carry the work. The new tagline keeps the old one's place, directly under the title and above the pitch.
+
 ## Out of Scope
 

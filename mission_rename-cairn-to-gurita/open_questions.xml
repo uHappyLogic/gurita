@@ -341,30 +341,6 @@
       <drawback>Needs a goal revision against the goal&apos;s explicit &quot;publish the result as the last task&quot;, and leaves the breaking release, the step that carries the rename to users, tracked by no mission at all; how its notes then treat this mission&apos;s finish is a condition on the sibling questions about the notes and the finish.</drawback>
     </alternative>
   </open-question>
-  <open-question id="README tagline">
-    <question>Does the README&apos;s tagline, &quot;Mark the path first, then hand off the walk.&quot;, stay under the new name? It stands directly under the title, above the one-sentence pitch, and draws on the image the old name carried, a pile of stones marking a path, which the name Gurita, Indonesian for octopus, does not carry.</question>
-    <recommendation option="Remove the tagline">The line belongs to the stone image the rename retires, as the unit&apos;s old word did, and the pitch below it already says everything it said, so deleting it removes the stale image with no new copy to write or judge.</recommendation>
-    <alternative id="Remove the tagline">
-      The bold line is deleted and no tagline replaces it: the renamed title is followed directly by the one-sentence pitch, which carries the introduction alone.
-      <advantage>It removes the stale image with no new copy to write or judge, and the pitch already states everything the tagline said, so the page loses no information and gains a shorter opening.</advantage>
-      <drawback>The landing page loses its one quotable line, and the title&apos;s meaning is left wholly to whatever explanation of the name the README carries elsewhere, which depends on where and at what length the README explains Gurita.</drawback>
-    </alternative>
-    <alternative id="Keep the tagline">
-      The bold line &quot;Mark the path first, then hand off the walk.&quot; stays under the renamed title, word for word, above the one-sentence pitch, which the rename changes only by its plugin name; no tagline is rewritten, now or as part of this mission.
-      <advantage>The line names the workflow&apos;s two halves, deciding first and executing later, in words that stand without the stone image (a path can be marked any way), so it still describes the plugin, costs no rewrite, and keeps the one phrase the landing page has carried since the 2026-10-02 task that introduced it.</advantage>
-      <drawback>It was written to echo a cairn marking a trail, so under the name Gurita it reads as a leftover of the old image beside a title that now suggests an octopus, and a reader who knew the old name may take it as a hint the rename was only a substitution.</drawback>
-    </alternative>
-    <alternative id="Rewrite to the octopus image">
-      The bold line under the title is replaced by a new tagline drawn from the image the new name carries, the arms that each carry a mission out on their own once its questions are decided (for example a line on deciding first and letting the arms carry the work), keeping the tagline&apos;s place directly under the title and above the pitch.
-      <advantage>Title and tagline tell one story again, the way the old pair did, so the tagline reinforces the new name instead of contradicting it, and it can carry the parallel, independent missions the naming draft gives as the reason the octopus fits.</advantage>
-      <drawback>The English octopus vocabulary is crowded (the naming draft rules out octopus, tentacle, and kraken for Octopus Deploy&apos;s sake, so the line must speak of arms), the head half of the image is reserved for the orchestrator in ideas/kepala.md and must not be claimed here, and the image&apos;s meaning only lands if the name&apos;s meaning is explained close by, which depends on where and how the README explains Gurita.</drawback>
-    </alternative>
-    <alternative id="Rewrite image-neutral">
-      The bold line under the title is replaced by a new tagline that states the workflow&apos;s promise, deciding the important questions first and then handing execution to an agent, in plain terms drawn from no image, neither the stones nor the octopus, keeping its place directly under the title and above the pitch.
-      <advantage>It drops the stale stone image without betting the landing page&apos;s first line on a metaphor most English readers will not get from the word Gurita, and it would survive a later rename untouched, the same reasoning that took the principle store&apos;s path off the plugin&apos;s name.</advantage>
-      <drawback>A plain tagline sits right above a one-sentence pitch that already says the same thing in plain terms, so it risks repeating the pitch in fewer words, and the landing page loses the memorable phrase the old pair had.</drawback>
-    </alternative>
-  </open-question>
   <open-question id="Ignored daemon path">
     <question>What happens to the .gitignore entry .cairn/daemon.toml? It is the file&apos;s first line and names a path under a directory called after the plugin, yet nothing else in the tree names that path, no tool creates it, and no such directory stands in the maintainer&apos;s checkout.</question>
     <recommendation option="Remove the line">Nothing in the tree or its history names the path, no tool creates it, and no such directory stands in the checkout, so the entry is dead and goes with the old name instead of being renamed to a path that cannot exist. Every commit of the workflow is path-scoped, so a stray file would not be swept into one.</recommendation>
@@ -522,8 +498,6 @@
   </open-question>
   <open-question id="Name meaning in README">
     <question>Where, and at what length, does the README explain the name Gurita? The naming draft holds that the name says nothing to most English speakers and that its meaning, Indonesian for octopus with the plugin as the arms that each carry a mission out on their own, should be one sentence away on the landing page. The README today explains no name: its &quot;Why Cairn?&quot; section is about handing long-running work to an agent, not about the word.</question>
-    <depends-on question="README tagline" option="Remove the tagline"/>
-    <recommendation option="Sentence in the pitch block">It puts the meaning one sentence from the title, where the naming draft asks for it, and the sentence doubles as a description of what the plugin does, arms that each carry a mission out on their own.</recommendation>
     <alternative id="Sentence in the pitch block">
       The root README carries one sentence on the name in the block directly under the title, beside the tagline and the pitch and above the diagram: Gurita is Indonesian for octopus, and the plugin is the arms, each carrying a mission out on its own. Nothing else in the README explains the name, the &quot;Why&quot; section stays about the handoff, and the host READMEs carry no explanation.
       <advantage>It does exactly what the naming draft asks, the meaning one sentence away at the first point of contact, and the sentence doubles as a description of what the plugin does, so it costs the pitch little.</advantage>
