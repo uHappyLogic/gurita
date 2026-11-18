@@ -92,5 +92,9 @@ The mission does not run the host suite and ends without one. The run is left to
 
 A test under `tests/`, run by both pytest runs in CI, guards the banner file only: every committed copy parses as a well-formed SVG, all copies are byte-identical, and the committed SVG equals what the generator script produces from the plain-text drawing. Nothing checks where the READMEs place the image, so their opening lines stay unpinned.
 
+### Rendered look verification
+
+Before the commit, the SVG is rendered locally to PNGs on the light and dark page backgrounds and inspected, with a renderer already on the machine, such as `qlmanage`, and nothing committed for it. After the push to `main`, the README pages are viewed on github.com in both themes as a final confirmation, and a fix lands as a follow-up commit.
+
 ## Out of Scope
 
