@@ -64,5 +64,9 @@ The art is a wide, low strip of about 80 to 100 character columns by about 8 to 
 
 The executing agent draws the art and lands it in the READMEs on its own judgment against the criteria recorded in these requirements, unattended, with no approval step before it lands. The maintainer reviews the result on `main` afterwards, before a release puts it on the three host pages, and any correction is entered as a follow-up task or made by reverting the commit.
 
+### Release within mission
+
+The mission's task list holds no release, and the mission ends with the banner committed on `main`. The maintainer runs `/release-plugin` directly after `/finish-mission` as the mission's committed closing step, so the release follows the finish commit and the three host pages gain the banner the same day.
+
 ## Out of Scope
 

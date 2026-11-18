@@ -1,23 +1,4 @@
 <open-questions>
-  <open-question id="Release within mission">
-    <question>Does this mission include a release that publishes the banner to the three host landing pages, which change only when a release publishes the host trees, or does it end with the banner committed on main, showing only on the source repository&apos;s page until the next release?</question>
-    <recommendation option="Release right after finish">The goal names four landing pages and the three host pages change only at a release, while the release notes are composed from missions already finished, so only a release that follows the finish commit both puts the banner on every page and gives this mission its own section on the standard path, with no empty-range confirmation.</recommendation>
-    <alternative id="Release right after finish">
-      The mission&apos;s task list holds no release and the mission ends with the banner committed on main, but the requirements record that the maintainer runs /release-plugin directly after /finish-mission as the mission&apos;s committed closing step, so the release follows the finish commit and the three host pages gain the banner the same day.
-      <advantage>The release runs on its standard path: the finish commit lands first, so step 5 of /release-plugin reads this mission&apos;s summary and writes its own per-mission section into CHANGELOG.md and the three release pages, with no empty-range confirmation, while the host pages still change promptly.</advantage>
-      <drawback>Nothing in the workflow enforces a step after finish: the commitment lives in a requirements.md that the finish commit removes, so a skipped release leaves exactly the state of not releasing, and the mission&apos;s record reads finished while three of its four landing pages still lack the banner.</drawback>
-    </alternative>
-    <alternative id="Release as final task">
-      The mission includes the release: the last task in TASKS_TODO.md runs /release-plugin at the next version once the banner tasks are committed, so the Release commit publishes hosts/claude, hosts/antigravity, and hosts/codex into the three distribution repositories and the banner shows on all four landing pages before /finish-mission runs. The maintainer completes that task with the inline complete-task skill rather than in an unattended complete-all-tasks run.
-      <advantage>When the mission finishes its goal is met as written: the banner is the first element of all four landing pages, including the three host pages and the README the Claude Code and Antigravity installs carry, and its appearance on those pages can be checked within the mission.</advantage>
-      <drawback>A release made before the finish commit finds no mission finished since 2.0.0, so /release-plugin falls to its empty-range path: commit-range-derived notes that proceed only on the maintainer&apos;s explicit confirmation, which an unattended run cannot give, and this mission&apos;s own section then lands in the following release&apos;s notes describing work already shipped. The release pre-flight also requires a passing host suite on every host whose trigger set changed, here all three because every host&apos;s README template changes, so this option&apos;s cost depends on how the host-suite sibling question settles.</drawback>
-    </alternative>
-    <alternative id="No release, next one carries it">
-      The mission includes no release and commits to none: it ends with the banner on main, visible on the source repository&apos;s page once pushed, and the three host pages gain it whenever the maintainer next cuts a release for any reason, that release&apos;s notes carrying this mission&apos;s section as a finished mission since 2.0.0.
-      <advantage>The mission stays small and fully executable unattended, with no version bump, distribution publish, or release pre-flight in its scope, and a cosmetic landing-page change rides along with the next substantive release instead of taking a version number of its own.</advantage>
-      <drawback>For an open-ended time the goal is met only on the source repository&apos;s page: the three host landing pages and the README installed with the Claude Code and Antigravity plugins stay without the banner, so the four pages the goal names disagree, and the banner&apos;s look on a host page cannot be checked until that release.</drawback>
-    </alternative>
-  </open-question>
   <open-question id="Character rendering in SVG">
     <question>How are the banner&apos;s characters drawn inside the SVG, given that GitHub loads no external font for an SVG shown as an image and a text element is drawn in whatever font the viewer&apos;s system supplies: as text elements relying on a system monospace font stack, as text with a font embedded in the file, or as glyph outlines converted to paths?</question>
     <applied-principle>Check tier claims against the live environment</applied-principle>
@@ -134,7 +115,6 @@
   </open-question>
   <open-question id="Host suite run">
     <question>Is the host suite run on all three hosts as part of this mission, since adding the banner to each host&apos;s README template changes every host&apos;s trigger set and the suite first requires each host&apos;s installed copy to equal the built tree, or is that run left to the next release&apos;s pre-flight?</question>
-    <depends-on question="Release within mission" option="Release right after finish"/>
     <recommendation option="Defer to release pre-flight">The release pre-flight runs the suite on all three hosts against the same final state before anything reaches a host page, so a closing run inside the mission would only repeat it shortly before, and deferring keeps the task run unattended and the home-directory installations in the maintainer&apos;s hands.</recommendation>
     <alternative id="Defer to release pre-flight">
       The mission does not run the host suite at all and ends without one. The run is left to the next release&apos;s pre-flight step g, which diffs each host&apos;s trigger set since the last tag and so selects all three hosts. Installed copies are refreshed then, by the maintainer, as that step&apos;s remedy describes.
