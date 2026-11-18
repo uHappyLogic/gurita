@@ -73,6 +73,41 @@
   </open-question>
   <open-question id="Light and dark themes">
     <question>How does the banner handle GitHub&apos;s light and dark page themes, no README today using a picture element or a theme-specific image variant: one image with a transparent background whose colours must read on both page backgrounds, one image with its own filled background, or separate light and dark variants selected per theme?</question>
+    <alternative id="Transparent both-theme image">
+      One SVG with no background fill, so the page shows through, its violet and grey-blue colours picked to keep enough contrast on both GitHub&apos;s white light background and its near-black dark background. The README holds one plain image reference and no theme selection markup.
+      <advantage>One file and one image reference per README. It works the same in every renderer, including the host READMEs installed with the plugin and read outside GitHub, and it blends into whichever page it sits on.</advantage>
+      <drawback>Only mid-luminance colours read on both backgrounds, so the palette is pushed toward middle tones. Fine character strokes lose contrast on one theme or the other, and the darker shades the diagram uses (#581c87, #475569) nearly vanish on the dark page. This option stands or falls with the colour values the palette question picks.</drawback>
+    </alternative>
+    <alternative id="Dark filled panel">
+      One SVG that paints its own dark, terminal-like background rectangle behind the art, so the colours are drawn against a fixed backdrop whatever the page theme. The README holds one plain image reference and no theme selection markup.
+      <advantage>The colours are tuned against one known background, so the art looks the same everywhere. A dark backdrop suits character art drawn in violet and grey-blue, and the setup stays one file with one reference.</advantage>
+      <drawback>On the light theme the banner is a heavy dark block at the very top of the page, which visually outweighs the badges and title below it. Its edges show as a hard rectangle on both themes unless the corners are softened.</drawback>
+    </alternative>
+    <alternative id="Light filled panel">
+      One SVG that paints its own light background rectangle (white or a pale tint) behind the art, so the colours are drawn against a fixed light backdrop whatever the page theme. The README holds one plain image reference and no theme selection markup.
+      <advantage>It matches the root README&apos;s Mermaid diagram, which also sits on white fills with violet and slate strokes. On the default light theme it is almost seamless, and the setup stays one file with one reference.</advantage>
+      <drawback>On the dark theme the banner is a bright block that glares at the top of an otherwise dark page, the most visible spot. This is the theme where a filled background is noticed most.</drawback>
+    </alternative>
+    <alternative id="Picture element variants">
+      Two SVGs, one coloured for the light theme and one for the dark, both with transparent backgrounds. Each README wraps them in a `&lt;picture&gt;` element whose `&lt;source media=&quot;(prefers-color-scheme: dark)&quot;&gt;` selects the dark file and whose fallback `&lt;img&gt;` shows the light one.
+      <advantage>This is GitHub&apos;s documented way of serving theme-specific images, and it follows the theme the viewer has set on GitHub. Each variant gets the full contrast range for its own background, and any renderer that ignores the source still shows the fallback image.</advantage>
+      <drawback>There are two files to draw, colour, and keep in step, and every README needs more markup. If the delivery question puts a copy in each host tree, that means six SVG copies instead of three. If the source-of-truth question leaves the SVG hand-edited, every change to the art is made twice.</drawback>
+    </alternative>
+    <alternative id="Fragment-tagged variants">
+      Two SVGs, one coloured for the light theme and one for the dark, both with transparent backgrounds. Each README references both with plain image syntax, tagging the URLs with GitHub&apos;s `#gh-light-mode-only` and `#gh-dark-mode-only` fragments so GitHub hides whichever does not match the current theme.
+      <advantage>Each theme gets its own full-contrast colours using only plain Markdown image references, without any HTML element.</advantage>
+      <drawback>The fragments are a GitHub-only convention that GitHub has replaced with the picture element in its documentation. Any other renderer, including a host README read from an installed plugin copy, shows both banners stacked. It also carries the same two-file maintenance cost as the picture-element option.</drawback>
+    </alternative>
+    <alternative id="Self-adapting SVG">
+      One SVG with a transparent background whose own embedded CSS uses an `@media (prefers-color-scheme: dark)` rule to swap the art&apos;s colours. The README holds one plain image reference and no theme selection markup.
+      <advantage>One file and one reference still give per-theme colours. The theme logic stays inside the image, so every README and every host copy stays as simple as a single image.</advantage>
+      <drawback>When the SVG is shown as an image, the browser resolves the media query from the operating system or browser colour preference, not from the theme chosen in GitHub&apos;s settings. A viewer whose GitHub theme differs from their system setting gets the wrong variant. Renderers that do not evaluate CSS in an SVG image fall back to the default colours.</drawback>
+    </alternative>
+    <alternative id="Light theme only">
+      One SVG with a transparent background whose colours are chosen for GitHub&apos;s default light page only. The dark theme gets whatever contrast those colours happen to have, and the README holds one plain image reference with no theme handling.
+      <advantage>It is the least work and the least to maintain: colours are tuned to one background, there is one file, and no markup beyond the image. Theme handling stays open for a later change if dark-theme readers complain.</advantage>
+      <drawback>Viewers using the dark theme, a large share of GitHub users, may see the darker violet and slate strokes nearly disappear. The page&apos;s most prominent element would then look broken to them.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Palette colour values">
     <question>Which exact colour values make up the banner&apos;s violet and grey-blue palette: the values the root README&apos;s workflow diagram already uses (violet #9333ea and #581c87, slate #94a3b8 and #475569), or values chosen for the banner alone?</question>
