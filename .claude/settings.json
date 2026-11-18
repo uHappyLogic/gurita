@@ -1,6 +1,6 @@
 {
   "enabledPlugins": {
     "skill-creator@claude-plugins-official": true,
-    "cairn@cairn": true
+    "gurita@gurita": true
   }
 }
