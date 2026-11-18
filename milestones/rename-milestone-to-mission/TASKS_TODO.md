@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Context File Follows the Mission Rename
-
-Carry the rename through `CLAUDE.md`: the commands, repository layout, pipeline listing, file structure, invariants, and development notes in the new identifiers and word, the container wording recast to `<scope>/mission_<slug>/`, and its closing section replaced by the `## Mission Workflow` text `core/shared/workflow-guidance.md` states. The `milestone_01` to `milestone_54` directory names and the numbered milestones the invariants cite stay as written. Verified by a search of `CLAUDE.md` finding the old word only in those citations and by every path, tool, skill, and query it names existing in the tree.
-
----
-
 ## Hard Cut Invariant Entry
 
 Add to `CLAUDE.md` one dedicated invariant entry for the hard cut, written only in the new vocabulary and naming no retired form: the plugin answers to its current names only, through one flag, one discovery pattern (`**/mission_*/requirements.md`), and one finish marker, with no alias and no second pattern, the record starts at the first `Mission-finish:` commit, and no migration is shipped, with low adoption as the ground and the bootstrap's replacement of an older workflow section as its stated exception. Verified by reading the entry against the Hard cut invariant entry decision.
