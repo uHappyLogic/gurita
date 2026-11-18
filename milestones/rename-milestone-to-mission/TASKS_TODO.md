@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Revise the Gurita Draft After the Rename
-
-Revise `ideas/gurita.md` to record the mission rename as carried out: its Today column and present-tense statements of the old forms recast as what stood before the rename, the open questions this milestone answers marked as answered with the recorded decisions, and the old word kept only where it names a retired form. Verified by reading the draft against this milestone's decisions and the tree as it stands.
-
----
-
 ## Kepala and Benchmark Drafts Follow the Rename
 
 Carry the rename through `ideas/kepala.md` and `ideas/benchmark_for_cairn.md` wherever they describe the plugin, identifiers and prose in the new word, and drop kepala's "a milestone today" gloss. Verified by a search of both drafts finding the old word only where it names a retired form.
