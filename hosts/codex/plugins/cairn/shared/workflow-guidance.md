@@ -3,8 +3,9 @@
 This is the single source of truth for the `## Mission Workflow` section of
 `AGENTS.md`, the guidance that tells anyone working in the project where missions live
 and how each is named and finished. `init-mission-base-workflow` writes it into a project
-whose `AGENTS.md` lacks it and states which of the cases below it writes, and this file
-states what the section is and how each case writes it.
+whose `AGENTS.md` lacks it or holds the older `## Milestone Workflow` section in its place,
+and states which of the cases below it writes, and this file states what the section is and how
+each case writes it.
 
 ## The section
 
@@ -39,8 +40,11 @@ it.
   <the section>
   ```
 
-- **`AGENTS.md` exists and holds no `## Mission Workflow` section** — append the
-  section to the end of the file, leaving every existing line untouched.
-- **`AGENTS.md` holds a `## Mission Workflow` section** — replace that section whole,
-  from its heading line down to the line before the next `# ` or `## ` heading, or to the end of
-  the file when none follows, with the section, leaving every line outside it untouched.
+- **`AGENTS.md` exists and holds neither a `## Mission Workflow` nor a
+  `## Milestone Workflow` section** — append the section to the end of the file, leaving every
+  existing line untouched.
+- **`AGENTS.md` holds a `## Milestone Workflow` section and no `## Mission Workflow`
+  one** — the older section an earlier copy of the plugin wrote: `init-mission-base-workflow`
+  replaces it whole, from its heading line down to the line before the next `# ` or `## `
+  heading, or to the end of the file when none follows, with the section, leaving every line
+  outside it untouched.

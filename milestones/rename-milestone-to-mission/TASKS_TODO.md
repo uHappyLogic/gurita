@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Bootstrap Replaces an Older Workflow Section
-
-Make the bootstrap recognize a `## Milestone Workflow` section in a context file holding no `## Mission Workflow` one and replace it whole with the new section, through the third case of `core/shared/workflow-guidance.md` with the bootstrap named as its writer, committing under `Workflow-bootstrap: missions` and printing the existing success line. In that same pass, when `milestones/answer_decision_principles.md` stands and `answer_decision_principles.md` at the root does not, it moves the file to the root unchanged and commits both paths with the context file in the one commit, and otherwise moves nothing. Verified by reading the rendered skill against the Bootstrap on an older workflow section and Existing store at upgrade decisions and by the drift gate and both pytest runs passing.
-
----
-
 ## Build Check Bans the Old Word in Core
 
 Add a permanent build check beside `host-name-in-core` in `scripts/build_hosts.py` that fails on the old word, in any capitalisation, anywhere under `core/`, apart from a residue list holding only the old forms runtime prose keeps by decision, the old workflow heading and the old store path the bootstrap names. It is the runtime half of the rename's completeness bar, catching a leftover the suites do not. Verified by the build and `--check` passing on the tree as it stands and by the check failing when the word is written into a `core/` file outside the list.
