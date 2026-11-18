@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Document the Upgrade From Cairn
-
-Add a short "Upgrading from Cairn" note beside the fresh-install commands of each host subsection in the root README's install sections, with that host's removal commands: Claude Code uninstalls `cairn@cairn` at every scope it was installed at and then removes the `cairn` marketplace; Codex removes the `cairn@cairn` plugin and the `cairn` marketplace; Antigravity deletes `~/.gemini/config/plugins/cairn` and restarts any running `agy` session, the existing project-level `.agents/plugins/cairn` note folded into it so the note removes both old copies. Have the upgrade paragraph of `docs/workflow.md` state the order once, with no commands: finish every live milestone under the old copy, then remove it, then install Gurita and re-run the bootstrap. It is verified by each host subsection carrying its note, the commands checked against each host CLI's help text only and never run, since the frozen cairn copy must stay installed.
-
----
-
 ## Rename the Plugin in the Benchmark Draft
 
 Rename the plugin throughout `ideas/benchmark.md`, its title, prose, and example identifiers alike, since the draft describes the plugin as it stands and no decision keeps the old name there. It is verified by a search finding no old name in the file.

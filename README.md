@@ -69,6 +69,13 @@ Gurita has two runtime prerequisites: **git**, with your project root inside a g
 /plugin install gurita@gurita
 ```
 
+**Upgrading from Cairn?** In a terminal, uninstall `cairn@cairn` at every scope it was installed at, then remove the `cairn` marketplace. The first line below uninstalls it at user scope; where it was also installed at project or local scope, run that line again from the project's root with `--scope project` or `--scope local` before the last line:
+
+```
+claude plugin uninstall cairn@cairn --scope user
+claude plugin marketplace remove cairn
+```
+
 ### Antigravity
 
 Extract the latest release into `~/.gemini/config/plugins/gurita`, the global path Antigravity loads the plugin from in every project:
@@ -80,9 +87,10 @@ curl -sL https://github.com/uHappyLogic/gurita-antigravity/archive/refs/heads/ma
 
 Antigravity discovers a new plugin directory only on startup, so restart any running `agy` session after the extract.
 
-**Extracted Cairn into a project under an earlier release?** From that project's root, remove the old copy, since Antigravity discovers it beside the global one and it predates the subagents' write and shell tools:
+**Upgrading from Cairn?** Delete the old global copy and, from the root of any project you extracted Cairn into under an earlier release, its project-level copy too, since Antigravity discovers that one beside the global copy; then restart any running `agy` session:
 
 ```bash
+rm -rf ~/.gemini/config/plugins/cairn
 rm -rf .agents/plugins/cairn
 ```
 
@@ -93,6 +101,13 @@ Gurita supports the Codex command-line tool. In a terminal, add the `gurita-code
 ```
 codex plugin marketplace add uHappyLogic/gurita-codex
 codex plugin add gurita@gurita
+```
+
+**Upgrading from Cairn?** In a terminal, remove the `cairn@cairn` plugin and then the `cairn` marketplace:
+
+```
+codex plugin remove cairn@cairn
+codex plugin marketplace remove cairn
 ```
 
 In a Codex session, invoke a skill by its name under the plugin's namespace, such as `$gurita:init-mission-base-workflow`. The skills' own text names other skills in the slash form, such as `/derive-tasks`; those slash names refer to the same skills, which you invoke as `$gurita:derive-tasks`.
