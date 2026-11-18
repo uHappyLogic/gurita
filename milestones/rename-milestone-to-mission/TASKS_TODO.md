@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Kepala and Benchmark Drafts Follow the Rename
-
-Carry the rename through `ideas/kepala.md` and `ideas/benchmark_for_cairn.md` wherever they describe the plugin, identifiers and prose in the new word, and drop kepala's "a milestone today" gloss. Verified by a search of both drafts finding the old word only where it names a retired form.
-
----
-
 ## Relocate the Sibling Milestone to Mission Form
 
 Move the sibling milestone with `git mv` from `milestones/rename-cairn-to-gurita/` to `mission_rename-cairn-to-gurita/`, leaving its files unchanged, so the work that follows this one stands where the renamed plugin discovers it. The task's commit holds the move alone. Verified by the working tree's `missions.py live` listing `mission_rename-cairn-to-gurita/` as `defined` and by the commit showing the three files as pure renames.
