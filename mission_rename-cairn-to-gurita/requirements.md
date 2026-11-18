@@ -136,5 +136,9 @@ The root README glosses the name inside its opening pitch with a bare translatio
 
 The 2.0.0 CHANGELOG entry holds the one section `### Rename Cairn to Gurita` and nothing beside it. Its bullets announce the renamed identifiers, state the two upgrade facts, and carry the documentation links, and one further bullet says that this release also carries the path-addressed redesign (every skill given its mission's path as `--mission`, missions placed in their scope as `mission_` directories, no current mission) and the rename of milestone to mission, both described in the documentation (`docs/workflow.md` and `docs/skill-reference.md`) rather than listed in the entry. Nothing of either is itemised, the name is given no meaning in the entry, and the Full Changelog link closes it.
 
+### Notes link pinning
+
+The documentation links in the 2.0.0 CHANGELOG entry are pinned to the release tag, not to the default branch. Both are absolute URLs into the source repository at the tag the release creates, written into the prepared wording as `https://github.com/uHappyLogic/gurita/blob/2.0.0/README.md#installation` (or the per-host install heading) and `https://github.com/uHappyLogic/gurita/blob/2.0.0/docs/workflow.md` with the anchor of the section holding the upgrade paragraph (today `### One-time setup`), heading anchors kept, so the published entry keeps showing the install commands and the upgrade rule as 2.0.0 shipped them.
+
 ## Out of Scope
 
