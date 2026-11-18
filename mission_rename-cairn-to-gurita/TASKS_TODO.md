@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Rename the Tooling Project to Gurita Tooling
-
-Rename the tooling project from `cairn-tooling` to `gurita-tooling` in `pyproject.toml`, in `uv.lock`, and in `scripts/set_version.py`, whose `LOCK_PACKAGE_NAME` constant finds the lock block by that name, the project description and the script's docstring following. It is verified by the lock staying in step with `pyproject.toml`, the version script still writing its three mirrors, and both test runs.
-
----
-
 ## Rename the Release Skill to the New Names
 
 Rename the plugin and its repositories in `.claude/skills/release-plugin/SKILL.md` and change nothing else of the procedure: the description, the distribution repositories as `uHappyLogic/gurita-<host>` with the creation commands' description and the topic `gurita`, the Codex plugin directory as `hosts/codex/plugins/gurita/`, and `uHappyLogic/gurita` in the compare link, each distribution commit's `Source:` and `Notes:` lines, and the release commands. It is verified by a search finding no old name in the file and a diff that changes names only.

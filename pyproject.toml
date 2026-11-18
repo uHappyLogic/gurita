@@ -1,7 +1,7 @@
 [project]
-name = "cairn-tooling"
+name = "gurita-tooling"
 version = "1.9.0"
-description = "Development tooling for the cairn plugin (host build and version script)"
+description = "Development tooling for the Gurita plugin (host build and version script)"
 requires-python = ">=3.11"
 dependencies = [
     "pyyaml>=6.0.2",

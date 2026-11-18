@@ -11,8 +11,8 @@ Surfaces written:
   - VERSION                          the bare literal (source of truth)
   - .claude-plugin/marketplace.json  "version" on the single plugins[] entry (the monorepo's
                                      hand-held marketplace, mirrored)
-  - pyproject.toml                   version under [project] (cairn-tooling, mirrored)
-  - uv.lock                          version in the cairn-tooling [[package]] block (mirrored)
+  - pyproject.toml                   version under [project] (gurita-tooling, mirrored)
+  - uv.lock                          version in the gurita-tooling [[package]] block (mirrored)
 
 Deliberately not written:
   - anything under hosts/            every host manifest (plugin.json, and the dist
@@ -38,7 +38,7 @@ MARKETPLACE_MANIFEST = os.path.join(".claude-plugin", "marketplace.json")
 PYPROJECT = "pyproject.toml"
 UV_LOCK = "uv.lock"
 
-LOCK_PACKAGE_NAME = "cairn-tooling"
+LOCK_PACKAGE_NAME = "gurita-tooling"
 
 
 class SurfaceError(Exception):
