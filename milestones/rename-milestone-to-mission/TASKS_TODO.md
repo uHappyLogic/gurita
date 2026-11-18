@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Workflow Docs State the Upgrade Rule
-
-In the bootstrap paragraph of `docs/workflow.md`, where the sentence sending a pointer-era project to `/migrate-milestones` stood, state the upgrade itself: finish every live milestone with the copy of the plugin it was started under before upgrading, the pointer-era state (`milestones/README.md` and the numbered directories) is read by nothing, left in place, and removable by hand, and a bootstrap run replaces the old `## Milestone Workflow` section and moves an existing principle store to the root. No recipe for moving a directory by hand is given. Verified by reading the paragraph against the Upgrade guidance placement and Existing store at upgrade decisions.
-
----
-
 ## Context File Follows the Mission Rename
 
 Carry the rename through `CLAUDE.md`: the commands, repository layout, pipeline listing, file structure, invariants, and development notes in the new identifiers and word, the container wording recast to `<scope>/mission_<slug>/`, and its closing section replaced by the `## Mission Workflow` text `core/shared/workflow-guidance.md` states. The `milestone_01` to `milestone_54` directory names and the numbered milestones the invariants cite stay as written. Verified by a search of `CLAUDE.md` finding the old word only in those citations and by every path, tool, skill, and query it names existing in the tree.
