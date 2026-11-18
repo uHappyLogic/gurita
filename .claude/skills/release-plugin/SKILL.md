@@ -279,16 +279,45 @@ since the last release. Every host whose command printed anything is selected, s
 release would ship that host's integration differing from the one last released, so a change
 to a host-neutral path selects all three hosts and a change under one host's definition
 directory selects that host alone. When no command prints anything, the suite does not run
-and the check costs nothing. Otherwise run the suite once against each selected host, one
-host per run, in the order above, with `<host>` the `--host` value its command is listed
-under:
+and the check costs nothing. Otherwise run the suite once against each selected host, all
+the selected hosts at the same time, with `<host>` the `--host` value its command is listed
+under. The runs share nothing: each drives its own host's CLI against that host's own installed
+copy, and each pytest process seeds its fixture projects under a temporary directory of its
+own. A run takes minutes, its host's CLI driving real sessions, so running the hosts together
+makes the check as long as its slowest host rather than the sum of all of them.
+
+First make one directory for the run's logs, and call the path it prints `<LOG_DIR>`:
 
 ```bash
-uv run pytest host_tests --host <host>
+mktemp -d
 ```
 
+Then start every selected host in one shell command, one line per selected host and only
+those, each writing its pytest output to `<LOG_DIR>/<host>.log` and its exit status to
+`<LOG_DIR>/<host>.exit`, closed by one `wait` so the command ends only after every run has
+ended. Run it as a background command, because it can outlast a foreground call's limit, and
+wait for its completion notice rather than polling the logs:
+
+```bash
+( uv run pytest host_tests --host claude > <LOG_DIR>/claude.log 2>&1; echo $? > <LOG_DIR>/claude.exit ) &
+( uv run pytest host_tests --host antigravity > <LOG_DIR>/antigravity.log 2>&1; echo $? > <LOG_DIR>/antigravity.exit ) &
+( uv run pytest host_tests --host codex > <LOG_DIR>/codex.log 2>&1; echo $? > <LOG_DIR>/codex.exit ) &
+wait
+```
+
+The command's own exit status says nothing about the runs; read each selected host's
+`<LOG_DIR>/<host>.exit` and the tail of its log once it has ended:
+
+```bash
+for h in claude antigravity codex; do [ -f <LOG_DIR>/${h}.exit ] && echo "${h}: exit $(cat <LOG_DIR>/${h}.exit)" && tail -5 <LOG_DIR>/${h}.log; done
+```
+
+A selected host with no `.exit` file never finished its run, which fails the check the same
+way a non-zero exit does.
+
 The check passes when every selected host's run exits zero. A non-zero exit on any host stops
-the run there, without running the hosts after it: report the host and pytest's output — the
+the release once every run has ended, never cutting the other runs short: report every host
+that failed and its pytest output — the
 failing tests, or the one `host suite prerequisite missing:` line the suite prints before any
 test when that host's CLI is not on `PATH`, the CLI reports no installed copy, or the copy is
 missing or differs from that host's plugin directory in the committed built tree (a fresh
