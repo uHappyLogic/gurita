@@ -84,5 +84,9 @@ The banner shows exactly eight arms, every one of an octopus's arms, each curlin
 
 The banner image carries the alternative text "Octopus arms drawn in ASCII art", identical in all four READMEs: a short literal description naming only what is drawn and how, with no colours, no counts, and nothing of the project's name or tagline. The alt is never left empty, since GitHub wraps every README image in a link that would then have no name.
 
+### Host suite run
+
+The mission does not run the host suite and ends without one. The run is left to the next release's pre-flight, whose step g diffs each host's trigger set since the last tag and so selects all three hosts. The maintainer refreshes the installed copies then, as that step's remedy describes.
+
 ## Out of Scope
 
