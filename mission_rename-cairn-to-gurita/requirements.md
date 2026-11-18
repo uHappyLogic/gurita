@@ -90,7 +90,7 @@ Both files drop the plugin's name and keep the rest of their stem: `docs/ways-of
 
 ### Host suite timing
 
-The host suite is run as a task of this mission as well as in the release's pre-flight. One task, ordered after the last task that changes any host's trigger set (its definition directory under `scripts/hosts/`, `core/agents/*.md`, `scripts/build_hosts.py`, `host_tests/`) and before the release task, runs `uv run pytest host_tests --host claude`, then the same for `antigravity` and `codex`, against the renamed build. The release's pre-flight still runs the suite again, as its step 2g requires.
+The host suite is run as a task of this mission as well as in the release's pre-flight. One task, ordered after every task that changes any host's trigger set (its definition directory under `scripts/hosts/`, `core/agents/*.md`, `scripts/build_hosts.py`, `host_tests/`) except the hands-on check-block edit, and before the release task, runs `uv run pytest host_tests --host claude`, then the same for `antigravity` and `codex`, against the renamed build. The check-block edit is the one trigger-set change allowed after that run: the same task, or the next one, still before the release task, adds each `settings.toml` block's dated "Re-checked" sentence naming that run and rewrites its Install, Dispatch, and path bullets from it. The release's pre-flight still runs the suite again on all three hosts, as its step 2g requires, and that run is the one that follows the edit.
 
 ### Installed copies for suite
 
