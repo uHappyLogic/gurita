@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Rename the Release Skill to the New Names
-
-Rename the plugin and its repositories in `.claude/skills/release-plugin/SKILL.md` and change nothing else of the procedure: the description, the distribution repositories as `uHappyLogic/gurita-<host>` with the creation commands' description and the topic `gurita`, the Codex plugin directory as `hosts/codex/plugins/gurita/`, and `uHappyLogic/gurita` in the compare link, each distribution commit's `Source:` and `Notes:` lines, and the release commands. It is verified by a search finding no old name in the file and a diff that changes names only.
-
----
-
 ## Move the Two Plugin-Named Files
 
 Move `docs/ways-of-using-cairn.md` to `docs/ways-of-using.md` and `ideas/benchmark_for_cairn.md` to `ideas/benchmark.md` with `git mv`, their contents unchanged, and rewrite every in-tree reference to the new paths: the README's link, the CLAUDE.md layout line and its two invariant mentions, `docs/skill-reference.md`, `docs/workflow.md`, and the drafts `ideas/gurita.md`, `ideas/kepala.md`, and `ideas/vscode_extension.md`. It is verified by both moves showing as pure renames and by no tracked file outside the CHANGELOG's published entries and this mission's own directory naming either old path.

@@ -1,11 +1,11 @@
 ---
 name: release-plugin
-description: Cut a cairn plugin release for a given MAJOR.MINOR.PATCH version, running every pre-flight and version gate before anything is changed or published.
+description: Cut a Gurita plugin release for a given MAJOR.MINOR.PATCH version, running every pre-flight and version gate before anything is changed or published.
 ---
 
 # release-plugin
 
-Releases the cairn plugin at a maintainer-supplied `MAJOR.MINOR.PATCH` version. This
+Releases the Gurita plugin at a maintainer-supplied `MAJOR.MINOR.PATCH` version. This
 `SKILL.md` is the single place the release procedure is documented — no release prose lives
 in `CLAUDE.md` or `README.md`. It is a maintainer-only, project-local skill: it lives under
 `.claude/skills/`, outside `core/`, so no host build renders it into a `hosts/<host>/` tree
@@ -167,19 +167,19 @@ host definitions — one directory per host, in definition order:
 ls -1 scripts/hosts/
 ```
 
-Call each directory name `<host>`. Its distribution repository is `uHappyLogic/cairn-<host>`,
+Call each directory name `<host>`. Its distribution repository is `uHappyLogic/gurita-<host>`,
 derived from the definition directory name by that fixed convention and nothing else — no
 settings file names it. For every `<host>`, check that the repository exists:
 
 ```bash
-gh repo view uHappyLogic/cairn-<host> --json nameWithOwner
+gh repo view uHappyLogic/gurita-<host> --json nameWithOwner
 ```
 
 A zero exit means it exists; then check that it holds the `TRAFFIC_TOKEN` secret its
 `traffic-badges` workflow pushes with:
 
 ```bash
-gh secret list --repo uHappyLogic/cairn-<host>
+gh secret list --repo uHappyLogic/gurita-<host>
 ```
 
 The secret is present when a line of the output begins with the name `TRAFFIC_TOKEN`; any
@@ -195,10 +195,10 @@ For each missing repository, with `<host>` filled in, print exactly these two co
 this order:
 
 ```bash
-gh repo create uHappyLogic/cairn-<host> --public \
-  --description "Cairn brings all the important questions up to be decided upfront, so you can hand long-running execution to your agent confidently. For <host>, published from uHappyLogic/cairn. Report issues there."
-gh repo edit uHappyLogic/cairn-<host> \
-  --add-topic cairn --add-topic <host> --add-topic plugin \
+gh repo create uHappyLogic/gurita-<host> --public \
+  --description "Gurita brings all the important questions up to be decided upfront, so you can hand long-running execution to your agent confidently. For <host>, published from uHappyLogic/gurita. Report issues there."
+gh repo edit uHappyLogic/gurita-<host> \
+  --add-topic gurita --add-topic <host> --add-topic plugin \
   --enable-issues=false --enable-wiki=false --enable-projects=false
 ```
 
@@ -206,31 +206,31 @@ The `create` is public, carries a description, and is deliberately empty — no 
 `--add-readme`, or `--gitignore` — so the first publish into it becomes the repository's root
 commit rather than a child of an initial README; the `LICENSE` file the published tree
 carries is the license. The `edit` adds the topics and disables issues, wiki, and projects so
-feedback routes to `uHappyLogic/cairn`. Provisioning a public repository is a deliberate,
+feedback routes to `uHappyLogic/gurita`. Provisioning a public repository is a deliberate,
 irreversible act that belongs to the maintainer: this skill publishes into what already
 exists and stops on anything else, so it prints the commands and exits with nothing changed.
 
 When any repository is missing the token, print these instructions once, with `<VERSION>`
 filled in. List every repository missing the token on the first line, and repeat the
-`uHappyLogic/cairn-<host>` mentions of steps 1 and 5 once for each of them; repeat the
-`uHappyLogic/cairn-<host>` line of step 3 once for every `<host>` in the definition list,
+`uHappyLogic/gurita-<host>` mentions of steps 1 and 5 once for each of them; repeat the
+`uHappyLogic/gurita-<host>` line of step 3 once for every `<host>` in the definition list,
 since regenerating the token invalidates it in every repository, not only the new ones.
 
 ```text
-TRAFFIC_TOKEN is missing in: uHappyLogic/cairn-<host>
+TRAFFIC_TOKEN is missing in: uHappyLogic/gurita-<host>
 1. Extend the one fine-grained TRAFFIC_TOKEN to the new repository: edit the token at
-   https://github.com/settings/personal-access-tokens and add uHappyLogic/cairn-<host> to
+   https://github.com/settings/personal-access-tokens and add uHappyLogic/gurita-<host> to
    its repository access, keeping every repository it already covers.
 2. Regenerate the token, which invalidates the old value everywhere it is set.
 3. Re-set the secret with the new value in every repository the token covers, the
    monorepo and every distribution repository, pasting the value at each prompt and
    keeping no local copy:
-     gh secret set TRAFFIC_TOKEN --repo uHappyLogic/cairn
-     gh secret set TRAFFIC_TOKEN --repo uHappyLogic/cairn-<host>
+     gh secret set TRAFFIC_TOKEN --repo uHappyLogic/gurita
+     gh secret set TRAFFIC_TOKEN --repo uHappyLogic/gurita-<host>
 4. Re-run /release-plugin <VERSION>.
 After this release has published, for each repository listed above:
 5. Run its traffic-badges workflow once:
-     gh workflow run traffic-badges.yml --repo uHappyLogic/cairn-<host>
+     gh workflow run traffic-badges.yml --repo uHappyLogic/gurita-<host>
    and wait for that run to succeed, so its traffic-data branch holds both badges.
 6. Add the repository's row to the adoption table in the root README.md, in the shape of
    the existing rows, and commit it in its own commit, apart from the Release: commit.
@@ -292,7 +292,7 @@ the run there, without running the hosts after it: report the host and pytest's 
 failing tests, or the one `host suite prerequisite missing:` line the suite prints before any
 test when that host's CLI is not on `PATH`, the CLI reports no installed copy, or the copy is
 missing or differs from that host's plugin directory in the committed built tree (a fresh
-build, by step e) — `hosts/claude/`, `hosts/antigravity/`, or `hosts/codex/plugins/cairn/`.
+build, by step e) — `hosts/claude/`, `hosts/antigravity/`, or `hosts/codex/plugins/gurita/`.
 The remedy is the maintainer's, outside this skill — fix the integration, or bring the
 installed copy up to date by the host's documented install, as that line says — then re-run
 `/release-plugin <VERSION>`. The check keeps this step's no-write rule: the suite writes
@@ -505,7 +505,7 @@ already carry, and matching it keeps the release series consistent.
 **f. Close with the compare link.** The last line of `<RELEASE_BODY>` is always:
 
 ```markdown
-**Full Changelog**: https://github.com/uHappyLogic/cairn/compare/<LAST_TAG>...<VERSION>
+**Full Changelog**: https://github.com/uHappyLogic/gurita/compare/<LAST_TAG>...<VERSION>
 ```
 
 `<LAST_TAG>` is used literally, whatever its format; `<VERSION>` is the tag this run creates.
@@ -812,13 +812,13 @@ exist even on a resumption that skips (c), and it is deleted only once step 8 is
 Then check by exact tag name:
 
 ```bash
-gh release view <VERSION> --repo uHappyLogic/cairn --json tagName,isDraft
+gh release view <VERSION> --repo uHappyLogic/gurita --json tagName,isDraft
 ```
 
 - **Non-zero exit** (`release not found`) → not published. Create the release from the file:
 
   ```bash
-  gh release create <VERSION> --repo uHappyLogic/cairn \
+  gh release create <VERSION> --repo uHappyLogic/gurita \
     --title <VERSION> --verify-tag --notes-file <BODY_FILE>
   ```
 
@@ -837,8 +837,8 @@ skipped or done. List the host definitions in definition order, as step 2f did:
 ls -1 scripts/hosts/
 ```
 
-For each `<host>` in that order, the distribution repository is `uHappyLogic/cairn-<host>` and
-its remote is `git@github.com:uHappyLogic/cairn-<host>.git` — the same SSH scheme as `origin`
+For each `<host>` in that order, the distribution repository is `uHappyLogic/gurita-<host>` and
+its remote is `git@github.com:uHappyLogic/gurita-<host>.git` — the same SSH scheme as `origin`
 — both derived from the directory name by that fixed convention and nothing else. Call that
 URL `<REMOTE>`; every git command below names it directly, so no remote is added to the
 monorepo's configuration. Each host is two check-then-do sub-steps in turn, its tag and then
@@ -886,7 +886,7 @@ git ls-remote --tags <REMOTE> "refs/tags/<VERSION>"
   provenance body:
 
   ```bash
-  printf 'Release: <VERSION>\n\nSource: uHappyLogic/cairn@<SHA>\nPath: hosts/<host>/\nNotes: https://github.com/uHappyLogic/cairn/releases/tag/<VERSION>\n' \
+  printf 'Release: <VERSION>\n\nSource: uHappyLogic/gurita@<SHA>\nPath: hosts/<host>/\nNotes: https://github.com/uHappyLogic/gurita/releases/tag/<VERSION>\n' \
     | git commit-tree <TREE> -p FETCH_HEAD -F -
   ```
 
@@ -901,9 +901,9 @@ git ls-remote --tags <REMOTE> "refs/tags/<VERSION>"
   monorepo release URL derived from `<VERSION>`:
 
   ```
-  Source: uHappyLogic/cairn@<SHA>
+  Source: uHappyLogic/gurita@<SHA>
   Path: hosts/<host>/
-  Notes: https://github.com/uHappyLogic/cairn/releases/tag/<VERSION>
+  Notes: https://github.com/uHappyLogic/gurita/releases/tag/<VERSION>
   ```
 
   It never carries the release notes; those live in the monorepo's `CHANGELOG.md` entry and
@@ -943,7 +943,7 @@ git ls-remote --tags <REMOTE> "refs/tags/<VERSION>"
 **ii. The distribution GitHub release.** Check by exact tag name on this host's repository:
 
 ```bash
-gh release view <VERSION> --repo uHappyLogic/cairn-<host> --json tagName,isDraft
+gh release view <VERSION> --repo uHappyLogic/gurita-<host> --json tagName,isDraft
 ```
 
 - **Non-zero exit** (`release not found`) → not published. Create it from the same
@@ -951,13 +951,13 @@ gh release view <VERSION> --repo uHappyLogic/cairn-<host> --json tagName,isDraft
   and the release pages carry identical notes by construction:
 
   ```bash
-  gh release create <VERSION> --repo uHappyLogic/cairn-<host> \
+  gh release create <VERSION> --repo uHappyLogic/gurita-<host> \
     --title <VERSION> --verify-tag --notes-file <BODY_FILE>
   ```
 
   `--verify-tag` aborts if (i) did not land the tag; neither `--draft` nor `--prerelease`,
   as in (c). The notes are composed for the monorepo — their compare link points at
-  `uHappyLogic/cairn` — and that is accepted; never edit them per host.
+  `uHappyLogic/gurita` — and that is accepted; never edit them per host.
 
 - **JSON with `"tagName": "<VERSION>"` and `"isDraft": false`** → already published. Skip.
 - **Any other existing release** — a draft, or one whose `tagName` differs → **stop and
@@ -967,6 +967,6 @@ With (a) through (d) each skipped or done, the release is live everywhere. Delet
 `<BODY_FILE>`, then report the release URLs — the monorepo's and one per host — and stop:
 
 ```bash
-gh release view <VERSION> --repo uHappyLogic/cairn --json url --jq .url
-gh release view <VERSION> --repo uHappyLogic/cairn-<host> --json url --jq .url
+gh release view <VERSION> --repo uHappyLogic/gurita --json url --jq .url
+gh release view <VERSION> --repo uHappyLogic/gurita-<host> --json url --jq .url
 ```
