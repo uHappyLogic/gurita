@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Rename the Root README and Rewrite Its Opening
-
-Rename the plugin throughout the root README (title, pitch, "Why" section, release and CI badges, install commands, invocation forms, and links) and rewrite its opening as decided: a new bold tagline in the old one's place, drawn from the arms that each carry a mission out on their own once its questions are decided; the bare gloss "(Indonesian for octopus)" inside the pitch; and one sentence near the title and pitch saying that Gurita was published as Cairn up to 1.9.0 and that the old names no longer work, linking to where the upgrade steps are documented. The adoption table carries four rows, `uHappyLogic/gurita` and the three `uHappyLogic/gurita-<host>` repositories, every badge URL under the new names with nothing deferred. It is verified by a search whose only old-name hits left in the README are that sentence and the Antigravity project-level note the upgrade task folds away, and by every in-tree link resolving.
-
----
-
 ## Document the Upgrade From Cairn
 
 Add a short "Upgrading from Cairn" note beside the fresh-install commands of each host subsection in the root README's install sections, with that host's removal commands: Claude Code uninstalls `cairn@cairn` at every scope it was installed at and then removes the `cairn` marketplace; Codex removes the `cairn@cairn` plugin and the `cairn` marketplace; Antigravity deletes `~/.gemini/config/plugins/cairn` and restarts any running `agy` session, the existing project-level `.agents/plugins/cairn` note folded into it so the note removes both old copies. Have the upgrade paragraph of `docs/workflow.md` state the order once, with no commands: finish every live milestone under the old copy, then remove it, then install Gurita and re-run the bootstrap. It is verified by each host subsection carrying its note, the commands checked against each host CLI's help text only and never run, since the frozen cairn copy must stay installed.
