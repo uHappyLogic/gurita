@@ -9,7 +9,10 @@ core/'s top-level directories, renames, exclude, and the [slots] table) beside t
 slots/ subdirectory of slot value files; every file in the directory other than
 settings.toml and the files under slots/ is a template rendered to the same relative path
 in the host tree with its {{VERSION}} slot filled from the root VERSION file and its
-{{NAME}} slot from plugin_name. The build discovers hosts by scanning that directory and
+{{NAME}} slot from plugin_name. Beside the rendered files every host tree carries two
+files copied byte for byte at its root: the root LICENSE as LICENSE, and the README banner
+assets/banner.svg as banner.svg, beside the README, so each host README can load the banner
+from its own repository by a relative path. The build discovers hosts by scanning that directory and
 applies the settings uniformly, so no host-specific code exists here and a definition is
 validated before any build runs.
 
@@ -95,8 +98,8 @@ listing the differing paths. It is the drift gate the release pre-flight runs.
 
 Exit status: 0 on success, 1 when a check or the comparison fails, 2 when the build cannot
 run at all (bad argument, unusable definition, missing input). This script reads core/,
-scripts/hosts/, VERSION, LICENSE, and the root marketplace, writes only under hosts/, and
-never invokes git or gh.
+scripts/hosts/, VERSION, LICENSE, assets/banner.svg, and the root marketplace, writes only
+under hosts/, and never invokes git or gh.
 """
 
 import argparse
@@ -118,6 +121,9 @@ DEFINITIONS_DIR = REPO_ROOT / "scripts" / "hosts"
 HOSTS_DIR = REPO_ROOT / "hosts"
 VERSION_FILE = REPO_ROOT / "VERSION"
 LICENSE_FILE = REPO_ROOT / "LICENSE"
+# The one README banner, copied byte for byte to BANNER_TREE_PATH at every host tree's root.
+BANNER_FILE = REPO_ROOT / "assets" / "banner.svg"
+BANNER_TREE_PATH = "banner.svg"
 ROOT_MARKETPLACE = REPO_ROOT / ".claude-plugin" / "marketplace.json"
 
 SETTINGS_FILE = "settings.toml"
@@ -476,6 +482,8 @@ def describe_origin(origin):
         return f"core/{rel}"
     if kind == "template":
         return f"the template {rel}"
+    if kind == "banner":
+        return f"the banner {rel}"
     return "the root LICENSE"
 
 
@@ -523,6 +531,7 @@ def render_host(defn, version, dest):
         add(tpl_rel, data, ("template", tpl_rel))
 
     add("LICENSE", LICENSE_FILE.read_bytes(), ("license", "LICENSE"))
+    add(BANNER_TREE_PATH, BANNER_FILE.read_bytes(), ("banner", "assets/banner.svg"))
 
     for out_rel, (data, _origin) in files.items():
         path = dest / out_rel
@@ -814,6 +823,8 @@ def main(argv):
         version = read_version()
         if not LICENSE_FILE.is_file():
             raise BuildError("LICENSE not found at the repository root")
+        if not BANNER_FILE.is_file():
+            raise BuildError("the banner assets/banner.svg not found")
         core_dirs = core_top_level_dirs()
         definitions = discover_definitions(core_dirs)
         selected = select_definitions(definitions, args.hosts)

@@ -1,8 +1,9 @@
 """The host build's rendering, run in-process against a synthetic core/ and one synthetic host
 definition: inline and file-backed slot values both land in the rendered tree, a file-backed
 value in the build's substitution order (slots filled first, then {{PLUGIN_ROOT}}, then the
-prose drop patterns, then frontmatter-key stripping), and the three refusals the loader
-raises for a bad file-backed [slots] entry. The build imports tomllib and PyYAML, so the
+prose drop patterns, then frontmatter-key stripping), the banner under assets/ copied byte
+for byte to the tree root beside the README, its collision with a template at that path
+refused, and the three refusals the loader raises for a bad file-backed [slots] entry. The build imports tomllib and PyYAML, so the
 module is skipped below Python 3.11: the floor run reports it skipped, the pinned run never
 does. main's orchestration and the check set are not exercised here."""
 
@@ -59,6 +60,13 @@ Inline: {{INLINE_NOTE}}
 GUIDE = "Guide kept under {{PLUGIN_ROOT}}.\n"
 README_TEMPLATE = "# {{NAME}} {{VERSION}}\n\nInstall under ${DEMO_ROOT}.\n"
 LICENSE_TEXT = "Synthetic license text.\n"
+# The synthetic banner holds the slot and plugin-root forms the templates have filled and
+# CRLF line endings, so a copy that rendered or normalized it would differ byte for byte.
+BANNER_BYTES = (
+    b'<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10">\r\n'
+    b"<text>{{VERSION}} {{NAME}} ${DEMO_ROOT}</text>\r\n"
+    b"</svg>\r\n"
+)
 
 
 @pytest.fixture
@@ -77,12 +85,14 @@ def write(path, text):
 
 @pytest.fixture
 def fixture_repo(tmp_path, build, monkeypatch):
-    """A synthetic core/, LICENSE, and one host definition under tmp_path, with the build's
-    module-level path constants pointed at them."""
+    """A synthetic core/, LICENSE, banner, and one host definition under tmp_path, with the
+    build's module-level path constants pointed at them."""
     core = tmp_path / "core"
     write(core / "skills" / "demo" / "SKILL.md", SKILL)
     write(core / "shared" / "guide.md", GUIDE)
     write(tmp_path / "LICENSE", LICENSE_TEXT)
+    (tmp_path / "assets").mkdir()
+    (tmp_path / "assets" / "banner.svg").write_bytes(BANNER_BYTES)
     definitions = tmp_path / "definitions"
     definition = definitions / HOST
     write(definition / "settings.toml", SETTINGS)
@@ -90,6 +100,7 @@ def fixture_repo(tmp_path, build, monkeypatch):
     write(definition / "README.md", README_TEMPLATE)
     monkeypatch.setattr(build, "CORE_DIR", core)
     monkeypatch.setattr(build, "LICENSE_FILE", tmp_path / "LICENSE")
+    monkeypatch.setattr(build, "BANNER_FILE", tmp_path / "assets" / "banner.svg")
     monkeypatch.setattr(build, "DEFINITIONS_DIR", definitions)
     return tmp_path
 
@@ -120,10 +131,32 @@ def test_render_fills_inline_and_file_backed_slots(build, fixture_repo):
         "README.md": "# demo-plugin 9.8.7\n\nInstall under ${DEMO_ROOT}.\n",
         "LICENSE": LICENSE_TEXT,
     }
-    assert set(origins) == set(expected)
-    assert build.walk_files(dest) == sorted(expected)
+    assert set(origins) == set(expected) | {"banner.svg"}
+    assert build.walk_files(dest) == sorted(set(expected) | {"banner.svg"})
     for rel, text in expected.items():
         assert (dest / rel).read_bytes().decode("utf-8") == text, rel
+
+
+def test_render_copies_banner_byte_for_byte_beside_readme(build, fixture_repo):
+    defn = build.load_definition(build.DEFINITIONS_DIR / HOST, build.core_top_level_dirs())
+    dest = fixture_repo / "rendered"
+    origins = build.render_host(defn, VERSION, dest)
+
+    assert build.BANNER_TREE_PATH == "banner.svg"
+    assert origins["banner.svg"] == ("banner", "assets/banner.svg")
+    assert (dest / "banner.svg").parent == (dest / "README.md").parent
+    assert (dest / "banner.svg").read_bytes() == BANNER_BYTES
+
+
+def test_render_refuses_template_at_banner_path(build, fixture_repo):
+    write(build.DEFINITIONS_DIR / HOST / "banner.svg", "<svg/>\n")
+    defn = build.load_definition(build.DEFINITIONS_DIR / HOST, build.core_top_level_dirs())
+    with pytest.raises(build.BuildError) as excinfo:
+        build.render_host(defn, VERSION, fixture_repo / "rendered")
+    message = str(excinfo.value)
+    assert "the template banner.svg" in message
+    assert "the banner assets/banner.svg" in message
+    assert "hosts/demo/banner.svg" in message
 
 
 def write_definition(tmp_path, slot_entry, files=()):
