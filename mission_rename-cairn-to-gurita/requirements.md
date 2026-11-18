@@ -120,5 +120,9 @@ Each host gets a re-check of the name-dependent points only: install under the n
 
 The maintainer makes every GitHub-side change by hand, outside the task list, at any time before the release: renaming the source repository, the distribution-repository transition, descriptions and topics, the local `origin` URL, and any extension, regeneration, and re-setting of `TRAFFIC_TOKEN`. No task of this mission records or checks the changes. The release pre-flight's existing check, with only its repository names changed to the new form, is the one gate, and it prints commands for a missing repository without running them, as it does now.
 
+### Finish after release
+
+The release procedure's keep rule is left as it stands and its same-day branch is satisfied. The released entry carries a section headed exactly `### Rename Cairn to Gurita`, the mission's `# ` title as it stands in `requirements.md` when finish reads it, and the mission is finished on the same day as the Release commit's author date, by running `finish-mission` directly after the release task's completion. The next release's run then counts that heading in CHANGELOG.md, finds one, and drops the finished line.
+
 ## Out of Scope
 
