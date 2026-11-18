@@ -100,5 +100,9 @@ No task of this mission installs anything. The maintainer brings each host's ins
 
 A copy of the plugin frozen under the name cairn runs every task of this mission and its finish. Before the first rename task, the cairn directory marketplace is pointed at the `hosts/claude` of a separate checkout or worktree held at the commit just before that task; the worktree at `/Users/lucask/workspace/cairn-old-word`, still standing at `04ebaec` from the previous rename, can be moved forward for this. The working tree's `hosts/` is rebuilt with every change as usual, so every commit passes `--check`, and nothing loads from it during the mission. After the finish, the marketplace is re-added from the working tree's `hosts/claude` under the name gurita and the stale copy is dropped.
 
+### Release run actor
+
+The release stays a task of this mission, entered and completed by the maintainer. The list `derive-tasks` writes ends at the last pre-release task, so `complete-all-tasks` can work it unattended to empty. Once it has, the maintainer enters the release as one task with `/submit-task` and completes it inline with `/complete-task`, present to give both of `/release-plugin`'s confirmations, the task's `Task-completion:` commit landing after the release commit and tag.
+
 ## Out of Scope
 
