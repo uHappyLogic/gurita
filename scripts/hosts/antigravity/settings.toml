@@ -21,18 +21,33 @@
 # built tree: a session following a skill read the shared procedures at the expanded absolute
 # path of that install and ran the task-list tool there through run_command, and both agents,
 # dispatched by bare name through invoke_subagent, landed the files only their write and shell
-# tools produce; that run no longer checks the tilde refusal.
-# - Install: `agy plugin list` reports the plugin enabled at that global path, source
-#   antigravity, with its 22 skills and 2 agents, and a session loads its skills from there.
-#   The rendered tilde path reaches the files two ways: run_command's shell expands it, so a
+# tools produce; that run no longer checks the tilde refusal. Re-checked 2026-11-18 against
+# `agy` 1.5.6 by the host suite after the plugin's rename, run as
+# `uv run pytest host_tests --host antigravity` against the global install at
+# ~/.gemini/config/plugins/gurita, the plugin_root path below, copied from the built tree and
+# labelled 1.9.0, with the cairn copy still installed and enabled beside it, its four tests
+# passing once the suite's reading of run_command output took the result's new opening
+# lines: sessions prompted with `/gurita:submit-task` and `/gurita:derive-tasks` ran those
+# skills, the first reading a shared procedure at the expanded absolute path of the gurita
+# install and running the task-list tool there through run_command, and both agents,
+# dispatched by bare name through invoke_subagent, landed the files only their write and
+# shell tools produce, no file of the cairn copy being read during the run. It rewrote the
+# Install and Dispatch bullets below from that run; the other points stand as their dated
+# sentences give them.
+# - Install (re-checked 2026-11-18): `agy plugin list --json` reports gurita enabled at that
+#   global path, version 1.9.0, with its 21 skills and 2 agents and no source field, and a
+#   session loads its skills from there; a run following a skill read the shared procedures
+#   at the install's expanded absolute path and ran the task-list tool under that install
+#   through run_command, whose result now opens with `Created At:` and `Completed At:` lines
+#   ahead of the exit-code line and the `Command output:` line over the printed output.
+#   Carried forward from 2026-10-26 and 2026-10-18, under the path then installed: the
+#   rendered tilde path reaches the files two ways, run_command's shell expanding it, so a
 #   `python3 ~/.gemini/config/plugins/cairn/tools/<tool>.py` command runs as written, while
 #   the session's file-reading tool refuses the tilde form as not absolute ("must be an
-#   absolute path"), and a run following a skill expanded it itself and read the shared
-#   procedures at the absolute path. On 1.4.7 that tool is read_file (its path in Path),
-#   where 1.4.1 gave the session view_file (AbsolutePath); a dispatched agent granted
-#   view_file by its tools list still reads with view_file. run_command's result now wraps
-#   the printed output under an exit-code line and a `Command output:` line.
-#   A workspace's own .agents/plugins/ root is loaded beside the global install at session
+#   absolute path"), and a run following a skill expanded it itself. On 1.4.7 that tool is
+#   read_file (its path in Path), where 1.4.1 gave the session view_file (AbsolutePath); a
+#   dispatched agent granted view_file by its tools list still reads with view_file. A
+#   workspace's own .agents/plugins/ root is loaded beside the global install at session
 #   start, its agents dispatchable by bare name, though `agy plugin list` does not show it.
 # - Write tools, both agents: an agent file's frontmatter grants its subagent the tools its
 #   tools list names and nothing for an enable_write_tools key. On a throwaway agent pair,
@@ -43,11 +58,15 @@
 #   (the alternatives agent's scratch file; the completion agent's task move with its paths
 #   staged). That list is what define_subagent writes for enable_write_tools, as a tools list
 #   of the same twelve names, into the conversation's own agents directory, not the install.
-# - Dispatch: the plugin's agents load from its agents/ directory with no other file, under
-#   their bare frontmatter names (a plugin-namespaced `<plugin>:<agent>` name is refused as
-#   not found), and a dispatched agent carries its file's instructions without reading the
-#   file. invoke_subagent takes a Subagents array of TypeName, Role, and Prompt entries; two
-#   entries in one call started and ran concurrently here (twelve did on 2026-10-13), and the
+# - Dispatch (re-checked 2026-11-18): the plugin's agents load from its agents/ directory with
+#   no other file, under their bare frontmatter names, complete-task and
+#   provide-alternatives-to-open-question, the names the enabled cairn copy's agents also
+#   carry; invoke_subagent takes a Subagents array of TypeName, Role, and Prompt entries, and
+#   one entry naming the bare agent with its three-line prompt dispatched it, its files landing
+#   with no file of the cairn copy read, so the agent that ran was the gurita copy's. Carried
+#   forward from 2026-10-18: a plugin-namespaced `<plugin>:<agent>` name is refused as not
+#   found, a dispatched agent carries its file's instructions without reading the file, two
+#   entries in one call started and ran concurrently (twelve did on 2026-10-13), and the
 #   call's result carries each conversation id.
 # - Waiting: invoke_subagent has no blocking form; it returns at once (within two seconds,
 #   before any agent had ended), and each agent's final message reaches the parent as a

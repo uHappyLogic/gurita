@@ -570,17 +570,33 @@ ANTIGRAVITY_WRITE_TOOLS = {
 }
 
 
+# A line the host may open run_command's wrapper with ahead of its exit-code line, a label and
+# its value (`Created At: <time>`, `Completed At: <time>`).
+ANTIGRAVITY_WRAPPER_FIELD = re.compile(r"[A-Z][A-Za-z ]*: ")
+ANTIGRAVITY_EXIT_STATUS = "Command exited with code "
+
+
 def _antigravity_command_output(update):
     """A completed run_command step's printed output. The host wraps it as an exit-code line,
+    behind any label-and-value lines it opens the wrapper with (ANTIGRAVITY_WRAPPER_FIELD),
     then a `Command output:` line over what the command printed (that line and what follows
     absent when it printed nothing); a wrapper reporting a non-zero exit yields None, and an
-    unwrapped output is returned as it stands."""
+    unwrapped output, one whose opening label-and-value lines no exit-code line follows, is
+    returned as it stands."""
     output = (update.get("tool_info", {}).get("output") or "").replace("\r\n", "\n")
-    if not output.startswith("Command exited with code "):
+    lines = output.split("\n")
+    index = 0
+    while (
+        index < len(lines)
+        and not lines[index].startswith(ANTIGRAVITY_EXIT_STATUS)
+        and ANTIGRAVITY_WRAPPER_FIELD.match(lines[index])
+    ):
+        index += 1
+    if index == len(lines) or not lines[index].startswith(ANTIGRAVITY_EXIT_STATUS):
         return output.strip()
-    status, _, rest = output.partition("\n")
-    if status.strip() != "Command exited with code 0.":
+    if lines[index].strip() != f"{ANTIGRAVITY_EXIT_STATUS}0.":
         return None
+    rest = "\n".join(lines[index + 1 :])
     _, marker, printed = rest.partition("Command output:")
     return printed.strip() if marker else ""
 

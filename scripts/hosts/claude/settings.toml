@@ -23,13 +23,28 @@
 # dispatched through the Agent tool by their cairn:-namespaced names with the three-line prompt
 # alone, landed the files only their write and shell tools produce, their dispatching session
 # writing no file and running no command of its own; the other points stand as checked on
-# 2026-10-18 and carried forward from 2026-10-13.
-# - Install: `claude plugin list` reports the plugin enabled at user scope, read from this
-#   checkout's hosts/claude through its directory marketplace. A run in a throwaway git
-#   project, started as `claude -p "/cairn:answer-all-open-questions-with-recommendation"
-#   --dangerously-skip-permissions --model "fable" --effort high`, loaded the skill from there,
-#   its text arriving with every ${CLAUDE_PLUGIN_ROOT} already resolved to that directory's
-#   absolute path, and the Bash tool ran every call in zsh.
+# 2026-10-18 and carried forward from 2026-10-13. Re-checked 2026-11-18 against `claude`
+# 2.1.327 by the host suite after the plugin's rename, run as
+# `uv run pytest host_tests --host claude` against the user-scope gurita@gurita install from
+# the directory marketplace on this checkout's hosts/claude, labelled 1.9.0, its four tests
+# passing: sessions prompted with `/gurita:submit-task` and `/gurita:derive-tasks` ran those
+# skills, the first reading a shared procedure under the absolute path ${CLAUDE_PLUGIN_ROOT}
+# resolved to and running the task-list tool there with no agent dispatched, and both agents,
+# dispatched through the Agent tool by their gurita:-namespaced names with the three-line
+# prompt alone, landed the files only their write and shell tools produce, their dispatching
+# session writing no file and running no command of its own. It rewrote the Install and
+# Dispatch bullets below from that run; the other points stand as checked on 2026-10-18 and
+# carried forward from 2026-10-13.
+# - Install (re-checked 2026-11-18): `claude plugin list --json` reports gurita@gurita enabled
+#   at user scope with no projectPath, read from this checkout's hosts/claude, its
+#   readFromFolder, through the directory marketplace named gurita. Runs in throwaway git
+#   projects seeded from the suite's fixture, each started as `claude -p "<prompt>"
+#   --dangerously-skip-permissions --output-format stream-json --verbose` at the account's
+#   default model and effort, two of them on `/gurita:submit-task` and `/gurita:derive-tasks`,
+#   loaded the plugin from there and read and ran its files under that directory's absolute
+#   path. Carried forward from 2026-10-18: the skill's text arrives with every
+#   ${CLAUDE_PLUGIN_ROOT} already resolved to that absolute path, and the Bash tool runs every
+#   call in zsh.
 # - Compact view and requirements read: the mission the run resolved held two
 #   recommendation-bearing blocks, a third whose <depends-on> assumed an option of the first
 #   other than its pick, and one recommendation-less block. The runner sent step 1's call,
@@ -60,10 +75,14 @@
 # - Turns: the clean run took seven, one lost to the runner's own read of the two shared
 #   procedures the steps name joined by an `echo ======` separator, which zsh refused as an
 #   =cmd expansion; the dirty-start run took five.
-# - Dispatch (carried forward from 2026-10-13): the Agent tool takes subagent_type; the
-#   plugin's agents are registered under their cairn:-namespaced names with their
-#   instructions; several dispatches sent in one message run concurrently, and each call's
-#   result carries the agent id.
+# - Dispatch (re-checked 2026-11-18): the Agent tool takes subagent_type, and the plugin's
+#   agents are registered under their gurita:-namespaced names, gurita:complete-task and
+#   gurita:provide-alternatives-to-open-question, with their instructions: each, dispatched
+#   once by that name with its three-line prompt, landed its files (the alternatives agent its
+#   scratch file; the completion agent its deliverable, its task's removal, and its body and
+#   path files), leaving nothing staged or committed. Carried forward from 2026-10-13: several
+#   dispatches sent in one message run concurrently, and each call's result carries the agent
+#   id.
 # - Waiting (carried forward from 2026-10-13): a dispatch runs in the background by default,
 #   its call returning at once and the agent's ending waking the session with its final
 #   message. A foreground (blocking) form, run_in_background set to false, exists only with
