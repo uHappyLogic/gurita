@@ -96,5 +96,9 @@ The host suite is run as a task of this mission as well as in the release's pre-
 
 No task of this mission installs anything. The maintainer brings each host's installed copy to the renamed build by hand, with the host's documented install as CONTRIBUTING.md states it once renamed, and decides alone whether the 1.9.0 cairn copies are removed. The mission carries no install step and no checkpoint for it: a suite run made before the copies are installed stops on its own prerequisite line, whose remedy names the host's install, and waits there for the maintainer.
 
+### Plugin copy running mission
+
+A copy of the plugin frozen under the name cairn runs every task of this mission and its finish. Before the first rename task, the cairn directory marketplace is pointed at the `hosts/claude` of a separate checkout or worktree held at the commit just before that task; the worktree at `/Users/lucask/workspace/cairn-old-word`, still standing at `04ebaec` from the previous rename, can be moved forward for this. The working tree's `hosts/` is rebuilt with every change as usual, so every commit passes `--check`, and nothing loads from it during the mission. After the finish, the marketplace is re-added from the working tree's `hosts/claude` under the name gurita and the stale copy is dropped.
+
 ## Out of Scope
 
