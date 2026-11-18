@@ -43,10 +43,10 @@ of step 9.
 
 Before reading anything for triage, check whether other milestones' work has landed in the
 scope since this milestone's starting state was recorded. Run, from the workspace root, the
-plugin's milestones tool:
+plugin's missions tool:
 
 ```
-python3 ${PLUGIN_ROOT}/tools/milestones.py since <MILESTONE_DIR> --milestones
+python3 ${PLUGIN_ROOT}/tools/missions.py since <MILESTONE_DIR> --missions
 ```
 
 Its first line, when it prints one, is the anchor, the commit that last recorded this
@@ -104,10 +104,10 @@ run, inserting and committing nothing further: report the fixed line
 In parallel, as independent tool calls:
 - Read `<MILESTONE_DIR>/requirements.md` — to confirm the issue fits the milestone's scope.
 - Read `<MILESTONE_DIR>/TASKS_TODO.md` — existing pending tasks, for duplicate-detection and positioning.
-- Run the plugin's milestones tool — completed work, to catch issues already addressed:
+- Run the plugin's missions tool — completed work, to catch issues already addressed:
 
   ```
-  python3 ${PLUGIN_ROOT}/tools/milestones.py tasks <MILESTONE_DIR> --with-body
+  python3 ${PLUGIN_ROOT}/tools/missions.py tasks <MILESTONE_DIR> --with-body
   ```
 
   It prints, newest first, one tab-separated line per task completed in the milestone (the

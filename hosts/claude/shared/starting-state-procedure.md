@@ -25,7 +25,7 @@ The milestone's **scope** is the directory holding its `milestones/` container: 
 `<scope>/milestones/<slug>/`, the workspace root for `milestones/<slug>/`.
 
 Every milestones-tool call below runs from the workspace root as the full fixed command
-`python3 ${CLAUDE_PLUGIN_ROOT}/tools/milestones.py <query> …`, written out in full on every call and
+`python3 ${CLAUDE_PLUGIN_ROOT}/tools/missions.py <query> …`, written out in full on every call and
 never through a variable, alias, or function of your own defined to stand for the command or any
 part of it. Make every one of them before step 5's edit.
 
@@ -42,7 +42,7 @@ clearing, and anything your runner would do next. Report the fixed line
 Run:
 
 ```
-python3 ${CLAUDE_PLUGIN_ROOT}/tools/milestones.py since <MILESTONE_DIR>
+python3 ${CLAUDE_PLUGIN_ROOT}/tools/missions.py since <MILESTONE_DIR>
 ```
 
 Its first line, when it prints one, is the anchor: the commit that last recorded this
@@ -99,12 +99,12 @@ where they are relevant.
 Read the record of finished and live work in two tiers. First the overview of the scope:
 
 ```
-python3 ${CLAUDE_PLUGIN_ROOT}/tools/milestones.py milestones --milestone <MILESTONE_DIR>
+python3 ${CLAUDE_PLUGIN_ROOT}/tools/missions.py missions --mission <MILESTONE_DIR>
 ```
 
 Then, for each finished milestone whose overview line bears on the goal, a deeper read: its
-finish summary through `python3 ${CLAUDE_PLUGIN_ROOT}/tools/milestones.py summary <path>`, or its
-recorded decisions through `python3 ${CLAUDE_PLUGIN_ROOT}/tools/milestones.py show <path>`, `<path>`
+finish summary through `python3 ${CLAUDE_PLUGIN_ROOT}/tools/missions.py summary <path>`, or its
+recorded decisions through `python3 ${CLAUDE_PLUGIN_ROOT}/tools/missions.py show <path>`, `<path>`
 the milestone path exactly as the overview printed it. Read no verified bar: make no
 `tasks --with-body` call. Past tasks reach the starting state only as the titles the overview and
 the summaries already carry.
@@ -112,7 +112,7 @@ the summaries already carry.
 Then what is in flight, the other live milestones whose scope overlaps this one's:
 
 ```
-python3 ${CLAUDE_PLUGIN_ROOT}/tools/milestones.py live <MILESTONE_DIR>
+python3 ${CLAUDE_PLUGIN_ROOT}/tools/missions.py live <MILESTONE_DIR>
 ```
 
 For each line it prints, note the milestone by path, whether it is `started`, and its goal in a

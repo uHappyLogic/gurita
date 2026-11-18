@@ -24,10 +24,10 @@ Facilitates a structured conversation to sharpen a vague or incomplete milestone
 
 ### 1. Read project context
 
-In the same turn, as two independent tool calls, read `CLAUDE.md` for the project's domain context and overview, and run, from the workspace root, the plugin's milestones tool for the project's whole record — what past milestones built and which milestones are live:
+In the same turn, as two independent tool calls, read `CLAUDE.md` for the project's domain context and overview, and run, from the workspace root, the plugin's missions tool for the project's whole record — what past milestones built and which milestones are live:
 
 ```
-python3 ${CLAUDE_PLUGIN_ROOT}/tools/milestones.py record .
+python3 ${CLAUDE_PLUGIN_ROOT}/tools/missions.py record .
 ```
 
 It prints one tab-separated line per milestone at column 0 (`live` or `finished`, the finish date or `-` for a live one, the milestone's path, and its title; the live ones first, then the finished ones newest first), with that milestone's summary bullets, or a live one's goal, and its completed tasks indented beneath it, and prints nothing when the project has no milestone yet, which is no failure. Run it once on every invocation, before the conversation opens, whatever the goal names. If the call fails, tell the user in prose that the record read failed, quoting its one `Error: <reason>` line from stderr verbatim, and carry on from the context file, printing no fixed line. Together the two reads ground all questions in the real project state.

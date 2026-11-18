@@ -50,10 +50,10 @@ In parallel, as independent tool calls, to ground the discussion in the real pro
 
 - Read `<MILESTONE_DIR>/requirements.md` — the goal, constraints, and decisions the issue must fit within.
 - Read `<MILESTONE_DIR>/TASKS_TODO.md` — pending tasks, to spot overlap and dependencies.
-- Run the plugin's milestones tool — completed work, to catch issues already addressed:
+- Run the plugin's missions tool — completed work, to catch issues already addressed:
 
   ```
-  python3 ${CLAUDE_PLUGIN_ROOT}/tools/milestones.py tasks <MILESTONE_DIR> --with-body
+  python3 ${CLAUDE_PLUGIN_ROOT}/tools/missions.py tasks <MILESTONE_DIR> --with-body
   ```
 
   It prints, newest first, one tab-separated line per task completed in the milestone (the commit's abbreviated hash, its date, the milestone directory, and the task title), with the task's verified bar indented beneath it, and prints nothing when no task has been completed, which is no failure.

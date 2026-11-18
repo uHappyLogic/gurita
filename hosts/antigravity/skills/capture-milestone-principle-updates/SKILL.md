@@ -72,10 +72,10 @@ this order:
 If `<path>` does not end in `/`, or neither test finds the file, **stop without changing anything**
 and report that the milestone was not found: the fixed line
 `Capture stopped — no milestone directory matches the path.` first, then below it the output of
-the plugin's milestones tool, run from the workspace root,
+the plugin's missions tool, run from the workspace root,
 
 ```
-python3 ~/.gemini/config/plugins/cairn/tools/milestones.py milestones .
+python3 ~/.gemini/config/plugins/cairn/tools/missions.py missions .
 ```
 
 verbatim — one line per milestone, live or finished, its path the third tab-separated field — or,

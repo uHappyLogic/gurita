@@ -39,19 +39,19 @@ In parallel, as independent tool calls, so the answer rests on the real state ra
 
 - Read `<MILESTONE_DIR>/requirements.md` — the goal, relevant starting state, and recorded decisions.
 - Read `<MILESTONE_DIR>/open_questions.xml` — any remaining open questions, each an `<open-question>` block carrying whatever alternatives and recommendation the recommend sweep has embedded. Read it whole with the file-reading tool, exactly as you read `requirements.md`; that whole read is for reasoning only, and a locate, list, or lift of one block is a call to the plugin's open-question tool, `python3 ~/.gemini/config/plugins/cairn/tools/open_questions.py <subcommand> <MILESTONE_DIR> …`, never a search of your own over the file.
-- Run the plugin's milestones tool — completed tasks:
+- Run the plugin's missions tool — completed tasks:
 
   ```
-  python3 ~/.gemini/config/plugins/cairn/tools/milestones.py tasks <MILESTONE_DIR> --with-body
+  python3 ~/.gemini/config/plugins/cairn/tools/missions.py tasks <MILESTONE_DIR> --with-body
   ```
 
   It prints, newest first, one tab-separated line per task completed in the milestone (the commit's abbreviated hash, its date, the milestone directory, and the task title), with the task's verified bar indented beneath it, and prints nothing when no task has been completed, which is no failure. Each task's title and verified bar tell you *what the task was meant to achieve* — the intent behind the deliverable that now exists — and its brief stands in its commit's diff, as the section removed from `TASKS_TODO.md`, which `git show <hash>` pulls up.
 - Read `<MILESTONE_DIR>/TASKS_TODO.md` — pending tasks, in priority order. Their ordering explains dependencies ("what's blocking what").
 - Read `AGENTS.md` — the project's domain context, conventions, and real names for its systems and files, so your answer uses the project's vocabulary.
-- When the question concerns past work — what an earlier milestone built, when or why something landed, a finished milestone — run the plugin's milestones tool for the project's composed record, at your own discretion and scoped to the question: the path the question concerns (a file or directory), the milestone's scope (the directory holding its `milestones/` container, `.` for one at `milestones/<slug>/`) for the work around this milestone, or `.` for a project-wide question:
+- When the question concerns past work — what an earlier milestone built, when or why something landed, a finished milestone — run the plugin's missions tool for the project's composed record, at your own discretion and scoped to the question: the path the question concerns (a file or directory), the milestone's scope (the directory holding its `milestones/` container, `.` for one at `milestones/<slug>/`) for the work around this milestone, or `.` for a project-wide question:
 
   ```
-  python3 ~/.gemini/config/plugins/cairn/tools/milestones.py record <PATH>
+  python3 ~/.gemini/config/plugins/cairn/tools/missions.py record <PATH>
   ```
 
   It prints one tab-separated line at column 0 for each milestone, live or finished, that changed PATH or whose scope overlaps it (`live` or `finished`, the finish date or `-` for a live one, the milestone's path, and its title; the live ones first, then the finished ones newest first), with its summary bullets, or a live one's goal, and its tasks that changed PATH indented beneath it. A finished milestone, its directory removed, resolves under no `--milestone`, so it is answered from this read, scoped as wide as `.` when nothing narrower lists it.

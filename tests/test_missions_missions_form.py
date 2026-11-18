@@ -1,8 +1,8 @@
-"""The milestones tool's milestones query in its milestone-path form and under its bound: with
---milestone MILESTONE_PATH in place of PATH, read lexically relative to the workspace root as the
+"""The missions tool's missions query in its mission-path form and under its bound: with
+--mission MISSION_PATH in place of PATH, read lexically relative to the workspace root as the
 gate query reads its argument and refused on one Error line with exit 1 and nothing on stdout
 when it names no mission_ directory, its last component opening with mission_, the query prints
-exactly the overview it prints with that milestone's scope (the directory holding its own
+exactly the overview it prints with that mission's scope (the directory holding its own
 directory, "." for the root) as PATH; with --last N it prints every live line and only the N
 newest finished lines; and with neither it prints what it always has. Every test runs on a
 repository seeded through the conftest factory, then given finish-shaped commits made through
@@ -20,7 +20,7 @@ WEB = "packages/web/mission_forms/"
 TODO = b"# TASKS TODO\n\n"
 
 
-def milestone_files(directory, title):
+def mission_files(directory, title):
     return {
         directory + "requirements.md": f"# {title}\n\n## Goal\n\nThe goal of {title}.\n".encode("utf-8"),
         directory + "TASKS_TODO.md": TODO,
@@ -33,11 +33,11 @@ def finish(make_commit, repo, directory, title, date):
         str(path.relative_to(repo)) for path in (repo / directory).rglob("*") if path.is_file()
     )
     body = title + "\n\n- built it\n"
-    return make_commit(repo, "Milestone-finish: " + directory, removed=removed, body=body, date=date)
+    return make_commit(repo, "Mission-finish: " + directory, removed=removed, body=body, date=date)
 
 
-def query(run_milestones, repo, *args):
-    result = run_milestones(repo, "milestones", *args)
+def query(run_missions, repo, *args):
+    result = run_missions(repo, "missions", *args)
     assert result.returncode == 0, result.stderr
     assert result.stderr == b""
     return result.stdout.decode("utf-8")
@@ -54,7 +54,7 @@ def assert_one_error_line(result, value):
 
 @pytest.fixture
 def project(repo, make_commit):
-    """Four root milestones and three package ones, three root and one package milestone
+    """Four root missions and three package ones, three root and one package mission
     finished on distinct days, so live and finished lines stand in both scopes."""
     files = {"README.md": b"# A project\n", "packages/api/src/limit.py": b"a\n", "packages/web/src/form.js": b"b\n"}
     for directory, title in (
@@ -66,7 +66,7 @@ def project(repo, make_commit):
         (API_TOO, "Caching"),
         (WEB, "Forms"),
     ):
-        files.update(milestone_files(directory, title))
+        files.update(mission_files(directory, title))
     seeded = repo({}, files=files)
     finish(make_commit, seeded, ROOT_B, "Beta Work", "2026-03-01T10:00:00+00:00")
     finish(make_commit, seeded, ROOT_C, "Gamma Work", "2026-03-03T10:00:00+00:00")
@@ -76,7 +76,7 @@ def project(repo, make_commit):
 
 
 @pytest.mark.parametrize(
-    "milestone, scope",
+    "mission, scope",
     [
         (ROOT_A, "."),
         (API, "packages/api"),
@@ -85,14 +85,14 @@ def project(repo, make_commit):
         ("packages/api/mission_not-yet/", "packages/api"),
     ],
 )
-def test_the_milestone_path_form_prints_the_scope_calls_overview(project, run_milestones, milestone, scope):
-    expected = query(run_milestones, project, scope)
+def test_the_mission_path_form_prints_the_scope_calls_overview(project, run_missions, mission, scope):
+    expected = query(run_missions, project, scope)
     assert expected
-    assert query(run_milestones, project, "--milestone", milestone) == expected
+    assert query(run_missions, project, "--mission", mission) == expected
 
 
-def test_the_package_form_lists_the_root_and_its_own_scope_only(project, run_milestones):
-    assert query(run_milestones, project, "--milestone", API) == (
+def test_the_package_form_lists_the_root_and_its_own_scope_only(project, run_missions):
+    assert query(run_missions, project, "--mission", API) == (
         f"live\t-\t{ROOT_A}\tAlpha Work\n"
         f"live\t-\t{API}\tRate Limits\n"
         f"finished\t2026-03-04\t{API_TOO}\tCaching\n"
@@ -103,8 +103,8 @@ def test_the_package_form_lists_the_root_and_its_own_scope_only(project, run_mil
 
 
 @pytest.mark.parametrize("spelling", ["./packages/api/mission_rate-limits", "packages//api/mission_rate-limits/./"])
-def test_the_milestone_path_is_read_lexically(project, run_milestones, spelling):
-    assert query(run_milestones, project, "--milestone", spelling) == query(run_milestones, project, "packages/api")
+def test_the_mission_path_is_read_lexically(project, run_missions, spelling):
+    assert query(run_missions, project, "--mission", spelling) == query(run_missions, project, "packages/api")
 
 
 @pytest.mark.parametrize(
@@ -120,51 +120,51 @@ def test_the_milestone_path_is_read_lexically(project, run_milestones, spelling)
         "mission_alpha/extra/",
     ],
 )
-def test_a_value_naming_no_mission_directory_is_refused(project, run_milestones, value):
-    assert_one_error_line(run_milestones(project, "milestones", "--milestone", value), value)
+def test_a_value_naming_no_mission_directory_is_refused(project, run_missions, value):
+    assert_one_error_line(run_missions(project, "missions", "--mission", value), value)
 
 
-def test_an_empty_milestone_path_is_refused(project, run_milestones):
-    assert_one_error_line(run_milestones(project, "milestones", "--milestone", ""), "MILESTONE_PATH")
+def test_an_empty_mission_path_is_refused(project, run_missions):
+    assert_one_error_line(run_missions(project, "missions", "--mission", ""), "MISSION_PATH")
 
 
-@pytest.mark.parametrize("args", [(), (".", "--milestone", ROOT_A), ("--last", "2"), (".", "--last", "-1"), (".", "--last", "x")])
-def test_a_malformed_form_exits_2(project, run_milestones, args):
-    result = run_milestones(project, "milestones", *args)
+@pytest.mark.parametrize("args", [(), (".", "--mission", ROOT_A), ("--last", "2"), (".", "--last", "-1"), (".", "--last", "x")])
+def test_a_malformed_form_exits_2(project, run_missions, args):
+    result = run_missions(project, "missions", *args)
     assert result.returncode == 2
     assert result.stdout == b""
 
 
 @pytest.mark.parametrize("last", [0, 1, 2, 3])
-def test_the_bound_keeps_every_live_line_and_the_newest_finished_lines(project, run_milestones, last):
-    unbounded = query(run_milestones, project, ".").splitlines(keepends=True)
+def test_the_bound_keeps_every_live_line_and_the_newest_finished_lines(project, run_missions, last):
+    unbounded = query(run_missions, project, ".").splitlines(keepends=True)
     live = [line for line in unbounded if line.startswith("live\t")]
     finished = [line for line in unbounded if line.startswith("finished\t")]
     assert len(live) == 3 and len(finished) == 4
-    assert query(run_milestones, project, ".", "--last", str(last)) == "".join(live + finished[:last])
+    assert query(run_missions, project, ".", "--last", str(last)) == "".join(live + finished[:last])
 
 
-def test_the_bound_keeps_the_newest_by_finish_timestamp(project, run_milestones):
-    assert query(run_milestones, project, ".", "--last", "2").splitlines()[-2:] == [
+def test_the_bound_keeps_the_newest_by_finish_timestamp(project, run_missions):
+    assert query(run_missions, project, ".", "--last", "2").splitlines()[-2:] == [
         f"finished\t2026-03-04\t{API_TOO}\tCaching",
         f"finished\t2026-03-03\t{ROOT_C}\tGamma Work",
     ]
 
 
-def test_a_bound_wider_than_the_record_prints_it_whole(project, run_milestones):
-    assert query(run_milestones, project, ".", "--last", "10") == query(run_milestones, project, ".")
+def test_a_bound_wider_than_the_record_prints_it_whole(project, run_missions):
+    assert query(run_missions, project, ".", "--last", "10") == query(run_missions, project, ".")
 
 
-def test_the_bound_applies_to_the_milestone_path_form(project, run_milestones):
-    assert query(run_milestones, project, "--milestone", WEB, "--last", "1") == (
+def test_the_bound_applies_to_the_mission_path_form(project, run_missions):
+    assert query(run_missions, project, "--mission", WEB, "--last", "1") == (
         f"live\t-\t{ROOT_A}\tAlpha Work\n"
         f"live\t-\t{WEB}\tForms\n"
         f"finished\t2026-03-03\t{ROOT_C}\tGamma Work\n"
     )
 
 
-def test_the_unbounded_print_is_unchanged(project, run_milestones):
-    assert query(run_milestones, project, ".") == (
+def test_the_unbounded_print_is_unchanged(project, run_missions):
+    assert query(run_missions, project, ".") == (
         f"live\t-\t{ROOT_A}\tAlpha Work\n"
         f"live\t-\t{API}\tRate Limits\n"
         f"live\t-\t{WEB}\tForms\n"
@@ -175,6 +175,6 @@ def test_the_unbounded_print_is_unchanged(project, run_milestones):
     )
 
 
-def test_the_record_query_takes_no_bound(project, run_milestones):
-    result = run_milestones(project, "record", ".", "--last", "1")
+def test_the_record_query_takes_no_bound(project, run_missions):
+    result = run_missions(project, "record", ".", "--last", "1")
     assert result.returncode == 2

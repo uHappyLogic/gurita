@@ -29,10 +29,10 @@ value found there is the input the resolution below uses.
    `<MILESTONE_DIR>` is `<path>`.
 
 3. Otherwise — no flag, a flag with no value, or a value that does not match — **stop without
-   changing anything**. Run, from the workspace root, the plugin's milestones tool:
+   changing anything**. Run, from the workspace root, the plugin's missions tool:
 
    ```
-   python3 ${CLAUDE_PLUGIN_ROOT}/tools/milestones.py live
+   python3 ${CLAUDE_PLUGIN_ROOT}/tools/missions.py live
    ```
 
    It prints one tab-separated line per live milestone — its path, `started` or `defined`, and

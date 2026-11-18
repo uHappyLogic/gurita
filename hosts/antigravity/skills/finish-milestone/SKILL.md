@@ -5,7 +5,7 @@ description: Finish a milestone by removing its directory in one commit whose bo
 
 # finish-milestone
 
-Wraps up the milestone named by `--milestone` — verifies that no open question stands and all tasks are done, composes a summary of what the milestone accomplished, and records it as the body of one `Milestone-finish: <MILESTONE_DIR>` commit that removes `<MILESTONE_DIR>` from the project, together with an update to `AGENTS.md` only if the milestone introduced lasting changes to the project's environment context. A milestone is finished exactly when its directory is gone: its files stand at the finish commit's parent, the plugin's milestones tool's `summary` and `record` queries print the commit's body back as the milestone's summary, and reverting the finish commit makes the milestone live again. It writes nothing to `milestones/README.md`, touches no pointer, and never invokes `/capture-milestone-principle-updates`. Run this when every open question is answered and all tasks are complete.
+Wraps up the milestone named by `--milestone` — verifies that no open question stands and all tasks are done, composes a summary of what the milestone accomplished, and records it as the body of one `Milestone-finish: <MILESTONE_DIR>` commit that removes `<MILESTONE_DIR>` from the project, together with an update to `AGENTS.md` only if the milestone introduced lasting changes to the project's environment context. A milestone is finished exactly when its directory is gone: its files stand at the finish commit's parent, the plugin's missions tool's `summary` and `record` queries print the commit's body back as the milestone's summary, and reverting the finish commit makes the milestone live again. It writes nothing to `milestones/README.md`, touches no pointer, and never invokes `/capture-milestone-principle-updates`. Run this when every open question is answered and all tasks are complete.
 
 ## Usage
 
@@ -25,10 +25,10 @@ Follow `~/.gemini/config/plugins/cairn/shared/resolve-milestone.md` to resolve `
 
 In parallel, as two independent tool calls:
 - Read `<MILESTONE_DIR>/requirements.md` — to extract the milestone's title, its **Goal**, and its key decisions. The title is the text of the file's top-level `# ` heading as it stands.
-- Run the plugin's milestones tool, to list what was concretely built:
+- Run the plugin's missions tool, to list what was concretely built:
 
   ```
-  python3 ~/.gemini/config/plugins/cairn/tools/milestones.py tasks <MILESTONE_DIR> --with-body
+  python3 ~/.gemini/config/plugins/cairn/tools/missions.py tasks <MILESTONE_DIR> --with-body
   ```
 
   It prints, newest first, one tab-separated line per task completed in the milestone (the commit's abbreviated hash, its date, the milestone directory, and the task title), with the task's verified bar indented beneath it, and prints nothing when no task has been completed, which is no failure.
@@ -76,7 +76,7 @@ Then compose the finish commit's body from it, in exactly this shape: the title 
 - ...
 ```
 
-The body is the milestone's record, which the milestones tool prints back, so it holds nothing else: no heading marker, number, date, or path. A trailing trailer block (one paragraph of `Token: value` lines, such as a `Co-Authored-By:` line) is allowed after the bullets, separated from them by one blank line; the milestones tool leaves it out of what it prints.
+The body is the milestone's record, which the missions tool prints back, so it holds nothing else: no heading marker, number, date, or path. A trailing trailer block (one paragraph of `Token: value` lines, such as a `Co-Authored-By:` line) is allowed after the bullets, separated from them by one blank line; the missions tool leaves it out of what it prints.
 
 ### 5. Update AGENTS.md only for lasting environment-context changes
 

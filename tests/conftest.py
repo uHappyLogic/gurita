@@ -2,7 +2,7 @@
 a fixed shell call extracted from the rendered Claude Code tree in a temporary git repository.
 
 Each tool is importable by its module name (`open_questions`, `define_milestone`,
-`task_list`, `requirements`, `commit`, `milestones`) through the `pythonpath = ["core/tools"]`
+`task_list`, `requirements`, `commit`, `missions`) through the `pythonpath = ["core/tools"]`
 line in pyproject.toml and driven end-to-end as a subprocess under the interpreter running the
 suite, so every exit status, stdout, and stderr the tests see is exactly what a caller sees.
 """
@@ -26,7 +26,7 @@ DEFINE_TOOL = REPO_ROOT / "core" / "tools" / "define_milestone.py"
 TASK_LIST_TOOL = REPO_ROOT / "core" / "tools" / "task_list.py"
 REQUIREMENTS_TOOL = REPO_ROOT / "core" / "tools" / "requirements.py"
 COMMIT_TOOL = REPO_ROOT / "core" / "tools" / "commit.py"
-MILESTONES_TOOL = REPO_ROOT / "core" / "tools" / "milestones.py"
+MISSIONS_TOOL = REPO_ROOT / "core" / "tools" / "missions.py"
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
 CLAUDE_TREE = REPO_ROOT / "hosts" / "claude"
 CLAUDE_PLUGIN_ROOT_VARIABLE = "CLAUDE_PLUGIN_ROOT"
@@ -242,14 +242,14 @@ def run_commit(environment):
 
 
 @pytest.fixture
-def run_milestones(environment):
-    """Run the milestones tool as a subprocess from a working directory under the isolated git
-    environment: run_milestones(repo, "tasks", "mission_first/"). Standard input
+def run_missions(environment):
+    """Run the missions tool as a subprocess from a working directory under the isolated git
+    environment: run_missions(repo, "tasks", "mission_first/"). Standard input
     is never a terminal; env replaces the environment fixture's for one call."""
 
     def run(cwd, *args, env=None):
         return subprocess.run(
-            [sys.executable, "-B", str(MILESTONES_TOOL), *args],
+            [sys.executable, "-B", str(MISSIONS_TOOL), *args],
             cwd=str(cwd),
             env=environment if env is None else env,
             stdin=subprocess.DEVNULL,

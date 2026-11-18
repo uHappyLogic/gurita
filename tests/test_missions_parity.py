@@ -1,4 +1,4 @@
-"""The milestones tool is one self-contained file: it imports no sibling tool and no importlib,
+"""The missions tool is one self-contained file: it imports no sibling tool and no importlib,
 so every rendered tool stays one runnable file and no run imports a sibling, and every host
 tree under hosts/ carries a byte-identical copy of it. Its conformance to the shared output
 contract is pinned only behaviourally, by its own subprocess tests."""
@@ -7,7 +7,7 @@ import ast
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-TOOL = REPO_ROOT / "core" / "tools" / "milestones.py"
+TOOL = REPO_ROOT / "core" / "tools" / "missions.py"
 HOSTS = REPO_ROOT / "hosts"
 
 
@@ -22,7 +22,7 @@ def imported_modules(path):
     return imported
 
 
-def test_the_milestones_tool_imports_no_sibling_tool():
+def test_the_missions_tool_imports_no_sibling_tool():
     imported = imported_modules(TOOL)
     assert "open_questions" not in imported
     assert "task_list" not in imported
@@ -37,6 +37,6 @@ def test_every_host_tree_carries_a_byte_identical_copy():
     assert trees
     source = TOOL.read_bytes()
     for tree in trees:
-        copies = sorted(tree.glob("**/tools/milestones.py"))
+        copies = sorted(tree.glob("**/tools/missions.py"))
         assert len(copies) == 1, (tree, copies)
         assert copies[0].read_bytes() == source, copies[0]

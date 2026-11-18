@@ -71,9 +71,9 @@ means for this task beyond the brief's own sentences — a decision recorded the
 on the work, and any value, name, or threshold it fixes is authoritative.
 
 **The past-work read.** Why an existing file is the way it is stands in the project's completed
-tasks, read with `python3 ~/.gemini/config/plugins/cairn/tools/milestones.py tasks <path> --with-body` run from
+tasks, read with `python3 ~/.gemini/config/plugins/cairn/tools/missions.py tasks <path> --with-body` run from
 the workspace root, `<path>` the file's path, its whole print taken whatever its length, and
-followed where a printed task bears by `python3 ~/.gemini/config/plugins/cairn/tools/milestones.py show <milestone path>`
+followed where a printed task bears by `python3 ~/.gemini/config/plugins/cairn/tools/missions.py show <milestone path>`
 for that milestone's decisions in their own words — every milestones-tool call this read makes,
 the `tasks` call on each file it is taken for and each `show` follow-up alike, written out in
 full on every call, never through a variable, alias, or function of your own defined to stand

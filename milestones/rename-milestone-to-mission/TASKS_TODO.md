@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Rename the Read-Only Tool to Missions
-
-Rename the read-only tool's own identifiers: `core/tools/milestones.py` becomes `missions.py`, the `milestones` query `missions`, `--milestone` and `since --milestones` become `--mission` and `--missions`, `MILESTONE_PATH` becomes `MISSION_PATH`, and `Mission-finish:` is the only finish marker it reads, so the record starts at the first such commit, with its docstring and help text in the new word. Every command under `core/` that calls the tool follows, its fifteen test files become `tests/test_missions_*.py`, and `tests/conftest.py` names the tool and its runner in the new word. Verified by the drift gate and both pytest runs passing and by a search of `core/` and `tests/` finding no call of the old file, query, or flags.
-
----
-
 ## Define a Mission at a Scope
 
 Rename the definition tool to `core/tools/define_mission.py` and make it create `<scope>/mission_<slug>/` directly in the scope, with no container, printing `Mission-definition: <path>` and the path, with the definition skill's call of it following. It is the writer side of the prefix form the read-only tool discovers. Verified by the `tests/test_define_*.py` files and the `workspace` factory of `tests/conftest.py`, rewritten to the new form, passing under both interpreters with the drift gate.

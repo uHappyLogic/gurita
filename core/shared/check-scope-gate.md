@@ -23,10 +23,10 @@ finished.
 
 ## Running the gate
 
-Run, from the workspace root, the plugin's milestones tool:
+Run, from the workspace root, the plugin's missions tool:
 
 ```
-python3 {{PLUGIN_ROOT}}/tools/milestones.py gate <MILESTONE_DIR>
+python3 {{PLUGIN_ROOT}}/tools/missions.py gate <MILESTONE_DIR>
 ```
 
 It prints the path of every milestone holding the scope, one per line, and nothing when none

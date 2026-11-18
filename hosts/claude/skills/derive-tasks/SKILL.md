@@ -35,10 +35,10 @@ Directly after resolving the milestone, and before anything else, follow `${CLAU
 
 ### 2. Refresh a stale starting state
 
-Before reading the documents you decompose, check whether other milestones' work has landed in the scope since this milestone's starting state was recorded. Run, from the workspace root, the plugin's milestones tool:
+Before reading the documents you decompose, check whether other milestones' work has landed in the scope since this milestone's starting state was recorded. Run, from the workspace root, the plugin's missions tool:
 
 ```
-python3 ${CLAUDE_PLUGIN_ROOT}/tools/milestones.py since <MILESTONE_DIR> --milestones
+python3 ${CLAUDE_PLUGIN_ROOT}/tools/missions.py since <MILESTONE_DIR> --missions
 ```
 
 Its first line, when it prints one, is the anchor, the commit that last recorded this milestone's starting state; every line beneath it is another milestone's task or finish commit that landed in the scope after it. Read its print as exactly one of three outcomes:
@@ -102,10 +102,10 @@ Apply these rules:
 
 ### 6. Prove coverage (requirement → task matrix)
 
-First run the plugin's milestones tool, for the work already recorded as completed in this milestone:
+First run the plugin's missions tool, for the work already recorded as completed in this milestone:
 
 ```
-python3 ${CLAUDE_PLUGIN_ROOT}/tools/milestones.py tasks <MILESTONE_DIR> --with-body
+python3 ${CLAUDE_PLUGIN_ROOT}/tools/missions.py tasks <MILESTONE_DIR> --with-body
 ```
 
 It prints, newest first, one tab-separated line per task completed in the milestone (the commit's abbreviated hash, its date, the milestone directory, and the task title), with the task's verified bar indented beneath it, and prints nothing when no task has been completed, which is no failure. If the call fails, stop and report it, writing and committing nothing: the fixed line `Cannot derive tasks: the completed-task read failed.` first, then its one `Error: <reason>` line from stderr verbatim below it, and print no line of step 11.
