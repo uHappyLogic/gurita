@@ -132,5 +132,9 @@ The release procedure's keep rule is left as it stands and its same-day branch i
 
 The root README glosses the name inside its opening pitch with a bare translation, a parenthetical such as "Gurita (Indonesian for octopus) brings all the important questions up…", and nothing more. The image of the arms is left to the tagline directly above the pitch: the name gets no section of its own, the "Why" section stays about the handoff, and the three host READMEs change only by the plain rename.
 
+### Release entry wording
+
+The 2.0.0 CHANGELOG entry holds the one section `### Rename Cairn to Gurita` and nothing beside it. Its bullets announce the renamed identifiers, state the two upgrade facts, and carry the documentation links, and one further bullet says that this release also carries the path-addressed redesign (every skill given its mission's path as `--mission`, missions placed in their scope as `mission_` directories, no current mission) and the rename of milestone to mission, both described in the documentation (`docs/workflow.md` and `docs/skill-reference.md`) rather than listed in the entry. Nothing of either is itemised, the name is given no meaning in the entry, and the Full Changelog link closes it.
+
 ## Out of Scope
 
