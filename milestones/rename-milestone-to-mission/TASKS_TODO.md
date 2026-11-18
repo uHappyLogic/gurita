@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Move the Principle Store to the Root
-
-Move this repository's principle store with `git mv` from `milestones/answer_decision_principles.md` to `answer_decision_principles.md` at the project root, its file name unchanged, and name the new path literally in the recommendation procedure, the capture skill's prose and its `git status`, `cp`, `git diff`, and restore commands, the docs, `CLAUDE.md`, and the two tests, with no fallback read of the old path. Edit the store's header to name the renamed capture skill and its "Description over retirement note" directive so that "the milestone record" reads in the new word, keeping the "Required input over optional branch" origin line as written. Verified by the drift gate and both pytest runs passing and by a search finding the old path only in `ideas/`, `CHANGELOG.md`, and this milestone's own files.
-
----
-
 ## Bootstrap Replaces an Older Workflow Section
 
 Make the bootstrap recognize a `## Milestone Workflow` section in a context file holding no `## Mission Workflow` one and replace it whole with the new section, through the third case of `core/shared/workflow-guidance.md` with the bootstrap named as its writer, committing under `Workflow-bootstrap: missions` and printing the existing success line. In that same pass, when `milestones/answer_decision_principles.md` stands and `answer_decision_principles.md` at the root does not, it moves the file to the root unchanged and commits both paths with the context file in the one commit, and otherwise moves nothing. Verified by reading the rendered skill against the Bootstrap on an older workflow section and Existing store at upgrade decisions and by the drift gate and both pytest runs passing.

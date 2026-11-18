@@ -22,7 +22,7 @@ simply harvests what exists so far, and a later run re-walks the same path to pi
 Running it right after `/finish-mission` is the natural moment, since the mission's
 answer set is complete by then, but it is never a precondition.
 
-It is the **sole writer** of `milestones/answer_decision_principles.md` (a single project-wide file,
+It is the **sole writer** of `answer_decision_principles.md` (a single project-wide file,
 **above** any one mission, so principles accumulate across missions).
 
 ## Usage
@@ -42,7 +42,7 @@ It is the **sole writer** of `milestones/answer_decision_principles.md` (a singl
 ```
 
 > This skill writes **only** the principle store at the fixed path
-> `milestones/answer_decision_principles.md`. It does **not** touch any mission's `requirements.md`
+> `answer_decision_principles.md`. It does **not** touch any mission's `requirements.md`
 > or `open_questions.xml`.
 > When a pass composes a store rewrite it writes it in place and — once the user has reviewed the
 > working-tree change with `git diff` and confirmed it — **commits** that rewrite itself (step 7); a
@@ -112,10 +112,10 @@ guard prints nothing and asks nothing; the run continues unchanged.
 2. **Dirty-store guard.** Check whether the store already carries uncommitted changes:
 
    ```
-   git status --porcelain -- milestones/answer_decision_principles.md
+   git status --porcelain -- answer_decision_principles.md
    ```
 
-   On any output, the notice states that `milestones/answer_decision_principles.md` has uncommitted
+   On any output, the notice states that `answer_decision_principles.md` has uncommitted
    changes and asks once whether to proceed. On proceed, the **working-tree file — not `HEAD` — is
    the baseline** every later step reads and the store rewrite composes over: the pending edits stay
    in place and are built on, never discarded or diffed away.
@@ -385,12 +385,12 @@ captured" report as the empty range. Reinforcement alone changes nothing in the 
 Phase 2 turns the two phase-1 sets into **one** proposed store and writes it **once**. There is no
 per-candidate loop: every change — add, revision, prune, merge, generalization, shortening — is
 composed together over the baseline and lands in a single in-place write of
-`milestones/answer_decision_principles.md`. The write is not the confirmation: the user reviews the
+`answer_decision_principles.md`. The write is not the confirmation: the user reviews the
 resulting working-tree change with `git diff`, and the single confirmation that gates the commit is
 step 7's. This step prints **no diff and no store content** to the conversation — the working tree is
 the review surface.
 
-1. **Read the baseline whole.** Read the entire live `milestones/answer_decision_principles.md` as it
+1. **Read the baseline whole.** Read the entire live `answer_decision_principles.md` as it
    stands in the working tree — the baseline fixed in step 2, whether or not it matches `HEAD`. It is
    small and grows slowly, so reading it whole is always feasible. If the file is absent or empty, the
    baseline is the header paragraph alone with no entries, and the write below creates the file.
@@ -462,7 +462,7 @@ the review surface.
    working tree to a temporary file outside the repository and hold its path:
 
    ```
-   SNAPSHOT="$(mktemp)" && cp milestones/answer_decision_principles.md "$SNAPSHOT"
+   SNAPSHOT="$(mktemp)" && cp answer_decision_principles.md "$SNAPSHOT"
    ```
 
    If the store does not exist yet, record the snapshot as *absent* instead. This snapshot — not
@@ -471,7 +471,7 @@ the review surface.
    taken.
 
 4. **Write the composed store in place, once.** Replace the full content of
-   `milestones/answer_decision_principles.md` with the composed store in a single write. Do not stage
+   `answer_decision_principles.md` with the composed store in a single write. Do not stage
    or commit it, and print no diff and no store content to the conversation: the working-tree change
    is what the user reviews with `git diff` before step 7's confirmation.
 
@@ -513,14 +513,14 @@ under this skill's subject. No empty commit is written to record such a run eith
 
 **The write was not the confirmation; this is.** The working tree is the only review surface. Tell
 the user, in one line, that the composed store has been written to
-`milestones/answer_decision_principles.md` and is ready to review with
-`git diff -- milestones/answer_decision_principles.md`, and ask **once** whether to commit it. Print
+`answer_decision_principles.md` and is ready to review with
+`git diff -- answer_decision_principles.md`, and ask **once** whether to commit it. Print
 no diff and no store content yourself. Exactly one confirmation gates the commit — there is no
 per-entry or per-change confirmation, and there is none for the write itself.
 
 **Review rounds.** The user reviews the working-tree change and may request changes in
 conversation — reword an entry, undo a prune, keep two merged entries separate, tighten or loosen a
-directive, drop a hygiene shortening. Each round, **re-edit `milestones/answer_decision_principles.md`
+directive, drop a hygiene shortening. Each round, **re-edit `answer_decision_principles.md`
 in place** to carry the request, still composing under step 6's rules (the step-6a entry schema, the
 evidence gate on what an entry decides, the compactness bar), then ask the same confirmation again.
 Take **no new snapshot** — the step-6 snapshot stays the restore point for the whole loop — and print
@@ -530,7 +530,7 @@ There is no round limit; the loop ends only on one of the two answers below.
 
 **On acceptance — commit.** Read and follow the shared commit procedure at `{{PLUGIN_ROOT}}/shared/commit-procedure.md`, running its one commit-tool command yourself as this step's one git tool call. Supply it these three inputs:
 
-- **PATHS** — this skill's own change set: the fixed-path store `milestones/answer_decision_principles.md` (a project-wide artifact, **not** any file under `<path>` — this skill writes only that store).
+- **PATHS** — this skill's own change set: the fixed-path store `answer_decision_principles.md` (a project-wide artifact, **not** any file under `<path>` — this skill writes only that store).
 - **SUBJECT** — `Principle-capture: <path>`, with `<path>` the argument from step 1 used verbatim, trailing slash included (e.g. `Principle-capture: mission_user-guide/`), the marker naming this skill's distinctive principle-capture function.
 - **BODY** — **one short line per store change**, each naming the **change kind** — `add`,
   `revision`, `prune`, `merge`, or `generalization` — and the **Short Title of the override answer
@@ -563,11 +563,11 @@ captured).
 from the step-6 snapshot, **not from `HEAD`**:
 
 ```
-cp "$SNAPSHOT" milestones/answer_decision_principles.md && rm -f "$SNAPSHOT"
+cp "$SNAPSHOT" answer_decision_principles.md && rm -f "$SNAPSHOT"
 ```
 
 When the snapshot was recorded as *absent*, remove the file the write created instead
-(`rm milestones/answer_decision_principles.md`). Either way the store stands exactly as it did
+(`rm answer_decision_principles.md`). Either way the store stands exactly as it did
 before the first write: in the clean case that is `HEAD`; after a dirty-store proceed it is the
 user's own uncommitted edits, which survive intact. Then **exit explicitly — do not invoke
 `shared/commit-procedure.md`**, not even for its commit tool's guard: stage nothing and commit

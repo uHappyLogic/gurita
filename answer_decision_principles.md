@@ -7,7 +7,7 @@ and by `/recommend-all-open-questions`'s `recommend-open-question` agent — app
 as a **weighted advisory factor** that drives, and is cited in, the recommended option
 (rather than silently filtering a candidate). Presence here means the principle is
 user-confirmed (there is no status field). This file is written **only** by
-`capture-milestone-principle-updates`.
+`capture-mission-principle-updates`.
 
 ### Prefer domain-neutral terms
 
@@ -47,7 +47,7 @@ When a question asks whether a run should print an advisory about items it skipp
 
 ### Description over retirement note
 
-When a question asks whether a durable instructions file should carry a retirement note or a do-not-restore ban for a design the file no longer describes, eliminate the note when the positive description of the current shape already rules the retired design out; keep an explicit ban only where the current description leaves the retired shape a natural reading. Keep measurement-bound figures out of durable rationale, since they go stale; the history belongs in the changelog and the milestone record.
+When a question asks whether a durable instructions file should carry a retirement note or a do-not-restore ban for a design the file no longer describes, eliminate the note when the positive description of the current shape already rules the retired design out; keep an explicit ban only where the current description leaves the retired shape a natural reading. Keep measurement-bound figures out of durable rationale, since they go stale; the history belongs in the changelog and the mission record.
 
 *Origin: Retired-agent rationale home — the mutation-in-agent inversion invariant was deleted with no retirement clause, because the inline sweep description already rules the recording agent out.*
 

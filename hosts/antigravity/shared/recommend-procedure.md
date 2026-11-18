@@ -39,7 +39,7 @@ the recommendation in what the project actually is, not what you recall it to be
 reading is read-only; forming a recommendation changes nothing.
 
 Part of that grounding is the project-wide answering-principle store
-`milestones/answer_decision_principles.md` — a fixed path, above any one mission. Read it in
+`answer_decision_principles.md` — a fixed path, above any one mission. Read it in
 place and note any confirmed principle that bears on this question. Presence of a principle in
 that file means it is user-confirmed.
 

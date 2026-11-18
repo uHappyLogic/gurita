@@ -162,6 +162,6 @@ def test_a_requirements_file_with_no_heading_gets_the_placeholder_title(repo, ru
 
 
 def test_no_live_mission_prints_nothing(repo, run_missions):
-    seeded = repo({}, files={"README.md": b"# A project\n", "milestones/answer_decision_principles.md": b"# P\n"})
+    seeded = repo({}, files={"README.md": b"# A project\n", "answer_decision_principles.md": b"# P\n"})
     result = run_missions(seeded, "live")
     assert (result.returncode, result.stdout, result.stderr) == (0, b"", b"")
