@@ -84,5 +84,9 @@ No permanent check guards the rename: the build gains no name check and no test 
 
 Every existing CHANGELOG entry, 1.9.0 back to 0.9.0, stays byte-for-byte as published: its prose naming Cairn, its literal paths and invocation forms (`.agents/plugins/cairn`, `~/.gemini/config/plugins/cairn`, `$cairn:<skill>`, `cairn:complete-task`), and its `uHappyLogic/cairn` compare and release links. The file's preamble, which is not an entry, takes the rename like any other current prose, so it keeps saying each entry is its release's notes verbatim and that claim stays true. Nothing is added to explain the former name, and no published GitHub release page is edited.
 
+### Plugin-named file names
+
+Both files drop the plugin's name and keep the rest of their stem: `docs/ways-of-using-cairn.md` becomes `docs/ways-of-using.md` and `ideas/benchmark_for_cairn.md` becomes `ideas/benchmark.md`, each moved with `git mv`. Every in-tree reference is rewritten to the new path: the README's link, the CLAUDE.md layout line and its two invariant mentions, `docs/skill-reference.md`, `docs/workflow.md`, and the drafts `ideas/gurita.md`, `ideas/kepala.md`, and `ideas/vscode_extension.md`.
+
 ## Out of Scope
 
