@@ -1,5 +1,5 @@
-"""define_milestone.py output and exit contract: two unlabeled stdout lines, the subject and the
-milestone path, and the three files on success, one Error line on stderr with exit 1 and empty
+"""define_mission.py output and exit contract: two unlabeled stdout lines, the subject and the
+mission path, and the three files on success, one Error line on stderr with exit 1 and empty
 stdout on every failure, argparse's own exit 2 (a missing --at or --title included), and never
 a traceback."""
 
@@ -9,7 +9,7 @@ import sys
 
 import pytest
 
-import define_milestone
+import define_mission
 
 GOAL = b"Ship it.\n"
 FILES = ["TASKS_TODO.md", "open_questions.xml", "requirements.md"]
@@ -21,26 +21,26 @@ def current_umask():
     return umask
 
 
-def test_success_prints_exactly_the_subject_and_the_milestone_path(run_define, workspace):
-    root = workspace("milestone_36_previous")
-    result = run_define("--at", ".", "--title", "Mechanical milestone definition", stdin=GOAL, cwd=root)
+def test_success_prints_exactly_the_subject_and_the_mission_path(run_define, workspace):
+    root = workspace("mission_previous")
+    result = run_define("--at", ".", "--title", "Mechanical mission definition", stdin=GOAL, cwd=root)
     assert result.returncode == 0
     assert result.stderr == b""
     assert result.stdout == (
-        b"Milestone-definition: milestones/mechanical-milestone-definition/\n"
-        b"milestones/mechanical-milestone-definition/\n"
+        b"Mission-definition: mission_mechanical-mission-definition/\n"
+        b"mission_mechanical-mission-definition/\n"
     )
 
 
-def test_a_package_scope_prints_the_path_under_its_container(run_define, workspace):
+def test_a_package_scope_prints_the_path_directly_in_the_scope(run_define, workspace):
     root = workspace()
     (root / "packages" / "ledger").mkdir(parents=True)
     result = run_define("--at", "packages/ledger", "--title", "Ledger import", stdin=GOAL, cwd=root)
     assert result.returncode == 0, result.stderr
     assert result.stderr == b""
     assert result.stdout == (
-        b"Milestone-definition: packages/ledger/milestones/ledger-import/\n"
-        b"packages/ledger/milestones/ledger-import/\n"
+        b"Mission-definition: packages/ledger/mission_ledger-import/\n"
+        b"packages/ledger/mission_ledger-import/\n"
     )
 
 
@@ -48,7 +48,7 @@ def test_success_writes_exactly_the_three_files(run_define, workspace):
     root = workspace()
     result = run_define("--at", ".", "--title", "First steps", stdin=b"Make the first step.\n", cwd=root)
     assert result.returncode == 0, result.stderr
-    directory = root / "milestones" / "first-steps"
+    directory = root / "mission_first-steps"
     assert sorted(path.name for path in directory.iterdir()) == FILES
     assert (directory / "open_questions.xml").read_bytes() == b"<open-questions/>\n"
     assert (directory / "requirements.md").read_bytes() == (
@@ -72,7 +72,7 @@ def test_the_files_take_the_default_mode(run_define, workspace):
     root = workspace()
     run_define("--at", ".", "--title", "First", stdin=GOAL, cwd=root)
     expected = 0o666 & ~current_umask()
-    for path in (root / "milestones" / "first").iterdir():
+    for path in (root / "mission_first").iterdir():
         assert os.stat(path).st_mode & 0o777 == expected
 
 
@@ -81,7 +81,7 @@ def test_the_goal_is_kept_byte_for_byte_with_only_its_ends_trimmed(run_define, w
     goal = "  \n\n\tLine one with `code` and *emphasis*.\n\n## Not a heading guard\n\n- item\n  indented café\r\n\n\n"
     result = run_define("--at", ".", "--title", "Goal kept", stdin=goal.encode("utf-8"), cwd=root)
     assert result.returncode == 0, result.stderr
-    requirements = (root / "milestones" / "goal-kept" / "requirements.md").read_bytes().decode("utf-8")
+    requirements = (root / "mission_goal-kept" / "requirements.md").read_bytes().decode("utf-8")
     expected_goal = "Line one with `code` and *emphasis*.\n\n## Not a heading guard\n\n- item\n  indented café"
     assert requirements == REQUIREMENTS.format(title="Goal kept", goal=expected_goal)
 
@@ -94,7 +94,7 @@ REQUIREMENTS = (
 def test_a_heredoc_final_newline_adds_no_blank_line(run_define, workspace):
     root = workspace()
     run_define("--at", ".", "--title", "Heredoc", stdin=b"One line goal.\n", cwd=root)
-    requirements = (root / "milestones" / "heredoc" / "requirements.md").read_text(encoding="utf-8")
+    requirements = (root / "mission_heredoc" / "requirements.md").read_text(encoding="utf-8")
     assert "One line goal.\n\n## Relevant starting state\n" in requirements
 
 
@@ -104,7 +104,7 @@ def test_an_empty_goal_is_refused(run_define, workspace, goal):
     result = run_define("--at", ".", "--title", "First", stdin=goal, cwd=root)
     assert (result.returncode, result.stdout) == (1, b"")
     assert result.stderr == b"Error: the goal text on standard input is empty\n"
-    assert list((root / "milestones").iterdir()) == []
+    assert list(root.iterdir()) == []
 
 
 def test_a_non_utf8_goal_is_refused(run_define, workspace):
@@ -112,7 +112,7 @@ def test_a_non_utf8_goal_is_refused(run_define, workspace):
     result = run_define("--at", ".", "--title", "First", stdin=b"caf\xe9\n", cwd=root)
     assert (result.returncode, result.stdout) == (1, b"")
     assert result.stderr == b"Error: the goal text on standard input is not UTF-8 text\n"
-    assert list((root / "milestones").iterdir()) == []
+    assert list(root.iterdir()) == []
 
 
 class Terminal(io.TextIOWrapper):
@@ -135,10 +135,10 @@ def test_a_closed_or_terminal_stdin_is_refused(workspace, monkeypatch, capsys, s
     root = workspace()
     monkeypatch.chdir(root)
     monkeypatch.setattr(sys, "stdin", stdin)
-    assert define_milestone.main(["--at", ".", "--title", "First"]) == 1
+    assert define_mission.main(["--at", ".", "--title", "First"]) == 1
     captured = capsys.readouterr()
     assert (captured.out, captured.err) == ("", reason)
-    assert list((root / "milestones").iterdir()) == []
+    assert list(root.iterdir()) == []
 
 
 def test_a_closed_stream_object_is_refused(workspace, monkeypatch, capsys):
@@ -147,7 +147,7 @@ def test_a_closed_stream_object_is_refused(workspace, monkeypatch, capsys):
     stream.close()
     monkeypatch.chdir(root)
     monkeypatch.setattr(sys, "stdin", stream)
-    assert define_milestone.main(["--at", ".", "--title", "First"]) == 1
+    assert define_mission.main(["--at", ".", "--title", "First"]) == 1
     assert capsys.readouterr().err.endswith("which is closed\n")
 
 
@@ -156,23 +156,23 @@ def test_a_missing_title_is_a_usage_error(run_define, workspace):
     result = run_define("--at", ".", stdin=GOAL, cwd=root)
     assert result.returncode == 2
     assert result.stdout == b""
-    assert result.stderr.startswith(b"usage: define_milestone.py")
+    assert result.stderr.startswith(b"usage: define_mission.py")
     assert b"--title" in result.stderr
-    assert list((root / "milestones").iterdir()) == []
+    assert list(root.iterdir()) == []
 
 
 def test_a_missing_scope_flag_is_a_usage_error_and_never_defaults_to_the_root(run_define, workspace):
-    root = workspace(root=False)
+    root = workspace()
     result = run_define("--title", "First", stdin=GOAL, cwd=root)
     assert result.returncode == 2
     assert result.stdout == b""
-    assert result.stderr.startswith(b"usage: define_milestone.py")
+    assert result.stderr.startswith(b"usage: define_mission.py")
     assert b"the following arguments are required: --at" in result.stderr
     assert list(root.iterdir()) == []
 
 
 def test_a_scope_flag_with_no_value_is_a_usage_error(run_define, workspace):
-    root = workspace(root=False)
+    root = workspace()
     result = run_define("--title", "First", "--at", stdin=GOAL, cwd=root)
     assert result.returncode == 2
     assert result.stdout == b""
@@ -186,13 +186,13 @@ def test_an_unknown_argument_is_a_usage_error(run_define, workspace):
     assert result.returncode == 2
     assert result.stdout == b""
     assert b"unrecognized arguments" in result.stderr
-    assert list((root / "milestones").iterdir()) == []
+    assert list(root.iterdir()) == []
 
 
 def test_help_exits_zero(run_define, workspace):
     result = run_define("--help", cwd=workspace())
     assert result.returncode == 0
-    assert result.stdout.startswith(b"usage: define_milestone.py")
+    assert result.stdout.startswith(b"usage: define_mission.py")
     assert b"--at SCOPE" in result.stdout
     assert b"--title" in result.stdout
     assert result.stderr == b""
@@ -203,13 +203,12 @@ FAILURES = {
     "absolute scope": dict(layout={}, scope="/", title="First", stdin=GOAL),
     "climbing scope": dict(layout={}, scope="..", title="First", stdin=GOAL),
     "missing scope": dict(layout={}, scope="missing", title="First", stdin=GOAL),
-    "file scope": dict(layout={"files": ("a-file",)}, scope="milestones/a-file", title="First", stdin=GOAL),
-    "file container": dict(layout={"root": False, "files": ()}, scope=".", title="First", stdin=GOAL, container=True),
+    "file scope": dict(layout={"files": ("a-file",)}, scope="a-file", title="First", stdin=GOAL),
     "empty title": dict(layout={}, scope=".", title=" \n ", stdin=GOAL),
     "slugless title": dict(layout={}, scope=".", title="?!", stdin=GOAL),
     "empty goal": dict(layout={}, scope=".", title="First", stdin=b" \n"),
     "non-utf8 goal": dict(layout={}, scope=".", title="First", stdin=b"\xff"),
-    "conflict": dict(layout={"files": ("first",)}, scope=".", title="First", stdin=GOAL),
+    "conflict": dict(layout={"files": ("mission_first",)}, scope=".", title="First", stdin=GOAL),
 }
 
 
@@ -217,8 +216,6 @@ FAILURES = {
 def test_every_failure_is_exactly_one_error_line_and_empty_stdout(run_define, workspace, case):
     setup = FAILURES[case]
     root = workspace(**setup["layout"])
-    if setup.get("container"):
-        (root / "milestones").write_bytes(b"not a directory")
     result = run_define("--at", setup["scope"], "--title", setup["title"], stdin=setup["stdin"], cwd=root)
     assert result.returncode == 1
     assert result.stdout == b""
@@ -235,34 +232,34 @@ def test_an_unexpected_exception_is_one_folded_error_line(workspace, monkeypatch
     root = workspace()
     monkeypatch.chdir(root)
     monkeypatch.setattr(sys, "stdin", io.TextIOWrapper(io.BytesIO(GOAL)))
-    monkeypatch.setattr(define_milestone, "derive_slug", explode)
-    assert define_milestone.main(["--at", ".", "--title", "First"]) == 1
+    monkeypatch.setattr(define_mission, "derive_slug", explode)
+    assert define_mission.main(["--at", ".", "--title", "First"]) == 1
     captured = capsys.readouterr()
     assert (captured.out, captured.err) == ("", "Error: RuntimeError: first line second line\n")
 
 
 def test_an_operating_system_failure_is_an_error_line_not_a_traceback(workspace, monkeypatch, capsys):
-    def unwritable(container):
-        raise PermissionError(13, "Permission denied", container)
+    def unwritable(directory):
+        raise PermissionError(13, "Permission denied", directory)
 
-    root = workspace(root=False)
+    root = workspace()
     monkeypatch.chdir(root)
     monkeypatch.setattr(sys, "stdin", io.TextIOWrapper(io.BytesIO(GOAL)))
-    monkeypatch.setattr(define_milestone, "create_container", unwritable)
-    assert define_milestone.main(["--at", ".", "--title", "First"]) == 1
+    monkeypatch.setattr(define_mission, "create_directory", unwritable)
+    assert define_mission.main(["--at", ".", "--title", "First"]) == 1
     captured = capsys.readouterr()
-    assert (captured.out, captured.err) == ("", "Error: Permission denied: milestones\n")
+    assert (captured.out, captured.err) == ("", "Error: Permission denied: mission_first\n")
 
 
 def test_an_operating_system_failure_without_a_filename_is_its_message(workspace, monkeypatch, capsys):
-    def broken(container):
+    def broken(directory):
         raise OSError("device gone")
 
     root = workspace()
     monkeypatch.chdir(root)
     monkeypatch.setattr(sys, "stdin", io.TextIOWrapper(io.BytesIO(GOAL)))
-    monkeypatch.setattr(define_milestone, "create_container", broken)
-    assert define_milestone.main(["--at", ".", "--title", "First"]) == 1
+    monkeypatch.setattr(define_mission, "create_directory", broken)
+    assert define_mission.main(["--at", ".", "--title", "First"]) == 1
     assert capsys.readouterr().err == "Error: device gone\n"
 
 
@@ -270,7 +267,7 @@ def test_main_returns_zero_and_prints_the_two_lines(workspace, monkeypatch, caps
     root = workspace()
     monkeypatch.chdir(root)
     monkeypatch.setattr(sys, "stdin", io.TextIOWrapper(io.BytesIO(GOAL)))
-    assert define_milestone.main(["--at", ".", "--title", "First"]) == 0
+    assert define_mission.main(["--at", ".", "--title", "First"]) == 0
     captured = capsys.readouterr()
-    assert captured.out == "Milestone-definition: milestones/first/\nmilestones/first/\n"
+    assert captured.out == "Mission-definition: mission_first/\nmission_first/\n"
     assert captured.err == ""

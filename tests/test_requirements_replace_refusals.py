@@ -59,7 +59,7 @@ def test_an_empty_decisions_section_has_no_subsection_to_replace(run_define, run
     root = workspace()
     defined = run_define("--at", ".", "--title", "First", stdin=b"Ship it.\n", cwd=root)
     assert defined.returncode == 0, defined.stderr
-    target = root / "milestones" / "first"
+    target = root / "mission_first"
     template = (target / NAME).read_bytes()
     result = run_requirements("replace", str(target), "--section", "Opening Decision", stdin=b"A new body.\n")
     assert_refused(result, '"### Opening Decision"')

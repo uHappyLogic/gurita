@@ -1,14 +1,14 @@
-"""define_milestone.py placement: the required --at scope, normalized lexically and printed in its
+"""define_mission.py placement: the required --at scope, normalized lexically and printed in its
 canonical repo-relative form, the root spelled "." or "./"; an empty, absolute, or climbing scope
 and one missing from the working tree or not a directory refused on one Error line naming it as
-given; only the scope's milestones/ container created when missing; and no number, the
-directory named by its slug alone."""
+given; the mission directory created directly in the scope, with no container and nothing else;
+and no number, the directory named mission_ and its slug alone."""
 
 import os
 
 import pytest
 
-import define_milestone
+import define_mission
 
 GOAL = b"Ship it.\n"
 
@@ -37,12 +37,12 @@ def tree(root):
 
 
 @pytest.mark.parametrize("scope", [".", "./", ".//", "./.", "pkg/..", "pkg/sub/../.."])
-def test_every_spelling_of_the_root_prints_the_root_container_path(run_define, workspace, scope):
-    root = workspace(root=False)
+def test_every_spelling_of_the_root_prints_the_root_mission_path(run_define, workspace, scope):
+    root = workspace()
     (root / "pkg" / "sub").mkdir(parents=True)
     subject, path = printed(run_define("--at", scope, "--title", "Root work", stdin=GOAL, cwd=root))
-    assert (subject, path) == ("Milestone-definition: milestones/root-work/", "milestones/root-work/")
-    assert (root / "milestones" / "root-work" / "requirements.md").is_file()
+    assert (subject, path) == ("Mission-definition: mission_root-work/", "mission_root-work/")
+    assert (root / "mission_root-work" / "requirements.md").is_file()
 
 
 @pytest.mark.parametrize(
@@ -57,30 +57,29 @@ def test_every_spelling_of_the_root_prints_the_root_container_path(run_define, w
     ],
 )
 def test_every_spelling_of_a_package_prints_one_canonical_path(run_define, workspace, scope):
-    root = workspace(root=False)
+    root = workspace()
     (root / "packages" / "ledger").mkdir(parents=True)
     (root / "packages" / "other").mkdir()
     subject, path = printed(run_define("--at", scope, "--title", "Ledger import", stdin=GOAL, cwd=root))
-    assert path == "packages/ledger/milestones/ledger-import/"
-    assert subject == "Milestone-definition: " + path
+    assert path == "packages/ledger/mission_ledger-import/"
+    assert subject == "Mission-definition: " + path
     assert (root / path / "requirements.md").is_file()
 
 
 def test_the_printed_path_is_the_directory_the_files_were_written_into(run_define, workspace):
-    root = workspace(root=False)
+    root = workspace()
     (root / "a" / "b" / "c").mkdir(parents=True)
     _, path = printed(run_define("--at", "a/b/c", "--title", "Deep core", stdin=GOAL, cwd=root))
-    assert path == "a/b/c/milestones/deep-core/"
+    assert path == "a/b/c/mission_deep-core/"
     assert sorted(entry.name for entry in (root / path).iterdir()) == ["TASKS_TODO.md", "open_questions.xml", "requirements.md"]
     assert tree(root) == [
         "a/",
         "a/b/",
         "a/b/c/",
-        "a/b/c/milestones/",
-        "a/b/c/milestones/deep-core/",
-        "a/b/c/milestones/deep-core/TASKS_TODO.md",
-        "a/b/c/milestones/deep-core/open_questions.xml",
-        "a/b/c/milestones/deep-core/requirements.md",
+        "a/b/c/mission_deep-core/",
+        "a/b/c/mission_deep-core/TASKS_TODO.md",
+        "a/b/c/mission_deep-core/open_questions.xml",
+        "a/b/c/mission_deep-core/requirements.md",
     ]
 
 
@@ -100,12 +99,12 @@ def test_the_printed_path_is_the_directory_the_files_were_written_into(run_defin
     ],
 )
 def test_normalize_scope_collapses_lexically(value, scope):
-    assert define_milestone.normalize_scope(value) == scope
+    assert define_mission.normalize_scope(value) == scope
 
 
 def test_normalization_reads_no_filesystem(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    assert define_milestone.normalize_scope("nowhere/../at/./all/") == "at/all"
+    assert define_mission.normalize_scope("nowhere/../at/./all/") == "at/all"
     assert list(tmp_path.iterdir()) == []
 
 
@@ -127,7 +126,7 @@ def test_normalization_reads_no_filesystem(tmp_path, monkeypatch):
     ],
 )
 def test_an_empty_absolute_or_climbing_scope_is_refused_naming_it_as_given(run_define, workspace, scope, reason):
-    root = workspace(root=False)
+    root = workspace()
     (root / "pkg").mkdir()
     result = run_define("--at", scope, "--title", "First", stdin=GOAL, cwd=root)
     assert (result.returncode, result.stdout) == (1, b"")
@@ -137,7 +136,7 @@ def test_an_empty_absolute_or_climbing_scope_is_refused_naming_it_as_given(run_d
 
 @pytest.mark.parametrize("scope", ["missing", "missing/", "./pkg/missing", "pkg//missing/./"])
 def test_a_scope_missing_from_the_working_tree_is_refused_naming_it_as_given(run_define, workspace, scope):
-    root = workspace(root=False)
+    root = workspace()
     (root / "pkg").mkdir()
     result = run_define("--at", scope, "--title", "First", stdin=GOAL, cwd=root)
     assert (result.returncode, result.stdout) == (1, b"")
@@ -148,7 +147,7 @@ def test_a_scope_missing_from_the_working_tree_is_refused_naming_it_as_given(run
 
 
 def test_a_scope_naming_a_file_is_refused_naming_it_as_given(run_define, workspace):
-    root = workspace(root=False)
+    root = workspace()
     (root / "pkg").mkdir()
     (root / "pkg" / "module.py").write_bytes(b"code")
     result = run_define("--at", "./pkg/module.py", "--title", "First", stdin=GOAL, cwd=root)
@@ -158,7 +157,7 @@ def test_a_scope_naming_a_file_is_refused_naming_it_as_given(run_define, workspa
 
 
 def test_a_scope_that_is_a_dangling_symlink_is_refused(run_define, workspace, tmp_path):
-    root = workspace(root=False)
+    root = workspace()
     (root / "gone").symlink_to(tmp_path / "missing")
     result = run_define("--at", "gone", "--title", "First", stdin=GOAL, cwd=root)
     assert (result.returncode, result.stdout) == (1, b"")
@@ -167,104 +166,88 @@ def test_a_scope_that_is_a_dangling_symlink_is_refused(run_define, workspace, tm
 
 
 def test_a_scope_that_is_a_symlink_to_a_directory_is_accepted(run_define, workspace, tmp_path):
-    root = workspace(root=False)
+    root = workspace()
     target = tmp_path / "real"
     target.mkdir()
     (root / "linked").symlink_to(target, target_is_directory=True)
     _, path = printed(run_define("--at", "linked", "--title", "Linked core", stdin=GOAL, cwd=root))
-    assert path == "linked/milestones/linked-core/"
-    assert (target / "milestones" / "linked-core" / "requirements.md").is_file()
+    assert path == "linked/mission_linked-core/"
+    assert (target / "mission_linked-core" / "requirements.md").is_file()
 
 
 def test_the_scope_is_never_created(run_define, workspace):
-    root = workspace(root=False)
+    root = workspace()
     result = run_define("--at", "packages/new-core", "--title", "First", stdin=GOAL, cwd=root)
     assert result.returncode == 1
     assert list(root.iterdir()) == []
 
 
-# --- the container ------------------------------------------------------------------------
+# --- no container -----------------------------------------------------------------------
 
 
-def test_a_missing_root_container_is_created(run_define, workspace):
-    root = workspace(root=False)
+def test_a_root_mission_stands_directly_in_the_root(run_define, workspace):
+    root = workspace()
     _, path = printed(run_define("--at", ".", "--title", "First", stdin=GOAL, cwd=root))
-    assert path == "milestones/first/"
+    assert path == "mission_first/"
     assert tree(root) == [
-        "milestones/",
-        "milestones/first/",
-        "milestones/first/TASKS_TODO.md",
-        "milestones/first/open_questions.xml",
-        "milestones/first/requirements.md",
+        "mission_first/",
+        "mission_first/TASKS_TODO.md",
+        "mission_first/open_questions.xml",
+        "mission_first/requirements.md",
     ]
 
 
-def test_a_missing_package_container_is_created_and_nothing_else(run_define, workspace):
-    root = workspace(root=False)
+def test_a_package_mission_stands_directly_in_the_package_and_nothing_else_is_created(run_define, workspace):
+    root = workspace()
     (root / "pkg").mkdir()
     (root / "pkg" / "module.py").write_bytes(b"code")
     printed(run_define("--at", "pkg", "--title", "First", stdin=GOAL, cwd=root))
     assert tree(root) == [
         "pkg/",
-        "pkg/milestones/",
-        "pkg/milestones/first/",
-        "pkg/milestones/first/TASKS_TODO.md",
-        "pkg/milestones/first/open_questions.xml",
-        "pkg/milestones/first/requirements.md",
+        "pkg/mission_first/",
+        "pkg/mission_first/TASKS_TODO.md",
+        "pkg/mission_first/open_questions.xml",
+        "pkg/mission_first/requirements.md",
         "pkg/module.py",
     ]
-    assert not (root / "milestones").exists()
 
 
-def test_an_existing_container_is_kept_with_everything_in_it(run_define, workspace):
-    root = workspace("live-one", files=("answer_decision_principles.md",))
+def test_the_scope_keeps_everything_already_in_it(run_define, workspace):
+    root = workspace("mission_live-one", files=("answer_decision_principles.md",))
     printed(run_define("--at", ".", "--title", "Second", stdin=GOAL, cwd=root))
-    assert sorted(entry.name for entry in (root / "milestones").iterdir()) == [
+    assert sorted(entry.name for entry in root.iterdir()) == [
         "answer_decision_principles.md",
-        "live-one",
-        "second",
+        "mission_live-one",
+        "mission_second",
     ]
-
-
-@pytest.mark.parametrize("scope", [".", "pkg"])
-def test_a_file_where_the_container_should_be_is_refused(run_define, workspace, scope):
-    root = workspace(root=False)
-    (root / "pkg").mkdir()
-    container = root / "milestones" if scope == "." else root / "pkg" / "milestones"
-    container.write_bytes(b"not a directory")
-    label = "milestones/" if scope == "." else "pkg/milestones/"
-    result = run_define("--at", scope, "--title", "First", stdin=GOAL, cwd=root)
-    assert (result.returncode, result.stdout) == (1, b"")
-    assert result.stderr == f"Error: {label} exists and is not a directory; nothing was written\n".encode("utf-8")
-    assert container.read_bytes() == b"not a directory"
 
 
 # --- no number ----------------------------------------------------------------------------
 
 
 def test_the_directory_is_named_by_the_slug_alone(run_define, workspace):
-    root = workspace("milestone_07_seven", "milestone_99_last")
+    root = workspace("mission_07_seven", "mission_99_last")
     subject, path = printed(run_define("--at", ".", "--title", "Next", stdin=GOAL, cwd=root))
-    assert (subject, path) == ("Milestone-definition: milestones/next/", "milestones/next/")
-    assert sorted(entry.name for entry in (root / "milestones").iterdir()) == ["milestone_07_seven", "milestone_99_last", "next"]
+    assert (subject, path) == ("Mission-definition: mission_next/", "mission_next/")
+    assert sorted(entry.name for entry in root.iterdir()) == ["mission_07_seven", "mission_99_last", "mission_next"]
 
 
 def test_the_heading_carries_the_title_alone(run_define, workspace):
-    root = workspace("milestone_06_six")
+    root = workspace("mission_06_six")
     printed(run_define("--at", ".", "--title", "Seventh", stdin=GOAL, cwd=root))
-    requirements = (root / "milestones" / "seventh" / "requirements.md").read_text(encoding="utf-8")
+    requirements = (root / "mission_seventh" / "requirements.md").read_text(encoding="utf-8")
     assert requirements.startswith("# Seventh\n\n## Goal\n")
 
 
-def test_two_scopes_take_two_milestones(run_define, workspace):
-    root = workspace(root=False)
+def test_two_scopes_take_two_missions(run_define, workspace):
+    root = workspace()
     (root / "app").mkdir()
     (root / "lib").mkdir()
     first = printed(run_define("--at", "app", "--title", "Parser rework", stdin=GOAL, cwd=root))
     second = printed(run_define("--at", "lib", "--title", "Parser rework", stdin=GOAL, cwd=root))
     third = printed(run_define("--at", ".", "--title", "Parser rework", stdin=GOAL, cwd=root))
     assert [path for _, path in (first, second, third)] == [
-        "app/milestones/parser-rework/",
-        "lib/milestones/parser-rework/",
-        "milestones/parser-rework/",
+        "app/mission_parser-rework/",
+        "lib/mission_parser-rework/",
+        "mission_parser-rework/",
     ]

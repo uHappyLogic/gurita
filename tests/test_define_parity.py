@@ -1,4 +1,4 @@
-"""The empty open-question document define_milestone.py writes is the one the open-question
+"""The empty open-question document define_mission.py writes is the one the open-question
 tool reads and renders, so the two tools cannot drift apart on its bytes."""
 
 import ast
@@ -6,23 +6,23 @@ from pathlib import Path
 
 import open_questions
 
-DEFINE_TOOL = Path(__file__).resolve().parent.parent / "core" / "tools" / "define_milestone.py"
+DEFINE_TOOL = Path(__file__).resolve().parent.parent / "core" / "tools" / "define_mission.py"
 
 
 def test_the_written_document_is_the_serializer_empty_document(run_define, workspace):
     root = workspace()
     result = run_define("--at", ".", "--title", "First", stdin=b"Ship it.\n", cwd=root)
     assert result.returncode == 0, result.stderr
-    directory = root / "milestones" / "first"
+    directory = root / "mission_first"
     written = (directory / open_questions.DOCUMENT_NAME).read_bytes()
     assert written == open_questions.render_document(open_questions.Document()).encode("utf-8")
     assert open_questions.load_document(str(directory)) == open_questions.Document()
 
 
-def test_the_open_question_tool_lists_nothing_in_the_new_milestone(run_define, run_tool, workspace):
+def test_the_open_question_tool_lists_nothing_in_the_new_mission(run_define, run_tool, workspace):
     root = workspace()
     run_define("--at", ".", "--title", "First", stdin=b"Ship it.\n", cwd=root)
-    result = run_tool("list", str(root / "milestones" / "first"))
+    result = run_tool("list", str(root / "mission_first"))
     assert (result.returncode, result.stdout, result.stderr) == (0, b"", b"")
 
 

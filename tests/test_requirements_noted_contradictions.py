@@ -67,7 +67,7 @@ def test_the_fresh_template_with_a_noted_section_takes_a_created_subsection_abov
     root = workspace()
     defined = run_define("--at", ".", "--title", "First", stdin=b"Ship it.\n", cwd=root)
     assert defined.returncode == 0, defined.stderr
-    target = root / "milestones" / "first"
+    target = root / "mission_first"
     noted = with_noted_section((target / NAME).read_bytes())
     (target / NAME).write_bytes(noted)
     result = run(run_requirements, "fold", target, "Opening Decision", b"The first decision.\n")

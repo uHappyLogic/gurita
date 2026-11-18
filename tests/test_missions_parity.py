@@ -27,7 +27,7 @@ def test_the_missions_tool_imports_no_sibling_tool():
     assert "open_questions" not in imported
     assert "task_list" not in imported
     assert "requirements" not in imported
-    assert "define_milestone" not in imported
+    assert "define_mission" not in imported
     assert "commit" not in imported
     assert "importlib" not in imported
 

@@ -2,7 +2,7 @@
 
 Usage: python3 <plugin root>/tools/open_questions.py <subcommand> MILESTONE_DIR [...]
 
-define_milestone.py creates the empty document together with its milestone directory; from
+define_mission.py creates the empty document together with its milestone directory; from
 then on this module is the document's only writer. Every subcommand takes the
 already-resolved milestone directory as its first argument and acts on the one file this
 module writes inside it, MILESTONE_DIR/open_questions.xml, which must already exist: no

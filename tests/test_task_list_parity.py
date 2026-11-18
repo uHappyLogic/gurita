@@ -22,6 +22,6 @@ def imported_modules(path):
 def test_the_task_list_tool_imports_neither_sibling_tool():
     imported = imported_modules(TOOL)
     assert "open_questions" not in imported
-    assert "define_milestone" not in imported
+    assert "define_mission" not in imported
     assert "importlib" not in imported
 

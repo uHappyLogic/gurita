@@ -1,7 +1,7 @@
 """Where a fold lands: at the end of the "## Decisions" subsection whose "### " heading equals
 the --section heading after whitespace and case folding, or under a new "### " heading created
 at the end of the section, just before the next "## " heading, when none carries it; the fresh
-requirements.md define_milestone.py writes takes its first decision the same way."""
+requirements.md define_mission.py writes takes its first decision the same way."""
 
 from pathlib import Path
 
@@ -123,7 +123,7 @@ def test_the_fresh_template_takes_its_first_and_later_decisions(run_define, run_
     root = workspace()
     defined = run_define("--at", ".", "--title", "First", stdin=b"Ship it.\n", cwd=root)
     assert defined.returncode == 0, defined.stderr
-    target = root / "milestones" / "first"
+    target = root / "mission_first"
     template = (target / NAME).read_bytes()
     assert template == b"# First\n\n## Goal\n\nShip it.\n\n## Relevant starting state\n\n## Decisions\n\n## Out of Scope\n\n"
 

@@ -1,12 +1,12 @@
-"""Creator of a new milestone: its directory and the three files it starts with.
+"""Creator of a new mission: its directory and the three files it starts with.
 
-Usage: python3 <plugin root>/tools/define_milestone.py --at SCOPE --title TITLE  (goal text on stdin)
+Usage: python3 <plugin root>/tools/define_mission.py --at SCOPE --title TITLE  (goal text on stdin)
 
-Run from the workspace root. The milestone is created at <scope>/milestones/<slug>/, under
-the milestones/ container of the scope given as --at, and named by its slug alone, with no
-number.
+Run from the workspace root. The mission is created at <scope>/mission_<slug>/, directly in
+the scope given as --at with no container between them, and named by its slug alone behind
+the mission_ prefix, with no number.
 
-Scope: --at names the directory holding the core of the milestone's work, relative to the
+Scope: --at names the directory holding the core of the mission's work, relative to the
 working directory, "." (or "./") naming the root. It is required, with no default. It is
 normalized lexically, with no filesystem lookup: "." components, duplicate and trailing
 slashes, and a leading "./" are collapsed, and a ".." component cancels the component
@@ -14,9 +14,8 @@ before it. A scope that is empty, absolute, or that climbs above the working dir
 ".." once normalized is refused. The normalized scope must then be an existing directory of
 the working tree, tested on the filesystem (the tool touches no git); a scope missing there,
 or naming something that is not a directory, is refused. Every scope refusal names the scope
-as given, and nothing is written. The tool never creates the scope; it creates only the
-scope's milestones/ container, when that is missing, and refuses a container path held by
-something that is not a directory.
+as given, and nothing is written. The tool never creates the scope, nor any directory but the
+mission's own.
 
 The title comes as --title and is folded to one line (whitespace runs and newlines
 collapsed to one space, ends trimmed); it is refused only when empty after that fold, and
@@ -34,10 +33,9 @@ characters outside [a-z0-9] turned into one hyphen with edge hyphens trimmed, so
 hyphenated compound stays one word; a word that cleans down to nothing is skipped and the
 five are filled from the words that follow. A title no word of which survives is refused.
 
-Conflict: the milestone directory <scope>/milestones/<slug> is created exclusively, so
-anything already at that path (a directory, a file, or a symlink) refuses the call before
-anything is written. That is the only conflict check: the same slug may stand in the
-containers of two scopes.
+Conflict: the mission directory <scope>/mission_<slug> is created exclusively, so anything
+already at that path (a directory, a file, or a symlink) refuses the call before anything is
+written. That is the only conflict check: the same slug may stand in two scopes.
 
 Files, written in this order into the new directory, each through a temporary file in the
 same directory renamed over the target:
@@ -48,19 +46,18 @@ same directory renamed over the target:
 
 Output and error contract:
   - on success exactly two unlabeled lines on stdout: the commit subject
-    "Milestone-definition: <path>", then the milestone path "<path>" itself, where <path> is
-    the canonical repo-relative path of the milestone directory with its trailing slash,
-    "milestones/<slug>/" for the root and "<scope>/milestones/<slug>/" otherwise, the scope
-    in its normalized form however it was typed
+    "Mission-definition: <path>", then the mission path "<path>" itself, where <path> is the
+    canonical repo-relative path of the mission directory with its trailing slash,
+    "mission_<slug>/" for the root and "<scope>/mission_<slug>/" otherwise, the scope in its
+    normalized form however it was typed
   - every failure is exactly one line "Error: <reason>" on stderr with exit status 1 and
     empty stdout; a malformed invocation (no --at or no --title included) gets argparse's
     own usage message and exit status 2; no traceback ever reaches the caller
-  - a failure after the call created its first directory removes what the call created, in
+  - a failure after the call created the mission directory removes what the call created, in
     reverse creation order, with a plain unlink for each file and a non-recursive rmdir for
-    each directory (the milestone directory, and the container when the call created it), so
-    nothing the call did not create is ever removed; a removal that fails stops the
-    cleanup, and the one Error line then gives the original reason followed by the paths
-    left in place
+    the mission directory, so nothing the call did not create is ever removed; a removal that
+    fails stops the cleanup, and the one Error line then gives the original reason followed
+    by the paths left in place
 
 Standard library only; runs on Python 3.9 and later.
 """
@@ -73,8 +70,8 @@ import sys
 import tempfile
 import unicodedata
 
-CONTAINER_NAME = "milestones"
-SUBJECT_MARKER = "Milestone-definition"
+DIRECTORY_PREFIX = "mission_"
+SUBJECT_MARKER = "Mission-definition"
 ROOT_SCOPE = "."
 SLUG_WORDS = 5
 APOSTROPHES = ("'", "‘", "’", "ʼ")
@@ -195,15 +192,16 @@ def derive_slug(title):
             if len(words) == SLUG_WORDS:
                 break
     if not words:
-        raise ToolError(f"no word of the title {title!r} leaves any letter or digit to build the milestone slug from")
+        raise ToolError(f"no word of the title {title!r} leaves any letter or digit to build the mission slug from")
     return "-".join(words)
 
 
-def container_path(scope):
-    """The repo-relative path of the scope's milestones/ container, with no trailing slash."""
+def mission_path(scope, slug):
+    """The repo-relative path of the mission directory in the scope, with no trailing slash."""
+    name = DIRECTORY_PREFIX + slug
     if scope == ROOT_SCOPE:
-        return CONTAINER_NAME
-    return posixpath.join(scope, CONTAINER_NAME)
+        return name
+    return posixpath.join(scope, name)
 
 
 def path_label(path):
@@ -235,8 +233,8 @@ def write_new_file(path, text):
         raise
 
 
-def milestone_files(title, goal):
-    """The three files of a new milestone, in creation order, as (name, text) pairs."""
+def mission_files(title, goal):
+    """The three files of a new mission, in creation order, as (name, text) pairs."""
     return [
         (OPEN_QUESTIONS_NAME, OPEN_QUESTIONS_TEMPLATE),
         (REQUIREMENTS_NAME, REQUIREMENTS_TEMPLATE.format(title=title, goal=goal)),
@@ -244,19 +242,8 @@ def milestone_files(title, goal):
     ]
 
 
-def create_container(container):
-    """Create the scope's milestones/ container when it is missing; True when this call
-    created it. A container path held by anything but a directory is a ToolError."""
-    try:
-        os.mkdir(container)
-    except FileExistsError:
-        if not os.path.isdir(container):
-            raise ToolError(f"{path_label(container)} exists and is not a directory; nothing was written")
-        return False
-    return True
-
-
 def create_directory(directory):
+    """Create the mission directory exclusively; anything already at its path is a ToolError."""
     try:
         os.mkdir(directory)
     except FileExistsError:
@@ -282,16 +269,13 @@ def remove_created(created):
     return []
 
 
-def create_milestone(container, directory, files):
-    """Create the container when missing and the milestone directory exclusively, and write
-    the files into it; on any failure remove what was created and raise one ToolError
-    carrying the reason."""
-    created = []
-    if create_container(container):
-        created.append(container)
+def create_mission(directory, files):
+    """Create the mission directory exclusively and write the files into it; on any failure
+    after the directory was created remove what was created and raise one ToolError carrying
+    the reason."""
+    create_directory(directory)
+    created = [directory]
     try:
-        create_directory(directory)
-        created.append(directory)
         for name, text in files:
             path = os.path.join(directory, name)
             write_new_file(path, text)
@@ -315,9 +299,8 @@ def define(args):
     scope = normalize_scope(args.at)
     goal = read_goal()
     check_scope(scope, args.at)
-    container = container_path(scope)
-    directory = posixpath.join(container, slug)
-    create_milestone(container, directory, milestone_files(title, goal))
+    directory = mission_path(scope, slug)
+    create_mission(directory, mission_files(title, goal))
     path = path_label(directory)
     sys.stdout.write(f"{SUBJECT_MARKER}: {path}\n{path}\n")
     return 0
@@ -325,11 +308,10 @@ def define(args):
 
 def build_parser():
     parser = argparse.ArgumentParser(
-        prog="define_milestone.py",
+        prog="define_mission.py",
         description=(
-            "Create a new milestone directory at <scope>/milestones/<slug>/ with its open_questions.xml, "
-            "requirements.md, and TASKS_TODO.md, creating the scope's milestones/ container when missing; "
-            "the goal text is read from standard input"
+            "Create a new mission directory at <scope>/mission_<slug>/, directly in the scope, with its "
+            "open_questions.xml, requirements.md, and TASKS_TODO.md; the goal text is read from standard input"
         ),
     )
     parser.add_argument(
@@ -337,14 +319,14 @@ def build_parser():
         required=True,
         metavar="SCOPE",
         help=(
-            "the existing directory holding the core of the milestone's work, relative to the workspace root, "
+            "the existing directory holding the core of the mission's work, relative to the workspace root, "
             "\".\" for the root; normalized lexically, and refused when absolute or climbing out with \"..\""
         ),
     )
     parser.add_argument(
         "--title",
         required=True,
-        help="the milestone title, written into the requirements.md heading and the source of the slug",
+        help="the mission title, written into the requirements.md heading and the source of the slug",
     )
     parser.set_defaults(func=define)
     return parser

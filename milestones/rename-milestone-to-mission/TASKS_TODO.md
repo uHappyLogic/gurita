@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Define a Mission at a Scope
-
-Rename the definition tool to `core/tools/define_mission.py` and make it create `<scope>/mission_<slug>/` directly in the scope, with no container, printing `Mission-definition: <path>` and the path, with the definition skill's call of it following. It is the writer side of the prefix form the read-only tool discovers. Verified by the `tests/test_define_*.py` files and the `workspace` factory of `tests/conftest.py`, rewritten to the new form, passing under both interpreters with the drift gate.
-
----
-
 ## Remaining Tools and Suite Say Mission
 
 Carry the rename through the open-question, task-list, fold, and commit tools, where the word stands only in docstrings, help text, the `MILESTONE_DIR` metavar, and the `milestone_dir` argument name, and through their tests, the golden fixtures, and the shared fixture names of `tests/conftest.py`, with fixture paths in the `mission_<slug>/` form. No tool's behaviour changes, and the four fixed-call tests are left to the task that renames the placeholder they extract. Verified by the drift gate and both pytest runs passing and by a search finding the old word nowhere in those four tools or their tests.

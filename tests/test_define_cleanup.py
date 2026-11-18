@@ -1,7 +1,7 @@
-"""define_milestone.py failure cleanup: a failure after the call created its first directory
-removes exactly what the call created, the milestones/ container included when the call made
-it, in reverse creation order, with unlink and non-recursive rmdir, and a removal that fails
-stops the cleanup and is named in the one Error line."""
+"""define_mission.py failure cleanup: a failure after the call created the mission directory
+removes exactly what the call created, in reverse creation order, with unlink and a
+non-recursive rmdir of the mission directory, never the scope, and a removal that fails stops
+the cleanup and is named in the one Error line."""
 
 import errno
 import io
@@ -10,10 +10,10 @@ import sys
 
 import pytest
 
-import define_milestone
+import define_mission
 
 GOAL = b"Ship it.\n"
-DIRECTORY = os.path.join("milestones", "first")
+DIRECTORY = "mission_first"
 
 
 def no_space(path):
@@ -23,15 +23,15 @@ def no_space(path):
 @pytest.fixture
 def define_in_process(workspace, monkeypatch, capsys):
     """Run main() in a fresh workspace with the goal on stdin: returns (status, out, err, root).
-    container=False leaves the milestones/ container out, so the call creates it."""
+    A scope other than the root is created first, empty."""
 
-    def run(title="First", container=True, scope="."):
-        root = workspace(root=container)
+    def run(title="First", scope="."):
+        root = workspace()
         if scope != ".":
             (root / scope).mkdir(parents=True)
         monkeypatch.chdir(root)
         monkeypatch.setattr(sys, "stdin", io.TextIOWrapper(io.BytesIO(GOAL)))
-        status = define_milestone.main(["--at", scope, "--title", title])
+        status = define_mission.main(["--at", scope, "--title", title])
         captured = capsys.readouterr()
         return status, captured.out, captured.err, root
 
@@ -43,7 +43,7 @@ def fail_on(monkeypatch):
     """Make the write of the named file fail, running `before` first when given."""
 
     def install(name, before=None, error=no_space):
-        real = define_milestone.write_new_file
+        real = define_mission.write_new_file
 
         def write(path, text):
             if os.path.basename(path) == name:
@@ -52,7 +52,7 @@ def fail_on(monkeypatch):
                 raise error(path)
             real(path, text)
 
-        monkeypatch.setattr(define_milestone, "write_new_file", write)
+        monkeypatch.setattr(define_mission, "write_new_file", write)
 
     return install
 
@@ -86,7 +86,7 @@ def test_a_failure_on_the_last_file_removes_what_was_written_in_reverse(define_i
         ("unlink", os.path.join(DIRECTORY, "open_questions.xml")),
         ("rmdir", DIRECTORY),
     ]
-    assert list((root / "milestones").iterdir()) == []
+    assert list(root.iterdir()) == []
 
 
 def test_a_failure_on_the_first_file_removes_only_the_directory(define_in_process, fail_on, removals):
@@ -95,7 +95,7 @@ def test_a_failure_on_the_first_file_removes_only_the_directory(define_in_proces
     assert (status, out) == (1, "")
     assert err.startswith("Error: No space left on device: ")
     assert removals == [("rmdir", DIRECTORY)]
-    assert list((root / "milestones").iterdir()) == []
+    assert list(root.iterdir()) == []
 
 
 def test_a_failure_on_the_middle_file_removes_the_first_file_and_the_directory(define_in_process, fail_on, removals):
@@ -107,53 +107,30 @@ def test_a_failure_on_the_middle_file_removes_the_first_file_and_the_directory(d
         os.path.join(DIRECTORY, "open_questions.xml"),
         DIRECTORY,
     ]
-    assert list((root / "milestones").iterdir()) == []
-
-
-def test_a_container_that_already_stood_is_never_removed(define_in_process, fail_on):
-    fail_on("requirements.md")
-    status, _, _, root = define_in_process()
-    assert status == 1
-    assert (root / "milestones").is_dir()
-
-
-def test_a_container_the_call_created_is_removed_last(define_in_process, fail_on, removals):
-    fail_on("TASKS_TODO.md")
-    status, out, err, root = define_in_process(container=False)
-    assert (status, out) == (1, "")
-    assert err == f"Error: No space left on device: {os.path.join(DIRECTORY, 'TASKS_TODO.md')}\n"
-    assert removals == [
-        ("unlink", os.path.join(DIRECTORY, "requirements.md")),
-        ("unlink", os.path.join(DIRECTORY, "open_questions.xml")),
-        ("rmdir", DIRECTORY),
-        ("rmdir", "milestones"),
-    ]
     assert list(root.iterdir()) == []
 
 
-def test_a_package_container_the_call_created_is_removed_and_the_scope_kept(define_in_process, fail_on, removals):
+def test_a_package_mission_is_removed_and_the_scope_kept(define_in_process, fail_on, removals):
     fail_on("open_questions.xml")
-    status, out, err, root = define_in_process(container=False, scope="pkg")
+    status, out, err, root = define_in_process(scope="pkg")
     assert (status, out) == (1, "")
-    assert err.startswith("Error: No space left on device: pkg/milestones/first/open_questions.xml")
-    assert removals == [("rmdir", "pkg/milestones/first"), ("rmdir", "pkg/milestones")]
+    assert err.startswith("Error: No space left on device: pkg/mission_first/open_questions.xml")
+    assert removals == [("rmdir", "pkg/mission_first")]
     assert [path.name for path in root.iterdir()] == ["pkg"]
     assert list((root / "pkg").iterdir()) == []
 
 
-def test_a_container_holding_a_stray_entry_is_left_in_place(define_in_process, fail_on):
-    def drop_stray(path):
-        with open(os.path.join("milestones", "stray.md"), "wb") as handle:
+def test_an_entry_already_in_the_scope_is_never_removed(define_in_process, fail_on, removals):
+    def drop_neighbour(path):
+        with open("neighbour.md", "wb") as handle:
             handle.write(b"someone else's")
 
-    fail_on("requirements.md", before=drop_stray)
-    status, out, err, root = define_in_process(container=False)
+    fail_on("requirements.md", before=drop_neighbour)
+    status, out, err, root = define_in_process()
     assert (status, out) == (1, "")
-    assert err == (
-        f"Error: No space left on device: {os.path.join(DIRECTORY, 'requirements.md')}; "
-        "the cleanup could not remove milestones\n"
-    )
-    assert [path.name for path in (root / "milestones").iterdir()] == ["stray.md"]
+    assert err == f"Error: No space left on device: {os.path.join(DIRECTORY, 'requirements.md')}\n"
+    assert [path for _, path in removals] == [os.path.join(DIRECTORY, "open_questions.xml"), DIRECTORY]
+    assert [path.name for path in root.iterdir()] == ["neighbour.md"]
 
 
 def test_a_failed_rename_leaves_no_temporary_file(define_in_process, monkeypatch):
@@ -168,7 +145,7 @@ def test_a_failed_rename_leaves_no_temporary_file(define_in_process, monkeypatch
     status, out, err, root = define_in_process()
     assert (status, out) == (1, "")
     assert err == f"Error: Input/output error: {os.path.join(DIRECTORY, 'requirements.md')}\n"
-    assert list((root / "milestones").iterdir()) == []
+    assert list(root.iterdir()) == []
 
 
 def test_a_stray_file_stops_the_cleanup_and_is_left_in_place(define_in_process, fail_on):
@@ -212,7 +189,7 @@ def test_an_already_missing_path_does_not_stop_the_cleanup(define_in_process, fa
     status, out, err, root = define_in_process()
     assert (status, out) == (1, "")
     assert "cleanup" not in err
-    assert list((root / "milestones").iterdir()) == []
+    assert list(root.iterdir()) == []
 
 
 def test_an_unexpected_exception_is_cleaned_up_and_reported(define_in_process, fail_on):
@@ -220,11 +197,11 @@ def test_an_unexpected_exception_is_cleaned_up_and_reported(define_in_process, f
     status, out, err, root = define_in_process()
     assert (status, out) == (1, "")
     assert err == "Error: ValueError: bad value\n"
-    assert list((root / "milestones").iterdir()) == []
+    assert list(root.iterdir()) == []
 
 
 def test_an_interrupt_is_cleaned_up_and_propagated(define_in_process, fail_on):
     fail_on("requirements.md", error=lambda path: KeyboardInterrupt())
     with pytest.raises(KeyboardInterrupt):
         define_in_process()
-    assert list(os.scandir("milestones")) == []
+    assert list(os.scandir(os.curdir)) == []

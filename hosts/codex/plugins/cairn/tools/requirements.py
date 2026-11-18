@@ -6,7 +6,7 @@ Usage: python3 <plugin root>/tools/requirements.py fold MILESTONE_DIR --section 
        python3 <plugin root>/tools/requirements.py replace MILESTONE_DIR --section HEADING
        (the subsection's new body on standard input)
 
-define_milestone.py creates requirements.md with its milestone directory, and the file keeps
+define_mission.py creates requirements.md with its milestone directory, and the file keeps
 being written by hand and by other writers afterwards: this module is not its only writer and
 writes one place of it only, so a call changes no byte it did not write. Each subcommand takes
 the already-resolved milestone directory as its first argument and acts on the requirements.md

@@ -1,7 +1,7 @@
 """Shared fixtures for the suite of the six tools under core/tools/, and for the tests that run
 a fixed shell call extracted from the rendered Claude Code tree in a temporary git repository.
 
-Each tool is importable by its module name (`open_questions`, `define_milestone`,
+Each tool is importable by its module name (`open_questions`, `define_mission`,
 `task_list`, `requirements`, `commit`, `missions`) through the `pythonpath = ["core/tools"]`
 line in pyproject.toml and driven end-to-end as a subprocess under the interpreter running the
 suite, so every exit status, stdout, and stderr the tests see is exactly what a caller sees.
@@ -22,7 +22,7 @@ sys.dont_write_bytecode = True
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 TOOL = REPO_ROOT / "core" / "tools" / "open_questions.py"
-DEFINE_TOOL = REPO_ROOT / "core" / "tools" / "define_milestone.py"
+DEFINE_TOOL = REPO_ROOT / "core" / "tools" / "define_mission.py"
 TASK_LIST_TOOL = REPO_ROOT / "core" / "tools" / "task_list.py"
 REQUIREMENTS_TOOL = REPO_ROOT / "core" / "tools" / "requirements.py"
 COMMIT_TOOL = REPO_ROOT / "core" / "tools" / "commit.py"
@@ -79,21 +79,18 @@ def run_define():
 
 @pytest.fixture
 def workspace(tmp_path):
-    """A fresh workspace directory under tmp_path holding a milestones root laid out as asked:
-    workspace("milestone_01_first", files=("milestone_50_file",)) -> the workspace Path, whose
-    milestones/ holds each named directory and each named empty file. root=False leaves the
-    milestones root out altogether."""
+    """A fresh workspace directory under tmp_path laid out as asked:
+    workspace("mission_first", files=("mission_file",)) -> the workspace Path, holding each
+    named directory and each named empty file directly at its root, with no container;
+    workspace() is an empty workspace."""
 
-    def build(*directories, files=(), root=True):
+    def build(*directories, files=()):
         path = tmp_path / "workspace"
         path.mkdir()
-        if root:
-            milestones = path / "milestones"
-            milestones.mkdir()
-            for name in directories:
-                (milestones / name).mkdir()
-            for name in files:
-                (milestones / name).write_bytes(b"")
+        for name in directories:
+            (path / name).mkdir()
+        for name in files:
+            (path / name).write_bytes(b"")
         return path
 
     return build

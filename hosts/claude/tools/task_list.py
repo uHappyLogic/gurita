@@ -2,7 +2,7 @@
 
 Usage: python3 <plugin root>/tools/task_list.py <subcommand> MILESTONE_DIR [...]
 
-define_milestone.py creates the task list together with its milestone directory; from then
+define_mission.py creates the task list together with its milestone directory; from then
 on this module is its only writer. Every subcommand takes the already-resolved milestone
 directory as its first argument and acts on the TASKS_TODO.md inside it, which must already
 exist: no subcommand creates it, and no other file in the directory is ever read or written.
