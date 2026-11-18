@@ -140,5 +140,9 @@ The 2.0.0 CHANGELOG entry holds the one section `### Rename Cairn to Gurita` and
 
 The documentation links in the 2.0.0 CHANGELOG entry are pinned to the release tag, not to the default branch. Both are absolute URLs into the source repository at the tag the release creates, written into the prepared wording as `https://github.com/uHappyLogic/gurita/blob/2.0.0/README.md#installation` (or the per-host install heading) and `https://github.com/uHappyLogic/gurita/blob/2.0.0/docs/workflow.md` with the anchor of the section holding the upgrade paragraph (today `### One-time setup`), heading anchors kept, so the published entry keeps showing the install commands and the upgrade rule as 2.0.0 shipped them.
 
+### Upgrade steps for old installs
+
+Removing the old Cairn copy is required, and its steps are commands written per host in the root README's install sections. Each host subsection gains a short "Upgrading from Cairn" note beside its fresh-install commands: Claude Code uninstalls `cairn@cairn` at every scope it was installed at and then removes the `cairn` marketplace; Codex removes the `cairn@cairn` plugin and the `cairn` marketplace; Antigravity deletes `~/.gemini/config/plugins/cairn` and restarts any running `agy` session. The existing project-level `.agents/plugins/cairn` note is folded into the Antigravity note, which then removes both old copies, its path kept as an old-name literal listed in the closing search's residue. The upgrade paragraph of `docs/workflow.md` states the order once, with no commands: finish every live milestone under the old copy, then remove it, then install Gurita and re-run the bootstrap.
+
 ## Out of Scope
 
