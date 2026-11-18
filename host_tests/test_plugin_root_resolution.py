@@ -4,7 +4,7 @@ orchestrator read a shared procedure at the installed copy's root and ran a pyth
 command there.
 
 The skill is the vehicle because its steps make both acts mandatory and dispatch no agent:
-step 0 follows the shared resolve-milestone procedure, step 4 reads the shared task format,
+step 0 follows the shared resolve-mission procedure, step 4 reads the shared task format,
 and step 6 runs the task-list tool's `insert` in one shell call, every path rendered under the
 plugin root. The run prints its records in the host's machine-readable output mode, each tool
 call with its parameters and whether it completed or failed, so the evidence is the host's own
@@ -18,17 +18,17 @@ dispatch tests' business, and this process is asserted to have dispatched none.
 
 import shlex
 
-# The one issue the skill is asked to queue: inside the fixture milestone's scope, distinct
+# The one issue the skill is asked to queue: inside the fixture mission's scope, distinct
 # from the fixture's own task, and concrete enough to be authored without a question back.
 ISSUE = (
     "Reject an expense whose amount is zero or negative with a one-line error and a non-zero "
     "exit status, so the ledger never records a non-expense; verify by adding an entry with "
     "amount 0 and checking the error line and the exit status."
 )
-# The fixture milestone, by the path the seeded copy holds it under, written as the required
-# `--milestone <path>` takes it, trailing slash included, and its task list.
-FIXTURE_MILESTONE = "milestones/milestone_01_pocket-ledger-foundations/"
-FIXTURE_TASKS_TODO = FIXTURE_MILESTONE + "TASKS_TODO.md"
+# The fixture mission, by the path the seeded copy holds it under, written as the required
+# `--mission <path>` takes it, trailing slash included, and its task list.
+FIXTURE_MISSION = "mission_pocket-ledger-foundations/"
+FIXTURE_TASKS_TODO = FIXTURE_MISSION + "TASKS_TODO.md"
 # What the chained insert call prints: nothing (the tool is silent on success) or the call's
 # own success line.
 INSERT_OUTPUTS = ("", "submission commit landed")
@@ -53,7 +53,7 @@ def test_the_orchestrator_reads_and_runs_at_the_installed_plugin_root(seeded_rep
     located, root = plugin_root
     repository = seeded_repo()
 
-    completed = run_host(f"/cairn:submit-task --milestone {FIXTURE_MILESTONE} {ISSUE}", cwd=repository)
+    completed = run_host(f"/cairn:submit-task --mission {FIXTURE_MISSION} {ISSUE}", cwd=repository)
     assert completed.returncode == 0, completed.stderr
     records = host.records(completed.stdout)
     assert records.succeeded, records.closing

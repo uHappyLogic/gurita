@@ -1,19 +1,19 @@
 """The derive-tasks refresh test: one headless process of the chosen host, the derive-tasks skill
-run on the fixture milestone in a seeded repository whose history has moved since that
-milestone's starting state was recorded, asserted from the repository's git log to commit a
+run on the fixture mission in a seeded repository whose history has moved since that
+mission's starting state was recorded, asserted from the repository's git log to commit a
 `Starting-state:` refresh before its `Task-derivation:` commit.
 
 The history is built here, on top of the shared one-commit seed, through the plugin's own
 tools, and only through them for every write the workflow gives a tool: the fixture
-milestone's three questions answered and removed, so the derivation's open-question
-precondition holds; its `Starting-state: <path>` commit, the anchor; then a second milestone in
-the same root container, so its scope overlaps the first's, defined, its tasks derived and
+mission's three questions answered and removed, so the derivation's open-question
+precondition holds; its `Starting-state: <path>` commit, the anchor; then a second mission at
+the repository root, so its scope overlaps the first's, defined, its tasks derived and
 completed, each completion committing a deliverable at the repository root with its verified
-bar as the body, and finished by the `Milestone-finish: <path>` commit that removes its
-directory. The second milestone is therefore finished when the host runs: the scope gate on the
-first milestone is open, while the milestones tool's `since --milestones` lists the second
-milestone's task and finish commits beneath the anchor, which is what sends derive-tasks into
-its refresh. The deliverables contradict the first milestone's recorded starting state, which
+bar as the body, and finished by the `Mission-finish: <path>` commit that removes its
+directory. The second mission is therefore finished when the host runs: the scope gate on the
+first mission is open, while the missions tool's `since --missions` lists the second
+mission's task and finish commits beneath the anchor, which is what sends derive-tasks into
+its refresh. The deliverables contradict the first mission's recorded starting state, which
 says no documentation or configuration exists, so the refresh has a fact to change and its
 commit has a change to record. Both are asserted on the built history before the host runs, so
 a test that fails on the host's side never fails for a history that did not hold.
@@ -31,14 +31,14 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 # history is built the same way whichever host the suite drives.
 TOOLS = REPO_ROOT / "core" / "tools"
 
-# The fixture milestone, by the path the seeded copy holds it under, written as the required
-# `--milestone <path>` takes it, trailing slash included.
-FIXTURE_MILESTONE = "milestones/milestone_01_pocket-ledger-foundations/"
-FIXTURE_REQUIREMENTS = FIXTURE_MILESTONE + "requirements.md"
-FIXTURE_QUESTIONS = FIXTURE_MILESTONE + "open_questions.xml"
+# The fixture mission, by the path the seeded copy holds it under, written as the required
+# `--mission <path>` takes it, trailing slash included.
+FIXTURE_MISSION = "mission_pocket-ledger-foundations/"
+FIXTURE_REQUIREMENTS = FIXTURE_MISSION + "requirements.md"
+FIXTURE_QUESTIONS = FIXTURE_MISSION + "open_questions.xml"
 
 # The fixture's three open questions, by Short Title, each with the decision its answer folds
-# into the milestone's `## Decisions`.
+# into the mission's `## Decisions`.
 ANSWERS = {
     "Data file format": (
         "- **Data file format.** The data file is one JSON document holding a list of entries, "
@@ -59,8 +59,8 @@ ANSWERS = {
 STARTING_STATE = """\
 ### The repository
 
-The repository holds only the milestone files under `milestones/`; no source code, \
-configuration, or documentation exists yet.
+The repository holds only the mission files under `mission_pocket-ledger-foundations/`; no \
+source code, configuration, or documentation exists yet.
 
 ### The ledger's environment
 
@@ -69,9 +69,9 @@ terminal, keeping its data in a single file inside the user's home directory. Th
 it tracks a few dozen expenses a month in one currency and reads the summary at month end.
 """
 
-# The second milestone, in the same root container as the fixture's, so the two scopes are the
+# The second mission, at the repository root as the fixture's is, so the two scopes are the
 # same directory and overlap.
-SECOND_MILESTONE = "milestones/repository-conventions/"
+SECOND_MISSION = "mission_repository-conventions/"
 SECOND_TITLE = "Repository Conventions"
 SECOND_REQUIREMENTS = f"""\
 # {SECOND_TITLE}
@@ -86,8 +86,8 @@ keeping generated files out of the history.
 
 ### The repository
 
-The repository holds only the milestone files under `milestones/`; no source code, \
-configuration, or documentation exists yet.
+The repository holds only the mission files under `mission_pocket-ledger-foundations/`; no \
+source code, configuration, or documentation exists yet.
 
 ## Decisions
 
@@ -98,7 +98,7 @@ configuration, or documentation exists yet.
 
 - Any source code of the ledger.
 """
-# The second milestone's tasks, in order: each one's `##` heading, its brief, the deliverable it
+# The second mission's tasks, in order: each one's `##` heading, its brief, the deliverable it
 # lands at the repository root, the deliverable's content, and its verified bar.
 SECOND_TASKS = (
     (
@@ -125,7 +125,7 @@ SECOND_TASKS = (
         "- it holds the one pattern `__pycache__/`",
     ),
 )
-# The second milestone's finish body: its title, a blank line, and the summary's bullets.
+# The second mission's finish body: its title, a blank line, and the summary's bullets.
 SECOND_SUMMARY = (
     f"{SECOND_TITLE}\n\n"
     "- Added `CONTRIBUTING.md` at the repository root, stating the stdlib-only Python 3.9+ "
@@ -133,10 +133,10 @@ SECOND_SUMMARY = (
     "- Added `.gitignore` at the repository root, ignoring `__pycache__/`"
 )
 
-# The two subjects the refresh run commits, in this order, each naming the fixture milestone by
+# The two subjects the refresh run commits, in this order, each naming the fixture mission by
 # its path exactly as resolved.
-STARTING_STATE_SUBJECT = f"Starting-state: {FIXTURE_MILESTONE}"
-DERIVATION_SUBJECT = f"Task-derivation: {FIXTURE_MILESTONE}"
+STARTING_STATE_SUBJECT = f"Starting-state: {FIXTURE_MISSION}"
+DERIVATION_SUBJECT = f"Task-derivation: {FIXTURE_MISSION}"
 
 
 def run(repository, command, *, stdin=None):
@@ -184,9 +184,9 @@ def replace_section(text, heading, body):
 
 
 def build_moved_history(repository):
-    """Build, on top of the seed, the history in which the fixture milestone's starting state is
+    """Build, on top of the seed, the history in which the fixture mission's starting state is
     stale: its questions answered, its `Starting-state:` anchor, then a second, overlapping
-    milestone defined, derived, completed, and finished after it."""
+    mission defined, derived, completed, and finished after it."""
     requirements = repository / FIXTURE_REQUIREMENTS
 
     # The fixture's questions answered one at a time, each decision folded ahead of its block's
@@ -195,7 +195,7 @@ def build_moved_history(repository):
         text = requirements.read_text(encoding="utf-8")
         position = text.index("\n## Out of Scope")
         requirements.write_text(text[:position] + decision + "\n" + text[position:], encoding="utf-8")
-        tool(repository, "open_questions.py", "remove", FIXTURE_MILESTONE, short_title)
+        tool(repository, "open_questions.py", "remove", FIXTURE_MISSION, short_title)
         commit(repository, f"Manual-answer: {short_title}", FIXTURE_QUESTIONS, FIXTURE_REQUIREMENTS)
 
     # The anchor: the fixture's starting state recorded under its path.
@@ -203,32 +203,32 @@ def build_moved_history(repository):
     requirements.write_text(replace_section(text, "Relevant starting state", STARTING_STATE), encoding="utf-8")
     commit(repository, STARTING_STATE_SUBJECT, FIXTURE_REQUIREMENTS)
 
-    # The second milestone's files added, as the definition tool lays them out.
-    second = repository / SECOND_MILESTONE
+    # The second mission's files added, as the definition tool lays them out.
+    second = repository / SECOND_MISSION
     second.mkdir()
     (second / "requirements.md").write_text(SECOND_REQUIREMENTS, encoding="utf-8")
     (second / "open_questions.xml").write_text("<open-questions/>\n", encoding="utf-8")
     (second / "TASKS_TODO.md").write_text("# TASKS TODO\n\n", encoding="utf-8")
     commit(
         repository,
-        f"Milestone-definition: {SECOND_MILESTONE}",
-        *(SECOND_MILESTONE + name for name in ("requirements.md", "open_questions.xml", "TASKS_TODO.md")),
+        f"Mission-definition: {SECOND_MISSION}",
+        *(SECOND_MISSION + name for name in ("requirements.md", "open_questions.xml", "TASKS_TODO.md")),
     )
 
     # Its tasks entered, which starts it.
     sections = "".join(f"## {title}\n\n{brief}\n\n---\n\n" for title, brief, *_ in SECOND_TASKS)
-    tool(repository, "task_list.py", "initialize", SECOND_MILESTONE, stdin=sections)
-    commit(repository, f"Task-derivation: {SECOND_MILESTONE}", SECOND_MILESTONE + "TASKS_TODO.md")
+    tool(repository, "task_list.py", "initialize", SECOND_MISSION, stdin=sections)
+    commit(repository, f"Task-derivation: {SECOND_MISSION}", SECOND_MISSION + "TASKS_TODO.md")
 
     # Its tasks completed, each committing its deliverable and the list the removal changed,
     # with its verified bar as the body.
     for title, _, deliverable, content, bar in SECOND_TASKS:
         (repository / deliverable).write_text(content, encoding="utf-8")
-        tool(repository, "task_list.py", "remove", SECOND_MILESTONE, title)
-        commit(repository, f"Task-completion: {title}", deliverable, SECOND_MILESTONE + "TASKS_TODO.md", body=bar)
+        tool(repository, "task_list.py", "remove", SECOND_MISSION, title)
+        commit(repository, f"Task-completion: {title}", deliverable, SECOND_MISSION + "TASKS_TODO.md", body=bar)
 
     # Its finish, removing its directory, with its summary as the body.
-    commit(repository, f"Milestone-finish: {SECOND_MILESTONE}", body=SECOND_SUMMARY, removals=(SECOND_MILESTONE,))
+    commit(repository, f"Mission-finish: {SECOND_MISSION}", body=SECOND_SUMMARY, removals=(SECOND_MISSION,))
 
 
 def subjects_since(repository, revision):
@@ -242,21 +242,21 @@ def test_derive_tasks_refreshes_a_stale_starting_state_before_deriving(seeded_re
     build_moved_history(repository)
     built = git(repository, "rev-parse", "HEAD").strip()
 
-    # The history holds as built: the gate on the fixture milestone open, nothing printed, and
-    # other milestones' work beneath its anchor, which is the derivation's reason to refresh.
-    assert tool(repository, "milestones.py", "gate", FIXTURE_MILESTONE) == ""
-    moved = tool(repository, "milestones.py", "since", FIXTURE_MILESTONE, "--milestones").splitlines()
+    # The history holds as built: the gate on the fixture mission open, nothing printed, and
+    # other missions' work beneath its anchor, which is the derivation's reason to refresh.
+    assert tool(repository, "missions.py", "gate", FIXTURE_MISSION) == ""
+    moved = tool(repository, "missions.py", "since", FIXTURE_MISSION, "--missions").splitlines()
     assert moved and moved[0].endswith("\t" + STARTING_STATE_SUBJECT), moved
     assert len(moved) > 1, moved
-    assert tool(repository, "open_questions.py", "list", FIXTURE_MILESTONE) == ""
+    assert tool(repository, "open_questions.py", "list", FIXTURE_MISSION) == ""
 
-    completed = run_host(f"/cairn:derive-tasks --milestone {FIXTURE_MILESTONE}", cwd=repository)
+    completed = run_host(f"/cairn:derive-tasks --mission {FIXTURE_MISSION}", cwd=repository)
     assert completed.returncode == 0, completed.stderr
     records = host.records(completed.stdout)
     assert records.succeeded, records.closing
 
     # The pass signal, read from the log: the run committed a starting-state refresh of the
-    # fixture milestone, and its task derivation after it.
+    # fixture mission, and its task derivation after it.
     subjects = subjects_since(repository, built)
     assert STARTING_STATE_SUBJECT in subjects, subjects
     assert DERIVATION_SUBJECT in subjects, subjects

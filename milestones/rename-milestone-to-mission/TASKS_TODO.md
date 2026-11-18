@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Host Suite and Fixture in Mission Form
-
-Move the host suite's fixture project into the mission form, its mission directory kept under a name the discovery pattern does not match and renamed by `seeded_repo` in each repository it seeds, its pointer-era `README.md` dropped with the container, and its heading retitled from `# Milestone 1: Pocket Ledger Foundations` to the bare title, and carry the rename through `host_tests/`: the `--mission` invocations, the `Mission directory:` prompt lines, the `missions.py since … --missions` calls, and the `Mission-definition:` and `Mission-finish:` commits. No host suite run is made in this work, on any host, so it is verified by both pytest runs and the drift gate passing and by a search of `host_tests/` and the fixture finding the old word nowhere.
-
----
-
 ## Revise the Gurita Draft After the Rename
 
 Revise `ideas/gurita.md` to record the mission rename as carried out: its Today column and present-tense statements of the old forms recast as what stood before the rename, the open questions this milestone answers marked as answered with the recorded decisions, and the old word kept only where it names a retired form. Verified by reading the draft against this milestone's decisions and the tree as it stands.

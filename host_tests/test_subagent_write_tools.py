@@ -4,11 +4,11 @@ host's orchestrator skill would hand it, so no orchestrator skill stands between
 the agent.
 
 - `provide-alternatives-to-open-question` is dispatched with a fixture Short Title, the
-  seeded milestone directory, and a scratch directory this test created. Its pass signal is
+  seeded mission directory, and a scratch directory this test created. Its pass signal is
   the one file its contract has it land, `<scratch dir>/<Short Title>.xml`, holding
   `<alternative>` elements, with the seeded repository left exactly as committed.
 - `complete-task` is dispatched with the heading of the fixture's one trivial task, the
-  seeded milestone directory, and a scratch directory this test created. Its pass signal is
+  seeded mission directory, and a scratch directory this test created. Its pass signal is
   the task's deliverable landed in the seeded repository, the task's section removed from
   `TASKS_TODO.md` in the task-list tool's rendering with no other file written beside it, and
   the two files its contract has it land: `<scratch dir>/body.txt`, holding the acceptance bar
@@ -38,9 +38,9 @@ import subprocess
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-# The fixture milestone, by the path the seeded copy holds it under, written as the required
-# `--milestone <path>` takes it, trailing slash included.
-FIXTURE_MILESTONE = "milestones/milestone_01_pocket-ledger-foundations/"
+# The fixture mission, by the path the seeded copy holds it under, written as the required
+# `--mission <path>` takes it, trailing slash included.
+FIXTURE_MISSION = "mission_pocket-ledger-foundations/"
 # A block of the fixture's open_questions.xml, by its Short Title.
 SHORT_TITLE = "Data file format"
 # The fixture's one trivial task, by its `##` heading, and the file it has the agent create.
@@ -59,24 +59,24 @@ ALTERNATIVES_LABEL = SHORT_TITLE
 COMPLETION_LABEL = "Task completer"
 
 
-def alternatives_prompt(milestone_dir, scratch_dir):
+def alternatives_prompt(mission_dir, scratch_dir):
     """The alternatives pass's dispatch prompt, as its orchestrator skill shows it: the Short
-    Title, the resolved milestone directory, and the run's scratch directory, nothing else."""
+    Title, the resolved mission directory, and the run's scratch directory, nothing else."""
     return (
         "Enumerate the alternatives for this single open question.\n\n"
         f"Short Title: {SHORT_TITLE}\n\n"
-        f"Milestone directory: {milestone_dir}\n\n"
+        f"Mission directory: {mission_dir}\n\n"
         f"Scratch directory: {scratch_dir}"
     )
 
 
-def completion_prompt(milestone_dir, scratch_dir):
+def completion_prompt(mission_dir, scratch_dir):
     """The completion orchestrator's dispatch prompt, as complete-all-tasks shows it: the
-    task's heading, the resolved milestone directory, and the run's scratch directory,
+    task's heading, the resolved mission directory, and the run's scratch directory,
     nothing else."""
     return (
         f'Complete the task named: "{TASK_TITLE}"\n\n'
-        f"Milestone directory: {milestone_dir}\n\n"
+        f"Mission directory: {mission_dir}\n\n"
         f"Scratch directory: {scratch_dir}"
     )
 
@@ -147,7 +147,7 @@ def test_the_alternatives_agent_lands_its_scratch_file(seeded_repo, host, run_ho
     scratch = tmp_path / "scratch"
     scratch.mkdir()
     dispatch = host.dispatch(
-        ALTERNATIVES_AGENT, ALTERNATIVES_LABEL, alternatives_prompt(repository / FIXTURE_MILESTONE, scratch)
+        ALTERNATIVES_AGENT, ALTERNATIVES_LABEL, alternatives_prompt(repository / FIXTURE_MISSION, scratch)
     )
 
     completed = run_host(dispatch.prompt, cwd=repository)
@@ -178,10 +178,10 @@ def test_the_alternatives_agent_lands_its_scratch_file(seeded_repo, host, run_ho
 
 def test_the_completion_agent_lands_the_task_its_body_file_and_its_path_file(seeded_repo, host, run_host, tmp_path):
     repository = seeded_repo()
-    milestone = repository / FIXTURE_MILESTONE
+    mission = repository / FIXTURE_MISSION
     scratch = tmp_path / "scratch"
     scratch.mkdir()
-    dispatch = host.dispatch(COMPLETION_AGENT, COMPLETION_LABEL, completion_prompt(milestone, scratch))
+    dispatch = host.dispatch(COMPLETION_AGENT, COMPLETION_LABEL, completion_prompt(mission, scratch))
 
     completed = run_host(dispatch.prompt, cwd=repository)
     assert_dispatched_only(host, completed, dispatch)
@@ -192,11 +192,11 @@ def test_the_completion_agent_lands_the_task_its_body_file_and_its_path_file(see
     assert deliverable.read_text(encoding="utf-8").splitlines()[0] == TASK_DELIVERABLE_HEADING
 
     # The section removed by the task-list tool: TASKS_TODO.md is the bare heading the tool
-    # renders, and the milestone directory gained no file, so no section was moved anywhere.
-    seeded_files = sorted(git(repository, "ls-files", "--", FIXTURE_MILESTONE).split())
-    todo = (milestone / "TASKS_TODO.md").read_text(encoding="utf-8")
+    # renders, and the mission directory gained no file, so no section was moved anywhere.
+    seeded_files = sorted(git(repository, "ls-files", "--", FIXTURE_MISSION).split())
+    todo = (mission / "TASKS_TODO.md").read_text(encoding="utf-8")
     assert todo == "# TASKS TODO\n\n", todo
-    present = sorted(path.relative_to(repository).as_posix() for path in milestone.iterdir())
+    present = sorted(path.relative_to(repository).as_posix() for path in mission.iterdir())
     assert present == seeded_files, present
 
     # The pass signal: the agent's two return files, at their fixed names inside the scratch
@@ -214,7 +214,7 @@ def test_the_completion_agent_lands_the_task_its_body_file_and_its_path_file(see
     # whole: the deliverable the agent created and the task list the removal changed, and no
     # other path.
     text = (scratch / PATH_FILE).read_text(encoding="utf-8")
-    task_list = FIXTURE_MILESTONE + "TASKS_TODO.md"
+    task_list = FIXTURE_MISSION + "TASKS_TODO.md"
     assert set(repository_paths(repository, text)) == {task_list, TASK_DELIVERABLE}, text
 
     # Nothing staged and nothing committed by the agent: the index matches the seed commit,

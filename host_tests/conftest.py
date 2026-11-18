@@ -43,12 +43,12 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFINITIONS_DIR = REPO_ROOT / "scripts" / "hosts"
 HOSTS_DIR = REPO_ROOT / "hosts"
 FIXTURE_PROJECT = REPO_ROOT / "tests" / "fixtures" / "host_project"
-# The fixture project's milestone container, tracked under a name the milestones tool's
-# discovery pattern does not match, so this repository's own `live` never lists the fixture's
-# milestone, and the name each seeded copy holds it under, where the installed skills find a
-# normal root container.
-FIXTURE_CONTAINER = "milestones.fixture"
-SEEDED_CONTAINER = "milestones"
+# The fixture project's mission directory, tracked under a name the missions tool's discovery
+# pattern does not match, so this repository's own `live` never lists the fixture's mission,
+# and the name each seeded copy holds it under, where the installed skills find a normal
+# root-scoped mission.
+FIXTURE_MISSION = "fixture.mission_pocket-ledger-foundations"
+SEEDED_MISSION = "mission_pocket-ledger-foundations"
 
 # The suite's one wall-clock bound on a headless run, in seconds: 20 minutes, one value for
 # every host, passed by the run fixture to the subprocess it starts. No host's own time limit
@@ -993,10 +993,10 @@ def _git(repository, *args):
 def seeded_repo(tmp_path):
     """A fresh committed copy of the fixture project for one headless process: seeded_repo() ->
     Path. Each call copies tests/fixtures/host_project to its own directory under tmp_path,
-    renames the copy's milestones.fixture/ container to milestones/, runs `git init` there, and
-    makes the initial commit, so every headless process starts from the same committed tree,
-    holding the fixture's milestone at milestones/<slug>/, and nothing it changes reaches the
-    fixture or another process."""
+    renames the copy's fixture.mission_<slug>/ directory to mission_<slug>/, runs `git init`
+    there, and makes the initial commit, so every headless process starts from the same
+    committed tree, holding the fixture's mission at mission_<slug>/, and nothing it changes
+    reaches the fixture or another process."""
 
     count = 0
 
@@ -1005,7 +1005,7 @@ def seeded_repo(tmp_path):
         count += 1
         repository = tmp_path / f"project{count}"
         shutil.copytree(FIXTURE_PROJECT, repository)
-        (repository / FIXTURE_CONTAINER).rename(repository / SEEDED_CONTAINER)
+        (repository / FIXTURE_MISSION).rename(repository / SEEDED_MISSION)
         _git(repository, "init", "-q")
         _git(repository, "config", "user.name", "Host Suite")
         _git(repository, "config", "user.email", "host-suite@example.invalid")
