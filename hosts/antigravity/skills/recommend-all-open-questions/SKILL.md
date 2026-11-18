@@ -1,11 +1,11 @@
 ---
 name: recommend-all-open-questions
-description: Annotate every open question in the named milestone carrying alternatives with a single recommended option, reasoning over the whole set inline.
+description: Annotate every open question in the named mission carrying alternatives with a single recommended option, reasoning over the whole set inline.
 ---
 
 # recommend-all-open-questions
 
-This is the second of the two annotating passes over a milestone's open questions, and the
+This is the second of the two annotating passes over a mission's open questions, and the
 non-interactive batch form of `/discuss-open-question`'s pick: the alternatives pass,
 `/provide-alternatives-to-all-open-questions`, has already given every `<open-question>` block
 its frozen set of `<alternative>` elements, and this pass picks one of them per block. It runs
@@ -39,15 +39,15 @@ Each embedded recommendation is consumed later, when it is recorded as an answer
 /recommend-all-open-questions --mission <path>
 ```
 
-It sweeps every `<open-question>` block in the named milestone's `open_questions.xml`. The
-required leading `--mission <path>` names the milestone by its repo-relative path, exactly as
-the definition tool printed it, trailing slash included, e.g. `milestones/user-guide/`.
-Both commit subjects below carry `<MISSION_DIR>`, the milestone path exactly as resolved,
+It sweeps every `<open-question>` block in the named mission's `open_questions.xml`. The
+required leading `--mission <path>` names the mission by its repo-relative path, exactly as
+the definition tool printed it, trailing slash included, e.g. `mission_user-guide/`.
+Both commit subjects below carry `<MISSION_DIR>`, the mission path exactly as resolved,
 trailing slash included.
 
 ## Workflow
 
-### 0. Find the milestone
+### 0. Find the mission
 
 Follow `~/.gemini/config/plugins/cairn/shared/resolve-mission.md` to resolve `<MISSION_DIR>`.
 Never use a hardcoded path.

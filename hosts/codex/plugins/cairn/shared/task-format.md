@@ -1,7 +1,7 @@
 # Task format (shared)
 
 This is the single source of truth for the **brief-level** format of one task section in a
-milestone's `TASKS_TODO.md`. The `derive-tasks` and `submit-task` skills author sections in
+mission's `TASKS_TODO.md`. The `derive-tasks` and `submit-task` skills author sections in
 this format, and the plugin's task-list tool parses them on every write.
 
 A task states *what* is to be achieved, not how to achieve it: the completer derives the
@@ -15,7 +15,7 @@ Use this exact template for every task section:
 ```markdown
 ## <Task Title>
 
-<1–3 sentence description of what this task does, why it is needed in this milestone, and
+<1–3 sentence description of what this task does, why it is needed in this mission, and
 how it would be verified.>
 
 ---

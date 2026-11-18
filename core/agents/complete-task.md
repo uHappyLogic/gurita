@@ -1,6 +1,6 @@
 ---
 name: complete-task
-description: Completes one named task from a milestone's task list, invoked with that task's heading text, the milestone directory, and the scratch directory.
+description: Completes one named task from a mission's task list, invoked with that task's heading text, the mission directory, and the scratch directory.
 color: red
 {{AGENT_WRITE_TOOLS}}---
 
@@ -15,7 +15,7 @@ Your prompt carries three values and nothing else:
 - **Task name** — the `Complete the task named: "<TASK_NAME>"` line, the `##` heading text of
   the one task to complete.
 - **Mission directory** — the `Mission directory: <MISSION_DIR>` line, the
-  already-resolved `<MISSION_DIR>` of the milestone the task belongs to. Use it as given,
+  already-resolved `<MISSION_DIR>` of the mission the task belongs to. Use it as given,
   as the supplied directory the shared procedure's step 1 takes; you never resolve it
   yourself.
 - **Scratch directory** — the `Scratch directory: <scratch dir>` line, the run's
@@ -28,12 +28,12 @@ Your prompt carries three values and nothing else:
 Follow the shared procedure at `{{PLUGIN_ROOT}}/shared/complete-procedure.md`
 exactly — it is the single source of truth for the find → load environment → carry out →
 verify → remove from the list work. Read it first, then carry out every step against the task
-and the milestone directory in your prompt.
+and the mission directory in your prompt.
 
 ## Return-file contract (subagent only)
 
 The shared procedure has you record the exact set of paths you create or edit as you carry
-out the task; that recorded set, with the milestone task list the removal changes, is your
+out the task; that recorded set, with the mission task list the removal changes, is your
 task's whole change set, and the acceptance bar step 5 hands on is your task's record. You
 **write the bar to the body file** `<scratch dir>/body.txt` and **that change set to the path
 file** `<scratch dir>/paths.txt`, in the same shell call as the procedure's step 5 removal,
@@ -71,7 +71,7 @@ or written, so write the bar's bullets into the heredoc and run the call again. 
 command is exactly the one the procedure's step 5 shows. Only after it succeeds does the call
 write `bar` to the body file and then the path file from the second quoted heredoc, which is
 the path file's whole content, one path per line: those recorded created/edited paths
-**plus** the milestone task list `<MISSION_DIR>/TASKS_TODO.md` (the task left it), every
+**plus** the mission task list `<MISSION_DIR>/TASKS_TODO.md` (the task left it), every
 path written out in full on a line of its own, exactly as recorded and with no quoting or
 escaping, since each line is read whole as one path, and none is held in a shell variable.
 The list is the recorded one: never build it from `git status` or any other tree-wide

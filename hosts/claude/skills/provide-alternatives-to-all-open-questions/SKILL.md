@@ -1,11 +1,11 @@
 ---
 name: provide-alternatives-to-all-open-questions
-description: Annotate every open question in the named milestone lacking alternatives with a set of alternatives, dispatching one subagent per question.
+description: Annotate every open question in the named mission lacking alternatives with a set of alternatives, dispatching one subagent per question.
 ---
 
 # provide-alternatives-to-all-open-questions
 
-This is the first of the two annotating passes over a milestone's open questions: it gives
+This is the first of the two annotating passes over a mission's open questions: it gives
 every `<open-question>` block that carries no `<alternative>` children yet an honest set of
 alternatives, and the recommendation pass, `/recommend-all-open-questions`, later picks one of
 them per block against that frozen set. Per question it dispatches a subagent, read-only
@@ -31,13 +31,13 @@ alternatives the recommendation pass reads.
 /provide-alternatives-to-all-open-questions --mission <path>
 ```
 
-It sweeps every `<open-question>` block in the named milestone's `open_questions.xml`. The
-required leading `--mission <path>` names the milestone by its repo-relative path, exactly as
-the definition tool printed it, trailing slash included, e.g. `milestones/user-guide/`.
+It sweeps every `<open-question>` block in the named mission's `open_questions.xml`. The
+required leading `--mission <path>` names the mission by its repo-relative path, exactly as
+the definition tool printed it, trailing slash included, e.g. `mission_user-guide/`.
 
 ## Workflow
 
-### 0. Find the milestone
+### 0. Find the mission
 
 Follow `${CLAUDE_PLUGIN_ROOT}/shared/resolve-mission.md` to resolve `<MISSION_DIR>`.
 Never use a hardcoded path.
@@ -149,7 +149,7 @@ Scratch directory: <scratch dir>
 ```
 
 The prompt carries no question text and no block: the subagent fetches its own block and its
-sibling scope through the plugin's open-question tool and reads the milestone's documents
+sibling scope through the plugin's open-question tool and reads the mission's documents
 itself, read-only, for whatever surrounding grounding it needs, so the orchestrator never reads
 them to assemble context.
 

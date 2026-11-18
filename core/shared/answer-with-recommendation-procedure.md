@@ -1,7 +1,7 @@
 # Answer-with-recommendation procedure (shared core)
 
 This is the single source of truth for recording one open question's **embedded
-recommendation** as its answer in a milestone. It composes over
+recommendation** as its answer in a mission. It composes over
 `shared/answer-procedure.md` (the recording core): it lifts the `<recommendation>` element
 the recommend sweep embedded in the question block, then delegates the actual recording to
 that core unchanged. It is followed inline by the `answer-open-question-with-recommendation`
@@ -13,9 +13,9 @@ the work itself — lift, delegate.
 This procedure records one recommendation-derived answer given two inputs the caller
 supplies:
 
-- **MISSION_DIR** — the already-resolved directory of the milestone the question belongs
+- **MISSION_DIR** — the already-resolved directory of the mission the question belongs
   to, the `<MISSION_DIR>` every tool call below uses. The caller resolves it; this
-  procedure never looks the milestone up, and hands it on to the recording core as that
+  procedure never looks the mission up, and hands it on to the recording core as that
   core's own `MISSION_DIR` input.
 - **SHORT TITLE** — the resolved handle of an existing `<open-question>` block to answer
   (its `id`, compared case-insensitively). The caller has already obtained it; lifting the

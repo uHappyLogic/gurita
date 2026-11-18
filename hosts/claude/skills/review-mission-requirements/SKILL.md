@@ -1,11 +1,11 @@
 ---
 name: review-mission-requirements
-description: Review the named milestone's requirements to reconcile its open questions against recorded decisions, surface new gaps, and report whether it has converged.
+description: Review the named mission's requirements to reconcile its open questions against recorded decisions, surface new gaps, and report whether it has converged.
 ---
 
 # review-mission-requirements
 
-The current "work in progress" requirements for the planned milestone live in two documents of the named milestone's directory: `requirements.md` (the prose — goal, relevant starting state, decisions, any noted contradictions, out of scope) and `open_questions.xml` (one `<open-question>` block per question still open). The overall goal is to make that requirements set ready enough for the work to begin.
+The current "work in progress" requirements for the planned mission live in two documents of the named mission's directory: `requirements.md` (the prose — goal, relevant starting state, decisions, any noted contradictions, out of scope) and `open_questions.xml` (one `<open-question>` block per question still open). The overall goal is to make that requirements set ready enough for the work to begin.
 
 This skill is the **repeatable engine** of the requirements-iteration loop — run it each time around:
 
@@ -23,9 +23,9 @@ Every write this skill makes to `open_questions.xml`, and every listing of its b
 /review-mission-requirements --mission <path>
 ```
 
-The required leading `--mission <path>` names the milestone by its repo-relative path, exactly as the definition tool printed it, trailing slash included, e.g. `milestones/user-guide/`.
+The required leading `--mission <path>` names the mission by its repo-relative path, exactly as the definition tool printed it, trailing slash included, e.g. `mission_user-guide/`.
 
-## Milestone requirements document structure
+## Mission requirements document structure
 
 `requirements.md` is prose Markdown in four sections, with an optional fifth between `## Decisions` and `## Out of Scope`:
 ```md
@@ -49,7 +49,7 @@ The required leading `--mission <path>` names the milestone by its repo-relative
 
 ## Out of Scope
 
-<what the milestone deliberately leaves out>
+<what the mission deliberately leaves out>
 ```
 
 `## Noted contradictions` is present only while a note stands: a single-question answer skill inserts the heading with its first note, and step 4 of this pass turns each note into an open question or drops it, deleting the heading with the last note.
@@ -58,7 +58,7 @@ The open questions live beside it in `<MISSION_DIR>/open_questions.xml` — one 
 
 ## Workflow
 
-### 0. Find the milestone
+### 0. Find the mission
 
 Follow `${CLAUDE_PLUGIN_ROOT}/shared/resolve-mission.md` to resolve `<MISSION_DIR>`. Never use a hardcoded path.
 
@@ -71,15 +71,15 @@ Read `<MISSION_DIR>/requirements.md` and `<MISSION_DIR>/open_questions.xml` in f
 - the **`<open-question>` blocks** already present (what's still flagged),
 - every stated requirement, constraint, and assumption.
 
-Beside the two documents, read the overview of the milestones around this one's scope, on every pass, with this one fixed call run from the workspace root, written out in full and never through a variable, alias, or function of your own defined to stand for the command or any part of it:
+Beside the two documents, read the overview of the missions around this one's scope, on every pass, with this one fixed call run from the workspace root, written out in full and never through a variable, alias, or function of your own defined to stand for the command or any part of it:
 
 ```
 python3 ${CLAUDE_PLUGIN_ROOT}/tools/missions.py missions --mission <MISSION_DIR> --last 10
 ```
 
-It prints one tab-separated line per milestone whose scope overlaps this one's, live or finished: its state, its finish date (`-` while live), its path, and its title, every live line and the ten most recently finished. Read it as context for the inventory, not as a fifth thing to reconcile: only where you judge a listed milestone's line to bear on a gap or on a pair of decisions, read that milestone more deeply, its finish summary through `python3 ${CLAUDE_PLUGIN_ROOT}/tools/missions.py summary <path>` or its recorded decisions through `python3 ${CLAUDE_PLUGIN_ROOT}/tools/missions.py show <path>`, `<path>` the milestone path exactly as the overview printed it, each written out in full the same way; a line that bears on nothing gets no deeper read.
+It prints one tab-separated line per mission whose scope overlaps this one's, live or finished: its state, its finish date (`-` while live), its path, and its title, every live line and the ten most recently finished. Read it as context for the inventory, not as a fifth thing to reconcile: only where you judge a listed mission's line to bear on a gap or on a pair of decisions, read that mission more deeply, its finish summary through `python3 ${CLAUDE_PLUGIN_ROOT}/tools/missions.py summary <path>` or its recorded decisions through `python3 ${CLAUDE_PLUGIN_ROOT}/tools/missions.py show <path>`, `<path>` the mission path exactly as the overview printed it, each written out in full the same way; a line that bears on nothing gets no deeper read.
 
-**Any of these milestones-tool calls that fails** — any non-zero exit, whatever its `Error:` line says — is one condition: **stop the pass here**, before any prune, dedup, new block, or note deletion. Report the fixed line `Review stopped — the milestones record could not be read.` first, then below it the call's `Error:` line from stderr, verbatim. Make no commit, and print neither the still-open list nor the convergence verdict: that is the whole report, and the run ends there.
+**Any of these missions-tool calls that fails** — any non-zero exit, whatever its `Error:` line says — is one condition: **stop the pass here**, before any prune, dedup, new block, or note deletion. Report the fixed line `Review stopped — the missions record could not be read.` first, then below it the call's `Error:` line from stderr, verbatim. Make no commit, and print neither the still-open list nor the convergence verdict: that is the whole report, and the run ends there.
 
 ### 2. Reconcile the existing question set
 
@@ -151,8 +151,8 @@ Neither path resolves a conflict: never edit, reword, or remove either `## Decis
 
 Read and follow the shared commit procedure at `${CLAUDE_PLUGIN_ROOT}/shared/commit-procedure.md`, running its one commit-tool command yourself as this step's one git tool call. Supply it these two inputs:
 
-- **PATHS** — this skill's own change set, the milestone's two requirements documents: `<MISSION_DIR>/open_questions.xml` (where every prune, dedup, and new block of this pass landed) and `<MISSION_DIR>/requirements.md` (where step 4's note deletions landed).
-- **SUBJECT** — `Requirements-review: <MISSION_DIR>`, the milestone path exactly as resolved, trailing slash included.
+- **PATHS** — this skill's own change set, the mission's two requirements documents: `<MISSION_DIR>/open_questions.xml` (where every prune, dedup, and new block of this pass landed) and `<MISSION_DIR>/requirements.md` (where step 4's note deletions landed).
+- **SUBJECT** — `Requirements-review: <MISSION_DIR>`, the mission path exactly as resolved, trailing slash included.
 
 The commit tool runs the dirty-own-path guard, the path-scoped staging, and the commit. Its guard covers this skill's no-op case: a pass that reconciled, pruned, and surfaced nothing and found no note to handle leaves both files unchanged, so the tool prints `Nothing committed — none of the paths changed.` and nothing is staged or committed; a pass that reshaped the question set or deleted a note commits that change.
 
@@ -166,7 +166,7 @@ python3 ${CLAUDE_PLUGIN_ROOT}/tools/open_questions.py list <MISSION_DIR>
 
 It prints the Short Title of every `<open-question>` block still in the document, one per line in document order; empty output is a converged document. That print — not your recollection of the pass — is what the two items below are read from.
 
-On the success path, print exactly one fixed terse status line — `Requirements reviewed.` — carrying no identifier (no milestone path, no count, no commit subject). Do **not** re-narrate what the pass reshaped: there is no "What changed this pass" summary (blocks pruned, repeats merged, new questions raised, notes deleted, "possibly resolved — confirm" flags) and no handoff pointer toward `/discuss-open-question` or `/answer-open-question`.
+On the success path, print exactly one fixed terse status line — `Requirements reviewed.` — carrying no identifier (no mission path, no count, no commit subject). Do **not** re-narrate what the pass reshaped: there is no "What changed this pass" summary (blocks pruned, repeats merged, new questions raised, notes deleted, "possibly resolved — confirm" flags) and no handoff pointer toward `/discuss-open-question` or `/answer-open-question`.
 
 Follow that terse line with only the two pieces of decision-critical state git never captures, so the user knows whether to loop again or move on:
 

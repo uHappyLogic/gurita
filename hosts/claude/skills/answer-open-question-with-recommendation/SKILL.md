@@ -1,6 +1,6 @@
 ---
 name: answer-open-question-with-recommendation
-description: Record an open question's embedded recommendation as that question's answer in the named milestone's requirements.md.
+description: Record an open question's embedded recommendation as that question's answer in the named mission's requirements.md.
 ---
 
 # answer-open-question-with-recommendation
@@ -21,13 +21,13 @@ To record **every** recommendation-bearing question unattended instead, use
 `<Short Title>` must match (case-insensitive, against the block's `id`) an existing
 `<open-question>` block in `<MISSION_DIR>/open_questions.xml` that the
 `/recommend-all-open-questions` sweep has already annotated with a `<recommendation>`
-element. The required leading `--mission <path>` names the milestone by its repo-relative
+element. The required leading `--mission <path>` names the mission by its repo-relative
 path, exactly as the definition tool printed it, trailing slash included, e.g.
-`milestones/user-guide/`; nothing else needs to be looked up first.
+`mission_user-guide/`; nothing else needs to be looked up first.
 
 ## Workflow
 
-### 1. Find the milestone
+### 1. Find the mission
 
 First strip the leading `--mission <path>` from the invocation text by the rule in
 `${CLAUDE_PLUGIN_ROOT}/shared/resolve-mission.md`, reading only the rest as `<Short Title>`.
@@ -68,7 +68,7 @@ step 1:
   `<MISSION_DIR>/requirements.md`.
 - **SUBJECT** — exactly `Recommendation-answer: <Short Title>` (the answered question's
   handle). This distinct subject marks an accepted recommendation: when
-  `/capture-mission-principle-updates` walks a milestone's answer commits across all three
+  `/capture-mission-principle-updates` walks a mission's answer commits across all three
   subjects, it reads this one as evidence about principles already in the store only, never as
   a source of new principles — those come from the `Manual-answer:` and `Alternative-answer:`
   override signals.

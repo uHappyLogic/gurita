@@ -1,6 +1,6 @@
 ---
 name: answer-all-open-questions-with-recommendation
-description: Record the embedded recommendation as the answer for every question in the named milestone that carries one, reasoning over the whole set inline.
+description: Record the embedded recommendation as the answer for every question in the named mission that carries one, reasoning over the whole set inline.
 ---
 
 # answer-all-open-questions-with-recommendation
@@ -8,7 +8,7 @@ description: Record the embedded recommendation as the answer for every question
 This is the batch path that records every open question's **embedded recommendation** as its
 answer, unattended. The recommendation pass (`/recommend-all-open-questions`) annotates each
 question by embedding a `<recommendation>` element in its `<open-question>` block in the named
-milestone's `open_questions.xml`; this skill walks the blocks that carry one and records each
+mission's `open_questions.xml`; this skill walks the blocks that carry one and records each
 pick — the decision lands under `## Decisions` of `requirements.md` and the answered block leaves
 `open_questions.xml` — one commit per answer, leaving recommendation-less blocks untouched
 (annotating them is the recommendation pass's job, not this one's).
@@ -27,7 +27,7 @@ Every tool call the run makes — this skill's own, those inside step 1's loop a
 sections included — is written out in full as its fenced block shows it, never through a
 variable, alias, or function of your own defined to stand for the command or any part of it.
 `requirements.md` is read whole once with the file-reading tool, in the same turn as step 1's
-call (step 2), for reasoning only. It requires **no** clean working tree beyond the milestone's
+call (step 2), for reasoning only. It requires **no** clean working tree beyond the mission's
 two files: step 3's call stops before any write while either of them holds a change, and every
 commit is made with them as its pathspec, so a dirty tree elsewhere, a change another run has
 staged included, stays out of it.
@@ -38,14 +38,14 @@ staged included, stays out of it.
 /answer-all-open-questions-with-recommendation --mission <path>
 ```
 
-It sweeps every `<open-question>` block in the named milestone's `open_questions.xml` that
+It sweeps every `<open-question>` block in the named mission's `open_questions.xml` that
 contains a `<recommendation>` element. The required leading `--mission <path>` names the
-milestone by its repo-relative path, exactly as the definition tool printed it, trailing slash
-included, e.g. `milestones/user-guide/`.
+mission by its repo-relative path, exactly as the definition tool printed it, trailing slash
+included, e.g. `mission_user-guide/`.
 
 ## Workflow
 
-### 0. Find the milestone, once
+### 0. Find the mission, once
 
 Follow `${CLAUDE_PLUGIN_ROOT}/shared/resolve-mission.md` to resolve `<MISSION_DIR>`. Never use
 a hardcoded path. Resolve it **once per run** and hold it: every tool call, every recorded
@@ -229,7 +229,7 @@ the conflict question's place in step 1's printed order like any other section. 
 thus makes the same tool calls — one `lift`, one fold-tool call, one `remove`, one commit-tool
 call — and a conflict section holds exactly one `replace` and no `fold`.
 
-The call's first lines are the **stranded-fold guard**: when either milestone file holds any
+The call's first lines are the **stranded-fold guard**: when either mission file holds any
 staged or unstaged change, whatever its origin — a fold or rewrite a stopped run left
 uncommitted, or a hand edit — the call prints `dirty before start` and the
 `git status --porcelain` lines beneath it, then ends before any lift, fold, removal, or
@@ -249,7 +249,7 @@ lands before the block is removed; `remove` deletes the block with `--option` na
 recorded option and, in the same write, strips the pick of every block whose `<depends-on>`
 assumed another option of it, keeping their alternatives; and the section runs the one
 command of the shared commit procedure at `${CLAUDE_PLUGIN_ROOT}/shared/commit-procedure.md`, the
-plugin's commit tool, with the two milestone files as its paths, `Recommendation-answer:
+plugin's commit tool, with the two mission files as its paths, `Recommendation-answer:
 <Short Title>` as its subject, and the held line as its body. The tool runs the dirty-own-path
 guard over the two files, stages exactly them, and commits them with them as the commit's
 pathspec, so nothing else the index holds — a change another run has staged included — rides
@@ -318,7 +318,7 @@ commits are the record.
 Two stops replace the status line, each opening with its own fixed line:
 
 - **Dirty start** — the call printed `dirty before start`: print the fixed line
-  `Sweep stopped — the milestone files already held changes.` first, then below it the
+  `Sweep stopped — the mission files already held changes.` first, then below it the
   porcelain lines the call printed beneath its marker verbatim, and the remedy — commit or
   discard those changes, then re-run this skill. The run recorded nothing.
 - **Stopped at a question** — the call printed `stopped at`, a tab, and a Short Title: print

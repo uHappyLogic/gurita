@@ -1,6 +1,6 @@
 ---
 name: complete-task
-description: Complete a single named task from the named milestone's TASKS_TODO.md inline in this conversation and commit it with its verified bar.
+description: Complete a single named task from the named mission's TASKS_TODO.md inline in this conversation and commit it with its verified bar.
 ---
 
 # complete-task
@@ -16,10 +16,10 @@ For completing the whole task list unattended, use `/complete-all-tasks` instead
 /complete-task --mission <path> <task name>
 ```
 
-`<task name>` is the full or partial text of a `##` heading in the named milestone's
-`TASKS_TODO.md`. The required leading `--mission <path>` names the milestone by its
+`<task name>` is the full or partial text of a `##` heading in the named mission's
+`TASKS_TODO.md`. The required leading `--mission <path>` names the mission by its
 repo-relative path, exactly as the definition tool printed it, trailing slash included, e.g.
-`milestones/user-guide/`.
+`mission_user-guide/`.
 
 ## Workflow
 
@@ -27,7 +27,7 @@ repo-relative path, exactly as the definition tool printed it, trailing slash in
 
 First strip the leading `--mission <path>` from the invocation text by the rule in
 `~/.gemini/config/plugins/cairn/shared/resolve-mission.md`, holding its value as the input of the
-procedure's milestone resolution and reading only the rest as the task name. Read and follow
+procedure's mission resolution and reading only the rest as the task name. Read and follow
 the shared procedure at
 `~/.gemini/config/plugins/cairn/shared/complete-procedure.md`, carrying out every step **yourself, in this conversation**,
 with step 2 below run between its step 1 and its step 2, and its step 5 removal run as the one
@@ -74,7 +74,7 @@ the one command of the shared commit procedure at `~/.gemini/config/plugins/cair
 the plugin's commit tool, with `Task-completion: <Task Title>`, the full `##` heading the
 procedure located, as its subject, the bar as its body, and this skill's own change set as
 its paths: the exact paths the completion procedure recorded as it created or edited files
-while carrying out the task, plus the milestone's task list `<MISSION_DIR>/TASKS_TODO.md`
+while carrying out the task, plus the mission's task list `<MISSION_DIR>/TASKS_TODO.md`
 (the task left it), every path written out on the command line after `--` as its own argument
 and none held in a shell variable. The tool runs the dirty-own-path guard over those paths,
 stages exactly them (never `git add -A`), and commits them with them as the commit's

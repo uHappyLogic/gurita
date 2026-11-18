@@ -1,6 +1,6 @@
 ---
 name: discuss-new-task
-description: Clarify a rough or ambiguous issue into one or more well-defined, task-sized pieces ready to add to the named milestone's task list.
+description: Clarify a rough or ambiguous issue into one or more well-defined, task-sized pieces ready to add to the named mission's task list.
 ---
 
 # discuss-new-task
@@ -25,22 +25,22 @@ Once those are clear, `submit-task` takes over — keep what you produce high-le
 /discuss-new-task --mission <path> <issue description>
 ```
 
-- `--mission <path>`: required and leading; names the milestone by its repo-relative path, exactly as the definition tool printed it, trailing slash included, e.g. `milestones/user-guide/`.
+- `--mission <path>`: required and leading; names the mission by its repo-relative path, exactly as the definition tool printed it, trailing slash included, e.g. `mission_user-guide/`.
 - `<issue description>`: a free-form, possibly rough description of a problem, gap, or idea surfaced mid-flight. May be a single issue or a larger "we need to create X" that spans several pieces.
 
 **Example (single task):**
 ```
-/discuss-new-task --mission milestones/user-guide/ the setup section's steps are out of order, feels confusing
+/discuss-new-task --mission mission_user-guide/ the setup section's steps are out of order, feels confusing
 ```
 
 **Example (likely several tasks):**
 ```
-/discuss-new-task --mission milestones/user-guide/ I think we need a proper glossary — this is probably a few tasks, not one
+/discuss-new-task --mission mission_user-guide/ I think we need a proper glossary — this is probably a few tasks, not one
 ```
 
 ## Workflow
 
-### 0. Find the milestone
+### 0. Find the mission
 
 First strip the leading `--mission <path>` from the invocation text by the rule in `~/.gemini/config/plugins/cairn/shared/resolve-mission.md`, reading only the rest as the issue description. Follow `~/.gemini/config/plugins/cairn/shared/resolve-mission.md` to resolve `<MISSION_DIR>`. Never use a hardcoded task-list path.
 
@@ -56,7 +56,7 @@ In parallel, as independent tool calls, to ground the discussion in the real pro
   python3 ~/.gemini/config/plugins/cairn/tools/missions.py tasks <MISSION_DIR> --with-body
   ```
 
-  It prints, newest first, one tab-separated line per task completed in the milestone (the commit's abbreviated hash, its date, the milestone directory, and the task title), with the task's verified bar indented beneath it, and prints nothing when no task has been completed, which is no failure.
+  It prints, newest first, one tab-separated line per task completed in the mission (the commit's abbreviated hash, its date, the mission directory, and the task title), with the task's verified bar indented beneath it, and prints nothing when no task has been completed, which is no failure.
 - Read `AGENTS.md` — the project's conventions and context, so the discussion uses the project's real terms.
 
 If the `tasks` call fails, tell the user in prose that the completed-task read failed, quoting its one `Error: <reason>` line from stderr verbatim, and carry on from the other reads, printing no fixed line.
@@ -104,7 +104,7 @@ Format as:
 
 Continue the conversation: after each answer, either ask the next question that matters most or confirm things are clear enough. Keep replies short and move fast. Favor judgment over completeness — listing every conceivable edge case wastes the user's time. The breakdown is allowed to shift as you learn: pieces may merge, split, or drop.
 
-Reach for `/discuss-open-question` instead if the ambiguity is really an open design decision about the milestone's direction (a trade-off to deliberate and record in `requirements.md`), not a concrete issue to queue up.
+Reach for `/discuss-open-question` instead if the ambiguity is really an open design decision about the mission's direction (a trade-off to deliberate and record in `requirements.md`), not a concrete issue to queue up.
 
 ### 5. Propose the handoff
 

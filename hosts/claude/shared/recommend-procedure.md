@@ -1,7 +1,7 @@
 # Recommendation procedure (shared core)
 
 This is the single source of truth for picking one recommendation over an
-already-enumerated alternative set for an open question in the named milestone. It is
+already-enumerated alternative set for an open question in the named mission. It is
 followed inline by the `recommend-all-open-questions` skill over every question its run
 annotates, held in view together as one whole-set judgment, and inline by the
 `discuss-open-question` skill for the one question it is deliberating. The caller supplies
@@ -32,16 +32,16 @@ and each question still gets one recommendation of its own.
 
 ### 1. Ground in the real project state
 
-Before forming any view, read the context that bears on the question: the milestone's
+Before forming any view, read the context that bears on the question: the mission's
 `requirements.md`, its `open_questions.xml`, and the actual project artifacts the question
 turns on. Prefer reading the live project over reasoning from memory — the point is to ground
 the recommendation in what the project actually is, not what you recall it to be. All of this
 reading is read-only; forming a recommendation changes nothing.
 
 Part of that grounding is the project-wide answering-principle store
-`milestones/answer_decision_principles.md` — a fixed path at the `milestones/` root, above
-any one milestone. Read it in place and note any confirmed principle that bears on this
-question. Presence of a principle in that file means it is user-confirmed.
+`milestones/answer_decision_principles.md` — a fixed path, above any one mission. Read it in
+place and note any confirmed principle that bears on this question. Presence of a principle in
+that file means it is user-confirmed.
 
 Reading `<MISSION_DIR>/open_questions.xml` whole — with the file-reading tool, exactly as
 `requirements.md` is read beside it — surfaces the sibling questions with their own

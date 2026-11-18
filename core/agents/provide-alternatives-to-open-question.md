@@ -1,6 +1,6 @@
 ---
 name: provide-alternatives-to-open-question
-description: Enumerates the honest alternatives for one open question into one scratch file, invoked with its Short Title, milestone directory, and scratch directory.
+description: Enumerates the honest alternatives for one open question into one scratch file, invoked with its Short Title, mission directory, and scratch directory.
 color: blue
 {{AGENT_WRITE_TOOLS}}---
 
@@ -22,16 +22,16 @@ Your prompt carries three values and nothing else — no question text and no bl
 
 - **Short Title** — the 2–5 word handle of the one question to enumerate alternatives for.
   The orchestrator has already selected it, so you do **not** decide any global ordering.
-- **Mission directory** — the already-resolved `<MISSION_DIR>` of the milestone the question
+- **Mission directory** — the already-resolved `<MISSION_DIR>` of the mission the question
   belongs to. You never resolve it yourself.
 - **Scratch directory** — the run's `<scratch dir>`, a directory outside the repository that
   the orchestrator has already created. Your return goes into it as one file (step 4); you
   never create, choose, or replace it yourself.
 
-Everything else you need you fetch yourself under the milestone directory: the question's own block and
+Everything else you need you fetch yourself under the mission directory: the question's own block and
 its sibling scope through the plugin's open-question tool (step 1), and
 `<MISSION_DIR>/requirements.md`, read whole with the file-reading tool as prose, for the
-milestone's goal, relevant starting state, and recorded decisions. You read those documents and
+mission's goal, relevant starting state, and recorded decisions. You read those documents and
 the project's live artifacts **read-only** and mutate nothing in the project.
 
 ## Workflow
@@ -39,7 +39,7 @@ the project's live artifacts **read-only** and mutate nothing in the project.
 ### 1. Ground in the real project state (read-only)
 
 Before listing any option, read the context that bears on the question — its own block, the
-milestone's `requirements.md`, its sibling questions, and the actual project artifacts the
+mission's `requirements.md`, its sibling questions, and the actual project artifacts the
 question turns on. Prefer the live project over reasoning from memory. All of this reading is
 read-only; enumerating alternatives changes nothing.
 

@@ -1,11 +1,11 @@
 ---
 name: discuss-open-question
-description: Discuss a named open question in a milestone's requirements, surfacing alternatives, trade-offs, and a recommendation to help the user decide.
+description: Discuss a named open question in a mission's requirements, surfacing alternatives, trade-offs, and a recommendation to help the user decide.
 ---
 
 # discuss-open-question
 
-Facilitates a deliberation on a named `<open-question>` block in the named milestone's `open_questions.xml` where the user cannot give an immediate answer. The goal is a concrete decision by the end of the conversation — not a design document. The skill is purely conversational: it never edits `open_questions.xml`, `requirements.md`, or any other file. It works on a block in **any state** — bare, carrying the `<alternative>` set the alternatives pass embedded, or carrying that set plus the `<recommendation>` the recommendation pass picked — and the state decides only where the option set comes from: an embedded alternative set is reused as it stands, never re-enumerated, and a bare block gets its options enumerated here first. The pick is always this skill's own, formed afresh over that set, and shown beside the sweep's standing pick when the block carries one.
+Facilitates a deliberation on a named `<open-question>` block in the named mission's `open_questions.xml` where the user cannot give an immediate answer. The goal is a concrete decision by the end of the conversation — not a design document. The skill is purely conversational: it never edits `open_questions.xml`, `requirements.md`, or any other file. It works on a block in **any state** — bare, carrying the `<alternative>` set the alternatives pass embedded, or carrying that set plus the `<recommendation>` the recommendation pass picked — and the state decides only where the option set comes from: an embedded alternative set is reused as it stands, never re-enumerated, and a bare block gets its options enumerated here first. The pick is always this skill's own, formed afresh over that set, and shown beside the sweep's standing pick when the block carries one.
 
 ## Usage
 
@@ -13,16 +13,16 @@ Facilitates a deliberation on a named `<open-question>` block in the named miles
 /discuss-open-question --mission <path> <Short Title>
 ```
 
-The `<Short Title>` must match (case-insensitive) the `id` of an existing `<open-question>` block in `<MISSION_DIR>/open_questions.xml`. The required leading `--mission <path>` names the milestone by its repo-relative path, exactly as the definition tool printed it, trailing slash included, e.g. `milestones/user-guide/`.
+The `<Short Title>` must match (case-insensitive) the `id` of an existing `<open-question>` block in `<MISSION_DIR>/open_questions.xml`. The required leading `--mission <path>` names the mission by its repo-relative path, exactly as the definition tool printed it, trailing slash included, e.g. `mission_user-guide/`.
 
 **Example:**
 ```
-/discuss-open-question --mission milestones/user-guide/ Getting-started section order
+/discuss-open-question --mission mission_user-guide/ Getting-started section order
 ```
 
 ## Workflow
 
-### 0. Find the milestone
+### 0. Find the mission
 
 First strip the leading `--mission <path>` from the invocation text by the rule in `${CLAUDE_PLUGIN_ROOT}/shared/resolve-mission.md`, reading only the rest as the `<Short Title>`. Follow `${CLAUDE_PLUGIN_ROOT}/shared/resolve-mission.md` to resolve `<MISSION_DIR>`. Never use a hardcoded task-list path.
 
@@ -72,6 +72,6 @@ After the opening, invite the user to push back, ask follow-up questions, or nar
 
 When the user lands on an answer, offer to invoke `/answer-open-question` with that answer to record it. Do not edit either document yourself — that is `answer-open-question`'s responsibility. When the answer is one of the block's embedded `<alternative>` elements, say which `id` it is, so the recorded decision can be matched to that option; a marked departure is recorded as the literal answer it is.
 
-If the deliberation instead reveals that the milestone **goal itself** needs to change — not just this question, but the objective the question hangs off — surface that explicitly and offer to invoke `/modify-mission-goal` with the proposed revised goal. Still do not edit anything yourself; the user confirms the wording and that skill performs the write.
+If the deliberation instead reveals that the mission **goal itself** needs to change — not just this question, but the objective the question hangs off — surface that explicitly and offer to invoke `/modify-mission-goal` with the proposed revised goal. Still do not edit anything yourself; the user confirms the wording and that skill performs the write.
 
 The two offers are not exclusive: a discussion can both resolve the question and conclude the goal must shift. When both apply, run `/modify-mission-goal` **first**, then `/answer-open-question`, so the answer is recorded — and its implications cascaded — against the revised goal rather than a stale one.

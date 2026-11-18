@@ -1,6 +1,6 @@
 ---
 name: answer-open-question-with-alternative
-description: Record a chosen alternative from an open question's embedded analysis as that question's answer in the named milestone's requirements.md.
+description: Record a chosen alternative from an open question's embedded analysis as that question's answer in the named mission's requirements.md.
 ---
 
 # answer-open-question-with-alternative
@@ -36,13 +36,13 @@ before it is `<Short Title>` (the question handle); everything after it is `<Alt
 - `<Alternative Id>` must match (case-insensitive, against the `id` attribute) one of that
   block's embedded `<alternative id="...">` elements.
 
-The required leading `--mission <path>` names the milestone by its repo-relative path,
+The required leading `--mission <path>` names the mission by its repo-relative path,
 exactly as the definition tool printed it, trailing slash included, e.g.
-`milestones/user-guide/`; nothing else needs to be looked up first.
+`mission_user-guide/`; nothing else needs to be looked up first.
 
 ## Workflow
 
-### 1. Find the milestone
+### 1. Find the mission
 
 Follow `{{PLUGIN_ROOT}}/shared/resolve-mission.md` to resolve `<MISSION_DIR>`. Never use a hardcoded
 task-list path. Hold `<MISSION_DIR>` — you need it for the lift, the delegated recording,
@@ -105,7 +105,7 @@ step 1:
   `<MISSION_DIR>/requirements.md`.
 - **SUBJECT** — exactly `Alternative-answer: <Short Title>` (the answered question's handle).
   This distinct subject marks an override of the embedded recommendation: when
-  `/capture-mission-principle-updates` walks a milestone's answer commits across all three
+  `/capture-mission-principle-updates` walks a mission's answer commits across all three
   subjects, it reads this one as an override signal, like `Manual-answer:`, and — because the
   body below carries no user rationale — asks the user then why the alternative was preferred;
   `Recommendation-answer:` commits are evidence about existing principles only.

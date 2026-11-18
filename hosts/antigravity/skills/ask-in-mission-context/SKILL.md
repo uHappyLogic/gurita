@@ -1,13 +1,13 @@
 ---
 name: ask-in-mission-context
-description: Answer an informational question about the named milestone from its goal, decisions, task lists, and live deliverables, without editing anything.
+description: Answer an informational question about the named mission from its goal, decisions, task lists, and live deliverables, without editing anything.
 ---
 
 # ask-in-mission-context
 
-Answers an informational question about the named milestone, grounded in the real project state: the milestone's goal and recorded decisions, the tasks done and still pending, the actual deliverables those tasks produced, and, when a question reaches into past work, the project's record of its milestones. The deliverable is **a clear answer** — not a decision, a new task, or an edited document. This skill reads; it never writes — it never creates or edits any file, not `requirements.md`, not `open_questions.xml`, not the task lists, nothing.
+Answers an informational question about the named mission, grounded in the real project state: the mission's goal and recorded decisions, the tasks done and still pending, the actual deliverables those tasks produced, and, when a question reaches into past work, the project's record of its missions. The deliverable is **a clear answer** — not a decision, a new task, or an edited document. This skill reads; it never writes — it never creates or edits any file, not `requirements.md`, not `open_questions.xml`, not the task lists, nothing.
 
-Use it to look back ("how did the onboarding section end up covering setup?", "where did we put the troubleshooting steps?"), to take stock ("what's left in this milestone, and why is it ordered that way?", "what has this milestone changed so far?"), or to pull up relevant context on demand before deciding what to do next.
+Use it to look back ("how did the onboarding section end up covering setup?", "where did we put the troubleshooting steps?"), to take stock ("what's left in this mission, and why is it ordered that way?", "what has this mission changed so far?"), or to pull up relevant context on demand before deciding what to do next.
 
 When the answer surfaces a concrete next step, this skill names the right cairn skill and offers to hand off (step 4) — but it stops there, never doing that skill's work here.
 
@@ -17,21 +17,21 @@ When the answer surfaces a concrete next step, this skill names the right cairn 
 /ask-in-mission-context --mission <path> <question>
 ```
 
-- `--mission <path>`: required and leading; names the milestone by its repo-relative path, exactly as the definition tool printed it, trailing slash included, e.g. `milestones/user-guide/`.
-- `<question>`: a free-form, informational question about the named milestone. Optional — invoked with no question, give a brief orientation to the milestone (goal, what's done, what's left) and invite a specific question.
+- `--mission <path>`: required and leading; names the mission by its repo-relative path, exactly as the definition tool printed it, trailing slash included, e.g. `mission_user-guide/`.
+- `<question>`: a free-form, informational question about the named mission. Optional — invoked with no question, give a brief orientation to the mission (goal, what's done, what's left) and invite a specific question.
 
 **Examples:**
 ```
-/ask-in-mission-context --mission milestones/user-guide/ how did we end up handling the case where two milestones are active at once?
-/ask-in-mission-context --mission milestones/user-guide/ what's left in this milestone and what's blocking it?
-/ask-in-mission-context --mission milestones/user-guide/ what changed in the rename task — which files did it touch?
+/ask-in-mission-context --mission mission_user-guide/ how did we end up handling the case where two missions are active at once?
+/ask-in-mission-context --mission mission_user-guide/ what's left in this mission and what's blocking it?
+/ask-in-mission-context --mission mission_user-guide/ what changed in the rename task — which files did it touch?
 ```
 
 ## Workflow
 
-### 0. Find the milestone
+### 0. Find the mission
 
-First strip the leading `--mission <path>` from the invocation text by the rule in `~/.gemini/config/plugins/cairn/shared/resolve-mission.md`, reading only the rest as the question. Follow `~/.gemini/config/plugins/cairn/shared/resolve-mission.md` to resolve `<MISSION_DIR>`. Never use a hardcoded task-list path. A call that resolves no milestone stops as that procedure says, with no answer and no fallback: this skill answers only within a named milestone.
+First strip the leading `--mission <path>` from the invocation text by the rule in `~/.gemini/config/plugins/cairn/shared/resolve-mission.md`, reading only the rest as the question. Follow `~/.gemini/config/plugins/cairn/shared/resolve-mission.md` to resolve `<MISSION_DIR>`. Never use a hardcoded task-list path. A call that resolves no mission stops as that procedure says, with no answer and no fallback: this skill answers only within a named mission.
 
 ### 1. Gather context
 
@@ -45,16 +45,16 @@ In parallel, as independent tool calls, so the answer rests on the real state ra
   python3 ~/.gemini/config/plugins/cairn/tools/missions.py tasks <MISSION_DIR> --with-body
   ```
 
-  It prints, newest first, one tab-separated line per task completed in the milestone (the commit's abbreviated hash, its date, the milestone directory, and the task title), with the task's verified bar indented beneath it, and prints nothing when no task has been completed, which is no failure. Each task's title and verified bar tell you *what the task was meant to achieve* — the intent behind the deliverable that now exists — and its brief stands in its commit's diff, as the section removed from `TASKS_TODO.md`, which `git show <hash>` pulls up.
+  It prints, newest first, one tab-separated line per task completed in the mission (the commit's abbreviated hash, its date, the mission directory, and the task title), with the task's verified bar indented beneath it, and prints nothing when no task has been completed, which is no failure. Each task's title and verified bar tell you *what the task was meant to achieve* — the intent behind the deliverable that now exists — and its brief stands in its commit's diff, as the section removed from `TASKS_TODO.md`, which `git show <hash>` pulls up.
 - Read `<MISSION_DIR>/TASKS_TODO.md` — pending tasks, in priority order. Their ordering explains dependencies ("what's blocking what").
 - Read `AGENTS.md` — the project's domain context, conventions, and real names for its systems and files, so your answer uses the project's vocabulary.
-- When the question concerns past work — what an earlier milestone built, when or why something landed, a finished milestone — run the plugin's missions tool for the project's composed record, at your own discretion and scoped to the question: the path the question concerns (a file or directory), the milestone's scope (the directory holding its `milestones/` container, `.` for one at `milestones/<slug>/`) for the work around this milestone, or `.` for a project-wide question:
+- When the question concerns past work — what an earlier mission built, when or why something landed, a finished mission — run the plugin's missions tool for the project's composed record, at your own discretion and scoped to the question: the path the question concerns (a file or directory), the mission's scope (the directory its mission directory stands in, `.` for one at `mission_<slug>/`) for the work around this mission, or `.` for a project-wide question:
 
   ```
   python3 ~/.gemini/config/plugins/cairn/tools/missions.py record <PATH>
   ```
 
-  It prints one tab-separated line at column 0 for each milestone, live or finished, that changed PATH or whose scope overlaps it (`live` or `finished`, the finish date or `-` for a live one, the milestone's path, and its title; the live ones first, then the finished ones newest first), with its summary bullets, or a live one's goal, and its tasks that changed PATH indented beneath it. A finished milestone, its directory removed, resolves under no `--mission`, so it is answered from this read, scoped as wide as `.` when nothing narrower lists it.
+  It prints one tab-separated line at column 0 for each mission, live or finished, that changed PATH or whose scope overlaps it (`live` or `finished`, the finish date or `-` for a live one, the mission's path, and its title; the live ones first, then the finished ones newest first), with its summary bullets, or a live one's goal, and its tasks that changed PATH indented beneath it. A finished mission, its directory removed, resolves under no `--mission`, so it is answered from this read, scoped as wide as `.` when nothing narrower lists it.
 
 If the `tasks` call or a `record` call fails, tell the user in prose that the completed-task read or the record read failed, quoting its one `Error: <reason>` line from stderr verbatim, and carry on from the other reads and the live deliverables, printing no fixed line.
 
@@ -81,7 +81,7 @@ Answering often reveals a next step. When it does, name the right skill and offe
 
 - The question is really an undecided design trade-off to deliberate and record → `/discuss-open-question <title>`.
 - The answer exposes a bug, gap, or "we should also…" worth tracking → `/submit-task` if it's already clear, `/discuss-new-task` if it needs shaping first.
-- The user wants to reshape what the milestone is even aiming at → `/discuss-mission-goal`.
+- The user wants to reshape what the mission is even aiming at → `/discuss-mission-goal`.
 - The user decides to actually do a pending task → `/complete-task <name>`.
 
 If no clear next action emerged, don't manufacture one. Plenty of questions just want an answer.

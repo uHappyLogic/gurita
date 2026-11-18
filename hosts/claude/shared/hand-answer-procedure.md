@@ -1,7 +1,7 @@
 # Hand-answer procedure (shared core)
 
 This is the single source of truth for recording one open question's answer **given by
-hand** in a milestone: a literal answer, or an alternative the user named. It composes over
+hand** in a mission: a literal answer, or an alternative the user named. It composes over
 `shared/answer-procedure.md` (the recording core): it names the standing picks on the other
 open questions that the answer undermines, then delegates the actual recording to that core
 unchanged, handing it those names. It is followed inline by the `answer-open-question` and
@@ -18,9 +18,9 @@ hand, and cleared in the same write that removes the answered block.
 This procedure records one hand answer given four inputs the caller supplies, the last
 optional:
 
-- **MISSION_DIR** — the already-resolved directory of the milestone the question belongs
+- **MISSION_DIR** — the already-resolved directory of the mission the question belongs
   to, the `<MISSION_DIR>` every path below uses. The caller resolves it; this procedure
-  never looks the milestone up, and hands it on to the recording core as that core's own
+  never looks the mission up, and hands it on to the recording core as that core's own
   `MISSION_DIR` input.
 - **SHORT TITLE** — the resolved handle of an existing `<open-question>` block to answer
   (its `id`, compared case-insensitively). The caller has already obtained it.

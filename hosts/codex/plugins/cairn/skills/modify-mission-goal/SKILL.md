@@ -1,11 +1,11 @@
 ---
 name: modify-mission-goal
-description: Revise the Goal section of the named milestone's requirements.md when the objective itself needs to be reshaped, broadened, narrowed, or corrected.
+description: Revise the Goal section of the named mission's requirements.md when the objective itself needs to be reshaped, broadened, narrowed, or corrected.
 ---
 
 # modify-mission-goal
 
-Replaces the `## Goal` of the named milestone's `requirements.md` with a revised goal statement and, in the same run, clears the standing picks on open questions that the revision undermines, keeping their alternatives. Everything else the change may have invalidated downstream is left as it stands, for the user and the next review pass. It is the only skill that edits the Goal of an *already-defined* milestone.
+Replaces the `## Goal` of the named mission's `requirements.md` with a revised goal statement and, in the same run, clears the standing picks on open questions that the revision undermines, keeping their alternatives. Everything else the change may have invalidated downstream is left as it stands, for the user and the next review pass. It is the only skill that edits the Goal of an *already-defined* mission.
 
 ## Usage
 
@@ -13,17 +13,17 @@ Replaces the `## Goal` of the named milestone's `requirements.md` with a revised
 /modify-mission-goal --mission <path> <new or revised goal text>
 ```
 
-- `--mission <path>`: required and leading; names the milestone by its repo-relative path, exactly as the definition tool printed it, trailing slash included, e.g. `milestones/user-guide/`.
+- `--mission <path>`: required and leading; names the mission by its repo-relative path, exactly as the definition tool printed it, trailing slash included, e.g. `mission_user-guide/`.
 - `<new or revised goal text>`: either a complete replacement goal statement, or a described change to fold into the existing one (e.g. "also cover a quick-reference section"). If it is a delta, integrate it against the current Goal rather than discarding what is still true.
 
 **Example:**
 ```
-/modify-mission-goal --mission milestones/user-guide/ Broaden the getting-started guide to walk a new user through their first week, not only their first session.
+/modify-mission-goal --mission mission_user-guide/ Broaden the getting-started guide to walk a new user through their first week, not only their first session.
 ```
 
 ## Workflow
 
-### 0. Find the milestone
+### 0. Find the mission
 
 First strip the leading `--mission <path>` from the invocation text by the rule in `${PLUGIN_ROOT}/shared/resolve-mission.md`, reading only the rest as the goal text. Follow `${PLUGIN_ROOT}/shared/resolve-mission.md` to resolve `<MISSION_DIR>`. Never use a hardcoded path.
 
@@ -48,11 +48,11 @@ Reason about what the new goal may have invalidated. Do **not** write this analy
 - Which open questions it newly settles, newly opens, or makes irrelevant — read `<MISSION_DIR>/open_questions.xml` whole with the file-reading tool for this, as you read `requirements.md` in step 1; that whole read is for reasoning only, and every locate, list, lift, and write is a call to the plugin's open-question tool, `python3 ${PLUGIN_ROOT}/tools/open_questions.py <subcommand> <MISSION_DIR> …`. Never edit the file yourself.
 - Which standing picks the revision undermines. A standing pick is the `<recommendation>` element an open question carries; it was formed under the goal being replaced. For each block carrying one, hold two texts from the read: the what-it-is text of the `<alternative>` its `<recommendation option="…">` names, and the one-line rationale that is the `<recommendation>` element's own text. Read them against the revised Goal and what it directly entails. The pick is **undermined** when either holds:
   - **The option can no longer be carried out.** The recommended alternative, as its what-it-is text reads, cannot be carried out alongside the revised Goal.
-  - **The stated reason no longer holds.** The rationale states or plainly presupposes something the revision changed — a fact about the project, a constraint, the scope or aim of the milestone, a sibling's expected outcome — so the reason no longer holds as written, even though the option itself could still be carried out.
+  - **The stated reason no longer holds.** The rationale states or plainly presupposes something the revision changed — a fact about the project, a constraint, the scope or aim of the mission, a sibling's expected outcome — so the reason no longer holds as written, even though the option itself could still be carried out.
 
   Judge it in prose, from those two texts as they are written. Do not re-form the recommender's judgment: do not weigh the block's other alternatives, ask which option is now best, or decide whether the same option would be picked again for a different reason. **Doubt strips**: a pick only arguably untouched is named, because a cleared block keeps its alternatives and the next run of the recommendation pass re-picks over them, while a stale pick left standing is recorded as a decision. A pick whose option text and rationale text neither conflict with the revised Goal nor rest on anything the revision changed is not named — sharing a topic with the revision is not being undermined by it. Judge each block on its own two texts only: a block whose `<depends-on>` names an undermined block is not named on that account.
 - Which `## Out of Scope` entries the new goal now pulls back in (or pushes out).
-- If `TASKS_TODO.md` already holds tasks or the milestone has completed some, which derived or completed tasks the new goal strands, contradicts, or leaves unaddressed.
+- If `TASKS_TODO.md` already holds tasks or the mission has completed some, which derived or completed tasks the new goal strands, contradicts, or leaves unaddressed.
 
 ### 4. Edit the Goal
 
@@ -77,7 +77,7 @@ If the call exits non-zero, stop and do not commit: print the fixed line `Goal r
 Read and follow the shared commit procedure at `${PLUGIN_ROOT}/shared/commit-procedure.md`, running its one commit-tool command yourself as this step's one git tool call. Supply it these two inputs:
 
 - **PATHS** — this skill's own change set: `<MISSION_DIR>/requirements.md` (the file whose `## Goal` section it just revised) and `<MISSION_DIR>/open_questions.xml` (the document step 5 clears picks from), so a goal revision and the picks it cleared are one commit.
-- **SUBJECT** — `Goal-revision: <MISSION_DIR>`, the milestone path exactly as resolved, trailing slash included.
+- **SUBJECT** — `Goal-revision: <MISSION_DIR>`, the mission path exactly as resolved, trailing slash included.
 
 The commit tool runs the dirty-own-path guard, the path-scoped staging, and the commit.
 
@@ -89,7 +89,7 @@ On the success path — the commit in step 6 recorded the revised goal — print
 Goal revised.
 ```
 
-Do not add the before → after goal text, the downstream-impact analysis from step 3, the picks step 5 cleared, the milestone path, or a next-step pointer. (The step-3 analysis still runs — it informs your own reasoning — but is not printed; the commit's diff is the record of the cleared picks.)
+Do not add the before → after goal text, the downstream-impact analysis from step 3, the picks step 5 cleared, the mission path, or a next-step pointer. (The step-3 analysis still runs — it informs your own reasoning — but is not printed; the commit's diff is the record of the cleared picks.)
 
 If instead the step-6 commit tool printed `Nothing committed — none of the paths changed.` (the `## Goal` section was unchanged, so nothing was committed), do not print the terse line — print this one fixed line and nothing else:
 

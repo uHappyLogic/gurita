@@ -1,13 +1,13 @@
 ---
 name: derive-tasks
-description: Convert the named milestone's requirements.md into a complete, dependency-ordered TASKS_TODO.md of brief-level task sections.
+description: Convert the named mission's requirements.md into a complete, dependency-ordered TASKS_TODO.md of brief-level task sections.
 ---
 
 # derive-tasks
 
-Reads the named milestone's requirements and derives a complete, dependency-ordered list of tasks into `TASKS_TODO.md`, ready for AI-driven completion via `/complete-task`.
+Reads the named mission's requirements and derives a complete, dependency-ordered list of tasks into `TASKS_TODO.md`, ready for AI-driven completion via `/complete-task`.
 
-Your job here is **decomposition and coverage**. You split the milestone into high-level task briefs, prove that those briefs cover every requirement, order them by dependency, and write them into `TASKS_TODO.md` yourself, as one whole list through the plugin's task-list tool — nothing here is delegated. Keep every task section at brief altitude: a task states *what* is to be achieved, and the completer derives the flow and the formal acceptance bar itself from the description plus `requirements.md`, against the live project.
+Your job here is **decomposition and coverage**. You split the mission into high-level task briefs, prove that those briefs cover every requirement, order them by dependency, and write them into `TASKS_TODO.md` yourself, as one whole list through the plugin's task-list tool — nothing here is delegated. Keep every task section at brief altitude: a task states *what* is to be achieved, and the completer derives the flow and the formal acceptance bar itself from the description plus `requirements.md`, against the live project.
 
 ## Usage
 
@@ -15,48 +15,48 @@ Your job here is **decomposition and coverage**. You split the milestone into hi
 /derive-tasks --mission <path>
 ```
 
-The skill reads from and writes to the milestone directory the flag names. The required leading `--mission <path>` names the milestone by its repo-relative path, exactly as the definition tool printed it, trailing slash included, e.g. `milestones/user-guide/`.
+The skill reads from and writes to the mission directory the flag names. The required leading `--mission <path>` names the mission by its repo-relative path, exactly as the definition tool printed it, trailing slash included, e.g. `mission_user-guide/`.
 
 ## Preconditions
 
-- No other started milestone may hold the named milestone's scope (checked twice, through the scope gate: in step 1, before anything else, and in step 9, directly ahead of the write).
-- All open questions in the named milestone must be resolved: its `open_questions.xml` holds no `<open-question>` block, so the plugin's open-question tool's `list` prints nothing (checked in step 4).
-- `TASKS_TODO.md` should be empty or contain only stale tasks from a previous milestone; this skill replaces its contents.
+- No other started mission may hold the named mission's scope (checked twice, through the scope gate: in step 1, before anything else, and in step 9, directly ahead of the write).
+- All open questions in the named mission must be resolved: its `open_questions.xml` holds no `<open-question>` block, so the plugin's open-question tool's `list` prints nothing (checked in step 4).
+- `TASKS_TODO.md` should be empty or contain only stale tasks from a previous mission; this skill replaces its contents.
 
 ## Workflow
 
-### 0. Find the milestone
+### 0. Find the mission
 
 Follow `~/.gemini/config/plugins/cairn/shared/resolve-mission.md` to resolve `<MISSION_DIR>`. Never use a hardcoded task-list path.
 
 ### 1. Check the scope gate
 
-Directly after resolving the milestone, and before anything else, follow `~/.gemini/config/plugins/cairn/shared/check-scope-gate.md` for `<MISSION_DIR>`. When the gate is closed, its report is the whole output: read, refresh, write, and commit nothing, and print no line of step 11.
+Directly after resolving the mission, and before anything else, follow `~/.gemini/config/plugins/cairn/shared/check-scope-gate.md` for `<MISSION_DIR>`. When the gate is closed, its report is the whole output: read, refresh, write, and commit nothing, and print no line of step 11.
 
 ### 2. Refresh a stale starting state
 
-Before reading the documents you decompose, check whether other milestones' work has landed in the scope since this milestone's starting state was recorded. Run, from the workspace root, the plugin's missions tool:
+Before reading the documents you decompose, check whether other missions' work has landed in the scope since this mission's starting state was recorded. Run, from the workspace root, the plugin's missions tool:
 
 ```
 python3 ~/.gemini/config/plugins/cairn/tools/missions.py since <MISSION_DIR> --missions
 ```
 
-Its first line, when it prints one, is the anchor, the commit that last recorded this milestone's starting state; every line beneath it is another milestone's task or finish commit that landed in the scope after it. Read its print as exactly one of three outcomes:
+Its first line, when it prints one, is the anchor, the commit that last recorded this mission's starting state; every line beneath it is another mission's task or finish commit that landed in the scope after it. Read its print as exactly one of three outcomes:
 
 - **No line at all, or the anchor alone** — there is no anchor to measure from, or nothing has landed since it: explore nothing, commit nothing, print nothing about the starting state, and go on to step 3 with the `## Relevant starting state` section as it stands, empty or filled.
 - **Anything beyond the anchor** — the ground moved under the section: refresh it before deriving anything, as below.
-- **The call failed** — any non-zero exit, whatever its `Error:` line says: stop the whole run, reading, writing, and committing nothing. Report the starting-state procedure's fixed line `Starting state stopped — a milestones-tool read failed.` first, then below it the call's `Error:` line from stderr, verbatim, and print no line of step 11.
+- **The call failed** — any non-zero exit, whatever its `Error:` line says: stop the whole run, reading, writing, and committing nothing. Report the starting-state procedure's fixed line `Starting state stopped — a missions-tool read failed.` first, then below it the call's `Error:` line from stderr, verbatim, and print no line of step 11.
 
 To refresh, read and follow the shared starting-state procedure at `~/.gemini/config/plugins/cairn/shared/starting-state-procedure.md` in place, with `<MISSION_DIR>` as its input. It ends in exactly one of three ways:
 
 - **The anchor alone** — its step 1 found the ground unmoved, so it explored, edited, and cleared nothing. Make no commit and go on to step 3.
-- **A stop** — it stopped on one of its two fixed lines, `Starting state stopped — a milestones-tool read failed.` or `Starting state stopped — clearing the undermined picks failed.`, with the detail the procedure gives beneath it. That report, as the procedure states it, is this run's whole output: write no task list, commit nothing, and print no line of step 11.
+- **A stop** — it stopped on one of its two fixed lines, `Starting state stopped — a missions-tool read failed.` or `Starting state stopped — clearing the undermined picks failed.`, with the detail the procedure gives beneath it. That report, as the procedure states it, is this run's whole output: write no task list, commit nothing, and print no line of step 11.
 - **The change handed back** — it ran through its step 7, with `requirements.md` edited or left as it stood, and `open_questions.xml` changed exactly when its step 6 cleared a pick. Commit it, as below, then go on to step 3.
 
 Commit the handed-back change as a commit of its own, before any read of step 3, by reading and following the shared commit procedure at `~/.gemini/config/plugins/cairn/shared/commit-procedure.md`, running its one commit-tool command yourself as one git tool call, with these two inputs:
 
 - **PATHS** — `<MISSION_DIR>/requirements.md`, and `<MISSION_DIR>/open_questions.xml` beside it only when the procedure's step 6 cleared a pick, so a refresh and the picks it cleared are one commit.
-- **SUBJECT** — `Starting-state: <MISSION_DIR>`, the milestone path exactly as resolved, trailing slash included.
+- **SUBJECT** — `Starting-state: <MISSION_DIR>`, the mission path exactly as resolved, trailing slash included.
 
 The refresh commit prints no line of its own in this run's report: whether it landed (the commit tool printed nothing) or found nothing to commit (it printed `Nothing committed — none of the paths changed.`, the exploration having left the section as it stood), go on to step 3. If the commit tool prints an `Error:` line instead, stop the whole run, writing and committing nothing further: report the fixed line `Cannot derive tasks: the starting-state refresh could not be committed.` first, then the `Error:` line quoted verbatim below it, and print no line of step 11.
 
@@ -90,7 +90,7 @@ If the call fails, stop and report it: the fixed line `Cannot derive tasks: the 
 
 ### 5. Decompose into high-level task briefs
 
-Break the milestone into discrete, independently-completable task briefs. A **brief** is high-level — it names the affected system, the desired behavior, and how it would be verified. It does **not** spell out the flow, the low-level design, a contract surface, or a structured done-ness section; the completer derives all of that against the live project.
+Break the mission into discrete, independently-completable task briefs. A **brief** is high-level — it names the affected system, the desired behavior, and how it would be verified. It does **not** spell out the flow, the low-level design, a contract surface, or a structured done-ness section; the completer derives all of that against the live project.
 
 Apply these rules:
 
@@ -102,13 +102,13 @@ Apply these rules:
 
 ### 6. Prove coverage (requirement → task matrix)
 
-First run the plugin's missions tool, for the work already recorded as completed in this milestone:
+First run the plugin's missions tool, for the work already recorded as completed in this mission:
 
 ```
 python3 ~/.gemini/config/plugins/cairn/tools/missions.py tasks <MISSION_DIR> --with-body
 ```
 
-It prints, newest first, one tab-separated line per task completed in the milestone (the commit's abbreviated hash, its date, the milestone directory, and the task title), with the task's verified bar indented beneath it, and prints nothing when no task has been completed, which is no failure. If the call fails, stop and report it, writing and committing nothing: the fixed line `Cannot derive tasks: the completed-task read failed.` first, then its one `Error: <reason>` line from stderr verbatim below it, and print no line of step 11.
+It prints, newest first, one tab-separated line per task completed in the mission (the commit's abbreviated hash, its date, the mission directory, and the task title), with the task's verified bar indented beneath it, and prints nothing when no task has been completed, which is no failure. If the call fails, stop and report it, writing and committing nothing: the fixed line `Cannot derive tasks: the completed-task read failed.` first, then its one `Error: <reason>` line from stderr verbatim below it, and print no line of step 11.
 
 Then re-read `requirements.md` bullet by bullet and build a traceability matrix mapping **every** requirement, constraint, and behavioral detail to at least one brief:
 
@@ -137,13 +137,13 @@ If the run derived no brief at all — every requirement is already satisfied �
 
 ### 9. Check the scope gate again
 
-Directly ahead of the write, follow `~/.gemini/config/plugins/cairn/shared/check-scope-gate.md` for `<MISSION_DIR>` a second time, since another milestone may have started in the scope while this run read and decomposed. When the gate is closed, its report is the whole output: write and commit no task list, and print no line of step 11. A refresh commit step 2 already landed stays committed. The write call in step 10 checks no gate of its own.
+Directly ahead of the write, follow `~/.gemini/config/plugins/cairn/shared/check-scope-gate.md` for `<MISSION_DIR>` a second time, since another mission may have started in the scope while this run read and decomposed. When the gate is closed, its report is the whole output: write and commit no task list, and print no line of step 11. A refresh commit step 2 already landed stays committed. The write call in step 10 checks no gate of its own.
 
 ### 10. Write and commit the task list in one shell call
 
 Write every brief as one task section, using the template and the authoring guidelines from `~/.gemini/config/plugins/cairn/shared/task-format.md` exactly: its `##` title heading, its description, and its trailing `---`. The brief you decomposed in step 5 *is* the task body; writing it down is a transcription into that format, not a second authoring pass that adds detail.
 
-Then run this one fixed shell call, written out in full exactly as shown, with only `<MISSION_DIR>` (in the subject too, the milestone path exactly as resolved, trailing slash included) and the sections replaced — every brief's section in the heredoc, **in dependency order**, so the finished file reads top-to-bottom in that order:
+Then run this one fixed shell call, written out in full exactly as shown, with only `<MISSION_DIR>` (in the subject too, the mission path exactly as resolved, trailing slash included) and the sections replaced — every brief's section in the heredoc, **in dependency order**, so the finished file reads top-to-bottom in that order:
 
 ```
 python3 ~/.gemini/config/plugins/cairn/tools/task_list.py initialize <MISSION_DIR> <<'EOF' &&

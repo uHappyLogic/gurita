@@ -1,7 +1,7 @@
 # Complete-task procedure (shared core)
 
 This is the single source of truth for completing one named task from the named
-milestone's task list: the `complete-task` skill follows these steps inline, the
+mission's task list: the `complete-task` skill follows these steps inline, the
 `complete-task` agent follows them in isolation. The wrappers add their own framing; this
 file describes only the work itself. If a step fails, diagnose the root cause with the
 available tools, fix it, and retry — never skip a step or record partial work as done.
@@ -10,13 +10,13 @@ available tools, fix it, and retry — never skip a step or record partial work 
 
 A task section in `TASKS_TODO.md` is **brief-level** — the format
 `${PLUGIN_ROOT}/shared/task-format.md` defines: a `##` title heading, a 1–3 sentence
-description of what is to be achieved, why the milestone needs it, and how it would be
+description of what is to be achieved, why the mission needs it, and how it would be
 verified, then a trailing `---` separator. That is the whole task.
 
 Two things follow, and they shape this entire procedure:
 
 - **The task carries no acceptance criteria.** You derive the formal acceptance bar
-  yourself, from the task description plus the milestone's `requirements.md` (step 2), and
+  yourself, from the task description plus the mission's `requirements.md` (step 2), and
   that derived bar — not anything authored in the task — is what step 4 verifies against
   and what step 5 hands on as the task's record.
 - **The task carries no forward contract.** Tasks run in order, so whatever an earlier task
@@ -39,7 +39,7 @@ kind of work.
 
 ### 1. Find and read the task
 
-When your runner supplies an already-resolved milestone directory, take it as given as
+When your runner supplies an already-resolved mission directory, take it as given as
 `<MISSION_DIR>`, with no resolution of your own. Only when none is supplied, the inline
 `complete-task` skill's case, follow `${PLUGIN_ROOT}/shared/resolve-mission.md` to
 resolve `<MISSION_DIR>`, with the `--mission <path>` value the runner holds as that
@@ -65,7 +65,7 @@ Read the workspace root `AGENTS.md` and hold in context:
 - Available tools — what tools exist and what they are for.
 - How work is verified as done — the checks that confirm a deliverable meets its bar.
 
-Read `<MISSION_DIR>/requirements.md` and hold in context the milestone's goal, its
+Read `<MISSION_DIR>/requirements.md` and hold in context the mission's goal, its
 relevant starting state, and its recorded decisions. This is what tells you what "done"
 means for this task beyond the brief's own sentences — a decision recorded there is binding
 on the work, and any value, name, or threshold it fixes is authoritative.
@@ -73,15 +73,15 @@ on the work, and any value, name, or threshold it fixes is authoritative.
 **The past-work read.** Why an existing file is the way it is stands in the project's completed
 tasks, read with `python3 ${PLUGIN_ROOT}/tools/missions.py tasks <path> --with-body` run from
 the workspace root, `<path>` the file's path, its whole print taken whatever its length, and
-followed where a printed task bears by `python3 ${PLUGIN_ROOT}/tools/missions.py show <milestone path>`
-for that milestone's decisions in their own words — every milestones-tool call this read makes,
+followed where a printed task bears by `python3 ${PLUGIN_ROOT}/tools/missions.py show <mission path>`
+for that mission's decisions in their own words — every missions-tool call this read makes,
 the `tasks` call on each file it is taken for and each `show` follow-up alike, written out in
 full on every call, never through a variable, alias, or function of your own defined to stand
 for the command or any part of it. `tasks` prints, newest first, one tab-separated line per task
-commit that changed the file — its abbreviated hash, date, milestone path, and title — with that
-task's verified bar indented beneath it, and `show` takes the milestone path exactly as that
+commit that changed the file — its abbreviated hash, date, mission path, and title — with that
+task's verified bar indented beneath it, and `show` takes the mission path exactly as that
 line's third field prints it. Take the read for each file the task edits rather than creates
-whose shape you judge `requirements.md` does not explain, only this milestone's goal, relevant
+whose shape you judge `requirements.md` does not explain, only this mission's goal, relevant
 starting state, and recorded decisions counting as an explanation and never what
 `AGENTS.md` says about the file, however fully it gives the reason. Deleting, renaming,
 or moving a file that already exists counts as editing it, and the read on it is taken on the
@@ -90,22 +90,22 @@ files the task names up front: what it surfaces is input to the bar you derive n
 a criterion. Step 3 takes it for the rest.
 
 A failed call of the read, the `tasks` call or a `show` follow-up, whatever the reason (a `-` in
-the milestone-path field, which `show` refuses, included), is the read not taken rather than a
+the mission-path field, which `show` refuses, included), is the read not taken rather than a
 failed step the opening rule has you diagnose, fix, and retry, and never a reason to stop the
 task: carry on from `requirements.md`, `AGENTS.md`, and the live material, printing no
 fixed line. Inline, as the `complete-task` skill, tell the user in prose that the past-work read
 failed, quoting its one `Error: <reason>` line from stderr verbatim; in isolation, as the
 `complete-task` agent, carry on and report nothing about it.
 
-When the read surfaces an earlier milestone's decision or verified bar that carrying out the
-task as briefed would undo, and this milestone's `requirements.md` does not address it, the
+When the read surfaces an earlier mission's decision or verified bar that carrying out the
+task as briefed would undo, and this mission's `requirements.md` does not address it, the
 earlier decision governs how the work is done wherever the brief can still be met: among the
 ways of meeting the brief, take one that leaves that decision or bar intact, and here the read
 may fix a criterion to that effect. Only where every way of meeting the brief undoes it does the
-brief govern, overriding it as the later-recorded decision of a converged milestone; never stop
+brief govern, overriding it as the later-recorded decision of a converged mission; never stop
 for it, and flag nothing. Every criterion the read fixes here names what it was formed against
 inside its own `- ` bullet: the abbreviated hash from the `tasks` line when a task commit's diff
-or bar fixed it, and the milestone path from that line's third field when a decision `show`
+or bar fixed it, and the mission path from that line's third field when a decision `show`
 printed fixed it.
 
 Then **derive the task's acceptance bar**: turn the task description plus what

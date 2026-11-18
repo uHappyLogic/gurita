@@ -1,11 +1,11 @@
 ---
 name: complete-all-tasks
-description: Complete every task in the named milestone's TASKS_TODO.md one by one, committing each with its verified bar.
+description: Complete every task in the named mission's TASKS_TODO.md one by one, committing each with its verified bar.
 ---
 
 # complete-all-tasks
 
-Pure orchestrator. Reads the named milestone's task list and spawns one isolated subagent per task, each with a clean context and exactly one task to complete, then commits each finished task from the body file and the path file its subagent wrote. Never complete a task directly here, even as a fallback when a subagent fails.
+Pure orchestrator. Reads the named mission's task list and spawns one isolated subagent per task, each with a clean context and exactly one task to complete, then commits each finished task from the body file and the path file its subagent wrote. Never complete a task directly here, even as a fallback when a subagent fails.
 
 ## Invocation
 
@@ -13,11 +13,11 @@ Pure orchestrator. Reads the named milestone's task list and spawns one isolated
 /complete-all-tasks --mission <path>
 ```
 
-The required leading `--mission <path>` names the milestone by its repo-relative path, exactly as the definition tool printed it, trailing slash included, e.g. `milestones/user-guide/`.
+The required leading `--mission <path>` names the mission by its repo-relative path, exactly as the definition tool printed it, trailing slash included, e.g. `mission_user-guide/`.
 
 ## Workflow
 
-### 0. Find the milestone
+### 0. Find the mission
 
 Follow `${PLUGIN_ROOT}/shared/resolve-mission.md` to resolve `<MISSION_DIR>`. Never use a hardcoded task-list path.
 
@@ -47,11 +47,11 @@ Re-read `<MISSION_DIR>/TASKS_TODO.md` to get the current top task — the first 
 
 #### 2b. Check the scope gate
 
-Before dispatching the task 2a identified, follow `${PLUGIN_ROOT}/shared/check-scope-gate.md` for `<MISSION_DIR>`, on every pass through the loop, so a milestone that started holding the scope while the run was working stops it before its next task. When the gate is closed, end the run there: its report is the whole output, no agent is dispatched for the task, and every task committed earlier in the run stays committed.
+Before dispatching the task 2a identified, follow `${PLUGIN_ROOT}/shared/check-scope-gate.md` for `<MISSION_DIR>`, on every pass through the loop, so a mission that started holding the scope while the run was working stops it before its next task. When the gate is closed, end the run there: its report is the whole output, no agent is dispatched for the task, and every task committed earlier in the run stays committed.
 
 #### 2c. Spawn a subagent to complete the task
 
-Use the `spawn_agent` tool to spawn one default (generic) subagent, with no custom agent type, and a prompt that tells it to read and follow the plugin's `complete-task` agent file at `${PLUGIN_ROOT}/agents/complete-task.md` and otherwise carries the task name, the milestone directory, and the scratch directory and nothing else, substituting `<TASK_NAME>` with the exact `##` heading text (without the `##` prefix), `<MISSION_DIR>` with the directory resolved in step 0, and `<scratch dir>` with the directory created at the start of step 2:
+Use the `spawn_agent` tool to spawn one default (generic) subagent, with no custom agent type, and a prompt that tells it to read and follow the plugin's `complete-task` agent file at `${PLUGIN_ROOT}/agents/complete-task.md` and otherwise carries the task name, the mission directory, and the scratch directory and nothing else, substituting `<TASK_NAME>` with the exact `##` heading text (without the `##` prefix), `<MISSION_DIR>` with the directory resolved in step 0, and `<scratch dir>` with the directory created at the start of step 2:
 
 ```
 Read and follow the agent instructions in ${PLUGIN_ROOT}/agents/complete-task.md.
@@ -63,13 +63,13 @@ Mission directory: <MISSION_DIR>
 Scratch directory: <scratch dir>
 ```
 
-Every dispatch carries the `Mission directory:` line, holding the `<MISSION_DIR>` step 0 resolved from the `--mission` path, so each agent works in the milestone this run commits for, and the `Scratch directory:` line, holding the one `<scratch dir>` created at the start of this step, the same directory on every dispatch, so each agent writes its two files where 2d reads them.
+Every dispatch carries the `Mission directory:` line, holding the `<MISSION_DIR>` step 0 resolved from the `--mission` path, so each agent works in the mission this run commits for, and the `Scratch directory:` line, holding the one `<scratch dir>` created at the start of this step, the same directory on every dispatch, so each agent writes its two files where 2d reads them.
 
 Wait for the agent to return.
 
 - If the agent reports FAILED, stop the loop and end the run: print the fixed line `Task run stopped — a task failed.` first, then below it the task name and the failure reason. Do not proceed to 2d.
 - If the agent returns without an explicit DONE or FAILED status (e.g. it returned early, produced no output, or gave an ambiguous result), treat this as FAILED: stop the loop, print the fixed line `Task run stopped — a task agent returned no status.` first, then below it the task name and what was returned, and do not proceed to 2d. **Never attempt to complete the task yourself as a fallback.**
-- On `DONE`, the agent has written its task's acceptance bar to the body file `<scratch dir>/body.txt` and its task's change set — the paths it created or edited, plus the milestone task list — to the path file `<scratch dir>/paths.txt`, one path per line, and has staged and committed nothing. You commit the task from those two files in 2d; you name no path, type no bar, and stage nothing yourself, and the agent's message carries nothing to collect.
+- On `DONE`, the agent has written its task's acceptance bar to the body file `<scratch dir>/body.txt` and its task's change set — the paths it created or edited, plus the mission task list — to the path file `<scratch dir>/paths.txt`, one path per line, and has staged and committed nothing. You commit the task from those two files in 2d; you name no path, type no bar, and stage nothing yourself, and the agent's message carries nothing to collect.
 
 #### 2d. Commit the task from its body file and path file
 

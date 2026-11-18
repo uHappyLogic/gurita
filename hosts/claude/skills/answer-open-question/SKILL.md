@@ -1,11 +1,11 @@
 ---
 name: answer-open-question
-description: Answer a named open question of a milestone by recording the supplied answer as a decision in its requirements.md.
+description: Answer a named open question of a mission by recording the supplied answer as a decision in its requirements.md.
 ---
 
 # answer-open-question
 
-Resolves a named open question of the milestone named by `--mission` by recording the user's answer as a decision in `requirements.md`, removing the answered block from `open_questions.xml`, propagating the answer's implications through both, and committing those edits on their own with the decision's rationale in the commit body — establishing the `Manual-answer:` commit that `/capture-mission-principle-updates` later reads, alongside `Alternative-answer:` and `Recommendation-answer:` commits, when it distills a milestone's answers into reusable principles: a manual answer is an override signal (a decision the recommender did not make), so its body rationale is what gets distilled. The answer text is recorded **literally**; the one reserved answer text is the retired sentinel `record the recommendation`, which this skill redirects instead of recording (step 2).
+Resolves a named open question of the mission named by `--mission` by recording the user's answer as a decision in `requirements.md`, removing the answered block from `open_questions.xml`, propagating the answer's implications through both, and committing those edits on their own with the decision's rationale in the commit body — establishing the `Manual-answer:` commit that `/capture-mission-principle-updates` later reads, alongside `Alternative-answer:` and `Recommendation-answer:` commits, when it distills a mission's answers into reusable principles: a manual answer is an override signal (a decision the recommender did not make), so its body rationale is what gets distilled. The answer text is recorded **literally**; the one reserved answer text is the retired sentinel `record the recommendation`, which this skill redirects instead of recording (step 2).
 
 ## Usage
 
@@ -13,16 +13,16 @@ Resolves a named open question of the milestone named by `--mission` by recordin
 /answer-open-question --mission <path> <Short Title>. <answer text>
 ```
 
-The `<Short Title>` must match (case-insensitive, against the block's `id`) an existing `<open-question>` block. The `.` character is the separator. Everything after the first `.` is the answer. The required leading `--mission <path>` names the milestone by its repo-relative path, exactly as the definition tool printed it, trailing slash included, e.g. `milestones/user-guide/`.
+The `<Short Title>` must match (case-insensitive, against the block's `id`) an existing `<open-question>` block. The `.` character is the separator. Everything after the first `.` is the answer. The required leading `--mission <path>` names the mission by its repo-relative path, exactly as the definition tool printed it, trailing slash included, e.g. `mission_user-guide/`.
 
 **Example (literal answer):**
 ```
-/answer-open-question --mission milestones/user-guide/ Getting-started section order. Use approach B — open the "Draft the Getting Started section of the user guide" deliverable with the install-and-run walkthrough, then follow it with the conceptual overview, so a new reader reaches a working setup before the background material.
+/answer-open-question --mission mission_user-guide/ Getting-started section order. Use approach B — open the "Draft the Getting Started section of the user guide" deliverable with the install-and-run walkthrough, then follow it with the conceptual overview, so a new reader reaches a working setup before the background material.
 ```
 
 **Example (retired sentinel — redirected, records nothing):**
 ```
-/answer-open-question --mission milestones/user-guide/ Getting-started section order. record the recommendation
+/answer-open-question --mission mission_user-guide/ Getting-started section order. record the recommendation
 ```
 
 ## Workflow
@@ -37,12 +37,12 @@ If no `.` is found, stop and report the parse error: the fixed line `Answer not 
 
 ### 2. Redirect guard for the retired sentinel
 
-Compare the parsed answer text — **trimmed and lowercased** — against the retired sentinel `record the recommendation`, as an **exact whole-string match** (never a substring: an answer that merely *contains* those words is a literal answer, not the sentinel). This is a pure string comparison on the parsed text — no milestone resolution, no file read.
+Compare the parsed answer text — **trimmed and lowercased** — against the retired sentinel `record the recommendation`, as an **exact whole-string match** (never a substring: an answer that merely *contains* those words is a literal answer, not the sentinel). This is a pure string comparison on the parsed text — no mission resolution, no file read.
 
 - **Exactly the sentinel — redirect and stop:** recording a question's embedded recommendation lives in `/answer-open-question-with-recommendation`. **Stop without recording or committing anything** and print the fixed line `Answer not recorded — "record the recommendation" is retired here.` first, then below it a redirect message telling the user to record the recommendation via `/answer-open-question-with-recommendation <Short Title>` instead (or to answer with literal text here via `/answer-open-question <Short Title>. <answer text>`).
 - **Anything else — literal-answer path:** the parsed answer text *is* the `ANSWER`. Carry it forward to the recording in step 4.
 
-### 3. Find the milestone
+### 3. Find the mission
 
 Follow `${CLAUDE_PLUGIN_ROOT}/shared/resolve-mission.md` to resolve `<MISSION_DIR>`. Never use a hardcoded path. Hold `<MISSION_DIR>` — you need it for the delegated recording and the commit.
 
@@ -57,7 +57,7 @@ That procedure names the standing picks on the other open questions that the ans
 Read and follow the shared commit procedure at `${CLAUDE_PLUGIN_ROOT}/shared/commit-procedure.md`, running its one commit-tool command yourself as this step's one git tool call. Supply it these three inputs, using the `<MISSION_DIR>` resolved in step 3:
 
 - **PATHS** — this skill's own edits: `<MISSION_DIR>/open_questions.xml` and `<MISSION_DIR>/requirements.md`.
-- **SUBJECT** — exactly `Manual-answer: <Short Title>` (the answered question's handle). The marker is the provenance `/capture-mission-principle-updates` reads when it walks a milestone's answer commits across all three subjects: `Manual-answer:` and `Alternative-answer:` mark override signals it distills new principles from, while `Recommendation-answer:` marks evidence about existing principles only.
+- **SUBJECT** — exactly `Manual-answer: <Short Title>` (the answered question's handle). The marker is the provenance `/capture-mission-principle-updates` reads when it walks a mission's answer commits across all three subjects: `Manual-answer:` and `Alternative-answer:` mark override signals it distills new principles from, while `Recommendation-answer:` marks evidence about existing principles only.
 - **BODY** — the decision's rationale — but record only rationale that genuinely exists in this conversation. Never prompt the user for a rationale and never fabricate one. When `/discuss-open-question` deliberation is in context, the body captures that reasoning. On a cold answer (no deliberation), the body is the literal answer text — recorded verbatim, including any inline "because" clause the user typed; when the answer states no reasoning, the body holds the bare decision. The answer string is itself the cold path's rationale affordance — add no separate rationale prompt.
 
 The commit tool runs the dirty-own-path guard, the path-scoped staging, and the commit. Its guard also covers this skill's clean-stop cases: if step 4 stopped on the tool's `Error:` line, step 2's redirect guard fired on the retired sentinel, or step 1 hit a parse error, neither file changed, so the commit tool prints its no-op line `Nothing committed — none of the paths changed.` and nothing is staged or committed.

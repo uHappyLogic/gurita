@@ -1,29 +1,29 @@
 ---
 name: capture-mission-principle-updates
-description: Distill reusable answering principles from a named milestone's recorded decisions into the project-wide principle store.
+description: Distill reusable answering principles from a named mission's recorded decisions into the project-wide principle store.
 ---
 
 # capture-mission-principle-updates
 
-This is the on-demand harvester of the answer-principle-learning loop. Over a milestone, every
-recorded answer is one commit touching the milestone's `open_questions.xml` and `requirements.md`
+This is the on-demand harvester of the answer-principle-learning loop. Over a mission, every
+recorded answer is one commit touching the mission's `open_questions.xml` and `requirements.md`
 under one of three subjects — `Manual-answer:`, `Alternative-answer:`, or
 `Recommendation-answer: <Short Title>` — whose body carries the recorded answer and whose diff
 preserves the analysis the user saw when recording it. This skill
-reads that finite, known-up-front set of commits for the milestone you name and distills from them
+reads that finite, known-up-front set of commits for the mission you name and distills from them
 the generalizable answering principles that the recommendation advisor can apply.
 
-It runs against **any** milestone path whose `requirements.md` stands in the working tree or once
-stood there in the git history — a live milestone, or a finished one whose directory its finish
+It runs against **any** mission path whose `requirements.md` stands in the working tree or once
+stood there in the git history — a live mission, or a finished one whose directory its finish
 removed (backfill included). Because every
-answer commit lands during the requirements phase, the milestone's finish status carries no
-information the harvest needs: a run against a milestone whose questions are still being answered
+answer commit lands during the requirements phase, the mission's finish status carries no
+information the harvest needs: a run against a mission whose questions are still being answered
 simply harvests what exists so far, and a later run re-walks the same path to pick up the rest.
-Running it right after `/finish-mission` is the natural moment, since the milestone's
+Running it right after `/finish-mission` is the natural moment, since the mission's
 answer set is complete by then, but it is never a precondition.
 
-It is the **sole writer** of `milestones/answer_decision_principles.md` (a single project-wide file at
-the `milestones/` root, **above** any one milestone, so principles accumulate across milestones).
+It is the **sole writer** of `milestones/answer_decision_principles.md` (a single project-wide file,
+**above** any one mission, so principles accumulate across missions).
 
 ## Usage
 
@@ -31,37 +31,37 @@ the `milestones/` root, **above** any one milestone, so principles accumulate ac
 /capture-mission-principle-updates <path>
 ```
 
-- `<path>` (**required**): the milestone's repo-relative path, exactly as the definition tool
-  printed it, trailing slash included, e.g. `milestones/user-guide/`. The value is used verbatim:
+- `<path>` (**required**): the mission's repo-relative path, exactly as the definition tool
+  printed it, trailing slash included, e.g. `mission_user-guide/`. The value is used verbatim:
   no prefix is added or stripped, no bare number or directory name is looked up, and a missing
   trailing slash is not supplied.
 
 **Example:**
 ```
-/capture-mission-principle-updates milestones/user-guide/
+/capture-mission-principle-updates mission_user-guide/
 ```
 
 > This skill writes **only** the principle store at the fixed path
-> `milestones/answer_decision_principles.md`. It does **not** touch any milestone's `requirements.md`
+> `milestones/answer_decision_principles.md`. It does **not** touch any mission's `requirements.md`
 > or `open_questions.xml`.
 > When a pass composes a store rewrite it writes it in place and — once the user has reviewed the
 > working-tree change with `git diff` and confirmed it — **commits** that rewrite itself (step 7); a
 > pass that distills nothing, or whose rewrite the user rejects, leaves the store as it stood and
-> commits nothing. It imposes no clean-store precondition and does not refuse a milestone already
+> commits nothing. It imposes no clean-store precondition and does not refuse a mission already
 > captured — both cases pass through a notice-and-confirm guard (step 2), never a stop.
 
 ## Workflow
 
-### 1. Locate the milestone
+### 1. Locate the mission
 
-If no `<path>` argument was given, stop and report that the milestone path is required: the
-fixed line `Capture stopped — no milestone path was given.` first, then the usage above below it.
+If no `<path>` argument was given, stop and report that the mission path is required: the
+fixed line `Capture stopped — no mission path was given.` first, then the usage above below it.
 
 `<path>` matches when it ends in `/` and its `requirements.md` is found by either test, tried in
 this order:
 
-1. `<path>/requirements.md` exists in the working tree — a live milestone.
-2. Otherwise, this path-scoped log, run from the workspace root, prints a hash — a milestone
+1. `<path>/requirements.md` exists in the working tree — a live mission.
+2. Otherwise, this path-scoped log, run from the workspace root, prints a hash — a mission
    whose directory is gone from the tree, its finish having removed it, read from the history
    where the file once stood:
 
@@ -70,17 +70,17 @@ this order:
    ```
 
 If `<path>` does not end in `/`, or neither test finds the file, **stop without changing anything**
-and report that the milestone was not found: the fixed line
-`Capture stopped — no milestone directory matches the path.` first, then below it the output of
+and report that the mission was not found: the fixed line
+`Capture stopped — no mission directory matches the path.` first, then below it the output of
 the plugin's missions tool, run from the workspace root,
 
 ```
 python3 ${PLUGIN_ROOT}/tools/missions.py missions .
 ```
 
-verbatim — one line per milestone, live or finished, its path the third tab-separated field — or,
+verbatim — one line per mission, live or finished, its path the third tab-separated field — or,
 when the call fails, its one `Error: <reason>` line from stderr, so the caller can retry with one
-of the printed paths. These two tests are the only validation; nothing about the milestone's
+of the printed paths. These two tests are the only validation; nothing about the mission's
 finish status is consulted, and nothing is restored to the working tree.
 
 The same `<path>` feeds, verbatim, the repeat-capture guard's anchored grep in step 2, the
@@ -96,7 +96,7 @@ further, changed nothing, and committed nothing. With no hit, a
 guard prints nothing and asks nothing; the run continues unchanged.
 
 1. **Repeat-capture guard.** The `Principle-capture: <path>` commit subject is the record
-   that this milestone was already ingested. Grep the history for that exact subject, **anchored on
+   that this mission was already ingested. Grep the history for that exact subject, **anchored on
    both ends**, with `<path>` verbatim from step 1:
 
    ```
@@ -120,9 +120,9 @@ guard prints nothing and asks nothing; the run continues unchanged.
    the baseline** every later step reads and the store rewrite composes over: the pending edits stay
    in place and are built on, never discarded or diffed away.
 
-### 3. Walk the milestone's answer commits
+### 3. Walk the mission's answer commits
 
-Collect every answer commit for this milestone — all three provenances — with a **path-scoped**
+Collect every answer commit for this mission — all three provenances — with a **path-scoped**
 log, using the `<path>` from step 1 verbatim in the path:
 
 ```
@@ -131,10 +131,10 @@ git log --format='%h %s' -E --grep='^(Manual-answer|Alternative-answer|Recommend
 
 - **The path filter is itself the lower boundary.** `<path>/open_questions.xml`
   does not exist before `/define-mission-goal` created it, so no earlier commit can touch it — there
-  is no need for a milestone-start marker or recorded base SHA. It is also the only boundary on the
+  is no need for a mission-start marker or recorded base SHA. It is also the only boundary on the
   harvest: no finish marker or upper bound is applied. The filter names `open_questions.xml` alone —
   every answer removes its block from that file, so the one path selects exactly the answer commits;
-  the finish commit that removed a finished milestone's directory touches the file too, but its
+  the finish commit that removed a finished mission's directory touches the file too, but its
   subject carries none of the three markers.
 - **Every subject is `<Marker>: <Short Title>`.** The marker names the provenance and the remainder
   is the answered question's Short Title — the `id` of the `<open-question>` block the answer removed.
@@ -269,7 +269,7 @@ and ask **once** how to handle them:
 - **skip every prompt** — each eligible commit's `override_rationale` is `none`;
 - **review one at a time** — walk the individual prompts below.
 
-The two blanket choices exist so a backfill run over an older milestone the user no longer remembers
+The two blanket choices exist so a backfill run over an older mission the user no longer remembers
 stays workable in one answer instead of a prompt per commit.
 
 **Each prompt shows the skill's best guess.** Per eligible commit, in walk order, show:
@@ -396,7 +396,7 @@ the review surface.
    baseline is the header paragraph alone with no entries, and the write below creates the file.
 
 2. **Compose the proposed store over the baseline.** Hold the baseline's entries in context and decide,
-   for the whole set at once, what the store should read after this milestone. Apply these moves
+   for the whole set at once, what the store should read after this mission. Apply these moves
    together, as one composition — never as a sequence of writes:
 
    - **Place each candidate** from the phase-1 ranked set, strongest first. Find the baseline entries
@@ -441,10 +441,10 @@ the review surface.
      control; never drop or merge an entry to hit a size.
 
    **What may touch which entry.** A **substantive** change — adding an entry, or pruning, narrowing,
-   generalizing, or replacing what an entry *decides* — requires this milestone's own evidence: a
+   generalizing, or replacing what an entry *decides* — requires this mission's own evidence: a
    candidate that overlaps it or a flag that names it. **Form-only hygiene** — shortening a directive
    past the ~100-word flag, and merging two entries that plainly duplicate each other — may reach
-   **any** entry, evidenced by this milestone or not, with the applied test unchanged: evidence gates
+   **any** entry, evidenced by this mission or not, with the applied test unchanged: evidence gates
    what a rule decides, not how tersely it is written. An entry that is neither evidenced, nor over
    the bar, nor a duplicate passes through verbatim.
 
@@ -530,8 +530,8 @@ There is no round limit; the loop ends only on one of the two answers below.
 
 **On acceptance — commit.** Read and follow the shared commit procedure at `${PLUGIN_ROOT}/shared/commit-procedure.md`, running its one commit-tool command yourself as this step's one git tool call. Supply it these three inputs:
 
-- **PATHS** — this skill's own change set: the fixed-path store `milestones/answer_decision_principles.md` (a `milestones/`-root artifact, **not** any file under `<path>` — this skill writes only that store).
-- **SUBJECT** — `Principle-capture: <path>`, with `<path>` the argument from step 1 used verbatim, trailing slash included (e.g. `Principle-capture: milestones/user-guide/`), the marker naming this skill's distinctive principle-capture function.
+- **PATHS** — this skill's own change set: the fixed-path store `milestones/answer_decision_principles.md` (a project-wide artifact, **not** any file under `<path>` — this skill writes only that store).
+- **SUBJECT** — `Principle-capture: <path>`, with `<path>` the argument from step 1 used verbatim, trailing slash included (e.g. `Principle-capture: mission_user-guide/`), the marker naming this skill's distinctive principle-capture function.
 - **BODY** — **one short line per store change**, each naming the **change kind** — `add`,
   `revision`, `prune`, `merge`, or `generalization` — and the **Short Title of the override answer
   commit that drove it**, e.g. `prune: Mutate live machinery last — driven by Cascade parent order`.
@@ -590,15 +590,15 @@ captured).
 - **If nothing was captured**, report it in a **single line** — distinct from the terse success
   line, never a collapse into `Principles captured.` — the one fixed line of the case that ended
   the run, each stating that nothing was captured or committed and which case it was:
-  - **empty commit range** (step 3), no answer commits touch this milestone's `open_questions.xml` —
-    `Nothing captured or committed — no answer commit touches the milestone.`
+  - **empty commit range** (step 3), no answer commits touch this mission's `open_questions.xml` —
+    `Nothing captured or committed — no answer commit touches the mission.`
   - **no candidates** (step 5), commits were in range, but none generalizes and none contradicts
     the store — `Nothing captured or committed — no answer generalizes or contradicts the store.`
-  - **composed store identical to its baseline** (step 6), everything the milestone teaches is
+  - **composed store identical to its baseline** (step 6), everything the mission teaches is
     already in the store, so nothing was written, or **an accepted rewrite the commit tool found
     unchanged** (step 7), its no-op line printed because the store already matches its last
     commit —
-    `Nothing captured or committed — the store already holds what the milestone teaches.`
+    `Nothing captured or committed — the store already holds what the mission teaches.`
   - **rejection** (step 7), the rewrite was declined and the store restored to its pre-write state —
     `Nothing captured or committed — the rewrite was declined and the store restored.`
 

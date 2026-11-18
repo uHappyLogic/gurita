@@ -1,7 +1,7 @@
-# Milestone workflow guidance (shared)
+# Mission workflow guidance (shared)
 
-This is the single source of truth for the `## Milestone Workflow` section of
-`{{CONTEXT_FILE}}`, the guidance that tells anyone working in the project where milestones live
+This is the single source of truth for the `## Mission Workflow` section of
+`{{CONTEXT_FILE}}`, the guidance that tells anyone working in the project where missions live
 and how each is named and finished. `init-mission-base-workflow` writes it into a project
 whose `{{CONTEXT_FILE}}` lacks it and states which of the cases below it writes, and this file
 states what the section is and how each case writes it.
@@ -11,19 +11,19 @@ states what the section is and how each case writes it.
 The section is this heading and paragraph, exactly:
 
 ```markdown
-## Milestone Workflow
+## Mission Workflow
 
-This project uses the milestone-driven workflow. Each milestone lives at
-`<scope>/milestones/<slug>/`, under the `milestones/` container of the directory holding the
-core of its work, with `requirements.md`, `open_questions.xml`, and `TASKS_TODO.md`. No
-milestone is current: every skill working inside one is given its path as
-`--mission <path>`, exactly as `/define-mission-goal` printed it, trailing slash included.
-A milestone directory is removed only by `/finish-mission`, whose `Milestone-finish: <path>`
-commit carries the milestone's record, so the directories standing are the live milestones and
+This project uses the mission-driven workflow. Each mission lives at
+`<scope>/mission_<slug>/`, directly in the directory holding the core of its work, with
+`requirements.md`, `open_questions.xml`, and `TASKS_TODO.md`. No mission is current: every
+skill working inside one is given its path as `--mission <path>`, exactly as
+`/define-mission-goal` printed it, trailing slash included.
+A mission directory is removed only by `/finish-mission`, whose `Mission-finish: <path>`
+commit carries the mission's record, so the directories standing are the live missions and
 the git log holds the finished ones.
 ```
 
-Never write a milestone path into it, and never document the project's environment context in
+Never write a mission path into it, and never document the project's environment context in
 it.
 
 ## Writing it
@@ -39,8 +39,8 @@ it.
   <the section>
   ```
 
-- **`{{CONTEXT_FILE}}` exists and holds no `## Milestone Workflow` section** — append the
+- **`{{CONTEXT_FILE}}` exists and holds no `## Mission Workflow` section** — append the
   section to the end of the file, leaving every existing line untouched.
-- **`{{CONTEXT_FILE}}` holds a `## Milestone Workflow` section** — replace that section whole,
+- **`{{CONTEXT_FILE}}` holds a `## Mission Workflow` section** — replace that section whole,
   from its heading line down to the line before the next `# ` or `## ` heading, or to the end of
   the file when none follows, with the section, leaving every line outside it untouched.

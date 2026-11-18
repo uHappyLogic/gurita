@@ -1,6 +1,6 @@
 # Starting-state procedure (shared core)
 
-This is the single source of truth for writing a milestone's `## Relevant starting state`
+This is the single source of truth for writing a mission's `## Relevant starting state`
 section, a first run and a refresh alike: the `specify-mission-starting-state` skill follows
 it whenever it runs, and the `derive-tasks` and `submit-task` skills follow it in place when
 their own check finds the ground moved. The runner supplies the input below and wraps the
@@ -17,22 +17,22 @@ the ground and nothing else.
 
 ## Input
 
-- **MISSION_DIR** — the already-resolved directory of the milestone whose starting state is
+- **MISSION_DIR** — the already-resolved directory of the mission whose starting state is
   written, its path exactly as resolved, trailing slash included. The runner resolves it; this
-  procedure never looks the milestone up.
+  procedure never looks the mission up.
 
-The milestone's **scope** is the directory holding its `milestones/` container: `<scope>` for
-`<scope>/milestones/<slug>/`, the workspace root for `milestones/<slug>/`.
+The mission's **scope** is the directory its mission directory stands in: `<scope>` for
+`<scope>/mission_<slug>/`, the workspace root for `mission_<slug>/`.
 
-Every milestones-tool call below runs from the workspace root as the full fixed command
+Every missions-tool call below runs from the workspace root as the full fixed command
 `python3 ${CLAUDE_PLUGIN_ROOT}/tools/missions.py <query> …`, written out in full on every call and
 never through a variable, alias, or function of your own defined to stand for the command or any
 part of it. Make every one of them before step 5's edit.
 
-**Any milestones-tool call that fails** — any non-zero exit, whatever its `Error:` line says —
+**Any missions-tool call that fails** — any non-zero exit, whatever its `Error:` line says —
 is one condition: **stop without changing anything**, before any edit of the section, any pick
 clearing, and anything your runner would do next. Report the fixed line
-`Starting state stopped — a milestones-tool read failed.` first, then below it the call's
+`Starting state stopped — a missions-tool read failed.` first, then below it the call's
 `Error:` line from stderr, verbatim. That is the whole report, and the run ends there.
 
 ## Procedure
@@ -46,8 +46,8 @@ python3 ${CLAUDE_PLUGIN_ROOT}/tools/missions.py since <MISSION_DIR>
 ```
 
 Its first line, when it prints one, is the anchor: the commit that last recorded this
-milestone's starting state. Every line beneath it is a later commit that changed the scope
-outside the milestone's own directory, or a revision of the milestone's own goal. Read its print
+mission's starting state. Every line beneath it is a later commit that changed the scope
+outside the mission's own directory, or a revision of the mission's own goal. Read its print
 as exactly one of three outcomes:
 
 - **No line at all** — there is no starting state yet: this is a **first run**. Go on to
@@ -84,7 +84,7 @@ lines step 1 held point. Focus on:
   surface. Skip internal detail.
 - **Existing capabilities** — if the goal builds on something that already exists, its current
   state and how other work connects to it.
-- **Supporting materials** — settings, reference data, or structures the milestone will likely
+- **Supporting materials** — settings, reference data, or structures the mission will likely
   touch.
 - **Known gaps** — if the goal requires something that clearly does not exist yet, state it as
   a gap in one sentence and move on; do not design its replacement here.
@@ -102,25 +102,25 @@ Read the record of finished and live work in two tiers. First the overview of th
 python3 ${CLAUDE_PLUGIN_ROOT}/tools/missions.py missions --mission <MISSION_DIR>
 ```
 
-Then, for each finished milestone whose overview line bears on the goal, a deeper read: its
+Then, for each finished mission whose overview line bears on the goal, a deeper read: its
 finish summary through `python3 ${CLAUDE_PLUGIN_ROOT}/tools/missions.py summary <path>`, or its
 recorded decisions through `python3 ${CLAUDE_PLUGIN_ROOT}/tools/missions.py show <path>`, `<path>`
-the milestone path exactly as the overview printed it. Read no verified bar: make no
+the mission path exactly as the overview printed it. Read no verified bar: make no
 `tasks --with-body` call. Past tasks reach the starting state only as the titles the overview and
 the summaries already carry.
 
-Then what is in flight, the other live milestones whose scope overlaps this one's:
+Then what is in flight, the other live missions whose scope overlaps this one's:
 
 ```
 python3 ${CLAUDE_PLUGIN_ROOT}/tools/missions.py live <MISSION_DIR>
 ```
 
-For each line it prints, note the milestone by path, whether it is `started`, and its goal in a
+For each line it prints, note the mission by path, whether it is `started`, and its goal in a
 sentence, read from its `requirements.md`. For each `started` one, also read, as prose, the
 decisions in its `requirements.md` and the remaining tasks in its `TASKS_TODO.md` that touch what
-this goal reaches: a started milestone holds the scope and will finish before this one takes a
-task, so what it has decided is the best description of the ground this milestone will execute
-against, and is left to it rather than re-decided here. A milestone that is only `defined` is
+this goal reaches: a started mission holds the scope and will finish before this one takes a
+task, so what it has decided is the best description of the ground this mission will execute
+against, and is left to it rather than re-decided here. A mission that is only `defined` is
 listed by its goal alone, since nothing of it is settled.
 
 ### 5. Edit the section

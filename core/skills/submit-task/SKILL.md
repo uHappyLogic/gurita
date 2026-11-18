@@ -1,12 +1,12 @@
 ---
 name: submit-task
-description: Add a single already-clear issue to the named milestone's TASKS_TODO.md as a brief-level task section.
+description: Add a single already-clear issue to the named mission's TASKS_TODO.md as a brief-level task section.
 ---
 
 # submit-task
 
 Turns a single, already-clear issue into a brief-level task section in the named
-milestone's `TASKS_TODO.md`. This skill is the user-facing entry point
+mission's `TASKS_TODO.md`. This skill is the user-facing entry point
 (`/submit-task`) and the handoff target for `/discuss-new-task`.
 
 It owns the triage and positioning that need the **whole task list in view** — checking for
@@ -22,27 +22,27 @@ use `/discuss-new-task` first.
 
 `<issue description>` is a free-form description of a problem or gap discovered during
 development, specific enough that the affected system, desired behavior, and how to verify
-it are clear. The required leading `--mission <path>` names the milestone by its
+it are clear. The required leading `--mission <path>` names the mission by its
 repo-relative path, exactly as the definition tool printed it, trailing slash included, e.g.
-`milestones/user-guide/`.
+`mission_user-guide/`.
 
 ## Workflow
 
-### 0. Find the milestone
+### 0. Find the mission
 
 First strip the leading `--mission <path>` from the invocation text by the rule in `{{PLUGIN_ROOT}}/shared/resolve-mission.md`, reading only the rest as the issue description. Follow `{{PLUGIN_ROOT}}/shared/resolve-mission.md` to resolve `<MISSION_DIR>`. Never use a hardcoded task-list path.
 
 ### 1. Check the scope gate
 
-Directly after resolving the milestone, and before anything else, follow
+Directly after resolving the mission, and before anything else, follow
 `{{PLUGIN_ROOT}}/shared/check-scope-gate.md` for `<MISSION_DIR>`. When the gate is closed,
 its report is the whole output: read, refresh, insert, and commit nothing, and print no line
 of step 9.
 
 ### 2. Refresh a stale starting state
 
-Before reading anything for triage, check whether other milestones' work has landed in the
-scope since this milestone's starting state was recorded. Run, from the workspace root, the
+Before reading anything for triage, check whether other missions' work has landed in the
+scope since this mission's starting state was recorded. Run, from the workspace root, the
 plugin's missions tool:
 
 ```
@@ -50,7 +50,7 @@ python3 {{PLUGIN_ROOT}}/tools/missions.py since <MISSION_DIR> --missions
 ```
 
 Its first line, when it prints one, is the anchor, the commit that last recorded this
-milestone's starting state; every line beneath it is another milestone's task or finish
+mission's starting state; every line beneath it is another mission's task or finish
 commit that landed in the scope after it. Read its print as exactly one of three outcomes:
 
 - **No line at all, or the anchor alone** — there is no anchor to measure from, or nothing
@@ -61,18 +61,18 @@ commit that landed in the scope after it. Read its print as exactly one of three
   authoring anything, as below.
 - **The call failed** — any non-zero exit, whatever its `Error:` line says: stop the whole
   run, reading, inserting, and committing nothing. Report the starting-state procedure's
-  fixed line `Starting state stopped — a milestones-tool read failed.` first, then below it
+  fixed line `Starting state stopped — a missions-tool read failed.` first, then below it
   the call's `Error:` line from stderr, verbatim, and print no line of step 9.
 
 To refresh, read and follow the shared starting-state procedure at
 `{{PLUGIN_ROOT}}/shared/starting-state-procedure.md` in place, with `<MISSION_DIR>` as its
-input; its pick judgment applies here in full, since this milestone's questions may carry
+input; its pick judgment applies here in full, since this mission's questions may carry
 standing picks. It ends in exactly one of three ways:
 
 - **The anchor alone** — its step 1 found the ground unmoved, so it explored, edited, and
   cleared nothing. Make no commit and go on to step 3.
 - **A stop** — it stopped on one of its two fixed lines,
-  `Starting state stopped — a milestones-tool read failed.` or
+  `Starting state stopped — a missions-tool read failed.` or
   `Starting state stopped — clearing the undermined picks failed.`, with the detail the
   procedure gives beneath it. That report, as the procedure states it, is this run's whole
   output: insert no task, commit nothing, and print no line of step 9.
@@ -88,7 +88,7 @@ one git tool call, with these two inputs:
 - **PATHS** — `<MISSION_DIR>/requirements.md`, and `<MISSION_DIR>/open_questions.xml`
   beside it only when the procedure's step 6 cleared a pick, so a refresh and the picks it
   cleared are one commit.
-- **SUBJECT** — `Starting-state: <MISSION_DIR>`, the milestone path exactly as resolved,
+- **SUBJECT** — `Starting-state: <MISSION_DIR>`, the mission path exactly as resolved,
   trailing slash included.
 
 The refresh commit prints no line of its own in this run's report: whether it landed (the
@@ -102,7 +102,7 @@ run, inserting and committing nothing further: report the fixed line
 ### 3. Read context for triage
 
 In parallel, as independent tool calls:
-- Read `<MISSION_DIR>/requirements.md` — to confirm the issue fits the milestone's scope.
+- Read `<MISSION_DIR>/requirements.md` — to confirm the issue fits the mission's scope.
 - Read `<MISSION_DIR>/TASKS_TODO.md` — existing pending tasks, for duplicate-detection and positioning.
 - Run the plugin's missions tool — completed work, to catch issues already addressed:
 
@@ -110,8 +110,8 @@ In parallel, as independent tool calls:
   python3 {{PLUGIN_ROOT}}/tools/missions.py tasks <MISSION_DIR> --with-body
   ```
 
-  It prints, newest first, one tab-separated line per task completed in the milestone (the
-  commit's abbreviated hash, its date, the milestone directory, and the task title), with the
+  It prints, newest first, one tab-separated line per task completed in the mission (the
+  commit's abbreviated hash, its date, the mission directory, and the task title), with the
   task's verified bar indented beneath it, and prints nothing when no task has been completed,
   which is no failure.
 
@@ -122,7 +122,7 @@ If the call fails, stop, writing and committing nothing: print the fixed line
 ### 4. Triage
 
 - **Duplicate?** If an existing pending task or a completed task the `tasks` call listed already covers this issue, stop: print the fixed line `Task not submitted — an existing task already covers it.` first, then below it which task covers it. Do not add a duplicate.
-- **In scope?** If the issue clearly belongs to a different milestone or is really an open design decision, stop instead of queuing it: print the fixed line `Task not submitted — the issue is not a task for this milestone.` first, then below it why, pointing to the better tool (`/discuss-open-question`).
+- **In scope?** If the issue clearly belongs to a different mission or is really an open design decision, stop instead of queuing it: print the fixed line `Task not submitted — the issue is not a task for this mission.` first, then below it why, pointing to the better tool (`/discuss-open-question`).
 
 ### 5. Decide the position
 
@@ -137,7 +137,7 @@ Read the shared task format at `{{PLUGIN_ROOT}}/shared/task-format.md` and write
 **yourself, in this conversation**, following its template and authoring guidelines exactly.
 That file owns the shape of a task section.
 
-The issue as the user described it, sharpened against the milestone's scope, *is* the task
+The issue as the user described it, sharpened against the mission's scope, *is* the task
 body; writing it down is a transcription into that format, not a second authoring pass that
 adds detail.
 
@@ -147,7 +147,7 @@ than re-reading.)
 ### 7. Check the scope gate again
 
 Directly ahead of the insert, follow `{{PLUGIN_ROOT}}/shared/check-scope-gate.md` for
-`<MISSION_DIR>` a second time, since another milestone may have started in the scope while
+`<MISSION_DIR>` a second time, since another mission may have started in the scope while
 this run read, triaged, and authored. When the gate is closed, its report is the whole output:
 insert and commit no task, and print no line of step 9. A refresh commit step 2 already landed
 stays committed. The call in step 8 checks no gate of its own.

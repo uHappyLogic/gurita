@@ -1,7 +1,7 @@
 # Answer-recording procedure (shared core)
 
 This is the single source of truth for recording an answer to one open question of a
-milestone: the decision lands under `## Decisions` of `<MISSION_DIR>/requirements.md` and
+mission: the decision lands under `## Decisions` of `<MISSION_DIR>/requirements.md` and
 the answered block leaves `<MISSION_DIR>/open_questions.xml`. It is followed inline by the
 single-question answer skills. The inline answer sweep draws only on its analyse step's
 first two questions and its fold step's rules for what a decision says and the shape it
@@ -23,9 +23,9 @@ document left byte-for-byte unchanged. Never edit `open_questions.xml` yourself.
 This procedure records one decision given five inputs the caller supplies, the last two
 optional:
 
-- **MISSION_DIR** — the already-resolved directory of the milestone the question belongs
+- **MISSION_DIR** — the already-resolved directory of the mission the question belongs
   to, the `<MISSION_DIR>` every path and tool call below uses. The caller resolves it; this
-  procedure never looks the milestone up.
+  procedure never looks the mission up.
 - **SHORT TITLE** — the resolved handle of an existing `<open-question>` block to answer
   (its `id`, compared case-insensitively). The caller has already obtained it; locating the
   matching block is this procedure's job.
@@ -92,7 +92,7 @@ relevant existing subsection, or a new subsection if none fits — capturing wha
 and any constraint it imposes. Write it as **clean prose with no citation marker**: the
 document records the decision itself, not where it came from. Match the live document's
 section names, and match each entry's shape to the subsection it lands in: a prose paragraph
-where the milestone's `## Decisions` holds one subsection per decision, a
+where the mission's `## Decisions` holds one subsection per decision, a
 `- **Lead.** text` bullet where it holds topical subsections of bullets.
 
 Two cases edit an existing entry in place, under its own heading and in its own shape:

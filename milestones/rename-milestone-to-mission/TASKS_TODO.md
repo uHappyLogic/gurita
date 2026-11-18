@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Runtime Prose and Console Lines Say Mission
-
-Rewrite what is left of the old word in `core/skills`, `core/shared`, `core/agents`, and the slot values: prose and frontmatter descriptions, example paths and the wording of the `milestones/` container recast to `<scope>/mission_<slug>/`, the `Mission-finish:` subject and the `Workflow-bootstrap: missions` descriptor, the `## Mission Workflow` guidance, and each fixed console line that carries the word, reworded together with its row in `docs/skill-reference.md`. Verified by the drift gate and both pytest runs passing and by a search of `core/` finding the old word only in the principle store's path, which moves in its own task.
-
----
-
 ## Move the Principle Store to the Root
 
 Move this repository's principle store with `git mv` from `milestones/answer_decision_principles.md` to `answer_decision_principles.md` at the project root, its file name unchanged, and name the new path literally in the recommendation procedure, the capture skill's prose and its `git status`, `cp`, `git diff`, and restore commands, the docs, `CLAUDE.md`, and the two tests, with no fallback read of the old path. Edit the store's header to name the renamed capture skill and its "Description over retirement note" directive so that "the milestone record" reads in the new word, keeping the "Required input over optional branch" origin line as written. Verified by the drift gate and both pytest runs passing and by a search finding the old path only in `ideas/`, `CHANGELOG.md`, and this milestone's own files.

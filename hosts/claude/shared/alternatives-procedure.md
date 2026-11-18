@@ -1,7 +1,7 @@
 # Alternatives procedure (shared core)
 
 This is the single source of truth for enumerating the honest alternatives of one open
-question in the named milestone. It is followed inline by the `discuss-open-question`
+question in the named mission. It is followed inline by the `discuss-open-question`
 skill when the question it is deliberating carries no alternatives yet, and once per question
 by the read-only `provide-alternatives-to-open-question` subagent during the alternatives
 sweep. The caller supplies the one input below and renders the result; this file describes
@@ -22,14 +22,14 @@ This procedure produces the alternative set for one question the caller supplies
 
 ### 1. Ground in the real project state
 
-Before listing any option, read the context that bears on the question: the milestone's
+Before listing any option, read the context that bears on the question: the mission's
 `requirements.md` (its goal, relevant starting state, and recorded decisions — a decision
 recorded there already closes any option it rules out) and the actual project artifacts the
 question turns on. Prefer reading the live project over reasoning from memory — the point is
 to ground each option in what the project actually is, not what you recall it to be. All of
 this reading is read-only; enumerating alternatives changes nothing.
 
-The milestone's sibling questions — the other open questions standing beside this one —
+The mission's sibling questions — the other open questions standing beside this one —
 bound it: they mark where this question ends and another begins, so an option that really
 answers a sibling is left to that sibling. They supply scope and nothing more: no sibling has
 settled on anything while its alternatives are being enumerated, so no option here presumes
