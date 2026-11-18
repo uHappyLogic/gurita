@@ -52,5 +52,9 @@ The source of truth is a plain-text drawing of the arms, committed together with
 
 The art uses only the 95 printable 7-bit ASCII characters (U+0020 to U+007E). The arms' curls are built from characters such as `/ \ | ( ) _ ~ ' . , o`, and no character outside that range appears anywhere in the drawing, so no box-drawing, block, or braille glyph is used.
 
+### Light and dark themes
+
+The banner is one SVG with no background fill, so the page shows through, and its violet and grey-blue colours are picked to keep enough contrast on both GitHub's white light background and its near-black dark background (`#0d1117`). Each README holds one plain image reference, with no `<picture>` element, no theme-specific variant, and no theme selection markup.
+
 ## Out of Scope
 
