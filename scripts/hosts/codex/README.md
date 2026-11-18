@@ -1,3 +1,5 @@
+<img src="banner.svg" width="100%" alt="Octopus arms drawn in ASCII art" />
+
 <p align="center">
   <a href="https://github.com/uHappyLogic/gurita-codex/tree/traffic-data">
     <img alt="unique views" src="https://raw.githubusercontent.com/uHappyLogic/gurita-codex/traffic-data/views-unique.svg" />

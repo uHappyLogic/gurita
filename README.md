@@ -1,3 +1,5 @@
+<img src="assets/banner.svg" width="100%" alt="Octopus arms drawn in ASCII art" />
+
 <p align="center">
   <a href="https://github.com/uHappyLogic/gurita/releases/latest">
     <img alt="Latest Release" src="https://img.shields.io/github/v/release/uHappyLogic/gurita?style=flat&color=22c55e&label=release&display_name=tag" />
