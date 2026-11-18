@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Repository Surface Follows the Mission Rename
-
-Carry the rename through `README.md`, `CONTRIBUTING.md`, the issue and pull request templates under `.github/` (the pull request template's first line and its checklist's two commit markers in the mission form), `.claude/skills/release-plugin/SKILL.md` where it reads the record, and each host's README, CONTRIBUTING, and settings comments under `scripts/hosts/`, leaving `CHANGELOG.md` as written. Verified by the drift gate passing on the rebuilt host trees and by a search of those files finding the old word nowhere.
-
----
-
 ## Host Suite and Fixture in Mission Form
 
 Move the host suite's fixture project into the mission form, its mission directory kept under a name the discovery pattern does not match and renamed by `seeded_repo` in each repository it seeds, its pointer-era `README.md` dropped with the container, and its heading retitled from `# Milestone 1: Pocket Ledger Foundations` to the bare title, and carry the rename through `host_tests/`: the `--mission` invocations, the `Mission directory:` prompt lines, the `missions.py since … --missions` calls, and the `Mission-definition:` and `Mission-finish:` commits. No host suite run is made in this work, on any host, so it is verified by both pytest runs and the drift gate passing and by a search of `host_tests/` and the fixture finding the old word nowhere.

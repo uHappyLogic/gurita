@@ -1,31 +1,31 @@
-name: Milestone proposal
-description: Propose a change you will carry out yourself as a contributor-run milestone. Acceptance reserves a milestone from this goal.
+name: Mission proposal
+description: Propose a change you will carry out yourself as a contributor-run mission. Acceptance reserves a mission from this goal.
 title: "[Proposal]: "
 body:
   - type: markdown
     attributes:
       value: |
-        A proposal is a work item in waiting. When the maintainer accepts it, they run `/define-milestone-goal --at <scope>` on `main` with your goal statement, which reserves the milestone's path, `<scope>/milestones/<slug>/`, for you; you then fork, run the milestone with `--milestone <path>` through `/finish-milestone`, and open a pull request that closes this issue. `CONTRIBUTING.md` spells out each step.
+        A proposal is a work item in waiting. When the maintainer accepts it, they run `/define-mission-goal --at <scope>` on `main` with your goal statement, which reserves the mission's path, `<scope>/mission_<slug>/`, for you; you then fork, run the mission with `--mission <path>` through `/finish-mission`, and open a pull request that closes this issue. `CONTRIBUTING.md` spells out each step.
   - type: textarea
     id: goal
     attributes:
       label: Goal statement
-      description: One paragraph in the shape a milestone's `## Goal` takes — an imperative statement of what the milestone accomplishes and what it leaves in the repository, specific enough to hand to `/define-milestone-goal` as it stands. On acceptance it becomes the `## Goal` of `<scope>/milestones/<slug>/requirements.md` verbatim.
-      placeholder: Make the <skill> do <X> so that <outcome>, by <the concrete changes>; <what the milestone deliberately leaves out>.
+      description: One paragraph in the shape a mission's `## Goal` takes — an imperative statement of what the mission accomplishes and what it leaves in the repository, specific enough to hand to `/define-mission-goal` as it stands. On acceptance it becomes the `## Goal` of `<scope>/mission_<slug>/requirements.md` verbatim.
+      placeholder: Make the <skill> do <X> so that <outcome>, by <the concrete changes>; <what the mission deliberately leaves out>.
     validations:
       required: true
   - type: textarea
     id: motivation
     attributes:
       label: Motivation
-      description: Why cairn needs this — the situation that exposed the gap, and what stays broken or awkward until the milestone lands.
+      description: Why cairn needs this — the situation that exposed the gap, and what stays broken or awkward until the mission lands.
     validations:
       required: true
   - type: textarea
     id: in-scope
     attributes:
       label: In scope
-      description: What the milestone changes — the skills, agents, shared procedures, scripts, or documentation it touches, and the behaviour each gains.
+      description: What the mission changes — the skills, agents, shared procedures, scripts, or documentation it touches, and the behaviour each gains.
     validations:
       required: true
   - type: textarea
@@ -41,5 +41,5 @@ body:
       label: Commitment
       description: A proposal is accepted only with its contributor attached; there is no plain-pull-request tier, and a change the maintainer is expected to make is a feature request instead.
       options:
-        - label: I will run this milestone myself in a fork, from the reserved `Milestone-definition:` commit through `/finish-milestone`, and open the pull request.
+        - label: I will run this mission myself in a fork, from the reserved `Mission-definition:` commit through `/finish-mission`, and open the pull request.
           required: true

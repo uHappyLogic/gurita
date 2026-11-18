@@ -41,6 +41,6 @@ body:
     id: how-to-reproduce
     attributes:
       label: How to reproduce
-      description: The milestone state and the sequence of skills that lead to it, if you can reproduce it — a `requirements.md` excerpt, a task section, or the commands run in order.
+      description: The mission state and the sequence of skills that lead to it, if you can reproduce it — a `requirements.md` excerpt, a task section, or the commands run in order.
     validations:
       required: false

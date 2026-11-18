@@ -58,7 +58,7 @@ flowchart LR
 
 ## Installation
 
-Cairn has two runtime prerequisites: **git**, with your project root inside a git work tree that every skill commits into, and a **Python 3.9 or later** interpreter that answers as `python3` on your PATH. The skills drive the plugin's stdlib-only Python tools with it (no packages to install), and `/define-milestone-goal` checks both each time it defines a milestone, git first, stopping with the remedy before anything is written when either is missing.
+Cairn has two runtime prerequisites: **git**, with your project root inside a git work tree that every skill commits into, and a **Python 3.9 or later** interpreter that answers as `python3` on your PATH. The skills drive the plugin's stdlib-only Python tools with it (no packages to install), and `/define-mission-goal` checks both each time it defines a mission, git first, stopping with the remedy before anything is written when either is missing.
 
 ### Claude Code
 
@@ -93,7 +93,7 @@ codex plugin marketplace add uHappyLogic/cairn-codex
 codex plugin add cairn@cairn
 ```
 
-In a Codex session, invoke a skill by its name under the plugin's namespace, such as `$cairn:init-milestone-base-workflow`. The skills' own text names other skills in the slash form, such as `/derive-tasks`; those slash names refer to the same skills, which you invoke as `$cairn:derive-tasks`.
+In a Codex session, invoke a skill by its name under the plugin's namespace, such as `$cairn:init-mission-base-workflow`. The skills' own text names other skills in the slash form, such as `/derive-tasks`; those slash names refer to the same skills, which you invoke as `$cairn:derive-tasks`.
 
 Codex reads its project instructions from `AGENTS.md`, so on Codex the skills read your project's environment context from `AGENTS.md`, and the bootstrap writes its workflow section there, never to `CLAUDE.md`.
 
@@ -101,10 +101,10 @@ Run your sessions under Codex's workspace-write sandbox with the on-request appr
 
 ### Bootstrap your project
 
-Then, in your project root, add the milestone workflow guidance to `CLAUDE.md` (`AGENTS.md` on Antigravity and Codex) once:
+Then, in your project root, add the mission workflow guidance to `CLAUDE.md` (`AGENTS.md` on Antigravity and Codex) once:
 
 ```
-/init-milestone-base-workflow
+/init-mission-base-workflow
 ```
 
 Run `/init` to document your project — its domain context, working conventions, available tools, and how work is verified as done — in `CLAUDE.md`, so the skills can read that environment context.
@@ -113,13 +113,13 @@ Run `/init` to document your project — its domain context, working conventions
 
 Handing long-running execution to an agent breaks down in a predictable way. An agent left to run for a long time hits questions nobody decided, and it either guesses quietly and builds on the guess or stops and waits for a person. Either way, you cannot walk away.
 
-Cairn works milestone by milestone, and the milestone is what makes the handoff possible. Each milestone first brings its open questions up, has them answered with recorded decisions, and only then derives tasks an agent can complete unattended. Bringing up all the important questions is the principle Cairn is built toward, not yet a measured result, and later milestones of Cairn's own development work toward it.
+Cairn works mission by mission, and the mission is what makes the handoff possible. Each mission first brings its open questions up, has them answered with recorded decisions, and only then derives tasks an agent can complete unattended. Bringing up all the important questions is the principle Cairn is built toward, not yet a measured result, and later missions of Cairn's own development work toward it.
 
 This holds for any kind of work. Skills read your project's environment — its domain context, working conventions, available tools, and how work is verified as done — from `CLAUDE.md`, so the same sequence fits whatever you're producing.
 
 ## Design principles
 
-- **[Cairn finds the open questions before the work starts.](docs/design-claims.md#1-cairn-finds-the-open-questions-before-the-work-starts)** The review skill reads the milestone's requirements and writes each gap as an open question, and task derivation does not start while one remains, so the questions reach you before an agent starts building.
+- **[Cairn finds the open questions before the work starts.](docs/design-claims.md#1-cairn-finds-the-open-questions-before-the-work-starts)** The review skill reads the mission's requirements and writes each gap as an open question, and task derivation does not start while one remains, so the questions reach you before an agent starts building.
 - **[Unattended batch runs are possible.](docs/design-claims.md#14-unattended-batch-runs-are-possible)** The batch skills recommend, answer, and complete every item in one run, strictly in sequence — you start them and read the git log afterwards.
 - **[Each decision has a record in git.](docs/design-claims.md#2-each-decision-has-a-record-in-git)** One answer is one path-scoped commit whose subject marks how it was made — manual, recommendation, or alternative — so the log is provenance and a revert reopens the question.
 
@@ -127,21 +127,21 @@ All nineteen claims, each with its design and a metric to test it, are in [docs/
 
 ## How it works
 
-Each milestone lives in `<scope>/milestones/<slug>/`, under the `milestones/` container of the directory holding the core of its work (`milestones/<slug>/` when that is the project root), and contains three files:
+Each mission lives in `<scope>/mission_<slug>/`, directly in the directory holding the core of its work with no container between them (`mission_<slug>/` when that is the project root), and contains three files:
 
 - `requirements.md` — goal, relevant starting state, decisions, and out of scope, as prose Markdown
-- `open_questions.xml` — the open questions, one `<open-question>` block each under a single `<open-questions>` root; created empty with the milestone and written only by the plugin's open-question tool, never by hand — the milestone's requirements have converged when no block remains
-- `TASKS_TODO.md` — pending tasks ordered by priority (highest first); created with the milestone and written only by the plugin's task-list tool, never by hand, which removes each task once it is completed
+- `open_questions.xml` — the open questions, one `<open-question>` block each under a single `<open-questions>` root; created empty with the mission and written only by the plugin's open-question tool, never by hand — the mission's requirements have converged when no block remains
+- `TASKS_TODO.md` — pending tasks ordered by priority (highest first); created with the mission and written only by the plugin's task-list tool, never by hand, which removes each task once it is completed
 
-A completed task's record is its own `Task-completion: <task heading>` commit rather than a file: the commit's diff holds the task's brief as the section removed from `TASKS_TODO.md`, and its body the acceptance bar the completer derived and verified the work against, one `- ` bullet per criterion. The plugin's read-only milestones tool lists a milestone's completed tasks, each with its bar, from those commits; since it reads the git log, a shallow clone lists only the task commits its truncated history still holds.
+A completed task's record is its own `Task-completion: <task heading>` commit rather than a file: the commit's diff holds the task's brief as the section removed from `TASKS_TODO.md`, and its body the acceptance bar the completer derived and verified the work against, one `- ` bullet per criterion. The plugin's read-only missions tool lists a mission's completed tasks, each with its bar, from those commits; since it reads the git log, a shallow clone lists only the task commits its truncated history still holds.
 
-No milestone is current. Every skill that works inside a milestone is given its path, `--milestone <path>`, exactly as `/define-milestone-goal` printed it, so it is never ambiguous which milestone a run works on, and several milestones can stand live at once. `/finish-milestone` removes a finished milestone's directory in one `Milestone-finish: <path>` commit whose body is the milestone's summary, so the directories standing are the live milestones and the git log holds the finished ones, which the milestones tool reads back.
+No mission is current. Every skill that works inside a mission is given its path, `--mission <path>`, exactly as `/define-mission-goal` printed it, so it is never ambiguous which mission a run works on, and several missions can stand live at once. `/finish-mission` removes a finished mission's directory in one `Mission-finish: <path>` commit whose body is the mission's summary, so the directories standing are the live missions and the git log holds the finished ones, which the missions tool reads back.
 
-How the skills move a milestone through those files is described in [docs/workflow.md](docs/workflow.md), what each skill does is in [docs/skill-reference.md](docs/skill-reference.md), and how to chain the skills as headless command lines, mixing hosts, models, and effort levels, is in [docs/ways-of-using-cairn.md](docs/ways-of-using-cairn.md).
+How the skills move a mission through those files is described in [docs/workflow.md](docs/workflow.md), what each skill does is in [docs/skill-reference.md](docs/skill-reference.md), and how to chain the skills as headless command lines, mixing hosts, models, and effort levels, is in [docs/ways-of-using-cairn.md](docs/ways-of-using-cairn.md).
 
 ## Self-dogfooding
 
-This repository runs its own workflow on itself. Its root `milestones/` container holds the live milestones Cairn's own skills produced — each one's requirements, open questions, and task list right there in the repo — and the git log holds every finished one: `python3 core/tools/milestones.py record .` prints the project's whole record, each milestone with its summary and the tasks that built it, and `git show` on a recent `Task-completion:` commit shows one task's change with its verified bar as the body. If you want to see what a real milestone looks like end-to-end, look no further.
+This repository runs its own workflow on itself. Its root holds the live missions Cairn's own skills produced, each a `mission_<slug>/` directory with its requirements, open questions, and task list right there in the repo, and the git log holds every finished one: `python3 core/tools/missions.py record .` prints the project's whole record, each mission with its summary and the tasks that built it, and `git show` on a recent `Task-completion:` commit shows one task's change with its verified bar as the body. If you want to see what a real mission looks like end-to-end, look no further.
 
 ## Contributing
 
