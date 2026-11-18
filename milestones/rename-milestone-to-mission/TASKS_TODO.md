@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Remove Migrate-Milestones and the Commit Date Option
-
-Remove the `/migrate-milestones` skill with its seven fixed-console-line rows, its `docs/skill-reference.md` entry, and its mentions in `docs/workflow.md`, `CLAUDE.md`, and `core/shared/workflow-guidance.md`, and with it the commit tool's `--date` option, whose only caller it was, as the Commit date option decision lists (`tests/test_commit_date.py` deleted, `--date` dropped from the option set `tests/test_commit_contract.py` asserts and from that test's name, no entry banning its return). The hard cut ships no migration, so neither is carried into the rename. Verified by `uv run scripts/build_hosts.py --check` and both pytest runs passing and by a search finding the skill and the option named nowhere outside `ideas/`, `CHANGELOG.md`, and this milestone's own files.
-
----
-
 ## Remove the Legacy Title Prefix Strip
 
 Remove the legacy `Milestone <N>: ` title prefix strip at both sites together, as the Legacy title prefix strip decision lists: `LEGACY_TITLE_PREFIX` and its branch in `title_of` with the docstring and help sentences in the read-only tool, the strip and its `# Milestone 21: …` example in the finish skill, the prefix mentions in `docs/skill-reference.md` and `CLAUDE.md`, and the tests that feed it. A live milestone's title is then its first `# ` heading with whitespace folded and nothing taken off it; the host suite fixture's heading is left to the task that moves that fixture. Verified by the drift gate and both pytest runs passing and by a search of `core/`, `docs/`, and `CLAUDE.md` finding no mention of the prefix.

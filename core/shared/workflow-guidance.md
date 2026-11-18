@@ -3,9 +3,8 @@
 This is the single source of truth for the `## Milestone Workflow` section of
 `{{CONTEXT_FILE}}`, the guidance that tells anyone working in the project where milestones live
 and how each is named and finished. `init-milestone-base-workflow` writes it into a project
-whose `{{CONTEXT_FILE}}` lacks it, and `migrate-milestones` rewrites an older section to it; each
-states which of the cases below it writes, and this file states what the section is and how
-each case writes it.
+whose `{{CONTEXT_FILE}}` lacks it and states which of the cases below it writes, and this file
+states what the section is and how each case writes it.
 
 ## The section
 
