@@ -128,5 +128,9 @@ The maintainer makes every GitHub-side change by hand, outside the task list, at
 
 The release procedure's keep rule is left as it stands and its same-day branch is satisfied. The released entry carries a section headed exactly `### Rename Cairn to Gurita`, the mission's `# ` title as it stands in `requirements.md` when finish reads it, and the mission is finished on the same day as the Release commit's author date, by running `finish-mission` directly after the release task's completion. The next release's run then counts that heading in CHANGELOG.md, finds one, and drops the finished line.
 
+### Name meaning in README
+
+The root README glosses the name inside its opening pitch with a bare translation, a parenthetical such as "Gurita (Indonesian for octopus) brings all the important questions up…", and nothing more. The image of the arms is left to the tagline directly above the pitch: the name gets no section of its own, the "Why" section stays about the handoff, and the three host READMEs change only by the plain rename.
+
 ## Out of Scope
 
