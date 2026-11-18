@@ -64,5 +64,9 @@ The README's bold tagline, "Mark the path first, then hand off the walk.", is re
 
 The three distribution repositories are created fresh, not renamed in place. Three new, empty repositories `uHappyLogic/gurita-<host>` are created, receive their `TRAFFIC_TOKEN` secret and the token's scope, and take the release's first distribution publish as a parentless root commit. Each old `uHappyLogic/cairn-<host>` is archived as it stands, its 1.9.0 tree, release, history, and `traffic-data` branch unchanged and read-only, so the old names keep serving exactly the last Cairn release and nothing is created or redirected at them.
 
+### Release version number
+
+The release that publishes the rename carries 2.0.0, a major bump over the last tag 1.9.0. The number is chosen now and written into the release task, so `/release-plugin 2.0.0` passes the strictly-greater gate unchanged, and the count continues in the renamed source repository beside its existing tags.
+
 ## Out of Scope
 
