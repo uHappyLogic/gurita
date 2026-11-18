@@ -9,7 +9,7 @@ Answers an informational question about the named mission, grounded in the real 
 
 Use it to look back ("how did the onboarding section end up covering setup?", "where did we put the troubleshooting steps?"), to take stock ("what's left in this mission, and why is it ordered that way?", "what has this mission changed so far?"), or to pull up relevant context on demand before deciding what to do next.
 
-When the answer surfaces a concrete next step, this skill names the right cairn skill and offers to hand off (step 4) — but it stops there, never doing that skill's work here.
+When the answer surfaces a concrete next step, this skill names the right Gurita skill and offers to hand off (step 4) — but it stops there, never doing that skill's work here.
 
 ## Usage
 

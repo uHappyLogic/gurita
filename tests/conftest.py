@@ -203,9 +203,9 @@ def environment(tmp_path):
             "XDG_CONFIG_HOME": str(home / ".config"),
             "GIT_CONFIG_NOSYSTEM": "1",
             "GIT_CONFIG_GLOBAL": os.devnull,
-            "GIT_AUTHOR_NAME": "Cairn Test",
+            "GIT_AUTHOR_NAME": "Gurita Test",
             "GIT_AUTHOR_EMAIL": "test@example.invalid",
-            "GIT_COMMITTER_NAME": "Cairn Test",
+            "GIT_COMMITTER_NAME": "Gurita Test",
             "GIT_COMMITTER_EMAIL": "test@example.invalid",
         }
     )

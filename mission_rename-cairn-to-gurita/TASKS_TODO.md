@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Rename the Remaining Single-Line Source Sites
-
-Rename the plugin at the source sites that hold its name once: the "right cairn skill" prose in `core/skills/ask-in-mission-context/SKILL.md`, with `hosts/` rebuilt in the same change, and the `Cairn Test` git identity in `tests/conftest.py`. Delete the `.cairn/daemon.toml` line from `.gitignore` under neither name, nothing replacing it, so the other six entries stay as they are and `.scratchpad.md` becomes the first line. It is verified by the drift gate and both test runs.
-
----
-
 ## Rename Plugin Identifiers in the Host Suite
 
 Bring the identifiers in `host_tests/` to the renamed build: `PLUGIN_ID` as `gurita@gurita`, the Antigravity root as `~/.gemini/config/plugins/gurita`, the Codex cache path as `~/.codex/plugins/cache/gurita/gurita/<version>`, and the two tests' invocations as `/gurita:derive-tasks` and `/gurita:submit-task`, with the comments and docstrings beside them. The suite itself is run by a later task, once the maintainer has installed the renamed copies, so this change is verified by a search finding no old name under `host_tests/` and the suite still collecting.
