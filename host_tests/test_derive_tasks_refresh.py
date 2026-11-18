@@ -250,7 +250,7 @@ def test_derive_tasks_refreshes_a_stale_starting_state_before_deriving(seeded_re
     assert len(moved) > 1, moved
     assert tool(repository, "open_questions.py", "list", FIXTURE_MISSION) == ""
 
-    completed = run_host(f"/cairn:derive-tasks --mission {FIXTURE_MISSION}", cwd=repository)
+    completed = run_host(f"/gurita:derive-tasks --mission {FIXTURE_MISSION}", cwd=repository)
     assert completed.returncode == 0, completed.stderr
     records = host.records(completed.stdout)
     assert records.succeeded, records.closing

@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Rename Plugin Identifiers in the Host Suite
-
-Bring the identifiers in `host_tests/` to the renamed build: `PLUGIN_ID` as `gurita@gurita`, the Antigravity root as `~/.gemini/config/plugins/gurita`, the Codex cache path as `~/.codex/plugins/cache/gurita/gurita/<version>`, and the two tests' invocations as `/gurita:derive-tasks` and `/gurita:submit-task`, with the comments and docstrings beside them. The suite itself is run by a later task, once the maintainer has installed the renamed copies, so this change is verified by a search finding no old name under `host_tests/` and the suite still collecting.
-
----
-
 ## Rename the Tooling Project to Gurita Tooling
 
 Rename the tooling project from `cairn-tooling` to `gurita-tooling` in `pyproject.toml`, in `uv.lock`, and in `scripts/set_version.py`, whose `LOCK_PACKAGE_NAME` constant finds the lock block by that name, the project description and the script's docstring following. It is verified by the lock staying in step with `pyproject.toml`, the version script still writing its three mirrors, and both test runs.

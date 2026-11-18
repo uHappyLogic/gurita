@@ -63,11 +63,11 @@ RUN_TIMEOUT = 20 * 60
 RUN_ENVIRONMENT = {"PYTHONDONTWRITEBYTECODE": "1"}
 
 # The id Claude Code's and Codex's plugin listings give the plugin installed from its own
-# marketplace, both named cairn.
-PLUGIN_ID = "cairn@cairn"
+# marketplace, both named gurita.
+PLUGIN_ID = "gurita@gurita"
 # Antigravity's install location, the one fixed in the repository: the global path its
 # plugin root renders as, which the host loads the plugin from in every project.
-ANTIGRAVITY_ROOT = "~/.gemini/config/plugins/cairn"
+ANTIGRAVITY_ROOT = "~/.gemini/config/plugins/gurita"
 # The wording slot whose value opens each plugin agent's dispatch prompt, ahead of the prompt's
 # own first line, keyed by the agent's name: the line pointing a generic subagent at the
 # agent's file on a host that runs one, and nothing on a host that dispatches the agent by name.
@@ -247,7 +247,7 @@ def _plugin_listing(host):
 
 def _claude_copy(host):
     """The copy Claude Code loads in a repository outside any recorded project: the
-    cairn@cairn entry of its listing that records no projectPath, since the project and local
+    gurita@gurita entry of its listing that records no projectPath, since the project and local
     scopes each record the project they apply to, read from its readFromFolder when that is
     set (a directory-marketplace install) and otherwise from its installPath."""
     listing = _plugin_listing(host)
@@ -265,8 +265,8 @@ def _claude_copy(host):
 
 
 def _codex_copy(host):
-    """The copy Codex loads: the cache directory of the cairn@cairn version its listing reports
-    installed, ~/.codex/plugins/cache/cairn/cairn/<version>."""
+    """The copy Codex loads: the cache directory of the gurita@gurita version its listing reports
+    installed, ~/.codex/plugins/cache/gurita/gurita/<version>."""
     listing = _plugin_listing(host)
     installed = listing.get("installed") if isinstance(listing, dict) else None
     for entry in installed if isinstance(installed, list) else []:
@@ -275,7 +275,7 @@ def _codex_copy(host):
         if entry.get("pluginId") == PLUGIN_ID and entry.get("installed", True):
             version = entry.get("version")
             if version:
-                return f"~/.codex/plugins/cache/cairn/cairn/{version}"
+                return f"~/.codex/plugins/cache/gurita/gurita/{version}"
     raise CopyNotLocated(f"`{host.cli} plugin list --json` reports no {PLUGIN_ID} installed")
 
 

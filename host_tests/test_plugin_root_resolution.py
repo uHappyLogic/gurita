@@ -53,7 +53,7 @@ def test_the_orchestrator_reads_and_runs_at_the_installed_plugin_root(seeded_rep
     located, root = plugin_root
     repository = seeded_repo()
 
-    completed = run_host(f"/cairn:submit-task --mission {FIXTURE_MISSION} {ISSUE}", cwd=repository)
+    completed = run_host(f"/gurita:submit-task --mission {FIXTURE_MISSION} {ISSUE}", cwd=repository)
     assert completed.returncode == 0, completed.stderr
     records = host.records(completed.stdout)
     assert records.succeeded, records.closing
