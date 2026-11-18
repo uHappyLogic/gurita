@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Put the Frozen Cairn Copy in Place
-
-Move the worktree at `/Users/lucask/workspace/cairn-old-word` to the commit standing when this task runs and re-point the `cairn` directory marketplace at that worktree's `hosts/claude`, so a copy of the plugin frozen under the name cairn runs every later task and the finish while the working tree's `hosts/` is rebuilt under the new name. The maintainer completes this task inline and starts the rest of the list from a fresh session, so nothing relies on a running session picking up the re-pointed marketplace. It is verified by the worktree standing at that commit and by Claude Code listing the `cairn` marketplace with the worktree's `hosts/claude` as its source.
-
----
-
 ## Rename Plugin Identifiers in the Host Definitions
 
 Rename every identifier that carries the plugin's name in the three host definitions under `scripts/hosts/` and in the root `.claude-plugin/marketplace.json` to `gurita`: `plugin_name`, the marketplace names, the Codex `displayName`, source path, template directory, `plugin_dir`, and four `[layout]` paths as `plugins/gurita`, Antigravity's `plugin_root` as `~/.gemini/config/plugins/gurita`, the `gurita:`-namespaced agent names in the three Claude Code slot values, and the description sentence opening with "Gurita". Each `settings.toml`'s dated hands-on check block and the README, CONTRIBUTING, and traffic-workflow templates are left to their own tasks, and `hosts/` is rebuilt in the same change. It is verified by the drift gate, both test runs, and the rendered trees carrying the new name at each of those sites, the host suite run being a later task's.
