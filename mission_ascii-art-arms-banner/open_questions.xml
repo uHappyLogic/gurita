@@ -1,6 +1,12 @@
 <open-questions>
   <open-question id="Banner delivery to host pages">
     <question>Where is the banner SVG committed, and how does it reach the three host landing pages, given that a host README&apos;s relative path resolves only to a file its own host tree carries and that the build copies only the root LICENSE into every tree: is a copy carried in each host tree and referenced by a relative path, or do the host READMEs reference a single file in the source repository by absolute URL? If each tree carries a copy, where does it come from: a file kept by hand in each of the three definition directories under scripts/hosts/, or a build change that copies one shared file into every tree?</question>
+    <recommendation option="Build copies one shared file">One committed file serves all four pages, each page loading it from its own repository, and --check proves every host copy equal to it, which hand-kept copies leave to memory; the build already copies the root LICENSE this way, so the change is one more copied file and its test.</recommendation>
+    <alternative id="Build copies one shared file">
+      One SVG is committed once in the source repository at a root location (for example an assets/ directory). The root README references it by a relative path. scripts/build_hosts.py is changed to copy that one file into every host tree at the tree root, beside the README, byte for byte as it copies the root LICENSE. Each host README references its tree&apos;s copy by a relative path. The build&apos;s tests are extended to cover the new copy.
+      <advantage>There is a single file to edit, and every host tree&apos;s copy is derived from it. --check then guarantees that the committed trees match the source byte for byte, and every page still loads its banner from its own repository. That gives one source with no hand synchronisation and no dependence on a remote URL.</advantage>
+      <drawback>It changes the host build, which today copies exactly one shared root file, so it adds a code change, a test, and a new build input to a mission otherwise limited to README content. The copy lands in the installed plugin for Claude Code and Antigravity. If the light-and-dark question settles on separate variants, the build must copy every variant.</drawback>
+    </alternative>
     <alternative id="Hand-kept copies in each definition">
       Each host tree carries its own copy of the SVG, referenced by a relative path from its README. Each copy is a file kept by hand in its definition directory (scripts/hosts/claude/, scripts/hosts/antigravity/, scripts/hosts/codex/), which the build picks up as a template and renders to the same relative path at the tree root. The root README references a fourth hand-kept copy at a root location (for example an assets/ directory) by a relative path. There is no build change, and the four copies are kept identical by hand, as the three traffic-badges.yml copies are.
       <advantage>It needs no change to scripts/build_hosts.py. It uses the build&apos;s existing template channel and the repository&apos;s existing practice for a file every tree needs. Every page loads its banner from its own repository, so no page depends on another repository or a URL staying valid.</advantage>
@@ -10,11 +16,6 @@
       Each host tree carries its own copy, kept by hand in its definition directory and referenced by a relative path from its README, as in the previous option. The root README keeps no copy of its own. It references one host&apos;s rendered copy by a relative path (for example hosts/claude/banner.svg). There is no build change, and three copies are kept identical by hand.
       <advantage>It has one hand-kept copy fewer than the four-copy layout and still needs no build change. Every host page still loads its banner from its own repository.</advantage>
       <drawback>The source repository&apos;s landing page depends on build output in one host&apos;s tree, which the repository otherwise treats as never hand-edited and as belonging to that host. If that host&apos;s tree is renamed, restructured, or dropped, the root banner breaks with no check catching it. The three host copies still have nothing checking that they agree, and they still land in the installed plugin for Claude Code and Antigravity.</drawback>
-    </alternative>
-    <alternative id="Build copies one shared file">
-      One SVG is committed once in the source repository at a root location (for example an assets/ directory). The root README references it by a relative path. scripts/build_hosts.py is changed to copy that one file into every host tree at the tree root, beside the README, byte for byte as it copies the root LICENSE. Each host README references its tree&apos;s copy by a relative path. The build&apos;s tests are extended to cover the new copy.
-      <advantage>There is a single file to edit, and every host tree&apos;s copy is derived from it. --check then guarantees that the committed trees match the source byte for byte, and every page still loads its banner from its own repository. That gives one source with no hand synchronisation and no dependence on a remote URL.</advantage>
-      <drawback>It changes the host build, which today copies exactly one shared root file, so it adds a code change, a test, and a new build input to a mission otherwise limited to README content. The copy lands in the installed plugin for Claude Code and Antigravity. If the light-and-dark question settles on separate variants, the build must copy every variant.</drawback>
     </alternative>
     <alternative id="Absolute URL to main branch">
       One SVG is committed once in the source repository at a root location, and no host tree carries a copy. The root README references the file by a relative path. Each host README template references the same file by an absolute raw.githubusercontent.com URL on the uHappyLogic/gurita main branch, the way the traffic badges already reference SVGs on the traffic-data branch. There is no build change.
@@ -29,15 +30,16 @@
   </open-question>
   <open-question id="Banner source of truth">
     <question>What is the source of truth for the banner: is the SVG file written and edited directly, or is the character art kept as a plain-text drawing from which a committed script generates the SVG, the repository holding no such script today?</question>
-    <alternative id="SVG edited directly">
-      The committed SVG is the only source of truth. It is written and later edited by hand as SVG, with the character art, its colours, and its layout held only inside the file. No plain-text drawing is kept beside it and no generator script is committed. However its first version comes to be written, every later change is an edit of the SVG itself.
-      <advantage>One artifact and nothing to keep in step with it. The repository gains no script, no new dependency, and no command a later editor must know to run. This matches how the README templates and the three traffic-workflow copies are kept today, as hand-edited files.</advantage>
-      <drawback>Changing the art means editing XML: positions, row elements, and characters that must be escaped (a literal &amp; or &lt; in the art becomes an entity). A diff of the art is then unreadable as a picture, so a reviewer cannot see what a change does to the drawing. Whether direct editing is practical at all depends on the Character rendering in SVG question&apos;s axis: with text elements it is tedious, and with glyphs converted to outline paths it is effectively impossible by hand.</drawback>
-    </alternative>
+    <recommendation option="Drawing plus committed generator script">The art stays a plain-text picture that is drawn, reviewed, and diffed as one, and the coloured per-character SVG markup is written by a script instead of by hand; committed generated output that nobody hand-edits is how the repository already keeps hosts/.</recommendation>
     <alternative id="Drawing plus committed generator script">
       A plain-text drawing of the arms, with whatever colour mapping it needs, is committed as the source of truth. A new standalone script under scripts/ is committed beside it, run by hand like set_version.py, and reads the drawing to write the SVG. The generated SVG is committed as derived output, never hand-edited, and is regenerated whenever the drawing changes.
       <advantage>The art stays editable and reviewable as a picture in plain text, and the SVG is reproducible from it. A redraw, a palette change, or a switch in how the characters are rendered is one edit plus one rerun, not a rewrite of the XML. Generated output that is committed and never hand-edited is the pattern the repository already follows for hosts/.</advantage>
       <drawback>The repository gains a script that must be written, kept working, and remembered whenever the art changes. Nothing ties the committed SVG to the drawing, so the two can drift silently unless a guard is added. Whether such a guard exists is the Permanent banner check question&apos;s axis, not this one&apos;s. The script also has to take a position on the Character rendering in SVG and Light and dark themes questions&apos; axes, which becomes code to change if either answer changes.</drawback>
+    </alternative>
+    <alternative id="SVG edited directly">
+      The committed SVG is the only source of truth. It is written and later edited by hand as SVG, with the character art, its colours, and its layout held only inside the file. No plain-text drawing is kept beside it and no generator script is committed. However its first version comes to be written, every later change is an edit of the SVG itself.
+      <advantage>One artifact and nothing to keep in step with it. The repository gains no script, no new dependency, and no command a later editor must know to run. This matches how the README templates and the three traffic-workflow copies are kept today, as hand-edited files.</advantage>
+      <drawback>Changing the art means editing XML: positions, row elements, and characters that must be escaped (a literal &amp; or &lt; in the art becomes an entity). A diff of the art is then unreadable as a picture, so a reviewer cannot see what a change does to the drawing. Whether direct editing is practical at all depends on the Character rendering in SVG question&apos;s axis: with text elements it is tedious, and with glyphs converted to outline paths it is effectively impossible by hand.</drawback>
     </alternative>
     <alternative id="Drawing rendered by the host build">
       The plain-text drawing is committed as the source of truth, and scripts/build_hosts.py itself renders the SVG from it as part of every host build. The generated file is written into each host tree and committed there as build output, with --check comparing it against a fresh render like every other file in the tree. The root README&apos;s copy is produced by the same rendering code rather than by a separate script.
@@ -52,15 +54,19 @@
   </open-question>
   <open-question id="Character rendering in SVG">
     <question>How are the banner&apos;s characters drawn inside the SVG, given that GitHub loads no external font for an SVG shown as an image and a text element is drawn in whatever font the viewer&apos;s system supplies: as text elements relying on a system monospace font stack, as text with a font embedded in the file, or as glyph outlines converted to paths?</question>
-    <alternative id="System font, natural advance">
-      Each row of the art is a text element (or a tspan per row) with whitespace preserved, its font-family a system monospace stack such as ui-monospace, SFMono-Regular, Menlo, Consolas, DejaVu Sans Mono, monospace. No font is embedded and no character carries its own position, so column alignment comes from whatever monospace font the viewer&apos;s system supplies.
-      <advantage>It is the smallest and simplest file. A plain-text drawing maps onto it line for line, it needs no tool beyond a text editor or the stdlib, and it adds no font licence to the repository.</advantage>
-      <drawback>The look varies from viewer to viewer. Glyph shapes, advance widths, and line metrics differ between Menlo, Consolas, DejaVu Sans Mono, and the rest, so the art&apos;s width, and the point where the curling arms meet the bottom edge, shift against a fixed viewBox, and the image may clip or leave gaps. Any check done on one machine says little about another. If the art uses Unicode box-drawing, block, or braille glyphs (the Art character set question), a system font may lack them and substitute a proportional fallback that breaks the columns.</drawback>
-    </alternative>
+    <applied-principle>Check tier claims against the live environment</applied-principle>
+    <depends-on question="Banner source of truth" option="Drawing plus committed generator script"/>
+    <depends-on question="Art character set" option="Printable ASCII only"/>
+    <recommendation option="System font, pinned columns">Pinning each character to the grid keeps the columns aligned in whatever monospace font the viewer has, with no font file, licence, or font tool added; a test render on this machine honoured the pinned positions, whereas an embedded font depends on the image renderer accepting a data-URI font, which is unconfirmed, and glyph outlines need a font tool the repository lacks.</recommendation>
     <alternative id="System font, pinned columns">
       Text elements in a system monospace stack, as above, but every character is placed on a fixed grid regardless of the font&apos;s own advance widths. Each row is a tspan with an explicit x list, one coordinate per column, or a textLength with lengthAdjust fitted to the row&apos;s grid width. No font is embedded.
       <advantage>It keeps the small, licence-free text file but guarantees the columns line up, and that the art fills the viewBox exactly, whichever monospace font the viewer gets. This removes the main failure of relying on font metrics.</advantage>
       <drawback>Glyph shapes, weights, and vertical metrics still differ per system, so the art never looks the same everywhere, and a missing glyph still falls back to another font. The per-character coordinate lists make the file impractical to write or edit by hand, so this option effectively needs a generator, which depends on how the Banner source of truth question is settled.</drawback>
+    </alternative>
+    <alternative id="System font, natural advance">
+      Each row of the art is a text element (or a tspan per row) with whitespace preserved, its font-family a system monospace stack such as ui-monospace, SFMono-Regular, Menlo, Consolas, DejaVu Sans Mono, monospace. No font is embedded and no character carries its own position, so column alignment comes from whatever monospace font the viewer&apos;s system supplies.
+      <advantage>It is the smallest and simplest file. A plain-text drawing maps onto it line for line, it needs no tool beyond a text editor or the stdlib, and it adds no font licence to the repository.</advantage>
+      <drawback>The look varies from viewer to viewer. Glyph shapes, advance widths, and line metrics differ between Menlo, Consolas, DejaVu Sans Mono, and the rest, so the art&apos;s width, and the point where the curling arms meet the bottom edge, shift against a fixed viewBox, and the image may clip or leave gaps. Any check done on one machine says little about another. If the art uses Unicode box-drawing, block, or braille glyphs (the Art character set question), a system font may lack them and substitute a proportional fallback that breaks the columns.</drawback>
     </alternative>
     <alternative id="Embedded whole font">
       Text elements whose font-family names a font defined by an @font-face rule in the SVG&apos;s own style element. The rule&apos;s src is a base64 data URI of one complete monospace font file under a licence that permits embedding and redistribution, for example the SIL Open Font License. The font is not subset, and the system stack is kept only as a fallback.
@@ -80,6 +86,7 @@
   </open-question>
   <open-question id="Art character set">
     <question>Which characters may the banner&apos;s art use: only the printable 7-bit ASCII characters, or also Unicode characters such as box-drawing, block, or braille glyphs?</question>
+    <recommendation option="Printable ASCII only">It keeps the goal&apos;s ASCII art literal, every system monospace font draws all 95 characters at one width so no glyph falls back to another font, and the drawing stays a plain-text file any editor or script handles.</recommendation>
     <alternative id="Printable ASCII only">
       The art uses only the 95 printable 7-bit ASCII characters (U+0020 to U+007E): the arms&apos; curls are built from characters such as / \ | ( ) _ ~ &apos; . , o and similar, and no character outside that range appears anywhere in the drawing.
       <advantage>It keeps the goal&apos;s &quot;ASCII art&quot; literal, and every monospace font a viewer&apos;s system can supply covers this range with one uniform advance width, so the columns stay aligned and no glyph falls back to a different font whichever way the characters end up drawn in the SVG; the drawing also stays a plain-text file any editor or script handles without encoding concerns.</advantage>
@@ -98,6 +105,8 @@
   </open-question>
   <open-question id="Light and dark themes">
     <question>How does the banner handle GitHub&apos;s light and dark page themes, no README today using a picture element or a theme-specific image variant: one image with a transparent background whose colours must read on both page backgrounds, one image with its own filled background, or separate light and dark variants selected per theme?</question>
+    <applied-principle>Check tier claims against the live environment</applied-principle>
+    <recommendation option="Transparent both-theme image">One file and one plain image reference work in every renderer, the README installed with the plugin included, and middle shades of violet and slate hold about 4:1 contrast on both of GitHub&apos;s page backgrounds, white and #0d1117, so a second variant and its markup in four READMEs would buy little for a decorative image.</recommendation>
     <alternative id="Transparent both-theme image">
       One SVG with no background fill, so the page shows through, its violet and grey-blue colours picked to keep enough contrast on both GitHub&apos;s white light background and its near-black dark background. The README holds one plain image reference and no theme selection markup.
       <advantage>One file and one image reference per README. It works the same in every renderer, including the host READMEs installed with the plugin and read outside GitHub, and it blends into whichever page it sits on.</advantage>
@@ -136,6 +145,14 @@
   </open-question>
   <open-question id="Palette colour values">
     <question>Which exact colour values make up the banner&apos;s violet and grey-blue palette: the values the root README&apos;s workflow diagram already uses (violet #9333ea and #581c87, slate #94a3b8 and #475569), or values chosen for the banner alone?</question>
+    <applied-principle>Check tier claims against the live environment</applied-principle>
+    <depends-on question="Light and dark themes" option="Transparent both-theme image"/>
+    <recommendation option="Diagram families, banner shades">The diagram&apos;s hues carry over, so the root page stays one design, while the shades are the ones that read on both page backgrounds: violet #a855f7 (4.0:1 on white, 4.8:1 on #0d1117) and slate #64748b (4.8:1 and 4.0:1), with the diagram&apos;s own #9333ea (5.4:1 and 3.5:1) as the darker violet; its dark tones #581c87 and #475569 drop to 2.5:1 or less on the dark page.</recommendation>
+    <alternative id="Diagram families, banner shades">
+      The banner takes its colours from the same violet and slate families the diagram draws on (the scale holding #faf5ff, #9333ea, and #581c87 on the violet side and #94a3b8 and #475569 on the slate side), but picks the shades for the banner itself, lighter or darker steps of those families included, as many as the drawing needs, the chosen hex values recorded in the requirements.
+      <advantage>The banner keeps the diagram&apos;s hues, so the root page stays visually related, while each shade can be chosen for legibility against whatever background the banner ends up on.</advantage>
+      <drawback>New values have to be chosen and recorded now, before the art or its theme handling exists, and the banner matches the diagram only in hue, not value for value.</drawback>
+    </alternative>
     <alternative id="Diagram values, all four">
       The banner uses exactly the four colours the root README&apos;s Mermaid diagram already uses for its violet and slate parts, and no other: violet #9333ea (the diagram&apos;s stroke) and deep violet #581c87 (its text), slate #94a3b8 (its lines) and #475569 (its borders), each assigned to parts of the arms (for example outline versus shading) by the drawing.
       <advantage>The banner and the diagram on the root page share one palette with no new value to choose or justify, so the page reads as one design and the exact values are already recorded in the repository.</advantage>
@@ -145,11 +162,6 @@
       The banner uses only the two mid-tone diagram values, violet #9333ea and slate #94a3b8, one colour per palette half, and leaves out the diagram&apos;s dark text and border tones (#581c87, #475569).
       <advantage>It stays strictly within values the page already uses while keeping only the two that remain legible on both a white and a near-black page, so it is the reuse option least dependent on how the banner handles themes.</advantage>
       <drawback>Two flat colours give the drawing little room for depth or shading between arms, and slate #94a3b8 is low in contrast on a white page, so the grey-blue parts read faintly in the light theme.</drawback>
-    </alternative>
-    <alternative id="Diagram families, banner shades">
-      The banner takes its colours from the same violet and slate families the diagram draws on (the scale holding #faf5ff, #9333ea, and #581c87 on the violet side and #94a3b8 and #475569 on the slate side), but picks the shades for the banner itself, lighter or darker steps of those families included, as many as the drawing needs, the chosen hex values recorded in the requirements.
-      <advantage>The banner keeps the diagram&apos;s hues, so the root page stays visually related, while each shade can be chosen for legibility against whatever background the banner ends up on.</advantage>
-      <drawback>New values have to be chosen and recorded now, before the art or its theme handling exists, and the banner matches the diagram only in hue, not value for value.</drawback>
     </alternative>
     <alternative id="Banner-only values">
       The banner uses a violet and grey-blue palette chosen for it alone, independent of the diagram&apos;s colour families (its own hex values, as many as the drawing needs), recorded in the requirements.
@@ -164,6 +176,8 @@
   </open-question>
   <open-question id="Arm count">
     <question>How many arms does the banner show, the goal saying only &quot;several&quot;: all eight of an octopus&apos;s arms, or a smaller number?</question>
+    <depends-on question="Banner size" option="Low full-width strip"/>
+    <recommendation option="All eight arms">Eight is the count the project&apos;s image rests on, an octopus having eight arms and the plugin being the arms, and a fixed count gives the drawing a criterion checked by counting; across 80 to 100 columns each arm keeps ten to twelve columns for its curl.</recommendation>
     <alternative id="All eight arms">
       The banner shows exactly eight arms, every one of an octopus&apos;s arms, each curling up from the bottom edge, and the requirements record eight as a fixed count the drawing must meet.
       <advantage>It carries the image the project already chose: ideas/gurita.md records that an octopus has eight arms and that &quot;the plugin is the arms&quot;, so the banner states the full metaphor rather than a fragment of it, and a fixed count gives the drawing an objective criterion to be checked against.</advantage>
@@ -182,6 +196,7 @@
   </open-question>
   <open-question id="Banner size">
     <question>What size is the banner, given that it sits above everything else on the page and pushes the badges and title down: how many character columns and rows does the art occupy, and at what width is the image displayed, the full width of the README column or a fixed narrower width?</question>
+    <recommendation option="Low full-width strip">A strip about 150 to 220 pixels tall moves the badges and the title down the least of the full-width options while still reading as the page&apos;s header, and its cells stay 8 to 10 pixels wide on a desktop page, readable as characters; the top of its row range, twelve rows, gives the arms room to curl.</recommendation>
     <alternative id="Low full-width strip">
       The art is a wide, low strip of about 80 to 100 character columns by about 8 to 12 rows, so its aspect is roughly 4:1 to 6:1. It is displayed at the full width of the README column (an img width of 100%), which comes to about 800 to 900 pixels on a desktop repository page and shrinks with the column on narrow screens. The same grid and width apply to all four READMEs.
       <advantage>At full desktop width it takes only about 150 to 220 pixels of height, so the badges and, in the root README, the traffic table and the title move down by little, while each character cell stays about 8 to 10 pixels wide, readable as a character.</advantage>
@@ -215,6 +230,12 @@
   </open-question>
   <open-question id="Drawing author and approval">
     <question>Who produces the character drawing of the arms, and what decides it is good enough to ship: does the executing agent draw it and accept it on its own judgment against criteria recorded in the requirements, does the agent draw it for the maintainer to approve before it lands in the READMEs, or does the maintainer supply the drawing?</question>
+    <recommendation option="Maintainer reviews after landing">The task run stays unattended, which the completion runners need since they have no pause for an approval, and the maintainer still sees the art before a release puts it on the three host pages; a correction enters as an ordinary follow-up task or a revert, so no new mechanism is needed.</recommendation>
+    <alternative id="Maintainer reviews after landing">
+      The executing agent draws the art and lands it in the READMEs on its own judgment against recorded criteria, unattended. The maintainer then reviews the result on main afterwards, before it matters, and any correction is entered as a follow-up task or made by reverting the commit.
+      <advantage>Keeps the task run unattended while still putting a human eye on the art. The review happens in the most realistic setting, the page as shown, and costs nothing in the run itself.</advantage>
+      <drawback>The source repository&apos;s landing page may show an unreviewed drawing between the push and the review. A rejection costs a further commit, or a revert followed by redoing the work, instead of a draft round. How long a weak drawing stays visible depends on whether a release falls within this mission, an axis a sibling question owns.</drawback>
+    </alternative>
     <alternative id="Agent-judged against criteria">
       The executing agent draws the character art itself during task completion. It accepts the drawing on its own judgment, checked against acceptance criteria written into requirements.md before tasks are derived, for example arms visibly curling upward from the bottom edge, the shapes readable as arms rather than noise, and no recognisable letters or words formed by accident. No maintainer review is held before the drawing lands in the four READMEs.
       <advantage>The mission stays fully unattended through complete-all-tasks. The completion procedure derives its acceptance bar from requirements.md, so recorded criteria become checkable bullets in the Task-completion commit body rather than a judgment of taste left unstated.</advantage>
@@ -229,11 +250,6 @@
       The executing agent draws the art, offering one draft or a few candidates, and the drawing lands in the READMEs only after the maintainer approves or picks one. The maintainer&apos;s verdict is the acceptance gate, with revisions requested until it passes. In the task list the drawing and its placement in the READMEs are separate tasks, with the maintainer&apos;s review between them.
       <advantage>A human with taste sees the art before any landing page shows it. For a purely aesthetic deliverable at the top of every page, that is the one judgment no recorded criterion can stand in for.</advantage>
       <drawback>Breaks unattended execution: the completion runners return only DONE or FAILED and have no pause for approval, so complete-all-tasks has to stop at the review point and the maintainer has to resume it by hand. Each rejected draft costs a round trip and a task of its own.</drawback>
-    </alternative>
-    <alternative id="Maintainer reviews after landing">
-      The executing agent draws the art and lands it in the READMEs on its own judgment against recorded criteria, unattended. The maintainer then reviews the result on main afterwards, before it matters, and any correction is entered as a follow-up task or made by reverting the commit.
-      <advantage>Keeps the task run unattended while still putting a human eye on the art. The review happens in the most realistic setting, the page as shown, and costs nothing in the run itself.</advantage>
-      <drawback>The source repository&apos;s landing page may show an unreviewed drawing between the push and the review. A rejection costs a further commit, or a revert followed by redoing the work, instead of a draft round. How long a weak drawing stays visible depends on whether a release falls within this mission, an axis a sibling question owns.</drawback>
     </alternative>
     <alternative id="Maintainer sketch, agent finish">
       The maintainer supplies a rough sketch or reference of the arms (a coarse character layout, or a description of poses and curls), recorded in requirements.md before tasks are derived. The executing agent refines it into the final drawing at the decided size and character set, accepting the result on its own judgment by its faithfulness to the sketch.
@@ -253,6 +269,15 @@
   </open-question>
   <open-question id="Rendered look verification">
     <question>How is the banner&apos;s rendered appearance checked before it is committed, the repository holding no tool that renders an SVG: by rendering the file locally to an image that is inspected, by viewing it on GitHub after a push in both page themes, or by no rendering check beyond the file being a well-formed SVG?</question>
+    <applied-principle>Check tier claims against the live environment</applied-principle>
+    <depends-on question="Drawing author and approval" option="Maintainer reviews after landing"/>
+    <depends-on question="Character rendering in SVG" option="System font, pinned columns"/>
+    <recommendation option="Local render then GitHub">The local render gives the drawing agent a loop it can see before anything is committed, qlmanage on this machine having rendered a test SVG with pinned characters correctly, and the view on github.com in both themes covers what no local renderer shows, the viewer&apos;s own monospace font and the real page backgrounds.</recommendation>
+    <alternative id="Local render then GitHub">
+      The SVG is rendered locally to PNGs on the light and dark backgrounds and inspected before the commit, with a renderer already on the machine and nothing committed for it, and after the push to main the README pages are viewed on github.com in both themes as a final confirmation, a fix landing as a follow-up commit.
+      <advantage>Combines a fast pre-commit loop that catches most mistakes before they are public with a final check against what visitors actually see, covering the local renderer&apos;s fidelity gap.</advantage>
+      <drawback>The most effort of any option, two checks for one image, and a fault only GitHub shows still reaches the public page briefly before its follow-up fix.</drawback>
+    </alternative>
     <alternative id="Local ad-hoc render">
       Before the commit, the SVG is rendered locally to a PNG with a renderer already on the machine and not added to the repository (macOS&apos;s WebKit-based qlmanage thumbnailer or ImageMagick, both present here; no rsvg-convert, Inkscape, or cairosvg is installed), composited on GitHub&apos;s light and dark page background colours, and inspected; nothing is committed for the check, and no GitHub view is part of it.
       <advantage>Catches a wrong look before anything lands, in a fast loop that costs no push and no new dependency, and the rendered PNG is something the executing agent can itself read as an image while it iterates on the drawing.</advantage>
@@ -273,11 +298,6 @@
       <advantage>Fits the workflow as it runs, one commit per task on main with no extra branch or tool, while still checking the true rendered look on the page that matters.</advantage>
       <drawback>Rejects the &quot;before it is committed&quot; premise: a misrendered banner is public on the source repository&apos;s landing page until the fix lands, and it would ride into a release if the push-and-look step is skipped before one, which a sibling question decides whether this mission makes.</drawback>
     </alternative>
-    <alternative id="Local render then GitHub">
-      The SVG is rendered locally to PNGs on the light and dark backgrounds and inspected before the commit, with a renderer already on the machine and nothing committed for it, and after the push to main the README pages are viewed on github.com in both themes as a final confirmation, a fix landing as a follow-up commit.
-      <advantage>Combines a fast pre-commit loop that catches most mistakes before they are public with a final check against what visitors actually see, covering the local renderer&apos;s fidelity gap.</advantage>
-      <drawback>The most effort of any option, two checks for one image, and a fault only GitHub shows still reaches the public page briefly before its follow-up fix.</drawback>
-    </alternative>
     <alternative id="Well-formed SVG only">
       No rendering check at all: the SVG is checked only to parse as well-formed XML and its source read to confirm its colours and dimensions are the ones decided; the rendered look is never inspected before or after the commit.
       <advantage>Costs nothing beyond what any committed file gets and needs no renderer, push, or human viewing, so an unattended execution can complete it end to end.</advantage>
@@ -286,6 +306,14 @@
   </open-question>
   <open-question id="Banner alt text">
     <question>What alternative text does the banner image carry in the four READMEs: an empty alt marking the image as decorative, or a short description of the arms, and in that case what wording?</question>
+    <applied-principle>Check tier claims against the live environment</applied-principle>
+    <depends-on question="Art character set" option="Printable ASCII only"/>
+    <recommendation option="Short literal description">GitHub wraps every README image in a link, so an empty alt would leave a link with no name for a screen reader to announce, while a few literal words name it, follow the written-alt pattern of every badge on the pages, and stay true however the count, size, or palette is tuned; the wording is the option&apos;s own example, &quot;Octopus arms drawn in ASCII art&quot;.</recommendation>
+    <alternative id="Short literal description">
+      The banner carries one short literal description of the picture, identical in all four READMEs, naming only what is drawn and how, with no colours and no counts — for example &quot;Octopus arms drawn in ASCII art&quot; — and nothing of the project&apos;s name or tagline.
+      <advantage>Tells anyone who cannot see the image what is there in a few words, follows the written-alt pattern the badges already set, and stays true whatever arm count, size, or palette the sibling questions settle, so it needs no rewording when the drawing is tuned.</advantage>
+      <drawback>Read aloud before the title on every page, it adds a line a screen-reader user hears ahead of the project&apos;s name for an image that conveys no information; the words &quot;ASCII art&quot; hold only while the art&apos;s character set is limited to ASCII, which the art-character-set question decides.</drawback>
+    </alternative>
     <alternative id="No alt attribute">
       The banner&apos;s image element carries no alt attribute at all in any of the four READMEs: no text is written for it, empty or otherwise, and what a screen reader or a failed image load shows is left to the browser.
       <advantage>Nothing to word or keep in step across the four files, so the banner&apos;s line in each README is the shortest it can be.</advantage>
@@ -295,11 +323,6 @@
       The banner carries an empty alt (alt=&quot;&quot;) in all four READMEs, marking it as decorative so assistive technology skips it and the page&apos;s spoken reading starts at the badges, then the title.
       <advantage>Matches what the banner is for a non-sighted reader: pure ornament ahead of a title that already names the project, so nothing redundant is read before the &quot;# Gurita&quot; heading, and no wording has to track the drawing&apos;s arm count, characters, or colours as those are settled or later changed.</advantage>
       <drawback>A sighted reader whose image fails to load, and every screen-reader user, learns nothing of the banner at all; it is also the one image on the pages with no written alt, so the choice reads as an omission unless it is understood as deliberate.</drawback>
-    </alternative>
-    <alternative id="Short literal description">
-      The banner carries one short literal description of the picture, identical in all four READMEs, naming only what is drawn and how, with no colours and no counts — for example &quot;Octopus arms drawn in ASCII art&quot; — and nothing of the project&apos;s name or tagline.
-      <advantage>Tells anyone who cannot see the image what is there in a few words, follows the written-alt pattern the badges already set, and stays true whatever arm count, size, or palette the sibling questions settle, so it needs no rewording when the drawing is tuned.</advantage>
-      <drawback>Read aloud before the title on every page, it adds a line a screen-reader user hears ahead of the project&apos;s name for an image that conveys no information; the words &quot;ASCII art&quot; hold only while the art&apos;s character set is limited to ASCII, which the art-character-set question decides.</drawback>
     </alternative>
     <alternative id="Detailed literal description">
       The banner carries one fuller literal description, identical in all four READMEs, stating what is drawn, how it sits, and its colours — for example &quot;Octopus arms curling up from the bottom edge, drawn in violet and grey-blue characters&quot; — still naming neither the project nor the tagline.
@@ -319,15 +342,16 @@
   </open-question>
   <open-question id="Release within mission">
     <question>Does this mission include a release that publishes the banner to the three host landing pages, which change only when a release publishes the host trees, or does it end with the banner committed on main, showing only on the source repository&apos;s page until the next release?</question>
-    <alternative id="Release as final task">
-      The mission includes the release: the last task in TASKS_TODO.md runs /release-plugin at the next version once the banner tasks are committed, so the Release commit publishes hosts/claude, hosts/antigravity, and hosts/codex into the three distribution repositories and the banner shows on all four landing pages before /finish-mission runs. The maintainer completes that task with the inline complete-task skill rather than in an unattended complete-all-tasks run.
-      <advantage>When the mission finishes its goal is met as written: the banner is the first element of all four landing pages, including the three host pages and the README the Claude Code and Antigravity installs carry, and its appearance on those pages can be checked within the mission.</advantage>
-      <drawback>A release made before the finish commit finds no mission finished since 2.0.0, so /release-plugin falls to its empty-range path: commit-range-derived notes that proceed only on the maintainer&apos;s explicit confirmation, which an unattended run cannot give, and this mission&apos;s own section then lands in the following release&apos;s notes describing work already shipped. The release pre-flight also requires a passing host suite on every host whose trigger set changed, here all three because every host&apos;s README template changes, so this option&apos;s cost depends on how the host-suite sibling question settles.</drawback>
-    </alternative>
+    <recommendation option="Release right after finish">The goal names four landing pages and the three host pages change only at a release, while the release notes are composed from missions already finished, so only a release that follows the finish commit both puts the banner on every page and gives this mission its own section on the standard path, with no empty-range confirmation.</recommendation>
     <alternative id="Release right after finish">
       The mission&apos;s task list holds no release and the mission ends with the banner committed on main, but the requirements record that the maintainer runs /release-plugin directly after /finish-mission as the mission&apos;s committed closing step, so the release follows the finish commit and the three host pages gain the banner the same day.
       <advantage>The release runs on its standard path: the finish commit lands first, so step 5 of /release-plugin reads this mission&apos;s summary and writes its own per-mission section into CHANGELOG.md and the three release pages, with no empty-range confirmation, while the host pages still change promptly.</advantage>
       <drawback>Nothing in the workflow enforces a step after finish: the commitment lives in a requirements.md that the finish commit removes, so a skipped release leaves exactly the state of not releasing, and the mission&apos;s record reads finished while three of its four landing pages still lack the banner.</drawback>
+    </alternative>
+    <alternative id="Release as final task">
+      The mission includes the release: the last task in TASKS_TODO.md runs /release-plugin at the next version once the banner tasks are committed, so the Release commit publishes hosts/claude, hosts/antigravity, and hosts/codex into the three distribution repositories and the banner shows on all four landing pages before /finish-mission runs. The maintainer completes that task with the inline complete-task skill rather than in an unattended complete-all-tasks run.
+      <advantage>When the mission finishes its goal is met as written: the banner is the first element of all four landing pages, including the three host pages and the README the Claude Code and Antigravity installs carry, and its appearance on those pages can be checked within the mission.</advantage>
+      <drawback>A release made before the finish commit finds no mission finished since 2.0.0, so /release-plugin falls to its empty-range path: commit-range-derived notes that proceed only on the maintainer&apos;s explicit confirmation, which an unattended run cannot give, and this mission&apos;s own section then lands in the following release&apos;s notes describing work already shipped. The release pre-flight also requires a passing host suite on every host whose trigger set changed, here all three because every host&apos;s README template changes, so this option&apos;s cost depends on how the host-suite sibling question settles.</drawback>
     </alternative>
     <alternative id="No release, next one carries it">
       The mission includes no release and commits to none: it ends with the banner on main, visible on the source repository&apos;s page once pushed, and the three host pages gain it whenever the maintainer next cuts a release for any reason, that release&apos;s notes carrying this mission&apos;s section as a finished mission since 2.0.0.
@@ -337,6 +361,13 @@
   </open-question>
   <open-question id="Host suite run">
     <question>Is the host suite run on all three hosts as part of this mission, since adding the banner to each host&apos;s README template changes every host&apos;s trigger set and the suite first requires each host&apos;s installed copy to equal the built tree, or is that run left to the next release&apos;s pre-flight?</question>
+    <depends-on question="Release within mission" option="Release right after finish"/>
+    <recommendation option="Defer to release pre-flight">The release pre-flight runs the suite on all three hosts against the same final state before anything reaches a host page, so a closing run inside the mission would only repeat it shortly before, and deferring keeps the task run unattended and the home-directory installations in the maintainer&apos;s hands.</recommendation>
+    <alternative id="Defer to release pre-flight">
+      The mission does not run the host suite at all and ends without one. The run is left to the next release&apos;s pre-flight step g, which diffs each host&apos;s trigger set since the last tag and so selects all three hosts. Installed copies are refreshed then, by the maintainer, as that step&apos;s remedy describes.
+      <advantage>It costs this mission nothing. A release cannot publish the banner to the host landing pages without the suite passing on every host, and a README template and an image change no skill, agent, or tool behaviour the suite exercises.</advantage>
+      <drawback>The banner commits land on main without the before-commit run CONTRIBUTING.md asks for. Any failure, including one with an unrelated cause, surfaces only at release time, when the work is no longer fresh. Whether the deferral leaves the mission at all depends on the release-within-mission question, since a release inside this mission would run the pre-flight here.</drawback>
+    </alternative>
     <alternative id="Closing agent run on all hosts">
       The mission runs the host suite on all three hosts (claude, antigravity, codex) once, as its last task, after every banner change under scripts/hosts/ has landed. The executing agent completes that task. It first brings each installed copy up to date with the committed tree by that host&apos;s documented install: the Claude Code directory-marketplace copy already reads the checkout, Antigravity&apos;s ~/.gemini/config/plugins/gurita is re-copied from hosts/antigravity/, and Codex is re-added from hosts/codex. It then runs the three hosts at once, as the release pre-flight does, and the task&apos;s verified bar records each host&apos;s exit status. The intermediate banner commits are not gated one by one.
       <advantage>The final state of every host&apos;s changed trigger set passes the suite inside the mission, at the cost of one parallel run that takes as long as the slowest host. The next release&apos;s pre-flight then has a known-good baseline, and an unattended chain can finish the run without the maintainer.</advantage>
@@ -357,11 +388,6 @@
       <advantage>It spends real runs only where the installed plugin a host loads actually differs from the last release. That cuts one host&apos;s run and one reinstall, and skips the host for which a run would re-test exactly what was last released.</advantage>
       <drawback>It departs from the documented trigger-set rule, which owes Codex a run for any change under scripts/hosts/codex/, so the next release&apos;s pre-flight still selects Codex. It holds only if the banner adds nothing under the Codex plugin directory, which depends on the banner delivery question.</drawback>
     </alternative>
-    <alternative id="Defer to release pre-flight">
-      The mission does not run the host suite at all and ends without one. The run is left to the next release&apos;s pre-flight step g, which diffs each host&apos;s trigger set since the last tag and so selects all three hosts. Installed copies are refreshed then, by the maintainer, as that step&apos;s remedy describes.
-      <advantage>It costs this mission nothing. A release cannot publish the banner to the host landing pages without the suite passing on every host, and a README template and an image change no skill, agent, or tool behaviour the suite exercises.</advantage>
-      <drawback>The banner commits land on main without the before-commit run CONTRIBUTING.md asks for. Any failure, including one with an unrelated cause, surfaces only at release time, when the work is no longer fresh. Whether the deferral leaves the mission at all depends on the release-within-mission question, since a release inside this mission would run the pre-flight here.</drawback>
-    </alternative>
     <alternative id="Exempt non-runtime files from trigger sets">
       The mission rejects the premise that a README or image change owes a suite run. It narrows each host&apos;s trigger set to exclude files that are not part of the runtime integration, such as the definition directory&apos;s README.md and image files. The narrowing is made in both homes of the rule: CONTRIBUTING.md&apos;s Development section and the release skill&apos;s step-g diff commands. The suite is then not run for the banner, now or at the next release.
       <advantage>It removes the cost for good, for this and every later landing-page change. The trigger sets then describe what the suite actually tests, so no future cosmetic edit owes minutes of real CLI sessions on three hosts.</advantage>
@@ -370,6 +396,13 @@
   </open-question>
   <open-question id="Permanent banner check">
     <question>Does a permanent check guard the banner once it is in place, for example a test that each of the four READMEs opens with the banner image or that every committed copy of the SVG is identical, or is the banner verified once when its tasks are completed, no test reading a README&apos;s content today?</question>
+    <depends-on question="Banner source of truth" option="Drawing plus committed generator script"/>
+    <recommendation option="File integrity test in pytest">The one silent failure is the committed SVG drifting from the drawing it is generated from, and a test that regenerates and compares closes it the way --check closes it for hosts/; a banner dropped or displaced shows at once on the page itself, so the READMEs&apos; opening lines stay unpinned.</recommendation>
+    <alternative id="File integrity test in pytest">
+      A test under tests/, run by both pytest runs in CI, checks only the banner file: every committed copy parses as a well-formed SVG and all copies are byte-identical. If the art is generated by a script, it also checks that the committed SVG equals what the script produces from the plain-text drawing. Nothing checks where the READMEs place the image.
+      <advantage>Guards the one failure a reader of the page may not notice right away, copies or a generated file quietly drifting from their source, while leaving the READMEs&apos; prose untested and free to change.</advantage>
+      <drawback>What it can check depends on two sibling questions: banner delivery (whether there are several copies, and whether the build already makes them identical through --check) and banner source of truth (whether a generating script exists). If there is one file and no script, the test reduces to a well-formedness check of little value. Placement on the four pages stays unguarded.</drawback>
+    </alternative>
     <alternative id="No permanent check">
       No check is added. The banner&apos;s placement and its file are verified once, against each task&apos;s acceptance bar, when the banner tasks are completed, and nothing afterwards reads the READMEs&apos; content or the SVG, as is the case for every README today. This is meant as never, not as postponed to a later mission.
       <advantage>Adds nothing to the test suite or the build for a decorative image whose loss or displacement shows at once on the landing page itself. The READMEs stay free prose with no test pinning their first lines, so later edits to the page openings meet no extra gate.</advantage>
@@ -379,11 +412,6 @@
       A test under tests/, run by both pytest runs in CI, asserts that the root README and each of the three host READMEs, read from the templates under scripts/hosts/ or from the rendered trees, open with the banner image: their first non-blank element is an image whose source names the banner. Nothing checks the SVG file itself.
       <advantage>Pins exactly what the goal promises, that the banner is the very first element on all four landing pages. It reuses the suite&apos;s existing habit of reading rendered host trees (as test_fixed_console_lines.py does) and changes no build code.</advantage>
       <drawback>It is the first test to pin README prose, so every later rework of a page opening must also update the test. It leaves the SVG copies unguarded, so if the banner-delivery question puts hand-kept copies in several definition directories, drift between them goes unseen. It also does not run in the release pre-flight, which runs --check rather than the unit suite.</drawback>
-    </alternative>
-    <alternative id="File integrity test in pytest">
-      A test under tests/, run by both pytest runs in CI, checks only the banner file: every committed copy parses as a well-formed SVG and all copies are byte-identical. If the art is generated by a script, it also checks that the committed SVG equals what the script produces from the plain-text drawing. Nothing checks where the READMEs place the image.
-      <advantage>Guards the one failure a reader of the page may not notice right away, copies or a generated file quietly drifting from their source, while leaving the READMEs&apos; prose untested and free to change.</advantage>
-      <drawback>What it can check depends on two sibling questions: banner delivery (whether there are several copies, and whether the build already makes them identical through --check) and banner source of truth (whether a generating script exists). If there is one file and no script, the test reduces to a well-formedness check of little value. Placement on the four pages stays unguarded.</drawback>
     </alternative>
     <alternative id="Placement and integrity in pytest">
       A test module under tests/, run by both pytest runs in CI, combines both checks. Each of the four READMEs must open with the banner image, and every committed copy of the SVG must be well-formed and byte-identical, or equal to the generating script&apos;s output if one exists.
