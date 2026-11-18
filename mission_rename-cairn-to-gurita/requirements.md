@@ -108,5 +108,9 @@ The release stays a task of this mission, entered and completed by the maintaine
 
 The `.cairn/daemon.toml` line is deleted from `.gitignore`, under neither name, and nothing replaces it. The other six entries stay as they are, `.scratchpad.md` becoming the first line.
 
+### Former name in READMEs
+
+The root README carries one sentence near its title and pitch saying that Gurita was published as Cairn up to 1.9.0 and that the old names no longer work, with a link to where the upgrade steps are documented. The three host README templates take a plain substitution with no mention of the former name, and the Claude Code host README's "Migrating from the old marketplace" section and its lead-in line are removed.
+
 ## Out of Scope
 
