@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Docs Follow the Mission Rename
-
-Carry the rename through `docs/skill-reference.md`, `docs/workflow.md`, `docs/ways-of-using-cairn.md`, and `docs/design-claims.md`: skill names, the `--mission <path>` flag on every heading and chain line, tool and query names, commit markers, and prose in the new word, with the `milestones/` container recast to `<scope>/mission_<slug>/`. The docs state that the record starts at the first `Mission-finish:` commit and that task commits made before the rename list under the placeholder. Verified by both pytest runs passing and by a search of `docs/` finding the old word only where it names a retired form.
-
----
-
 ## Workflow Docs State the Upgrade Rule
 
 In the bootstrap paragraph of `docs/workflow.md`, where the sentence sending a pointer-era project to `/migrate-milestones` stood, state the upgrade itself: finish every live milestone with the copy of the plugin it was started under before upgrading, the pointer-era state (`milestones/README.md` and the numbered directories) is read by nothing, left in place, and removable by hand, and a bootstrap run replaces the old `## Milestone Workflow` section and moves an existing principle store to the root. No recipe for moving a directory by hand is given. Verified by reading the paragraph against the Upgrade guidance placement and Existing store at upgrade decisions.

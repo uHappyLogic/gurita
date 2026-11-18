@@ -52,7 +52,7 @@ other tests yet.
 - **Metric:** Judge score for alternative quality, and the count of
   recommendations without a clear option.
 
-### 5. Advice gets better with each milestone.
+### 5. Advice gets better with each mission.
 
 - **Design:** The capture skill reads the decisions where the user did not
   accept the recommendation. It writes the reasons as principles in one store.
@@ -84,7 +84,7 @@ other tests yet.
   against it. Then the task-list tool removes the task from the task list.
   The commit of the task records the bar as its body, with one bullet for
   each criterion. The subject of that commit gives the task title, and its
-  diff keeps the text of the task. The milestones tool reads these commits
+  diff keeps the text of the task. The missions tool reads these commits
   from the git log.
 - **Metric:** Recall of requirement IDs in the tasks and in the verified
   bullets of the task commits.
@@ -97,34 +97,34 @@ other tests yet.
 - **Metric:** Task body length, and the count of references that do not match
   the live project.
 
-### 9. Work is bounded: one milestone for each run, one started milestone for each scope, one task at a time.
+### 9. Work is bounded: one mission for each run, one started mission for each scope, one task at a time.
 
-- **Design:** Each run names the milestone that it works on by the path of
-  the milestone directory. No file stores a current milestone. A run that
-  does not name a live milestone stops and changes nothing. The finish skill
-  removes the milestone directory, thus the directories that stay are the
-  live milestones. The scope of a milestone is the directory that holds its
-  `milestones/` container. A milestone is started when tasks go into its
+- **Design:** Each run names the mission that it works on by the path of
+  the mission directory. No file stores a current mission. A run that
+  does not name a live mission stops and changes nothing. The finish skill
+  removes the mission directory, thus the directories that stay are the
+  live missions. The scope of a mission is the directory that holds the
+  mission directory. A mission is started when tasks go into its
   task list, and it stays started until the finish skill removes its
-  directory. A started milestone holds its scope, the directories above it,
+  directory. A started mission holds its scope, the directories above it,
   and the directories below it. Before the skills that add tasks write, and
   before each task that the completion skills start, a scope gate checks the
-  scope. If a different started milestone holds it, the skill stops and
+  scope. If a different started mission holds it, the skill stops and
   changes nothing. Tasks run in dependency order, one at a time.
-- **Metric:** Count of runs that change a milestone other than the milestone
-  that they name (must be 0), count of task commits for a milestone while a
-  different started milestone holds its scope (must be 0), and the order of
+- **Metric:** Count of runs that change a mission other than the mission
+  that they name (must be 0), count of task commits for a mission while a
+  different started mission holds its scope (must be 0), and the order of
   the task commits.
 
 ## Records
 
 ### 10. The repository is the memory.
 
-- **Design:** The files of the live milestones and the git log hold the full
-  record. The finish commit of a milestone removes the milestone directory,
-  and the body of that commit is the summary of the milestone. The files of
-  the milestone stay in the parent of that commit. The read-only milestones
-  tool reads the finished milestones and the completed tasks from the git
+- **Design:** The files of the live missions and the git log hold the full
+  record. The finish commit of a mission removes the mission directory,
+  and the body of that commit is the summary of the mission. The files of
+  the mission stay in the parent of that commit. The read-only missions
+  tool reads the finished missions and the completed tasks from the git
   log. A new session reads these records and can answer questions about the
   project. No chat transcript is necessary.
 - **Metric:** Score of a new session on a fixed question bank about the
@@ -132,17 +132,17 @@ other tests yet.
 
 ### 11. The records are machine-readable.
 
-- **Design:** Open questions are one XML document for each milestone. A
-  stdlib tool creates the document empty with the milestone. After that, the
+- **Design:** Open questions are one XML document for each mission. A
+  stdlib tool creates the document empty with the mission. After that, the
   open-question tool is the only writer of the document. Each answer, cascade,
   prune, and embed is a tool call. The tool validates the input and writes the whole
   document again in one canonical form. The task list is the same. The same
-  stdlib tool creates it with the milestone. After that, the task-list tool
+  stdlib tool creates it with the mission. After that, the task-list tool
   is the only writer of the task list. Each derivation, submission, and
   removal is a tool call. The tool writes the whole file again in one
   canonical layout. A removal changes only the task list, and a failed
   removal changes nothing. A completed task has no file. Its record is its
-  task commit. The read-only milestones tool reads these commits from the git
+  task commit. The read-only missions tool reads these commits from the git
   log and prints one line for each task, with fields that tabs separate.
   The decisions in `requirements.md` are prose, and no tool is the only
   writer of that file. The batch answer skill writes each decision with the
@@ -200,7 +200,7 @@ other tests yet.
   for each block. Task bodies are minimal. A shared procedure loads only when a step needs
   it.
 - **Metric:** Tokens per task, orchestrator context size as the task count
-  increases, and total cost per milestone.
+  increases, and total cost per mission.
 
 ### 14. Unattended batch runs are possible.
 
@@ -211,7 +211,7 @@ other tests yet.
   blocks that the tool refused. Thus a run has a maximum of two calls and
   two annotation commits. For each commit that lands, the call prints one
   fixed marker line, and the status line comes from these marker lines.
-- **Metric:** Milestones completed with 0 user turns after the start, and their
+- **Metric:** Missions completed with 0 user turns after the start, and their
   scores on the other claims.
 
 ## Robustness
