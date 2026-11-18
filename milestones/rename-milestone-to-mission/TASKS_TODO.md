@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Hard Cut Invariant Entry
-
-Add to `CLAUDE.md` one dedicated invariant entry for the hard cut, written only in the new vocabulary and naming no retired form: the plugin answers to its current names only, through one flag, one discovery pattern (`**/mission_*/requirements.md`), and one finish marker, with no alias and no second pattern, the record starts at the first `Mission-finish:` commit, and no migration is shipped, with low adoption as the ground and the bootstrap's replacement of an older workflow section as its stated exception. Verified by reading the entry against the Hard cut invariant entry decision.
-
----
-
 ## Repository Surface Follows the Mission Rename
 
 Carry the rename through `README.md`, `CONTRIBUTING.md`, the issue and pull request templates under `.github/` (the pull request template's first line and its checklist's two commit markers in the mission form), `.claude/skills/release-plugin/SKILL.md` where it reads the record, and each host's README, CONTRIBUTING, and settings comments under `scripts/hosts/`, leaving `CHANGELOG.md` as written. Verified by the drift gate passing on the rebuilt host trees and by a search of those files finding the old word nowhere.
