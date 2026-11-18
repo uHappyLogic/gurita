@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-Only the latest release of cairn receives security fixes. Every fix ships as a new release, published to all three distribution repositories — [`cairn-claude`](https://github.com/uHappyLogic/cairn-claude), [`cairn-antigravity`](https://github.com/uHappyLogic/cairn-antigravity), and [`cairn-codex`](https://github.com/uHappyLogic/cairn-codex) — so updating to the newest release is how a fix is received.
+Only the latest release of Gurita receives security fixes. Every fix ships as a new release, published to all three distribution repositories — [`gurita-claude`](https://github.com/uHappyLogic/gurita-claude), [`gurita-antigravity`](https://github.com/uHappyLogic/gurita-antigravity), and [`gurita-codex`](https://github.com/uHappyLogic/gurita-codex) — so updating to the newest release is how a fix is received.
 
 | Version         | Supported |
 | --------------- | --------- |
@@ -11,6 +11,6 @@ Only the latest release of cairn receives security fixes. Every fix ships as a n
 
 ## Reporting a vulnerability
 
-Report vulnerabilities through GitHub private vulnerability reporting only, using this repository's [Report a vulnerability](https://github.com/uHappyLogic/cairn/security/advisories/new) form. A report filed there opens a draft security advisory with a private thread between you and the maintainer, where the fix is worked out; the advisory is published once the release carrying the fix is out.
+Report vulnerabilities through GitHub private vulnerability reporting only, using this repository's [Report a vulnerability](https://github.com/uHappyLogic/gurita/security/advisories/new) form. A report filed there opens a draft security advisory with a private thread between you and the maintainer, where the fix is worked out; the advisory is published once the release carrying the fix is out.
 
 Do not report a vulnerability through a public issue, a discussion, or a pull request, and do not look for an email address: the form is the only channel.

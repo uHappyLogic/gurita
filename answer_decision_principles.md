@@ -11,7 +11,7 @@ user-confirmed (there is no status field). This file is written **only** by
 
 ### Prefer domain-neutral terms
 
-When a question chooses among candidate names or vocabulary, eliminate any candidate that carries a specific domain's connotation (coding, ops, a particular industry) and keep the plain-English option that reads naturally across arbitrary workflows. Cairn is a domain-agnostic workflow tool, so naming that implies one domain is out. Tie-breaker among surviving neutral candidates: prefer the one that doesn't overload a word already reserved for a distinct meaning in the vocabulary.
+When a question chooses among candidate names or vocabulary, eliminate any candidate that carries a specific domain's connotation (coding, ops, a particular industry) and keep the plain-English option that reads naturally across arbitrary workflows. Gurita is a domain-agnostic workflow tool, so naming that implies one domain is out. Tie-breaker among surviving neutral candidates: prefer the one that doesn't overload a word already reserved for a distinct meaning in the vocabulary.
 
 *Origin: Replace-implement-verb — "complete" chosen over the coding-flavored "execute".*
 

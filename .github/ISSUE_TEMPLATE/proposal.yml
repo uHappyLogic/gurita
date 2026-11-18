@@ -18,7 +18,7 @@ body:
     id: motivation
     attributes:
       label: Motivation
-      description: Why cairn needs this — the situation that exposed the gap, and what stays broken or awkward until the mission lands.
+      description: Why Gurita needs this — the situation that exposed the gap, and what stays broken or awkward until the mission lands.
     validations:
       required: true
   - type: textarea

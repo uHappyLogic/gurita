@@ -1,6 +1,6 @@
 # Changelog
 
-Each entry is the notes of that version's [GitHub release](https://github.com/uHappyLogic/cairn/releases), verbatim, newest first.
+Each entry is the notes of that version's [GitHub release](https://github.com/uHappyLogic/gurita/releases), verbatim, newest first.
 
 ## 1.9.0 — 2026-10-26
 

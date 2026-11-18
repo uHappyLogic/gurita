@@ -6,7 +6,7 @@ body:
   - type: textarea
     id: what
     attributes:
-      label: What should cairn do
+      label: What should Gurita do
       description: The behaviour you want, stated against the skill or file it touches — a new skill, a change to an existing one, a wording fix in a rendered file, a build-script change.
     validations:
       required: true

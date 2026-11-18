@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Rename the Contributor and Policy Files
-
-Rename the plugin, its repositories, its plugin id, and its installed-copy paths in `CONTRIBUTING.md`, `SECURITY.md`, the issue-template files under `.github/ISSUE_TEMPLATE/` (the bug form's version field id becoming `gurita-version`), `CLAUDE.md`, the principle store's one sentence naming the plugin, and the CHANGELOG's preamble, while every CHANGELOG entry from 1.9.0 back to 0.9.0 stays byte-for-byte as published. It is verified by a search finding no old name in those files outside the CHANGELOG's entries and by a `CHANGELOG.md` diff that touches the preamble alone.
-
----
-
 ## Rename the Plugin Across the Docs Pages
 
 Rename the plugin across the pages under `docs/`: the `/gurita:<skill>` chain lines and prose of `docs/ways-of-using.md`, the title, prose, and three claim headings of `docs/design-claims.md`, with the README's anchor link to the renamed claim heading following in the same change, and the prose of `docs/skill-reference.md` and `docs/workflow.md`. It is verified by a search finding no old name under `docs/`, the README's claim link resolving to its heading, and both test runs.

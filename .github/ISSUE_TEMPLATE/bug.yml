@@ -1,5 +1,5 @@
 name: Bug report
-description: A skill or agent misbehaved. The three required facts are what a cairn bug cannot be reproduced without.
+description: A skill or agent misbehaved. The three required facts are what a Gurita bug cannot be reproduced without.
 title: "[Bug]: "
 labels: ["bug"]
 body:
@@ -7,7 +7,7 @@ body:
     id: host
     attributes:
       label: Host
-      description: The host you run cairn under, named by its definition directory under `scripts/hosts/` — `claude` is Claude Code (installed from `cairn-claude`), `antigravity` is Antigravity (installed from `cairn-antigravity`), `codex` is Codex (installed from `cairn-codex`).
+      description: The host you run Gurita under, named by its definition directory under `scripts/hosts/` — `claude` is Claude Code (installed from `gurita-claude`), `antigravity` is Antigravity (installed from `gurita-antigravity`), `codex` is Codex (installed from `gurita-codex`).
       options:
         - claude
         - antigravity
@@ -15,10 +15,10 @@ body:
     validations:
       required: true
   - type: input
-    id: cairn-version
+    id: gurita-version
     attributes:
-      label: Cairn version
-      description: The release you have installed — the `version` field of the plugin manifest (`.claude-plugin/plugin.json` in the installed plugin on Claude Code, `~/.gemini/config/plugins/cairn/plugin.json` on Antigravity, `.codex-plugin/plugin.json` on Codex), or the release tag you extracted.
+      label: Gurita version
+      description: The release you have installed — the `version` field of the plugin manifest (`.claude-plugin/plugin.json` in the installed plugin on Claude Code, `~/.gemini/config/plugins/gurita/plugin.json` on Antigravity, `.codex-plugin/plugin.json` on Codex), or the release tag you extracted.
       placeholder: MAJOR.MINOR.PATCH
     validations:
       required: true
