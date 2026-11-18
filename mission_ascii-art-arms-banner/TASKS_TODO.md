@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Add the Banner Generator Script
-
-Add a standalone script under `scripts/`, run by hand like `set_version.py`, that reads a plain-text drawing and its colour mapping from `assets/` and writes the banner SVG beside them, so the committed SVG is derived output of the drawing: one SVG with no background fill whose characters are text elements in a system monospace font stack, with no font embedded and no glyph converted to paths, every character pinned to a fixed grid by an explicit `x` coordinate per column regardless of the font's own advance widths. The script is stdlib-only, runs under Python 3.9 as well as the pinned interpreter, and writes the same bytes on every run, because the mission's banner test runs it under both pytest runs. It is verified by running it on a throwaway sample drawing and checking that the output parses as a well-formed SVG, repeats byte for byte, and shows each of those properties.
-
----
-
 ## Draw the Eight-Arm Banner Art
 
 Draw the banner's plain-text source under `assets/` with the colour mapping it needs, and commit beside it the SVG the generator script writes from it, as derived output that is never hand-edited: exactly eight octopus arms, each curling up from the bottom edge, in a strip of about 80 to 100 character columns by about 8 to 12 rows with an aspect of roughly 4:1 to 6:1, using only the 95 printable 7-bit ASCII characters (U+0020 to U+007E) and only the palette violet `#a855f7`, slate `#64748b`, and darker violet `#9333ea`. The art lands on the executing agent's own judgment, with no approval step. It is verified by counting the arms, checking the grid size, the character range, and the colours, and rendering the SVG locally to PNGs on the white light background and the `#0d1117` dark background with a renderer already on the machine, such as `qlmanage`, inspecting them before the task completes and committing nothing for that check.
