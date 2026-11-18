@@ -1,1 +1,59 @@
-<open-questions/>
+<open-questions>
+  <open-question id="Distribution repository transition">
+    <question>How do the three distribution repositories uHappyLogic/cairn-claude, uHappyLogic/cairn-antigravity, and uHappyLogic/cairn-codex come to stand as uHappyLogic/gurita-&lt;host&gt;, and what stands at each old name afterwards? Renamed in place, a repository keeps its releases, its traffic-data branch, and its secret, and GitHub redirects the old URL until something is created there, so an existing install&apos;s marketplace source still resolves and is served the renamed plugin; created fresh, it starts empty and the old repository remains to be kept, archived, or deleted. The two choices are asked together because what can stand at the old name depends on how the new repository came to exist. The source repository is not part of this question: it is renamed to uHappyLogic/gurita by decision.</question>
+  </open-question>
+  <open-question id="Release version number">
+    <question>Which version number does the release that publishes the rename carry? The last release is 1.9.0 and the release procedure requires only a bare MAJOR.MINOR.PATCH strictly greater than it. The release answers to the new names only, so an installed copy is installed again rather than updated, and it also carries the path-addressed redesign and the milestone-to-mission rename, each of which changes how every skill is invoked.</question>
+  </open-question>
+  <open-question id="Release notes authoring path">
+    <question>By what means does the release&apos;s CHANGELOG entry come to hold the rebranding notes the goal calls for? The release procedure composes the entry from the missions finished since the last tag, and it will find none: this mission is still live when it publishes as its own last task, and the work finished since 1.9.0 is read by no query. The procedure then takes its empty-range branch, condensing the commits since 1.9.0 into one &quot;Changes since 1.9.0&quot; section it asks the maintainer to accept, and its one pause before publishing lets the maintainer revise the committed entry.</question>
+  </open-question>
+  <open-question id="Upgrade guidance in notes">
+    <question>How much upgrade guidance does the release&apos;s CHANGELOG entry carry for a user who holds an installed Cairn copy? By decision the notes are the rebranding, and everything else the release changed is described in the documentation rather than itemised. Not settled is whether the entry itself states the steps for moving an install to the new name on each host and the rule that live work is finished under the last Cairn release before upgrading, or only points to where the documentation states them.</question>
+  </open-question>
+  <open-question id="Former name in READMEs">
+    <question>What do the root README and the three host READMEs tell a reader who knows the plugin as Cairn? A link to the source repository&apos;s old URL lands on the renamed README, which after a plain substitution would say nothing of the former name, and the Claude Code host README carries a &quot;Migrating from the old marketplace&quot; section stating that installs from uHappyLogic/cairn keep working and updating under the unchanged id cairn@cairn, which no longer holds once the marketplace and the plugin are named gurita. The hard cut rules out an alias for the old name and does not say whether prose may name it.</question>
+  </open-question>
+  <open-question id="Rename completeness bar">
+    <question>What shows that the old name is gone from everywhere it should be, and over which surface? The drift gate and both test runs pin behaviour, not the name, and no build check bans or requires it, so a leftover cairn in runtime prose, a host template, a slot value, or the docs fails nothing. The milestone-to-mission rename used two bars: a permanent build check over core/ with a short list of allowed forms, and one closing whole-tree search compared by hand against a recorded list of what stays. Here core/ holds the name once, while nearly every identifier site stands in the host definitions under scripts/hosts/ and in the trees rendered from them.</question>
+  </open-question>
+  <open-question id="Past CHANGELOG entries">
+    <question>Do the CHANGELOG&apos;s existing entries stay exactly as published, old name and uHappyLogic/cairn links included? Each entry is a release&apos;s notes verbatim; together they hold 72 occurrences of the name, most in compare and release links to the source repository, which is renamed with no link to its old name kept working on purpose, so those links resolve only through GitHub&apos;s redirect and only while nothing is created at the old name. The milestone-to-mission rename left the entries as written.</question>
+  </open-question>
+  <open-question id="Plugin-named file names">
+    <question>What are the two files named after the plugin called after the rename, docs/ways-of-using-cairn.md and ideas/benchmark_for_cairn.md? The docs file is referenced from the README, CLAUDE.md, two other docs files, the CHANGELOG, and three idea drafts. Each can take the new name in place of the old or a name holding no plugin name at all, the course taken for the principle store&apos;s path so that a later rename would not move it again.</question>
+  </open-question>
+  <open-question id="Hands-on check blocks">
+    <question>What happens to the dated hands-on check block heading each of the three scripts/hosts/&lt;host&gt;/settings.toml files? Each block is the one record of that host&apos;s hands-on check, naming the date, the installed version checked, and what the run covered, and it quotes install commands, invocations, agent names, and cache paths under the old name; a later re-check is what updates a block. Not settled is whether the rename runs a fresh hands-on check on each host under the new name and rewrites the block from it, rewrites only the quoted names with no new check, or leaves each block as the record of the check that was run.</question>
+  </open-question>
+  <open-question id="Host suite timing">
+    <question>When is the host suite run against the renamed plugin: only as the release procedure&apos;s pre-flight check, or also earlier, as a step of this mission before its release task? The namespace, the marketplace and plugin ids, and the install paths are exercised by nothing but an installed copy, the drift gate and both test runs touching none of them, and the release&apos;s pre-flight already owes a passing run on all three hosts; a failure first seen there stops the release with every rename task already complete.</question>
+  </open-question>
+  <open-question id="Installed copies for suite">
+    <question>How do the three hosts&apos; installed copies on the maintainer&apos;s machine come to equal the renamed build before the host suite runs? The suite refuses to start unless the chosen host&apos;s installed copy equals the built tree, and it writes to no installation. Today Claude Code&apos;s one install is project-scoped where the suite looks for one outside any project, and the Antigravity and Codex copies are 1.9.0 copies under the old name and paths. Not settled is whether a task of this mission installs the renamed copies, writing outside the repository into each host&apos;s own configuration, or the run waits for the maintainer to install them.</question>
+  </open-question>
+  <open-question id="Plugin copy running mission">
+    <question>Which copy of the plugin runs this mission&apos;s tasks and its finish? The maintainer&apos;s sessions load the plugin from this checkout&apos;s hosts/claude under the name cairn, so the task that renames the plugin and rebuilds that tree takes the cairn: skill namespace, the cairn:complete-task agent name, and the cairn@cairn plugin id away from every task after it and from every other project&apos;s session on the machine; whether a running session reads the tree once at its start or again at each skill call was never tested. The milestone-to-mission rename ran from a copy held in a separate checkout at the commit before its first rename task and pointed the marketplace back at the working tree after its finish.</question>
+  </open-question>
+  <open-question id="GitHub-side changes actor">
+    <question>Who makes the changes on GitHub that the release depends on, a task of this mission through gh or the maintainer by hand: renaming the source repository to uHappyLogic/gurita, bringing the three distribution repositories to their new names, updating their descriptions and topics, and confirming that the one fine-grained TRAFFIC_TOKEN still covers all four repositories under their new names? The release procedure only checks that each distribution repository exists and holds the token, and treats provisioning a repository as the maintainer&apos;s own act, printing the commands and never running them.</question>
+  </open-question>
+  <open-question id="Release run actor">
+    <question>Who runs the release, given that publishing is this mission&apos;s last task? /release-plugin is a maintainer-invoked skill that proceeds past two points only on the maintainer&apos;s explicit yes, the acceptance of commit-derived notes and the confirmation before anything is pushed, while a task completed by a dispatched agent in an unattended run has nobody to ask. Not settled is whether the last task is completed inline with the maintainer present, or the maintainer runs /release-plugin outside the task list and the task records or checks its result.</question>
+  </open-question>
+  <open-question id="Finish after release">
+    <question>How should the next release treat this mission&apos;s finish, which lands after the release it publishes? The release is the mission&apos;s last task, so its Mission-finish commit comes after the release&apos;s tag, and the release procedure composes each release&apos;s notes from the missions finished since the last tag: finished on a later day, this mission gets a section of its own in the next release&apos;s notes, announcing the rename a second time; finished on the release day, it is left out only if the released entry already carries a heading that is exactly its title.</question>
+  </open-question>
+  <open-question id="Final name lookup">
+    <question>Is the lookup of the name gurita that is owed before publication a gate on the release or a record only? The naming draft&apos;s direct lookup on 2026-11-10 found an npm placeholder package, the small tool bjpop/gurita, and two taken GitHub owner names, held none of them to block the rename, and left one more lookup to be made before anything is published, without saying what new finding, if any, would hold the release or where the result is recorded.</question>
+  </open-question>
+  <open-question id="README tagline">
+    <question>Does the README&apos;s tagline, &quot;Mark the path first, then hand off the walk.&quot;, stay under the new name? It stands directly under the title, above the one-sentence pitch, and draws on the image the old name carried, a pile of stones marking a path, which the name Gurita, Indonesian for octopus, does not carry.</question>
+  </open-question>
+  <open-question id="Name meaning in README">
+    <question>Where, and at what length, does the README explain the name Gurita? The naming draft holds that the name says nothing to most English speakers and that its meaning, Indonesian for octopus with the plugin as the arms that each carry a mission out on their own, should be one sentence away on the landing page. The README today explains no name: its &quot;Why Cairn?&quot; section is about handing long-running work to an agent, not about the word.</question>
+  </open-question>
+  <open-question id="Ignored daemon path">
+    <question>What happens to the .gitignore entry .cairn/daemon.toml? It is the file&apos;s first line and names a path under a directory called after the plugin, yet nothing else in the tree names that path, no tool creates it, and no such directory stands in the maintainer&apos;s checkout.</question>
+  </open-question>
+</open-questions>
