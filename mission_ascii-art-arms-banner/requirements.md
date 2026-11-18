@@ -56,5 +56,9 @@ The art uses only the 95 printable 7-bit ASCII characters (U+0020 to U+007E). Th
 
 The banner is one SVG with no background fill, so the page shows through, and its violet and grey-blue colours are picked to keep enough contrast on both GitHub's white light background and its near-black dark background (`#0d1117`). Each README holds one plain image reference, with no `<picture>` element, no theme-specific variant, and no theme selection markup.
 
+### Banner size
+
+The art is a wide, low strip of about 80 to 100 character columns by about 8 to 12 rows, an aspect of roughly 4:1 to 6:1. It is displayed at the full width of the README column (an `img` width of 100%), which comes to about 800 to 900 pixels on a desktop repository page and shrinks with the column on narrow screens. The same grid and width apply to all four READMEs.
+
 ## Out of Scope
 

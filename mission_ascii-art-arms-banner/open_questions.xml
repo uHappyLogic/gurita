@@ -1,38 +1,4 @@
 <open-questions>
-  <open-question id="Banner size">
-    <question>What size is the banner, given that it sits above everything else on the page and pushes the badges and title down: how many character columns and rows does the art occupy, and at what width is the image displayed, the full width of the README column or a fixed narrower width?</question>
-    <recommendation option="Low full-width strip">A strip about 150 to 220 pixels tall moves the badges and the title down the least of the full-width options while still reading as the page&apos;s header, and its cells stay 8 to 10 pixels wide on a desktop page, readable as characters; the top of its row range, twelve rows, gives the arms room to curl.</recommendation>
-    <alternative id="Low full-width strip">
-      The art is a wide, low strip of about 80 to 100 character columns by about 8 to 12 rows, so its aspect is roughly 4:1 to 6:1. It is displayed at the full width of the README column (an img width of 100%), which comes to about 800 to 900 pixels on a desktop repository page and shrinks with the column on narrow screens. The same grid and width apply to all four READMEs.
-      <advantage>At full desktop width it takes only about 150 to 220 pixels of height, so the badges and, in the root README, the traffic table and the title move down by little, while each character cell stays about 8 to 10 pixels wide, readable as a character.</advantage>
-      <drawback>A dozen rows leaves little height for arms to curl up from the bottom edge, so the curls come out flat and the drawing reads more as a border than as arms. On a phone-width column the characters shrink to 3 or 4 pixels and read as texture. How many arms fit side by side depends on the arm count a sibling question settles.</drawback>
-    </alternative>
-    <alternative id="Tall full-width banner">
-      The art is a fuller drawing of about 80 to 100 character columns by about 20 to 30 rows, an aspect of roughly 2:1 to 3:1, displayed at the full width of the README column (an img width of 100%), so about 300 to 450 pixels tall on a desktop page. The same grid and width apply to all four READMEs.
-      <advantage>It gives the arms room to rise from the bottom edge and curl back over, so the octopus image the tagline draws on is unmistakable and the banner is a clear visual opening of the page.</advantage>
-      <drawback>Above the root README&apos;s badges and four-row traffic table it pushes the `# Gurita` title and tagline well down, likely below the first screen on a laptop, and on the host pages it takes more height than everything that follows the badges up to the pitch. A taller drawing is also more character work to draw and to check.</drawback>
-    </alternative>
-    <alternative id="Dense full-width texture">
-      The art is a high-resolution grid of about 140 to 180 character columns by about 30 to 45 rows, displayed at the full width of the README column (an img width of 100%), so each character cell is about 5 to 6 pixels wide on a desktop page and the drawing is about 250 to 400 pixels tall.
-      <advantage>The fine grid allows smooth curls, tapering arm tips, and shading, so the arms look drawn rather than blocky.</advantage>
-      <drawback>At that cell size the characters stop reading as characters and become shading, which loses the drawn-in-characters look the goal asks for, and on a phone they vanish into a grey wash. A 150-column drawing is also hard to edit and to review by eye. Whether density reads as texture depends on the character set a sibling question settles.</drawback>
-    </alternative>
-    <alternative id="Fixed narrower width">
-      The art is a medium grid of about 50 to 70 character columns by about 12 to 18 rows, displayed centred at a fixed width narrower than the column, about 480 to 640 pixels, set by an explicit img width attribute inside a centred block like the badges&apos; own `p align=&quot;center&quot;`, and scaling down only where the column is narrower than that width. The same grid and width apply to all four READMEs.
-      <advantage>The banner&apos;s height is bounded at about 200 to 300 pixels on every desktop page whatever the window width, and centred it lines up with the centred badges and traffic table beneath it, so the page opening stays compact and consistent.</advantage>
-      <drawback>Fewer columns give the arms less horizontal room, so several arms side by side have to be narrow or few, and a banner narrower than the column reads as a logo rather than a header. How many arms fit depends on the arm count a sibling question settles.</drawback>
-    </alternative>
-    <alternative id="Natural text-scale size">
-      The SVG declares an intrinsic width and height computed from its grid at a fixed character cell matching README body text (about 16 pixels per row and roughly 8 to 10 pixels per column), the img carries no width attribute, and the image shows at that natural size, centred, with GitHub&apos;s image styling scaling it down only when the column is narrower. The grid is a medium one of about 60 to 80 columns by about 10 to 16 rows, so it shows at about 500 to 800 pixels wide and 160 to 260 pixels tall.
-      <advantage>The characters appear at the same size as the page&apos;s own text on every desktop page, so the art reads as character art rather than as a picture of it, and the displayed size follows from the drawing alone with no separate width to choose or keep in sync across four READMEs.</advantage>
-      <drawback>The displayed width is no longer chosen: changing the drawing&apos;s column count changes how wide the banner shows, so the banner may end up neither full-width nor a deliberate narrower width, and its edge will not line up with anything else on the page.</drawback>
-    </alternative>
-    <alternative id="Size left to drawing">
-      No grid size or display width is fixed in the requirements now: whoever draws the art chooses the column and row count and the display width while drawing, constrained only by the goal, and the size is settled when the drawing is made rather than in this mission&apos;s decisions.
-      <advantage>The size can follow what the drawing actually needs once arms are on the grid, instead of a number fixed before anyone has tried to draw them.</advantage>
-      <drawback>How far the banner pushes the badges and title down, the concern the question raises, is then decided by no recorded criterion, so an unattended run can ship a banner that buries the title, and the four READMEs may drift apart if each is sized separately. Its acceptability depends on who draws and approves the art, which a sibling question settles.</drawback>
-    </alternative>
-  </open-question>
   <open-question id="Drawing author and approval">
     <question>Who produces the character drawing of the arms, and what decides it is good enough to ship: does the executing agent draw it and accept it on its own judgment against criteria recorded in the requirements, does the agent draw it for the maintainer to approve before it lands in the READMEs, or does the maintainer supply the drawing?</question>
     <recommendation option="Maintainer reviews after landing">The task run stays unattended, which the completion runners need since they have no pause for an approval, and the maintainer still sees the art before a release puts it on the three host pages; a correction enters as an ordinary follow-up task or a revert, so no new mechanism is needed.</recommendation>
@@ -153,7 +119,6 @@
   </open-question>
   <open-question id="Arm count">
     <question>How many arms does the banner show, the goal saying only &quot;several&quot;: all eight of an octopus&apos;s arms, or a smaller number?</question>
-    <depends-on question="Banner size" option="Low full-width strip"/>
     <recommendation option="All eight arms">Eight is the count the project&apos;s image rests on, an octopus having eight arms and the plugin being the arms, and a fixed count gives the drawing a criterion checked by counting; across 80 to 100 columns each arm keeps ten to twelve columns for its curl.</recommendation>
     <alternative id="All eight arms">
       The banner shows exactly eight arms, every one of an octopus&apos;s arms, each curling up from the bottom edge, and the requirements record eight as a fixed count the drawing must meet.
