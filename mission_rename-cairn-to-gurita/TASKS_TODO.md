@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Move the Two Plugin-Named Files
-
-Move `docs/ways-of-using-cairn.md` to `docs/ways-of-using.md` and `ideas/benchmark_for_cairn.md` to `ideas/benchmark.md` with `git mv`, their contents unchanged, and rewrite every in-tree reference to the new paths: the README's link, the CLAUDE.md layout line and its two invariant mentions, `docs/skill-reference.md`, `docs/workflow.md`, and the drafts `ideas/gurita.md`, `ideas/kepala.md`, and `ideas/vscode_extension.md`. It is verified by both moves showing as pure renames and by no tracked file outside the CHANGELOG's published entries and this mission's own directory naming either old path.
-
----
-
 ## Rename the Contributor and Policy Files
 
 Rename the plugin, its repositories, its plugin id, and its installed-copy paths in `CONTRIBUTING.md`, `SECURITY.md`, the issue-template files under `.github/ISSUE_TEMPLATE/` (the bug form's version field id becoming `gurita-version`), `CLAUDE.md`, the principle store's one sentence naming the plugin, and the CHANGELOG's preamble, while every CHANGELOG entry from 1.9.0 back to 0.9.0 stays byte-for-byte as published. It is verified by a search finding no old name in those files outside the CHANGELOG's entries and by a `CHANGELOG.md` diff that touches the preamble alone.

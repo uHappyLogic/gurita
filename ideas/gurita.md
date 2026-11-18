@@ -152,7 +152,7 @@ Decided on 2026-11-10, on one ground: Cairn was not widely adopted, so the renam
   - the host suite: `PLUGIN_ID = "cairn@cairn"`, the Antigravity root, and the Codex cache path in `host_tests/conftest.py`, and the `/cairn:` invocations in two of its tests;
   - `scripts/set_version.py`, which holds `cairn-tooling` as the lock package it rewrites;
   - `.claude/skills/release-plugin/SKILL.md`, which names the distribution repositories, creates them with the topic `cairn`, and carries the name in its description;
-  - two file names, `docs/ways-of-using-cairn.md`, referenced from six files, and `ideas/benchmark_for_cairn.md`;
+  - two file names that carried the plugin's name, `docs/ways-of-using.md`, referenced from six files, and `ideas/benchmark.md`, each since moved to drop it;
   - one runtime file, `core/skills/ask-in-mission-context/SKILL.md`, whose prose says "the right cairn skill";
   - the dated hands-on check blocks heading the three `settings.toml` files, which quote install commands, invocations, and cache paths under the old name.
 

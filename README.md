@@ -137,7 +137,7 @@ A completed task's record is its own `Task-completion: <task heading>` commit ra
 
 No mission is current. Every skill that works inside a mission is given its path, `--mission <path>`, exactly as `/define-mission-goal` printed it, so it is never ambiguous which mission a run works on, and several missions can stand live at once. `/finish-mission` removes a finished mission's directory in one `Mission-finish: <path>` commit whose body is the mission's summary, so the directories standing are the live missions and the git log holds the finished ones, which the missions tool reads back.
 
-How the skills move a mission through those files is described in [docs/workflow.md](docs/workflow.md), what each skill does is in [docs/skill-reference.md](docs/skill-reference.md), and how to chain the skills as headless command lines, mixing hosts, models, and effort levels, is in [docs/ways-of-using-cairn.md](docs/ways-of-using-cairn.md).
+How the skills move a mission through those files is described in [docs/workflow.md](docs/workflow.md), what each skill does is in [docs/skill-reference.md](docs/skill-reference.md), and how to chain the skills as headless command lines, mixing hosts, models, and effort levels, is in [docs/ways-of-using.md](docs/ways-of-using.md).
 
 ## Self-dogfooding
 

@@ -10,11 +10,11 @@ Per mission the person replaces the placeholder throughout the file, then for ea
 
 Three properties of the file shape the design:
 
-- **Hosts, models, and efforts are per line and personal.** A block mixes hosts: the critical execution block under Antigravity runs its last line on Claude Code, because the models `agy` runs there stop at `high`. Each line names its own model and effort, and `docs/ways-of-using-cairn.md` publishes other values for the same chains.
+- **Hosts, models, and efforts are per line and personal.** A block mixes hosts: the critical execution block under Antigravity runs its last line on Claude Code, because the models `agy` runs there stop at `high`. Each line names its own model and effort, and `docs/ways-of-using.md` publishes other values for the same chains.
 - **A block may end on an interactive line.** Where the recommendation line or the `complete-all-tasks` line closes a block it is written without `-p` (`agy -i` on Antigravity), so the session stays open and the person is in it when the run ends.
 - **A stopped line does not stop a block.** The lines are joined by `;` and no skill sets an exit code, so a block runs every line after one that stopped.
 
-The file has the form `docs/ways-of-using-cairn.md` already has: a heading naming the goal and one fenced block whose every line is a complete invocation, with the text to substitute in angle brackets. The page uses six placeholders: `<goal>`, `<scope>`, `<path>`, `<Short Title>`, `<Alternative Id>`, and `<answer text>`.
+The file has the form `docs/ways-of-using.md` already has: a heading naming the goal and one fenced block whose every line is a complete invocation, with the text to substitute in angle brackets. The page uses six placeholders: `<goal>`, `<scope>`, `<path>`, `<Short Title>`, `<Alternative Id>`, and `<answer text>`.
 
 ## What was measured
 
@@ -41,7 +41,7 @@ The extension runs the command lines a person would type, through the host's own
 
 A recipe is a named list of literal command lines with placeholders, the form the snippet file and the ways-of-using page already have. The extension holds no model name, effort level, host flag, or skill order of its own: all of that is text in the lines.
 
-- **Shipped recipes** are the chains of `docs/ways-of-using-cairn.md`, so the page stays the one place a chain is written.
+- **Shipped recipes** are the chains of `docs/ways-of-using.md`, so the page stays the one place a chain is written.
 - **A person's own recipes** are a file in the same form, which adds to the shipped set or replaces a recipe of the same name. Shell steps of the person's own, such as sourcing an environment file, are lines like any other.
 - **The interface fills the placeholders.** `<path>` comes from the selected mission, `<Short Title>` and `<Alternative Id>` from the question and alternative clicked in the question view, and `<goal>`, `<scope>`, and `<answer text>` from an input box.
 

@@ -95,7 +95,7 @@ DeliverableTeam->>Stakeholder: Present deliverable
 
 ### Handling transitions
 
-Kepala should be an orchestrator that runs Gurita through CLI commands, as `docs/ways-of-using-cairn.md` describes for headless chains. Specifically, it should not drive the skills in its own context.
+Kepala should be an orchestrator that runs Gurita through CLI commands, as `docs/ways-of-using.md` describes for headless chains. Specifically, it should not drive the skills in its own context.
 
 The diagram below is what Kepala sees from outside: one state per situation it can tell apart without holding any Gurita context, and one edge per skill it can run from there. An edge reads `skill / fixed first line that confirms the move`; every skill after the definition takes `--mission PATH`, left out of the labels. The shape is the path-addressed one that stands on `main` today: a mission addressed by its path, the scope gate, and finish as removal of the directory.
 
