@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Build Check Bans the Old Word in Core
-
-Add a permanent build check beside `host-name-in-core` in `scripts/build_hosts.py` that fails on the old word, in any capitalisation, anywhere under `core/`, apart from a residue list holding only the old forms runtime prose keeps by decision, the old workflow heading and the old store path the bootstrap names. It is the runtime half of the rename's completeness bar, catching a leftover the suites do not. Verified by the build and `--check` passing on the tree as it stands and by the check failing when the word is written into a `core/` file outside the list.
-
----
-
 ## Docs Follow the Mission Rename
 
 Carry the rename through `docs/skill-reference.md`, `docs/workflow.md`, `docs/ways-of-using-cairn.md`, and `docs/design-claims.md`: skill names, the `--mission <path>` flag on every heading and chain line, tool and query names, commit markers, and prose in the new word, with the `milestones/` container recast to `<scope>/mission_<slug>/`. The docs state that the record starts at the first `Mission-finish:` commit and that task commits made before the rename list under the placeholder. Verified by both pytest runs passing and by a search of `docs/` finding the old word only where it names a retired form.

@@ -56,7 +56,12 @@ Checks (every selected host, every failure listed):
                             own word in any core/ file (an identifier that merely contains
                             it, such as CLAUDE.md or a Claude-Session: trailer, is not a
                             mention of the host)
-  slot-declaration          every slot name a definition's [slots] table declares appears
+  old-word-in-core          core/ carries no "milestone", in any capitalisation and inside
+                            any identifier, in a file's text or its path, apart from the
+                            residue forms OLD_WORD_RESIDUE lists, the old forms runtime
+                            prose keeps by decision, each allowed only as written there
+                            (a __pycache__ directory, git-ignored bytecode, is not scanned)
+  slot-declaration         every slot name a definition's [slots] table declares appears
                             as a {{SLOT_NAME}} placeholder somewhere in core/, and every
                             definition declares the same set of slot names
   root-marketplace-version  every plugins[] entry of .claude-plugin/marketplace.json carries
@@ -126,6 +131,17 @@ PLACEHOLDER_OPEN = "{{"
 RESERVED_SLOT_NAMES = ("PLUGIN_ROOT", "VERSION", "NAME")
 DESCRIPTION_WORD_CAP = 25
 REQUIRED_FRONTMATTER_KEYS = ("name", "description")
+
+# The unit of work's retired name, banned under core/ in any capitalisation, and the only
+# old forms runtime prose keeps by decision: the bootstrap names the older context-file
+# heading it replaces and the store path it moves the principle store from. A residue form
+# is allowed exactly as written; any other occurrence of the word fails old-word-in-core.
+OLD_WORD_RE = re.compile("milestone", re.IGNORECASE)
+OLD_WORD_RESIDUE = (
+    "## Milestone Workflow",
+    "milestones/answer_decision_principles.md",
+)
+PYCACHE_DIR = "__pycache__"
 
 VERSION_PATTERN = re.compile(r"^(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)$")
 
@@ -540,6 +556,26 @@ def check_core_names_no_host(host_names):
     return failures
 
 
+def check_core_carries_no_old_word():
+    failures = []
+    for core_rel in walk_files(CORE_DIR):
+        # Python's bytecode cache, written beside core/tools by any import of a tool and
+        # ignored by git, keeps a retired module's name until it is cleared; it is not core/.
+        if PYCACHE_DIR in core_rel.split("/"):
+            continue
+        if OLD_WORD_RE.search(core_rel):
+            failures.append((f"core/{core_rel}", "old-word-in-core", 'path carries the old word "milestone"'))
+        text = decode_text((CORE_DIR / core_rel).read_bytes())
+        if text is None:
+            continue
+        for lineno, line in enumerate(text.splitlines(), 1):
+            for form in OLD_WORD_RESIDUE:
+                line = line.replace(form, "")
+            if OLD_WORD_RE.search(line):
+                failures.append((f"core/{core_rel}", "old-word-in-core", f'line {lineno} carries the old word "milestone" outside the residue forms'))
+    return failures
+
+
 def check_slot_declarations(definitions):
     """Every declared slot is used somewhere in core/, and every host declares the same set."""
     used = set()
@@ -783,6 +819,7 @@ def main(argv):
         selected = select_definitions(definitions, args.hosts)
 
         failures = check_core_names_no_host([d.name for d in definitions])
+        failures += check_core_carries_no_old_word()
         failures += check_slot_declarations(definitions)
         failures += check_root_marketplace(version)
 
