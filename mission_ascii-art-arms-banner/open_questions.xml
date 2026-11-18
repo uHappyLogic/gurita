@@ -253,6 +253,36 @@
   </open-question>
   <open-question id="Rendered look verification">
     <question>How is the banner&apos;s rendered appearance checked before it is committed, the repository holding no tool that renders an SVG: by rendering the file locally to an image that is inspected, by viewing it on GitHub after a push in both page themes, or by no rendering check beyond the file being a well-formed SVG?</question>
+    <alternative id="Local ad-hoc render">
+      Before the commit, the SVG is rendered locally to a PNG with a renderer already on the machine and not added to the repository (macOS&apos;s WebKit-based qlmanage thumbnailer or ImageMagick, both present here; no rsvg-convert, Inkscape, or cairosvg is installed), composited on GitHub&apos;s light and dark page background colours, and inspected; nothing is committed for the check, and no GitHub view is part of it.
+      <advantage>Catches a wrong look before anything lands, in a fast loop that costs no push and no new dependency, and the rendered PNG is something the executing agent can itself read as an image while it iterates on the drawing.</advantage>
+      <drawback>A local renderer is not what a viewer&apos;s browser on GitHub draws: text elements fall back to this machine&apos;s fonts rather than the viewer&apos;s, and ImageMagick&apos;s own SVG renderer supports less than a browser does, so a banner can pass locally and still misrender on the page; how much that gap matters depends on how the characters are drawn (text versus outlined paths), which a sibling question settles, and whose eyes judge the PNG is the drawing-approval sibling&apos;s axis.</drawback>
+    </alternative>
+    <alternative id="Committed render script">
+      A small script committed under scripts/ renders the SVG to PNGs on the light and dark page backgrounds, run before each commit that touches the banner and inspected by eye; it is a tool run by hand, not a test, and no GitHub view is part of the check.
+      <advantage>The check is reproducible: any later edit of the banner, by anyone, re-renders it the same way rather than relying on whatever renderer happens to be installed.</advantage>
+      <drawback>Adds a tool the repository does not have today, which either brings a rendering dependency into a tooling project whose one dependency is PyYAML or shells out to a platform-specific renderer, and it carries the same local-versus-GitHub fidelity gap as any local render while leaving one more file to maintain for an image that may rarely change.</drawback>
+    </alternative>
+    <alternative id="GitHub branch preview">
+      The banner is committed on a scratch branch pushed to the source repository (or opened as a pull request), and the root README and each rendered hosts/&lt;host&gt;/README.md are viewed on github.com in both the light and dark page themes before the change lands on main; no local render is made.
+      <advantage>Checks the real thing before it is public on the landing page: GitHub&apos;s own image serving and sanitization, in a real browser, in both themes, exactly as a visitor will see it.</advantage>
+      <drawback>Needs a push and a branch outside the mission&apos;s usual commit-on-main flow, every fix costs another push-and-look round, and an unattended executing agent cannot view the page itself, so the look is judged by whoever opens the browser; a host README&apos;s relative image path resolves on the source repository&apos;s branch only if the delivery chosen by a sibling question places the file there.</drawback>
+    </alternative>
+    <alternative id="GitHub after push to main">
+      The banner is committed on main as any other change, with no rendering check before the commit; once pushed, the root README and the rendered host READMEs are viewed on github.com in both page themes, and anything wrong is corrected by a follow-up commit.
+      <advantage>Fits the workflow as it runs, one commit per task on main with no extra branch or tool, while still checking the true rendered look on the page that matters.</advantage>
+      <drawback>Rejects the &quot;before it is committed&quot; premise: a misrendered banner is public on the source repository&apos;s landing page until the fix lands, and it would ride into a release if the push-and-look step is skipped before one, which a sibling question decides whether this mission makes.</drawback>
+    </alternative>
+    <alternative id="Local render then GitHub">
+      The SVG is rendered locally to PNGs on the light and dark backgrounds and inspected before the commit, with a renderer already on the machine and nothing committed for it, and after the push to main the README pages are viewed on github.com in both themes as a final confirmation, a fix landing as a follow-up commit.
+      <advantage>Combines a fast pre-commit loop that catches most mistakes before they are public with a final check against what visitors actually see, covering the local renderer&apos;s fidelity gap.</advantage>
+      <drawback>The most effort of any option, two checks for one image, and a fault only GitHub shows still reaches the public page briefly before its follow-up fix.</drawback>
+    </alternative>
+    <alternative id="Well-formed SVG only">
+      No rendering check at all: the SVG is checked only to parse as well-formed XML and its source read to confirm its colours and dimensions are the ones decided; the rendered look is never inspected before or after the commit.
+      <advantage>Costs nothing beyond what any committed file gets and needs no renderer, push, or human viewing, so an unattended execution can complete it end to end.</advantage>
+      <drawback>The banner exists only to look right, and nothing confirms it does: fallback fonts misaligning the art, colours unreadable on one theme, or a wrong displayed size all ship unseen; the risk is lower only if the characters are outlined as paths, which a sibling question decides.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Banner alt text">
     <question>What alternative text does the banner image carry in the four READMEs: an empty alt marking the image as decorative, or a short description of the arms, and in that case what wording?</question>
