@@ -72,5 +72,9 @@ The mission's task list holds no release, and the mission ends with the banner c
 
 The characters are drawn as text elements in a system monospace font stack, with no font embedded in the file and no glyph converted to paths. Every character is placed on a fixed grid regardless of the font's own advance widths: each row is a `tspan` with an explicit `x` list, one coordinate per column, or carries a `textLength` with `lengthAdjust` fitted to the row's grid width.
 
+### Palette colour values
+
+The banner takes its colours from the violet and slate families the root README's workflow diagram draws on, with the shades picked for the banner itself so that they read on both page backgrounds. The palette is violet `#a855f7` (4.0:1 on white, 4.8:1 on `#0d1117`), slate `#64748b` (4.8:1 and 4.0:1), and the diagram's own `#9333ea` (5.4:1 and 3.5:1) as the darker violet. The diagram's dark tones `#581c87` and `#475569` are not among them, since they drop to 2.5:1 or less on the dark page.
+
 ## Out of Scope
 
