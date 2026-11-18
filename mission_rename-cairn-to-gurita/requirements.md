@@ -76,5 +76,9 @@ The release that publishes the rename carries 2.0.0, a major bump over the last 
 
 The release's CHANGELOG entry states two facts in a sentence or two each, with no commands: that the plugin must be installed again under its new name on every host, a reinstall and not an update, with no alias left for `cairn:`, and that live milestones are finished under the last Cairn release before upgrading. For the per-host commands and the full rule it links the places in the documentation that hold them, the README's install sections and the upgrade paragraph of `docs/workflow.md`, pinned to the release tag or to the default branch.
 
+### Rename completeness bar
+
+No permanent check guards the rename: the build gains no name check and no test is added. Completeness is shown once, by one closing task whose verified bar records a whole-tree search over every tracked file, `hosts/`, `uv.lock`, and file paths included (`git grep -I -i cairn` beside `git ls-files | grep -i cairn`), with every hit compared by hand against a residue list of what stays, each residue entry naming its file, its count, and the decision that keeps it.
+
 ## Out of Scope
 
