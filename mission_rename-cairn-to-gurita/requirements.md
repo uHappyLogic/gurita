@@ -92,5 +92,9 @@ Both files drop the plugin's name and keep the rest of their stem: `docs/ways-of
 
 The host suite is run as a task of this mission as well as in the release's pre-flight. One task, ordered after the last task that changes any host's trigger set (its definition directory under `scripts/hosts/`, `core/agents/*.md`, `scripts/build_hosts.py`, `host_tests/`) and before the release task, runs `uv run pytest host_tests --host claude`, then the same for `antigravity` and `codex`, against the renamed build. The release's pre-flight still runs the suite again, as its step 2g requires.
 
+### Installed copies for suite
+
+No task of this mission installs anything. The maintainer brings each host's installed copy to the renamed build by hand, with the host's documented install as CONTRIBUTING.md states it once renamed, and decides alone whether the 1.9.0 cairn copies are removed. The mission carries no install step and no checkpoint for it: a suite run made before the copies are installed stops on its own prerequisite line, whose remedy names the host's install, and waits there for the maintainer.
+
 ## Out of Scope
 
