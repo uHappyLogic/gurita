@@ -56,5 +56,9 @@ The path-form record holds two finished missions, both root-scoped: `mission_ren
 
 The extension's code lives in this repository, in a directory outside `core/` that is rendered into no host tree. Its build and tests run as steps of the existing one-job drift-gate workflow, among them a check of the extension's recipes and fixed lines against `docs/ways-of-using.md` and the `## Fixed console lines` table of `docs/skill-reference.md`, so a plugin change that moves a line the extension relies on fails CI in the same commit. The extension is released from this repository beside the three host trees. The draft's first question for the work is settled this way, and the draft states it.
 
+### Per-mission pane
+
+The draft adopts the 2026-11-19 conversation's pane as stated: one pane in the editor area holding one page per live mission, with a way on the pane itself to move between missions, each page showing that mission's state, its open questions, its remaining tasks, and every button, the per-question ones included. The pane replaces both the side-bar tree of missions and the custom editor: the extension contributes no tree and claims no file, so `open_questions.xml` opened from the explorer shows its XML text. One surface then carries everything the tree and the editor were for, the least to build for an experiment, and the pane rests on `window.createWebviewPanel`, which stands in the installed 1.143.0 API definitions.
+
 ## Out of Scope
 
