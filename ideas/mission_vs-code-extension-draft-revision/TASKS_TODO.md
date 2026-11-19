@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Correct the Moved Present-Tense Draft Facts
-
-In `ideas/vscode_extension.md`, correct in place only the present-tense descriptions that are now wrong, chiefly "The hand work", which must describe the snippet file as it stands: the tracked `snippets/GURITA_USAGE.md`, titled "Gurita CLI usage snippets" with the placeholder clone path in its install line, holding two placeholders (`<mission_path>` and, on the two single-task lines, `<Task Title>`), with no mention that a rename was ever planned or which commit made it. Every dated measurement (the fixed-line count, the live-mission and answer counts, the cost figures) stays as written under its 2026-11-17 date, and nothing is measured again. It is verified by reading each corrected sentence against the snippet file as committed and by the diff leaving "What was measured" and every dated figure untouched.
-
----
-
 ## Add the Why an Extension Section
 
 Add to `ideas/vscode_extension.md` one new section, "Why an extension", placed after "The hand work" and before "What was measured", dated 2026-11-19 and attributed to that day's conversation without naming the transcript file this mission removes, so the case is read whole in one place. It holds the three reasons together, each as the conversation gives it: a host offers two usable layers, an agent and its subagents (with the conversation's own hedge that a third layer works, but strangely), so what orders the skills sits outside the host; VS Code supplies the terminal and git integration an application of its own would have to build; and the extension is an experiment that a deeper host integration or such an application may follow. No other section is changed for the reasons, which is verified by reading the three against `ideas/vscode_extension_improvement_transcript.md` and by the diff touching nothing outside the new section.
