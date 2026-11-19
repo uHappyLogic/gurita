@@ -64,5 +64,9 @@ The draft adopts the 2026-11-19 conversation's pane as stated: one pane in the e
 
 The revised draft records all three reasons the 2026-11-19 conversation gives for the extension, together, in one new section of its own (for example "Why an extension"), placed after "The hand work" and before "What was measured", dated 2026-11-19 and attributed to the conversation. Each is written as the conversation gives it: a host offers two usable layers, an agent and its subagents (with the conversation's own hedge that a third layer works, but strangely), so what orders the skills sits outside the host; VS Code supplies the terminal and git integration an application of its own would have to build; and the extension is an experiment that a deeper host integration or such an application may follow. No other section is changed for them: the case is read whole in one place and survives the transcript's removal.
 
+### Recipe bounded repeat
+
+A recipe is only a flat, ordered list of command lines with placeholders, run once per click: the recipe format has no repeat construct and the button no repeat option. A further requirements iteration is the person clicking the same recipe again after reading how the last run ended, which the extension shows. The draft records the bounded repeat among its dropped ideas with a one-line reason: the maintainer screens the questions between rounds and stops by judgment, never on convergence, so a repeat would run unscreened exactly the rounds the maintainer chooses to screen.
+
 ## Out of Scope
 
