@@ -29,6 +29,46 @@
   </open-question>
   <open-question id="Per-mission pane">
     <question>Does the draft adopt the 2026-11-19 conversation&apos;s one pane with a page per mission, on which a mission&apos;s questions, tasks, and buttons stand together, and if so does it replace the draft&apos;s side-bar tree of missions and its custom editor claiming `open_questions.xml`, or stand beside either? The draft&apos;s VS Code check names no pane other than the custom editor.</question>
+    <alternative id="No mission page">
+      The draft does not adopt the per-mission page: it keeps its two parts as written, the side-bar tree of live missions with their open questions and remaining task headings beneath each, where the recipe buttons hang, and the read-only custom editor claiming `open_questions.xml` as the question view with the per-question buttons. The pane is listed among the dropped ideas with a one-line reason.
+      <advantage>Nothing in the draft&apos;s parts changes, and the one surface the question view rests on, the custom editor claimed by a file-name glob, is the one the draft&apos;s VS Code check already covers.</advantage>
+      <drawback>It drops the experience the 2026-11-19 conversation centres on, a mission&apos;s questions, tasks, and buttons standing together on one state-aware page, and leaves the mission-level buttons on a tree the draft itself says adds little to `missions.py live` as a display.</drawback>
+    </alternative>
+    <alternative id="One pane replaces both">
+      The draft adopts the pane as stated: one pane in the editor area, holding one page per live mission and a way on the pane itself to move between missions, each page showing that mission&apos;s state, its open questions, its remaining tasks, and every button, the per-question ones included. It replaces both the side-bar tree and the custom editor: the extension contributes no tree and claims no file, so `open_questions.xml` opened from the explorer shows its XML text.
+      <advantage>One surface to build and describe, exactly the form the conversation proposes, with every button of a mission in one place and no second rendering of the same questions to keep in step.</advantage>
+      <drawback>Opening the question document from the explorer brings back the raw, entity-escaped XML the draft measured as hard to read, only one mission&apos;s page is in view at a time although two missions&apos; chains may run at once, and the pane rests on an editor-area panel the draft&apos;s VS Code check never covered (a condition on the further-checks question).</drawback>
+    </alternative>
+    <alternative id="One pane beside the tree">
+      The draft adopts the one pane with a page per mission, carrying the questions, tasks, and buttons, and keeps the side-bar tree of live missions as the way into it: selecting a mission in the tree opens or switches the pane to that mission&apos;s page. The custom editor claiming `open_questions.xml` is dropped, the questions being shown only on the page.
+      <advantage>The live missions stay listed in the side bar, always in view and one click from their page, while the questions are still rendered in one place only.</advantage>
+      <drawback>The tree and the page list the same questions and task headings unless the tree is cut to missions alone, the question document opened from the explorer shows raw XML, and both surfaces rest on parts the draft&apos;s check left unchecked, the side-bar tree and the editor-area panel (a condition on the further-checks question).</drawback>
+    </alternative>
+    <alternative id="One pane beside the question editor">
+      The draft adopts the one pane with a page per mission, carrying the questions, tasks, and buttons, and drops the side-bar tree, the pane holding its own way to move between missions. The custom editor claiming `open_questions.xml` stays beside it, so opening the document from the explorer shows the same question rendering the page shows.
+      <advantage>The question document reads rendered however it is reached, from the pane or from the file, which keeps the draft&apos;s original fix for the raw XML while the transcript&apos;s page becomes the working surface.</advantage>
+      <drawback>The same questions are rendered on two surfaces whose buttons and refresh after a run must stay in step, a double cost whichever renderer the question-renderer question settles on, and the pane itself is outside what the draft&apos;s check covered.</drawback>
+    </alternative>
+    <alternative id="One pane beside both">
+      The draft adopts the one pane with a page per mission, carrying the questions, tasks, and buttons, and keeps both of its parts beside it: the side-bar tree of live missions as the way into the pages, and the custom editor claiming `open_questions.xml` so the document opened from the explorer is still rendered.
+      <advantage>Every way a person might reach a mission or its questions, the side bar, the pane, or the file, leads to a rendered view, so nothing the draft offered is lost by adding the page.</advantage>
+      <drawback>Three surfaces to build and keep consistent, two of them rendering the same questions and the tree repeating the page&apos;s lists, the largest cost of the set for an experiment whose first user is the maintainer, and two of the three rest on parts the draft&apos;s check left unchecked.</drawback>
+    </alternative>
+    <alternative id="Page as the question editor">
+      The draft adopts a page per mission in a refined form: the custom editor claiming `open_questions.xml` is widened into the mission page, showing beside the questions the mission&apos;s state, its remaining tasks, and every button, so each mission&apos;s page is its own editor tab opened by opening its question document, as a Markdown preview is opened, rather than one pane switching pages. The side-bar tree is dropped, the explorer being the way in.
+      <advantage>It realizes the page on the one surface the draft&apos;s VS Code check already covered, behaves like the preview the conversation names as its model, and lets two missions&apos; pages stand open side by side while their chains run at once.</advantage>
+      <drawback>The extension lists no live missions of its own, so a page is reached only by finding `mission_&lt;slug&gt;/open_questions.xml` in the explorer, and an editor claimed by the question document shows content the file does not hold, the task list and the mission&apos;s state.</drawback>
+    </alternative>
+    <alternative id="Page as editor with tree">
+      The draft adopts a page per mission in the same refined form, the custom editor claiming `open_questions.xml` widened into the mission page with its state, questions, remaining tasks, and buttons, one editor tab per mission, and keeps the side-bar tree of live missions as the way in: selecting a mission in the tree opens its question document in that editor.
+      <advantage>Each mission&apos;s page is a tab of its own on the already-checked custom editor, so two pages stand side by side, and the side bar still lists the live missions so no page needs finding in the explorer.</advantage>
+      <drawback>Two parts to build, the tree repeating the page&apos;s lists unless it is cut to missions alone, the side-bar tree still unchecked (a condition on the further-checks question), and the claimed editor still shows content its file does not hold.</drawback>
+    </alternative>
+    <alternative id="Side-bar page with question editor">
+      The draft adopts a page per mission refined into the side bar: a view in the side bar, in place of the tree, shows the selected mission&apos;s page, its state, its questions as headings with their picks, its remaining task headings, and the mission-level buttons, while the custom editor claiming `open_questions.xml` is kept in the editor area for reading a question whole, with its per-question buttons.
+      <advantage>The mission&apos;s state and buttons stay in view beside the editor area and the terminal while a question is read in full in a wide editor, so the page never competes with the run it starts for the main area.</advantage>
+      <drawback>The page is split across two surfaces, the side bar being too narrow for alternatives in full, so it holds only if questions are shown collapsed to their headings (a condition on the heading-first screening question), and a side-bar view other than a tree is outside the draft&apos;s check.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Mission page state">
     <question>Which states of a mission does the extension tell apart, from what does it read them, and does a state only show or also decide which buttons are offered: the `started` or `defined` of `missions.py live` with the open-question and task lists, or the finer states `ideas/kepala.md` names (Scoped through Done), which that draft reads from the last run&apos;s fixed first line?</question>
