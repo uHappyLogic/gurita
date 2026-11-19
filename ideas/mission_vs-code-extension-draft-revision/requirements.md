@@ -104,5 +104,9 @@ The extension runs each headless line exactly as the recipe writes it, with no o
 
 The runner is one stdlib-only Python file (Python 3.9+, no `uv`, no third-party package) bundled in the extension's own package and started by the extension as the terminal's process: `python3` with the file's path under the extension's install directory and the chain's lines as arguments. The extension finds it by its own path, so the plugin gains nothing and no installed plugin location is looked up, and the runner stays a plain script a person can start by hand outside the editor.
 
+### Chain shell session
+
+A chain runs as one shell session started for that run, so a recipe's shell step of the person's own (sourcing an environment file, calling a shell function such as the snippet file's `claude-wait`) takes effect for every line after it. A substituted value (`<path>`, `<Short Title>`, `<Alternative Id>`, `<goal>`, `<scope>`, `<answer text>`) never enters the line's text: the extension puts it in the session's environment when it starts the session, all of a chain's values being fixed when its button is clicked, and writes the placeholder into the line as a variable reference suited to the placeholder's quoting (as is inside a double-quoted prompt, and on a Codex line by closing and reopening the single quotes around it), which the shell expands without parsing what the value holds. No character is refused or escaped.
+
 ## Out of Scope
 
