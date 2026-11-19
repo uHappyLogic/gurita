@@ -196,5 +196,9 @@ The runner is the only evaluator of the per-task rules. Besides being started as
 
 Bringing the title and install block of `snippets/GURITA_USAGE.md` to the Gurita name and checkout is no longer a step of making that file a shipped document, and it leaves the draft's account. The file already carries the name, so the draft describes it only as it stands now, titled "Gurita CLI usage snippets" with the placeholder clone path in its install line, and mentions neither that a rename was ever planned nor which commit made it. The changes still to make to the file are only the placeholder and the personal lines.
 
+### New-mission button
+
+The draft adopts the 2026-11-19 conversation's new-mission button as stated: it asks for the goal in an input box and opens a terminal running an interactive `discuss-mission-goal` session with that goal as the skill's text, where the person carries the conversation on to its proposed goal and `--at` scope and runs `/define-mission-goal` from inside the session. The draft's existing button for the headless `define-mission-goal --at <scope> <goal>` line, its goal and scope typed into input boxes, stays beside it for a goal that is already crisp, so the draft names two ways to start a mission.
+
 ## Out of Scope
 
