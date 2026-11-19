@@ -493,6 +493,36 @@
   </open-question>
   <open-question id="Shipped host lines">
     <question>For which hosts does the extension ship command lines: the chains as `docs/ways-of-using.md` writes them (Claude Code lines, one mixed-host chain, and a legend for moving a line to another host), or each chain also written out per host?</question>
+    <alternative id="Page as written">
+      The extension ships the chains exactly as `docs/ways-of-using.md` writes them: Claude Code lines, the one mixed-host requirements review whose review line runs on `agy`, and the legend left as documentation the person reads. No other host&apos;s form of a chain ships; a person on Antigravity or Codex moves a line by the legend&apos;s rule into a recipe file of their own. The extension holds no host flag, binary name, or prompt sigil.
+      <advantage>Nothing is written twice and nothing new is maintained: the page stays the one place a chain is written, the draft&apos;s constraint that the extension holds no host flag holds untouched, and the shipped set changes only when the page does.</advantage>
+      <drawback>Out of the box only Claude Code is served: a person on another host gets buttons that run a CLI they may not have, and the hand translation the extension exists to remove comes back for them; the snippet file the maintainer actually works from already holds an Antigravity heading the shipped set would lack.</drawback>
+    </alternative>
+    <alternative id="Hand-written per host, all three">
+      Every chain is also written out by hand on each of the three hosts, Claude Code, Antigravity, and Codex, each line carrying that host&apos;s binary, permission flag, prompt form, and the model and effort values chosen for that host (none on Codex, which has no effort flag, and on Antigravity only the levels its models offer); the mixed-host chain stays as written beside the single-host forms. The shipped set holds one version of each chain per host, and the extension still holds no host flag of its own, only text in the lines.
+      <advantage>Every host&apos;s user gets working buttons with values tuned for that host, such as the Antigravity critical-execution case where the models `agy` runs stop at `high`, rather than the defaults a mechanical move leaves.</advantage>
+      <drawback>The chains roughly triple, with nothing checking that the three forms of one chain stay the same chain, so a change to one host&apos;s form can leave the others stale; where the extra forms are written, and whether the ways-of-using page grows to hold them, turns on what the shipped recipes are read from.</drawback>
+    </alternative>
+    <alternative id="Derived per host, all three">
+      The chains are written once, as the page writes them, and each chain&apos;s Antigravity and Codex forms are produced mechanically by the legend&apos;s rule (binary swapped, `--model` and `--effort` dropped, the permission flag replaced on Codex, the prompt rewritten to `&apos;$gurita:&lt;skill&gt;&apos;`) on the plugin side, by a generator or a check in this repository, so the shipped set holds every chain on all three hosts while the extension itself holds no host syntax. The mixed-host chain ships as written.
+      <advantage>Every host is served with one hand-written source and no possibility of the per-host forms drifting from it, since they are rebuilt or checked from the same lines and the same rule the legend states.</advantage>
+      <drawback>The derived lines run Antigravity and Codex at their defaults with no per-host tuning, and a generator or check is new code in a repository that keeps its tooling minimal; whether there is a data file or step to hang it on turns on what the shipped recipes are read from.</drawback>
+    </alternative>
+    <alternative id="Extension applies the legend">
+      The extension ships the page&apos;s Claude Code chains as written and carries the legend&apos;s rule itself: a host chosen in the extension&apos;s settings or per run makes the extension rewrite each line into that host&apos;s form at run time. This rejects the draft&apos;s premise that the extension holds no host flag, since it then holds each host&apos;s binary, permission flag, and prompt form.
+      <advantage>Every host is served from one shipped set with no extra lines written or generated, and a person switches hosts with one setting instead of maintaining recipes.</advantage>
+      <drawback>The extension becomes a second copy of the legend and of each host&apos;s command syntax, which the plugin can outrun, and it revises the draft&apos;s constraint; whether it should hold host syntax at all is the same ground the per-task line composition question decides.</drawback>
+    </alternative>
+    <alternative id="Hand-written for two hosts">
+      Every chain is also written out by hand on Antigravity beside Claude Code, the two hosts the maintainer&apos;s snippet file holds headings for, each line carrying that host&apos;s own model and effort values, while Codex gets no shipped lines and is left to the legend and a person&apos;s own recipe file. The mixed-host chain stays as written, and the extension holds no host flag of its own.
+      <advantage>It ships exactly the hosts the extension&apos;s first user works on, as the snippet file already writes them, at about two thirds of the maintenance of writing all three.</advantage>
+      <drawback>Codex users, a host the plugin ships a tree for, get none of the buttons, the partition follows one person&apos;s habits rather than the plugin&apos;s host set, and the two forms of each chain still have nothing checking that they agree.</drawback>
+    </alternative>
+    <alternative id="No shipped lines">
+      The extension ships no command lines for any host: its only recipes are the person&apos;s own recipe file, in the page&apos;s form, which the person writes or copies from `docs/ways-of-using.md` or the snippet file for whichever hosts they use. The legend stays documentation and the extension holds no host flag.
+      <advantage>The extension takes no copy of any published chain and no dependency on the page&apos;s layout, so the plugin can change its chains freely, and the maintainer, the first user, already holds a full recipe set in the snippet file.</advantage>
+      <drawback>A fresh install has no buttons until the person writes a recipe file, which drops the draft&apos;s shipped-recipes part and leaves new users with the copying the extension exists to remove; it holds only if the shipped recipe source question does not settle on a shipped set.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Publication venue">
     <question>Where is the extension published: the Visual Studio Marketplace only, or also a registry the VS Code forks read? The 2026-11-19 conversation calls the extension an experiment in the maintainer&apos;s own environment, and the draft&apos;s check did not cover publication outside the Marketplace.</question>
