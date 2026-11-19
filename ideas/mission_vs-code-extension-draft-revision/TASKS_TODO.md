@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Add the Why an Extension Section
-
-Add to `ideas/vscode_extension.md` one new section, "Why an extension", placed after "The hand work" and before "What was measured", dated 2026-11-19 and attributed to that day's conversation without naming the transcript file this mission removes, so the case is read whole in one place. It holds the three reasons together, each as the conversation gives it: a host offers two usable layers, an agent and its subagents (with the conversation's own hedge that a third layer works, but strangely), so what orders the skills sits outside the host; VS Code supplies the terminal and git integration an application of its own would have to build; and the extension is an experiment that a deeper host integration or such an application may follow. No other section is changed for the reasons, which is verified by reading the three against `ideas/vscode_extension_improvement_transcript.md` and by the diff touching nothing outside the new section.
-
----
-
 ## Record the Extension Home and Publication
 
 Rewrite the sections of `ideas/vscode_extension.md` that the "Extension repository home" and "Publication venue" decisions bear on, "What it costs" and "What waits" among them, to state the design as chosen: the code lives in this repository in a directory outside `core/` rendered into no host tree, its build and tests run as steps of the existing one-job drift-gate workflow with a check of the extension's fixed lines against the `## Fixed console lines` table of `docs/skill-reference.md`, and while it is an experiment it is published to no registry and no release page, packaged as a VSIX and installed by hand, with registry publication recorded as deferred, not ruled out. Add a "Decided on 2026-11-19." line to the Decided section beside the 2026-11-17 one, with one bulleted entry per choice naming it and its reason, and remove the "Where it lives" and "Where it is published" questions. It is verified by the draft no longer giving a separate repository, a marketplace publisher, or a release beside the three host trees as the design, and by both choices standing once in their sections and once under the new Decided line.

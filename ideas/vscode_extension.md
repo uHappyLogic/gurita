@@ -16,6 +16,14 @@ Three properties of the file shape the design:
 
 The file has the form `docs/ways-of-using.md` already has: a heading naming the goal and one fenced block whose every line is a complete invocation, with the text to substitute in angle brackets. The page uses six placeholders: `<goal>`, `<scope>`, `<path>`, `<Short Title>`, `<Alternative Id>`, and `<answer text>`.
 
+## Why an extension
+
+Given by the maintainer on 2026-11-19, in that day's conversation with a collaborator about the snippet file and what the extension would do with it: the first reason in answer to the collaborator asking what command lines run in a terminal gain over workflows or commands inside Claude Code, the other two in saying why the layer is a VS Code extension.
+
+- **A host gives two usable layers, an agent and its subagents.** It was said of Claude Code: an agent can call a subagent, and a subagent of a subagent can be had too, but it works differently, strangely, and going that deep, to a third layer, met many issues. So what orders the skills sits outside the host. The snippet file is that orchestrator today: it is the first layer, a Gurita skill called through the host's CLI the second, and an agent the skill dispatches, such as `complete-task`, the third. The maintainer called the limit one to work around, and the extension makes the workaround a button: the four lines of a first run become one click.
+- **VS Code supplies what an application of its own would have to build.** A standalone application sounds like a good idea, but it would have to implement much itself, where VS Code works out of the box: its Git and GitHub integration, the changes view among it, although with Gurita taking care of so much the changes are seldom checked, and its integration with the terminal, the part called very important. Calling Gurita from an application of the maintainer's own, tried before, meant building the whole application-to-terminal communication, a great deal of work VS Code already does.
+- **The extension is an experiment.** VS Code is the editor the maintainer works in, used now as a reader of text rather than of code, since working with Gurita is mostly reading text, so the extension extends that environment a little to try the visual flow, a choice the maintainer allowed suits them and not everybody. If it works, a deeper integration with the host may follow, with Claude Code or the Claude Code extension for VS Code, or a custom application of the kind the reason above weighs.
+
 ## What was measured
 
 Read from this repository's history on 2026-11-17.
