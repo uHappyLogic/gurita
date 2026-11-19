@@ -120,5 +120,9 @@ When tasks are run one at a time, each task's host, model, and effort come from 
 
 Whatever ordering the extension does itself (a task loop, a bounded repeat) sits in the part the draft already keeps apart from the VS Code interface, beside the recipes, the fixed-line reading, and the state read. The Kepala section is rewritten so that the runner walks only the edges a recipe names (for a task loop the `Listed` self-loop task by task, for a bounded repeat the review repeated until its verdict line), with the person choosing every other edge. Whether Kepala reuses that part stays Kepala's question, as the section says today.
 
+### Per-task line composition
+
+A task run under a host, model, and effort chosen for it uses one of the recipe file's own single-task lines. The recipe file holds complete single-task lines, one per host, model, and effort combination wanted, each under a name of its own and each in the form the snippet file already has (`claude -p "/gurita:complete-task --mission <path> <Task Title>" ... --model "opus" --effort xhigh`, `agy -p ... --model "claude-opus-5-5" --effort high`). A task's chosen combination is a reference to one of those names; the extension picks the named line and fills only `<path>` and `<Task Title>`. It composes no line and holds no host flag, model name, or effort level, so on this point "The constraint" and the Recipes part stand as written.
+
 ## Out of Scope
 
