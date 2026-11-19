@@ -136,5 +136,9 @@ The extension's shipped recipes are the blocks of `snippets/GURITA_USAGE.md`, ea
 
 This mission checks only the surfaces its recorded decisions rely on: the pane form the draft adopts, the side-bar tree only if the draft keeps it, and a fork registry only if the draft publishes to one. Each such surface is read from the VS Code documentation, confirmed against the installed 1.143.0 `vscode.d.ts` for API facts, and recorded as a dated entry in "What was checked of VS Code". A surface no decision relies on is neither checked nor listed, and the section's "were not checked" sentence is rewritten to name only what still stands unchecked and why it no longer matters, the side-bar tree the pane replaced among it. Whatever the documentation leaves unstated is listed among the draft's questions for the work.
 
+### Assignment override timing
+
+When the looped task recipe is clicked, the page shows every task then remaining in `TASKS_TODO.md` with the host, model, and effort the rules give it, and the person overrides any of them before starting the loop. Once started, the loop never waits for the person: before each task it applies the override made for that task if there is one and otherwise the rules' result, shows the assignment it used, and goes on. Overrides are held for that run only and kept nowhere, and a task that enters the list only after the loop started gets the rules' result with no chance to override it. A looped run thus stays as unattended as the `complete-all-tasks` line it stands beside, with every assignment read and corrected in one sitting before the run starts.
+
 ## Out of Scope
 
