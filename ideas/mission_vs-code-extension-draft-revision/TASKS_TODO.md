@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Look Up and Record the Extension Name
-
-Look up the slug `gurita-vscode` directly on the extension registries (the Visual Studio Marketplace and Open VSX) and on GitHub, and record in `ideas/vscode_extension.md` the dated result with its sources beside the name the "Extension name" decision gives: a descriptive name carrying the plugin's name with a qualifier, display name "Gurita for VS Code" and slug `gurita-vscode`, coining no word, leaving Kepala and Kepalagurita to `ideas/kepala.md`, and reserving nothing while the extension is unpublished. The choice gets its entry under "Decided on 2026-11-19.", the "Its name" question is removed, and the opening paragraph's sentence that the extension has no name of its own is corrected; a slug found taken is recorded as found and the name is listed among the questions for the work instead. It is verified by the draft carrying the lookup's date, each place searched, and what each returned.
-
----
-
 ## Record the Webview Pane Check
 
 Read from the VS Code documentation the pane form the draft adopts, a webview panel in the editor area created with `window.createWebviewPanel`, confirm its API facts against the `vscode.d.ts` of the installed VS Code 1.143.0, and record it as a dated entry in "What was checked of VS Code" of `ideas/vscode_extension.md`, with the pages read added under Sources. Rewrite that section's "were not checked" sentence to name only what still stands unchecked and why it no longer matters, the side-bar tree the pane replaced and publication outside the Marketplace among it, check no surface that no recorded decision relies on, and list whatever the documentation leaves unstated among the draft's questions for the work. It is verified by every API fact of the new entry being found in the installed definitions and by each source page being listed with its read date.

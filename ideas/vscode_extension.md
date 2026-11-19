@@ -1,6 +1,6 @@
 # VS Code extension
 
-A draft, written 2026-11-17, for work not yet defined: a Visual Studio Code extension that puts a UX layer over the plugin. It replaces two pieces of hand work, copying command lines into a terminal and reading `open_questions.xml` as raw XML, with buttons and a rendered view. It runs the host CLIs' own command lines and writes no mission file itself, so everything it does can still be done by hand. The draft records the hand work it replaces, what was measured, the parts, how a line is run, what was checked of VS Code and when, what it costs, what is decided, and the questions the work decides. It uses today's vocabulary (Gurita, mission, `--mission`), the plugin's since the rename `ideas/gurita.md` records; the extension has no name of its own yet.
+A draft, written 2026-11-17, for work not yet defined: a Visual Studio Code extension that puts a UX layer over the plugin. It replaces two pieces of hand work, copying command lines into a terminal and reading `open_questions.xml` as raw XML, with buttons and a rendered view. It runs the host CLIs' own command lines and writes no mission file itself, so everything it does can still be done by hand. The draft records the hand work it replaces, what was measured, the parts, how a line is run, what was checked of VS Code and when, what it costs, what is decided, and the questions the work decides. It uses today's vocabulary (Gurita, mission, `--mission`), the plugin's since the rename `ideas/gurita.md` records, and names the extension Gurita for VS Code, its slug `gurita-vscode` (see The name).
 
 ## The hand work
 
@@ -94,6 +94,16 @@ The output read and the argument-list form were left unconfirmed by the first ch
 
 The runner is the transition engine `ideas/kepala.md` outlines, with a person choosing the edge. Kepala runs the skills through the CLI, reads the coarse state from `missions.py live` and the fine state from the last fixed first line, and names the `Recommended` state as where the team comes in. The question view is that state's interface. So the recipes, the fixed-line reading, and the state read are kept apart from the VS Code interface, in a part with no dependency on it. Whether Kepala then uses that part is Kepala's question.
 
+## The name
+
+The extension takes a descriptive name, the plugin's name with a qualifier: its display name is Gurita for VS Code and its slug `gurita-vscode`. It coins no word, and Kepala and Kepalagurita stay what `ideas/kepala.md` gives them, the orchestrator's name and the name of the whole. Nothing is reserved under the name: while the extension is an experiment it is published nowhere (see What waits), so no publisher id or extension name is held for good before the experiment is judged.
+
+Looked up on 2026-11-19, the exact slug directly on the two extension registries and on GitHub, the `gurita` stem having had its own direct lookup on 2026-11-10 (`ideas/gurita.md`), which covered no extension registry. Nothing holds the slug:
+
+- **The Visual Studio Marketplace holds no `gurita-vscode`.** Its extension query, run for VS Code extensions, returned no result for `gurita-vscode` and none for `gurita`, so no extension's name or display name there carries the word.
+- **Open VSX holds no `gurita-vscode`.** Its query by extension name returned no extension named `gurita-vscode` and none named `gurita`, in any namespace, and neither `gurita-vscode` nor `gurita` exists as a namespace. Its search for `gurita` returned one result, `danisss9.guito` (Guito), a near spelling, not the word.
+- **GitHub holds no `gurita-vscode`.** A repository search for the slug in a name returned none, no account or organisation is named `gurita-vscode`, and of the 91 repositories with `gurita` in their name, the plugin's own four among them, none is an editor extension, the nearest being `yandyrohman/guritamarket-ext-release`, the releases of a browser extension named Gurita Market.
+
 ## What it costs
 
 - **A second toolchain.** TypeScript, Node, and packaging, in this repository, in a directory outside `core/` that is rendered into no host tree, beside code that is otherwise stdlib-only Python, Markdown, and one build script. The extension's build and tests run as steps of the existing one-job drift-gate workflow (`.github/workflows/drift-gate.yml`), which puts that second toolchain into this repository's CI. Its release costs nothing while it is an experiment (see What waits).
@@ -118,6 +128,7 @@ Decided on 2026-11-19.
 
 - **The extension lives in this repository.** Its code stands in a directory outside `core/` that is rendered into no host tree, and its build and tests run as steps of the existing one-job drift-gate workflow, among them a check of the extension's fixed lines against the `## Fixed console lines` table of `docs/skill-reference.md`. A repository of its own was set aside: here the recipes and the fixed-line table stand one checkout away, and a plugin change that moves a fixed line the extension relies on fails CI in the same commit, where a separate repository would carry copies the plugin could outrun.
 - **The extension is published nowhere while it is an experiment.** It goes to no registry and no release page: it is packaged as a VSIX and installed by hand, and anyone else who wants it builds it from source. No publisher account, token, or publish step joins the release of the three host trees, so no publisher id, which cannot be changed, and no extension name, which a removal does not free, is reserved for good before the experiment has proved out. Registry publication is deferred, not ruled out, to be decided once the experiment is judged.
+- **The extension is named Gurita for VS Code, its slug `gurita-vscode`.** A descriptive name carrying the plugin's says the one thing that sets the extension apart from the plugin and the orchestrator, that it is Gurita's interface in VS Code. It coins no word, needs one narrow lookup, and leaves Kepala and Kepalagurita to what `ideas/kepala.md` gives them. The slug was looked up directly on the Visual Studio Marketplace, Open VSX, and GitHub on 2026-11-19 and found free (see The name), and since the extension is published nowhere while it is an experiment, the one lasting cost of the name, a published name that cannot be taken back, does not arise before the experiment is judged.
 
 ## Questions for the work
 
@@ -128,7 +139,6 @@ Decided on 2026-11-19.
 - **Where the live state comes from.** The installed `missions.py`, which needs the plugin's installed location: Antigravity's is the fixed `~/.gemini/config/plugins/gurita`, and the host suite finds Claude Code's and Codex's through `<cli> plugin list --json`. Or a glob of the discovery pattern in the workspace, which needs no tool and no install but is a second copy of the pattern and cannot tell `started` from `defined`.
 - **What renders the question document.** A reader of the XML inside the extension, or the tool-side render under the costs.
 - **Which hosts' lines ship.** The page's chains are Claude Code lines with one mixed-host chain and a legend for moving a line to another host. The extension ships them as written, or also ships each chain per host.
-- **Its name.** It joins Gurita and Kepala or stays descriptive. Whichever it is, the slug gets the direct registry lookup `ideas/gurita.md` records its own first check lacked.
 
 ## Sources
 
@@ -141,3 +151,9 @@ Read on 2026-11-17.
 - Shell integration, supported shells and its limits: https://code.visualstudio.com/docs/terminal/shell-integration
 - The API reference, read only in part: https://code.visualstudio.com/api/references/vscode-api
 - The API definitions shipped with the installed VS Code 1.143.0, `out/vscode-dts/vscode.d.ts` inside the application, for `TerminalShellExecution`, `TerminalShellIntegration.executeCommand`, `Terminal.shellIntegration`, `TerminalOptions`, `TerminalExitStatus`, `Pseudoterminal`, `ProcessExecution`, `TaskProcessEndEvent`, and `TaskPresentationOptions`
+
+Looked up on 2026-11-19, for the name.
+
+- Visual Studio Marketplace, its extension query for VS Code extensions, searched for `gurita-vscode` and `gurita`: https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery
+- Open VSX, its query by extension name, its namespaces, and its search: https://open-vsx.org/api/-/query?extensionName=gurita-vscode , https://open-vsx.org/api/-/query?extensionName=gurita , https://open-vsx.org/api/gurita-vscode , https://open-vsx.org/api/gurita , https://open-vsx.org/api/-/search?query=gurita
+- GitHub, its repository search and its account lookup: https://api.github.com/search/repositories?q=gurita-vscode+in:name , https://api.github.com/search/repositories?q=gurita+in:name , https://api.github.com/users/gurita-vscode
