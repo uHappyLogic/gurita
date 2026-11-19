@@ -54,7 +54,7 @@ The path-form record holds two finished missions, both root-scoped: `mission_ren
 
 ### Extension repository home
 
-The extension's code lives in this repository, in a directory outside `core/` that is rendered into no host tree. Its build and tests run as steps of the existing one-job drift-gate workflow, among them a check of the extension's recipes and fixed lines against `docs/ways-of-using.md` and the `## Fixed console lines` table of `docs/skill-reference.md`, so a plugin change that moves a line the extension relies on fails CI in the same commit. The extension is released from this repository beside the three host trees. The draft's first question for the work is settled this way, and the draft states it.
+The extension's code lives in this repository, in a directory outside `core/` that is rendered into no host tree. Its build and tests run as steps of the existing one-job drift-gate workflow, among them a check of the extension's recipes and fixed lines against `docs/ways-of-using.md` and the `## Fixed console lines` table of `docs/skill-reference.md`, so a plugin change that moves a line the extension relies on fails CI in the same commit. While the extension is an experiment it is not released beside the three host trees: it is packaged from this repository as a VSIX and installed by hand. The draft's first question for the work is settled this way, and the draft states it.
 
 ### Per-mission pane
 
@@ -123,6 +123,10 @@ Whatever ordering the extension does itself (a task loop, a bounded repeat) sits
 ### Per-task line composition
 
 A task run under a host, model, and effort chosen for it uses one of the recipe file's own single-task lines. The recipe file holds complete single-task lines, one per host, model, and effort combination wanted, each under a name of its own and each in the form the snippet file already has (`claude -p "/gurita:complete-task --mission <path> <Task Title>" ... --model "opus" --effort xhigh`, `agy -p ... --model "claude-opus-5-5" --effort high`). A task's chosen combination is a reference to one of those names; the extension picks the named line and fills only `<path>` and `<Task Title>`. It composes no line and holds no host flag, model name, or effort level, so on this point "The constraint" and the Recipes part stand as written.
+
+### Publication venue
+
+While the extension is an experiment it is published to no registry and no release page: it is packaged as a VSIX and installed by hand into the maintainer's own editor, and anyone else who wants it builds it from source. No publisher account, token, or publish step joins the release of the three host trees, so no publisher id or extension name is reserved for good before the experiment has proved out. The draft records registry publication as deferred, not ruled out, to be decided once the experiment is judged.
 
 ## Out of Scope
 
