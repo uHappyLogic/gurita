@@ -132,5 +132,9 @@ While the extension is an experiment it is published to no registry and no relea
 
 The extension's shipped recipes are the blocks of `snippets/GURITA_USAGE.md`, each recipe read as one of its `###` headings and that heading's fenced block. The file is first made a maintained, shipped document: its title and install block are brought to the Gurita name and checkout, its `<mission_path>` placeholder becomes `<path>`, and its personal lines (the `.env_anthropic` source, `claude-wait`) are either kept as shell steps or moved out. `docs/ways-of-using.md` stays separately written, with no generation from and no check against the snippet file.
 
+### Further VS Code checks
+
+This mission checks only the surfaces its recorded decisions rely on: the pane form the draft adopts, the side-bar tree only if the draft keeps it, and a fork registry only if the draft publishes to one. Each such surface is read from the VS Code documentation, confirmed against the installed 1.143.0 `vscode.d.ts` for API facts, and recorded as a dated entry in "What was checked of VS Code". A surface no decision relies on is neither checked nor listed, and the section's "were not checked" sentence is rewritten to name only what still stands unchecked and why it no longer matters, the side-bar tree the pane replaced among it. Whatever the documentation leaves unstated is listed among the draft's questions for the work.
+
 ## Out of Scope
 
