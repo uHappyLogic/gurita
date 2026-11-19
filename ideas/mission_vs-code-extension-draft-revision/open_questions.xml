@@ -596,6 +596,26 @@
   </open-question>
   <open-question id="Publication venue">
     <question>Where is the extension published: the Visual Studio Marketplace only, or also a registry the VS Code forks read? The 2026-11-19 conversation calls the extension an experiment in the maintainer&apos;s own environment, and the draft&apos;s check did not cover publication outside the Marketplace.</question>
+    <alternative id="Unpublished during experiment">
+      The extension is published to no registry and no release page while it is an experiment: it is packaged as a VSIX and installed by hand into the maintainer&apos;s own editor (built from source by anyone else who wants it), and the draft records registry publication as deferred, not ruled out, to be decided once the experiment is judged.
+      <advantage>Fits the 2026-11-19 conversation&apos;s framing of an experiment in the maintainer&apos;s own environment, and reserves nothing permanent before the experiment has proved out: the draft&apos;s check found that a publisher id &quot;cannot be changed once created&quot; and a removed extension name &quot;cannot be reused, even by the original publisher&quot;, and no publisher account, token, or publish step joins the release of the three host trees.</advantage>
+      <drawback>No one but the maintainer gets the extension without building it, there is no update path beyond rebuilding and reinstalling, and the venue question comes back unsettled once the experiment succeeds, so the draft still leaves it open.</drawback>
+    </alternative>
+    <alternative id="Release VSIX, no registry">
+      Each release&apos;s packaged VSIX is attached to a release page of the repository holding the extension and installed by hand through the editor&apos;s install-from-VSIX command; no registry is used, so VS Code and its forks are reached the same way.
+      <advantage>Reaches VS Code and every fork alike with no publisher account, no registry token, and no permanently reserved publisher id or extension name, while still giving the collaborator and other users a versioned artifact to install.</advantage>
+      <drawback>No registry search, no update notice, and no automatic update: every user reinstalls each version by hand, and it adds a packaging and upload step to the release; where the release page stands depends on the extension&apos;s repository home, which a sibling question owns.</drawback>
+    </alternative>
+    <alternative id="Visual Studio Marketplace only">
+      The extension is published to the Visual Studio Marketplace alone, under a publisher id created for it, and to no registry the VS Code forks read.
+      <advantage>The one venue the draft&apos;s 2026-11-17 check covered, read by default by the VS Code the maintainer works in, with search, update notices, and automatic updates, at one publisher account and one publish step per release.</advantage>
+      <drawback>Forks that read another registry by default (VSCodium and the other editors built on VS Code that use Open VSX) do not reach it, and the Marketplace&apos;s terms limit its use to Microsoft&apos;s products; it also creates the permanent publisher id and reserves the extension name for good while the extension is still an experiment, binding whatever name the sibling naming question settles.</drawback>
+    </alternative>
+    <alternative id="Marketplace and Open VSX">
+      The extension is published to the Visual Studio Marketplace and to the Open VSX registry the forks read, both from the first release and with the same version each time.
+      <advantage>Every editor built on VS Code installs and updates it from its own default registry, so a collaborator or user on a fork is reached as the maintainer on VS Code is.</advantage>
+      <drawback>Two publisher accounts, two tokens, two namespaces whose ids and names are reserved, and two publish steps on every release of a fourth artifact beside the three host trees, for a plugin with few users; publication outside the Marketplace is unchecked in the draft, so this rests on a venue whose rules nobody has read, which depends on whether the sibling question on further VS Code checks has it checked.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Extension name">
     <question>What is the extension named: a name that joins Gurita and Kepala, or a descriptive one? Whichever it is, its slug is to get the direct registry lookup `ideas/gurita.md` records its own first check lacked.</question>
