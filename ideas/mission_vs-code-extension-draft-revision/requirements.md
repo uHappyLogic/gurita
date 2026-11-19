@@ -176,5 +176,9 @@ The shipped snippet file gains one complete headless line for each of four skill
 
 The five blocks of `snippets/GURITA_USAGE.md` that are not chains of host command lines (the two lists of bare slash commands, the Antigravity install block, the `agy models` line, and the `git log` one-liner that lists every mission) stay in the file, moved under one reference heading of their own (for example `## Reference`) standing apart from the host headings. The reader takes as recipes only the `###` blocks under `## Claude Code` and `## Antigravity` and never reads that section, so a shipped recipe is each `###` heading under a host heading, and the draft states that the reference section holds lines for hand use only. The file stays the one usage reference a person reads by hand, and no block that cannot run is offered as a button.
 
+### Standalone shell steps
+
+The two standalone personal blocks, `source .env_anthropic` (API KEY usage) and `claude-wait` (Wait for next quota reset), leave `snippets/GURITA_USAGE.md`, so the shipped file keeps no personal line, and the recipe format gains nothing. A person who wants a shell step in a run writes it as an ordinary line inside a recipe of their own recipe file: a variant of a shipped chain (for example an "Execute tasks of normal difficulty (API key)" opening with `source .env_anthropic`, or one opening with `claude-wait;`), which adds to the shipped set or replaces the shipped recipe of the same name. The step runs because it stands ahead of the chain's lines in the same recipe, and so in the same shell session; it can also stand mid-chain, before a second `complete-all-tasks` line. The extension gives no line its own handling for this, at the cost of one copied chain for each variant a person actually runs.
+
 ## Out of Scope
 
