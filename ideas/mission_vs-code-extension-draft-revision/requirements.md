@@ -76,5 +76,9 @@ The extension runs a chain under a runner process started as a terminal's own pr
 
 The extension ships its own byte-identical copy of `missions.py`, found by the extension's own path, and runs its `live` query with `python3` for both the live list and `started` or `defined`; no installed plugin is looked up. The copy is pinned to the plugin version the extension is built against, so the state comes from the plugin's own tested definition of the discovery pattern and the started test, with no per-host install lookup and no setup step.
 
+### Question document renderer
+
+The extension reads `open_questions.xml` itself, in its own language and in process, with an XML parser of its own written against the document format the open-question tool's module docstring states, and builds the question view and its buttons from what it parses. The plugin is unchanged, with no new subcommand, output form, or tool, and the extension calls no plugin tool to draw the view. The view then shows everything a block holds, the advantages, drawbacks, dependencies, and principles included, and a redraw after a run costs one file read with no process started.
+
 ## Out of Scope
 
