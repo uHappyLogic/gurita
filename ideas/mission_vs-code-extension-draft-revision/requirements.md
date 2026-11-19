@@ -112,5 +112,9 @@ A chain runs as one shell session started for that run, so a recipe's shell step
 
 The draft adopts the task loop in a refined form. The extension carries out the loop itself (the top remaining heading re-read before each run, one `complete-task` line per task, a stop on any first line other than `Task completed.`), but as an execution recipe of its own beside the unchanged `complete-all-tasks` line, which the execution recipes keep, so a uniform run loses nothing and each task of a looped run can go under its own host, model, and effort with the plugin unchanged. "The constraint" and the Recipes part are amended to name the loop's order as the one order the extension holds.
 
+### Per-task model assignment
+
+When tasks are run one at a time, each task's host, model, and effort come from rules kept in a tracked project file outside every mission directory. The rules map patterns over a task's title and brief text (keywords or regular expressions, for example "model generation" or "animation") to a host, model, and effort, with a default profile for tasks no rule matches. The extension evaluates them before each task, shows the resulting assignment, and lets the person override a task for the current run only, the override kept nowhere. The extension writes nothing for it, and neither the plugin nor the task format changes.
+
 ## Out of Scope
 
