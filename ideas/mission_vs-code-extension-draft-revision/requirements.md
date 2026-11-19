@@ -144,5 +144,9 @@ When the looped task recipe is clicked, the page shows every task then remaining
 
 The revised draft's list of dropped ideas holds every idea of the 2026-11-19 conversation decided as dropped and each part of an adopted or refined idea that the refinement set aside, for example the conversation's extension that no longer calls `complete-all-tasks`, where the refined task loop keeps that line beside its own recipe, together with the entries a recorded decision places there by name (the bounded repeat). It holds no option of the draft's ten questions and no part of the 2026-11-17 draft that a decision replaced, since those already carry their reasons in the Decided entries. Once the transcript is removed, the list is the one place left that says what the conversation proposed and the revision did not carry.
 
+### Looped run task title
+
+The runner holds the task loop: it is started once as the terminal's process for the whole looped run, and before each task it re-reads the top remaining heading, takes that task's chosen single-task line, and starts a fresh shell session for the task with the task's title and the mission path in that session's environment from its start. The looped recipe's own shell steps run again at the head of every task's session. The per-task line choice, the rules, and their evaluation move into the runner, or the runner is handed the rule file and the recipe file's named lines at its start. One terminal then shows the whole run, the loop can be started by hand outside the editor, and each task's values are fixed at its own session's start with nothing escaped.
+
 ## Out of Scope
 
