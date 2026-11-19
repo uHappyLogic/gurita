@@ -164,5 +164,9 @@ The interactive lines behind the extension's buttons are written out literally, 
 
 The extension ships command lines for two hosts, Claude Code and Antigravity, the two the snippet file holds headings for: every chain is written out by hand under each, each line carrying that host's own model and effort values, which is the snippet file as it stands, so nothing is written for it. Codex gets no shipped lines and is left to the legend and a person's own recipe file, since a Codex heading would hold lines nobody runs while the extension is installed by hand into the maintainer's editor and what Codex's plain print opens with is still unchecked. The mixed-host chain stays as written, and the extension holds no host flag of its own.
 
+### Own recipe file location
+
+A person's own recipe file lives outside the project as one per-user file serving every project, at a per-user path the extension reads: a default location, changeable through a VS Code user setting. Its lines carry a person's own hosts, models, and efforts, so nothing personal stands in any tree to ignore or commit by accident. A tracked rule naming a single-task line that file lacks leaves that task's assignment unresolved: the extension shows the missing name, in the preview before the loop starts, where the person overrides the task or adds the line, and the loop stops at that task rather than running it under any other line.
+
 ## Out of Scope
 
