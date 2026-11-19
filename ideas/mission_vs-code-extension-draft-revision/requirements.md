@@ -160,5 +160,9 @@ The mission page reads whether any question lacks alternatives or a pick from th
 
 The interactive lines behind the extension's buttons are written out literally, host binary, model, and effort included, as entries of their own in the shipped recipe source, `snippets/GURITA_USAGE.md`, beside its blocks: a `discuss-open-question --mission <path> <Short Title>` line and a `discuss-mission-goal <goal>` line in the interactive form (`claude "…"` with no `-p`, `agy -i "…"` on Antigravity). The extension fills `<path>`, `<Short Title>`, and `<goal>` and hands the line to a terminal, and a person's own recipe of the same name replaces a shipped line. The buttons then work with no recipe file of the person's own, the extension still holds no host flag, model, or effort, and `docs/ways-of-using.md` stays as it is, holding headless lines only.
 
+### Shipped host lines
+
+The extension ships command lines for two hosts, Claude Code and Antigravity, the two the snippet file holds headings for: every chain is written out by hand under each, each line carrying that host's own model and effort values, which is the snippet file as it stands, so nothing is written for it. Codex gets no shipped lines and is left to the legend and a person's own recipe file, since a Codex heading would hold lines nobody runs while the extension is installed by hand into the maintainer's editor and what Codex's plain print opens with is still unchecked. The mixed-host chain stays as written, and the extension holds no host flag of its own.
+
 ## Out of Scope
 
