@@ -100,5 +100,9 @@ The question view shows each question collapsed by default to one row holding it
 
 The extension runs each headless line exactly as the recipe writes it, with no output flag added, and reads only the run's plain print: the first line of the final message is looked up in the `## Fixed console lines` table of `docs/skill-reference.md`, a success or no-op line continuing the chain and a stop line, or any line the table does not hold, stopping it. The process's exit code is not read, and nothing tells a host-level failure apart from an unlisted line. What Codex's plain print opens with stays to be checked.
 
+### Runner language and home
+
+The runner is one stdlib-only Python file (Python 3.9+, no `uv`, no third-party package) bundled in the extension's own package and started by the extension as the terminal's process: `python3` with the file's path under the extension's install directory and the chain's lines as arguments. The extension finds it by its own path, so the plugin gains nothing and no installed plugin location is looked up, and the runner stays a plain script a person can start by hand outside the editor.
+
 ## Out of Scope
 
