@@ -152,5 +152,9 @@ The runner holds the task loop: it is started once as the terminal's process for
 
 The extension takes a descriptive name that carries the plugin's name with a qualifier: a display name such as Gurita for VS Code or Gurita Missions, with the slug its lowercase form, such as `gurita-vscode`. It coins no word and leaves Kepala and Kepalagurita to what `ideas/kepala.md` gives them. This mission looks the exact slug up directly on the extension registries and on GitHub and records the dated result in the draft, the `gurita` stem being already covered by the 2026-11-10 lookup. Since nothing is published while the extension is an experiment, no name is reserved for good before the experiment is judged.
 
+### Page question-state source
+
+The mission page reads whether any question lacks alternatives or a pick from the extension's own in-process parse of `open_questions.xml`, the one read the question view already makes, so the page label and the view cannot disagree on a block and a refresh starts no process. Nothing beyond `missions.py` is bundled and no installed plugin is looked up. The extension's tests, run as steps of the drift-gate workflow, run this repository's own `core/tools/open_questions.py list --without-alternatives` and `--without-recommendation` over the committed question documents or fixtures and fail when the parse selects different blocks, so a plugin change that moves the filters' meaning fails in the same commit. The page state's account of its source names the parse, with the tool's two filters named as what the parse is checked against.
+
 ## Out of Scope
 
