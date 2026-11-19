@@ -60,5 +60,9 @@ The extension's code lives in this repository, in a directory outside `core/` th
 
 The draft adopts the 2026-11-19 conversation's pane as stated: one pane in the editor area holding one page per live mission, with a way on the pane itself to move between missions, each page showing that mission's state, its open questions, its remaining tasks, and every button, the per-question ones included. The pane replaces both the side-bar tree of missions and the custom editor: the extension contributes no tree and claims no file, so `open_questions.xml` opened from the explorer shows its XML text. One surface then carries everything the tree and the editor were for, the least to build for an experiment, and the pane rests on `window.createWebviewPanel`, which stands in the installed 1.143.0 API definitions.
 
+### Conversation reasons record
+
+The revised draft records all three reasons the 2026-11-19 conversation gives for the extension, together, in one new section of its own (for example "Why an extension"), placed after "The hand work" and before "What was measured", dated 2026-11-19 and attributed to the conversation. Each is written as the conversation gives it: a host offers two usable layers, an agent and its subagents (with the conversation's own hedge that a third layer works, but strangely), so what orders the skills sits outside the host; VS Code supplies the terminal and git integration an application of its own would have to build; and the extension is an experiment that a deeper host integration or such an application may follow. No other section is changed for them: the case is read whole in one place and survives the transcript's removal.
+
 ## Out of Scope
 
