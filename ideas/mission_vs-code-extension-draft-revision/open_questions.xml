@@ -1,1 +1,77 @@
-<open-questions/>
+<open-questions>
+  <open-question id="New-mission button">
+    <question>Does the draft adopt the 2026-11-19 conversation&apos;s new-mission button, which takes a typed goal and opens an interactive `discuss-mission-goal` session on it in a terminal, where the person carries the conversation on: as stated, in a refined form, or not at all? The draft&apos;s one way to start a mission today is the headless chain of the usage page, its `&lt;goal&gt;` and `&lt;scope&gt;` typed into an input box.</question>
+  </open-question>
+  <open-question id="Per-mission pane">
+    <question>Does the draft adopt the 2026-11-19 conversation&apos;s one pane with a page per mission, on which a mission&apos;s questions, tasks, and buttons stand together, and if so does it replace the draft&apos;s side-bar tree of missions and its custom editor claiming `open_questions.xml`, or stand beside either? The draft&apos;s VS Code check names no pane other than the custom editor.</question>
+  </open-question>
+  <open-question id="Mission page state">
+    <question>Which states of a mission does the extension tell apart, from what does it read them, and does a state only show or also decide which buttons are offered: the `started` or `defined` of `missions.py live` with the open-question and task lists, or the finer states `ideas/kepala.md` names (Scoped through Done), which that draft reads from the last run&apos;s fixed first line?</question>
+  </open-question>
+  <open-question id="Extension-run task loop">
+    <question>Does the draft adopt the 2026-11-19 conversation&apos;s proposal that the extension carry out task completion itself, running the `complete-task` skill once per remaining task in list order in place of the one `complete-all-tasks` line, so that each task can run under its own host, model, and effort: as stated, in a refined form, or not at all? The draft&apos;s constraint has the extension hold no skill order of its own.</question>
+  </open-question>
+  <open-question id="Per-task model assignment">
+    <question>When tasks are run one at a time, how is each task&apos;s host, model, and effort chosen, and where is what that choice needs kept: picked by the person per task, taken from assignments or rules kept in the project as the 2026-11-19 conversation proposes, or assigned by a model run reading each brief? A task section holds a title and a brief with no field for a kind of work, the maintainer&apos;s largest mission held about 140 tasks, and the draft&apos;s constraint has the extension write nothing under a mission directory.</question>
+  </open-question>
+  <open-question id="Per-task line composition">
+    <question>When a task runs under a host, model, and effort chosen for it, is its command line one of the recipe file&apos;s own single-task lines picked by name, so the extension still holds no host flag, model name, or effort level of its own, or does the extension compose the line from the three values and so hold each host&apos;s command syntax?</question>
+  </open-question>
+  <open-question id="Kepala boundary">
+    <question>Where the extension orders runs itself (a task loop, a bounded repeat), how does the draft place that logic against the orchestrator `ideas/kepala.md` outlines: as the interface-independent part Kepala may reuse, as a first form of Kepala itself, or left out, with all automatic ordering kept for Kepala? The draft&apos;s Kepala section calls its runner Kepala&apos;s transition engine with a person choosing the edge.</question>
+  </open-question>
+  <open-question id="Interactive line source">
+    <question>Where do the interactive command lines behind the extension&apos;s buttons come from, the `discuss-open-question` session the question view opens and any `discuss-mission-goal` session a new-mission button opens, given that `docs/ways-of-using.md` holds only headless lines and the draft has the extension hold no host flag or model name of its own?</question>
+  </open-question>
+  <open-question id="Heading-first question screening">
+    <question>Does the question view show each question collapsed to its title and its pick until the person opens it, to fit the maintainer&apos;s report that most questions are screened by their heading alone and only one or two are read in full, or does it show every question whole as the draft describes?</question>
+  </open-question>
+  <open-question id="Conversation reasons record">
+    <question>Does the revised draft record the reasons the 2026-11-19 conversation gives for the extension (a host offers two usable layers, an agent and its subagents, so what orders the skills sits outside it; VS Code supplies the terminal and git integration an application of its own would have to build; the extension is an experiment that a deeper integration or such an application may follow), and if so where in the draft?</question>
+  </open-question>
+  <open-question id="Extension repository home">
+    <question>Where does the VS Code extension&apos;s code live: in a repository of its own, as `ideas/kepala.md` plans for the orchestrator, or in a directory of this repository outside `core/` that is rendered into no host tree?</question>
+  </open-question>
+  <open-question id="Shipped recipe source">
+    <question>What are the extension&apos;s shipped recipes read from: the chains of `docs/ways-of-using.md` parsed as the page stands, a data file the page is written from or checked against, or the blocks of `snippets/GURITA_USAGE.md`, tracked since 2026-11-18, whose first-run, requirements-iteration, and execution blocks are the ones the 2026-11-19 conversation turns into one button each?</question>
+  </open-question>
+  <open-question id="Recipe bounded repeat">
+    <question>Is a recipe only a flat list of command lines, clicked again for each further requirements iteration, or may it carry a bounded repeat that ends when the review prints its convergence line? The maintainer reports going from the first run straight to execution for the easiest work, one requirements iteration for harder work, and a third about once a month.</question>
+  </open-question>
+  <open-question id="Headless line execution">
+    <question>Where does the extension run a headless command line: typed into the person&apos;s terminal and followed through shell integration, as a child process of the extension outside any terminal, or under a runner started as a terminal&apos;s own process that starts each line of a chain itself?</question>
+  </open-question>
+  <open-question id="Run outcome reading">
+    <question>From what does the extension read how a headless run ended: the first line of the run&apos;s plain final message, matched against the fixed console lines, or the structured output each host offers (`--output-format stream-json` on Claude Code and Antigravity, `--json` on Codex), which adds a flag the pasted line does not carry?</question>
+  </open-question>
+  <open-question id="Runner language and home">
+    <question>If a runner process carries out a chain&apos;s lines, what is it written in and where does it ship: stdlib-only Python, which needs only the `python3` the plugin already requires, or the extension&apos;s own language, and inside the extension or as a plugin tool found at the plugin&apos;s installed location? A plugin tool can only be stdlib-only Python.</question>
+  </open-question>
+  <open-question id="Chain shell session">
+    <question>Does a chain run as one shell session, so that a shell step of the person&apos;s own in a recipe (sourcing an environment file, a shell function) takes effect for the lines after it, and with that how does a substituted value such as a Short Title or a typed answer reach a line: as an argument no shell parses, escaped for the line&apos;s quoting, or refused when it holds a character special there?</question>
+  </open-question>
+  <open-question id="Live state source">
+    <question>From what does the extension read which missions are live and whether each is started: the plugin&apos;s installed `missions.py`, which needs the plugin&apos;s installed location found per host, or a glob of the discovery pattern in the workspace, which needs no install but is a second copy of the pattern and cannot tell `started` from `defined`?</question>
+  </open-question>
+  <open-question id="Question document renderer">
+    <question>What turns `open_questions.xml` into the extension&apos;s question view: a reader of the XML inside the extension, or a read-only render added to the plugin&apos;s tools, whose output the view shows?</question>
+  </open-question>
+  <open-question id="Shipped host lines">
+    <question>For which hosts does the extension ship command lines: the chains as `docs/ways-of-using.md` writes them (Claude Code lines, one mixed-host chain, and a legend for moving a line to another host), or each chain also written out per host?</question>
+  </open-question>
+  <open-question id="Publication venue">
+    <question>Where is the extension published: the Visual Studio Marketplace only, or also a registry the VS Code forks read? The 2026-11-19 conversation calls the extension an experiment in the maintainer&apos;s own environment, and the draft&apos;s check did not cover publication outside the Marketplace.</question>
+  </open-question>
+  <open-question id="Extension name">
+    <question>What is the extension named: a name that joins Gurita and Kepala, or a descriptive one? Whichever it is, its slug is to get the direct registry lookup `ideas/gurita.md` records its own first check lacked.</question>
+  </open-question>
+  <open-question id="Moved draft facts">
+    <question>What does the revision do with the facts in the draft that have moved since it was written on 2026-11-17 (the fixed-line count, now 87 rather than 94; the live-mission and answer-commit counts; the snippet file, now tracked as `snippets/GURITA_USAGE.md` with two placeholders rather than personal and untracked): bring them all to today&apos;s values under a new date, correct only those a decision of this mission touches, or leave the dated sections as written?</question>
+  </open-question>
+  <open-question id="Further VS Code checks">
+    <question>Does this mission check the VS Code documentation for what its decisions newly rely on (a pane other than the custom editor, the side-bar tree, publication outside the Marketplace) and record the result in the draft&apos;s dated check section, or does it list each as an unchecked unknown among the draft&apos;s questions for the work?</question>
+  </open-question>
+  <open-question id="Settled choice record form">
+    <question>How does the revised draft record each choice this mission settles, the ten former questions and the adopted ideas alike: as a dated entry with its reason under the draft&apos;s Decided section beside the section text it changes, only as that section text with the question removed, or only as a Decided entry?</question>
+  </open-question>
+</open-questions>
