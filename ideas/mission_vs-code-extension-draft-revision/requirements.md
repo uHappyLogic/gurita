@@ -148,5 +148,9 @@ The revised draft's list of dropped ideas holds every idea of the 2026-11-19 con
 
 The runner holds the task loop: it is started once as the terminal's process for the whole looped run, and before each task it re-reads the top remaining heading, takes that task's chosen single-task line, and starts a fresh shell session for the task with the task's title and the mission path in that session's environment from its start. The looped recipe's own shell steps run again at the head of every task's session. The per-task line choice, the rules, and their evaluation move into the runner, or the runner is handed the rule file and the recipe file's named lines at its start. One terminal then shows the whole run, the loop can be started by hand outside the editor, and each task's values are fixed at its own session's start with nothing escaped.
 
+### Extension name
+
+The extension takes a descriptive name that carries the plugin's name with a qualifier: a display name such as Gurita for VS Code or Gurita Missions, with the slug its lowercase form, such as `gurita-vscode`. It coins no word and leaves Kepala and Kepalagurita to what `ideas/kepala.md` gives them. This mission looks the exact slug up directly on the extension registries and on GitHub and records the dated result in the draft, the `gurita` stem being already covered by the 2026-11-10 lookup. Since nothing is published while the extension is an experiment, no name is reserved for good before the experiment is judged.
+
 ## Out of Scope
 
