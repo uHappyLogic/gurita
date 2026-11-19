@@ -192,5 +192,9 @@ The looped recipe holds no lines that run once before the loop: only its own she
 
 The runner is the only evaluator of the per-task rules. Besides being started as the terminal's process for the run, the same bundled Python file takes a preview mode, which the extension runs as a short-lived child process when the looped recipe is clicked, given the rule file, the recipe file's named single-task lines, and the mission's `TASKS_TODO.md`; it prints one line per remaining task with the named line the rules give it, and the page shows that print. At the loop's start the extension passes the person's overrides to the runner as arguments, and the runner evaluates the rules again only for tasks without an override, a task entering the list later included. The rules are read in Python's `re` dialect alone and the extension evaluates no pattern, so the preview and the run cannot disagree on a pattern.
 
+### Snippet rename step
+
+Bringing the title and install block of `snippets/GURITA_USAGE.md` to the Gurita name and checkout is no longer a step of making that file a shipped document, and it leaves the draft's account. The file already carries the name, so the draft describes it only as it stands now, titled "Gurita CLI usage snippets" with the placeholder clone path in its install line, and mentions neither that a rename was ever planned nor which commit made it. The changes still to make to the file are only the placeholder and the personal lines.
+
 ## Out of Scope
 
