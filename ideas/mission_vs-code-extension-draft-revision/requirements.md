@@ -140,5 +140,9 @@ This mission checks only the surfaces its recorded decisions rely on: the pane f
 
 When the looped task recipe is clicked, the page shows every task then remaining in `TASKS_TODO.md` with the host, model, and effort the rules give it, and the person overrides any of them before starting the loop. Once started, the loop never waits for the person: before each task it applies the override made for that task if there is one and otherwise the rules' result, shows the assignment it used, and goes on. Overrides are held for that run only and kept nowhere, and a task that enters the list only after the loop started gets the rules' result with no chance to override it. A looped run thus stays as unattended as the `complete-all-tasks` line it stands beside, with every assignment read and corrected in one sitting before the run starts.
 
+### Dropped ideas list scope
+
+The revised draft's list of dropped ideas holds every idea of the 2026-11-19 conversation decided as dropped and each part of an adopted or refined idea that the refinement set aside, for example the conversation's extension that no longer calls `complete-all-tasks`, where the refined task loop keeps that line beside its own recipe, together with the entries a recorded decision places there by name (the bounded repeat). It holds no option of the draft's ten questions and no part of the 2026-11-17 draft that a decision replaced, since those already carry their reasons in the Decided entries. Once the transcript is removed, the list is the one place left that says what the conversation proposed and the revision did not carry.
+
 ## Out of Scope
 
