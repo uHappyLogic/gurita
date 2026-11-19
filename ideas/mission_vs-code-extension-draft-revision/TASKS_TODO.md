@@ -1,2 +1,91 @@
 # TASKS TODO
 
+## Correct the Moved Present-Tense Draft Facts
+
+In `ideas/vscode_extension.md`, correct in place only the present-tense descriptions that are now wrong, chiefly "The hand work", which must describe the snippet file as it stands: the tracked `snippets/GURITA_USAGE.md`, titled "Gurita CLI usage snippets" with the placeholder clone path in its install line, holding two placeholders (`<mission_path>` and, on the two single-task lines, `<Task Title>`), with no mention that a rename was ever planned or which commit made it. Every dated measurement (the fixed-line count, the live-mission and answer counts, the cost figures) stays as written under its 2026-11-17 date, and nothing is measured again. It is verified by reading each corrected sentence against the snippet file as committed and by the diff leaving "What was measured" and every dated figure untouched.
+
+---
+
+## Add the Why an Extension Section
+
+Add to `ideas/vscode_extension.md` one new section, "Why an extension", placed after "The hand work" and before "What was measured", dated 2026-11-19 and attributed to that day's conversation without naming the transcript file this mission removes, so the case is read whole in one place. It holds the three reasons together, each as the conversation gives it: a host offers two usable layers, an agent and its subagents (with the conversation's own hedge that a third layer works, but strangely), so what orders the skills sits outside the host; VS Code supplies the terminal and git integration an application of its own would have to build; and the extension is an experiment that a deeper host integration or such an application may follow. No other section is changed for the reasons, which is verified by reading the three against `ideas/vscode_extension_improvement_transcript.md` and by the diff touching nothing outside the new section.
+
+---
+
+## Record the Extension Home and Publication
+
+Rewrite the sections of `ideas/vscode_extension.md` that the "Extension repository home" and "Publication venue" decisions bear on, "What it costs" and "What waits" among them, to state the design as chosen: the code lives in this repository in a directory outside `core/` rendered into no host tree, its build and tests run as steps of the existing one-job drift-gate workflow with a check of the extension's fixed lines against the `## Fixed console lines` table of `docs/skill-reference.md`, and while it is an experiment it is published to no registry and no release page, packaged as a VSIX and installed by hand, with registry publication recorded as deferred, not ruled out. Add a "Decided on 2026-11-19." line to the Decided section beside the 2026-11-17 one, with one bulleted entry per choice naming it and its reason, and remove the "Where it lives" and "Where it is published" questions. It is verified by the draft no longer giving a separate repository, a marketplace publisher, or a release beside the three host trees as the design, and by both choices standing once in their sections and once under the new Decided line.
+
+---
+
+## Look Up and Record the Extension Name
+
+Look up the slug `gurita-vscode` directly on the extension registries (the Visual Studio Marketplace and Open VSX) and on GitHub, and record in `ideas/vscode_extension.md` the dated result with its sources beside the name the "Extension name" decision gives: a descriptive name carrying the plugin's name with a qualifier, display name "Gurita for VS Code" and slug `gurita-vscode`, coining no word, leaving Kepala and Kepalagurita to `ideas/kepala.md`, and reserving nothing while the extension is unpublished. The choice gets its entry under "Decided on 2026-11-19.", the "Its name" question is removed, and the opening paragraph's sentence that the extension has no name of its own is corrected; a slug found taken is recorded as found and the name is listed among the questions for the work instead. It is verified by the draft carrying the lookup's date, each place searched, and what each returned.
+
+---
+
+## Record the Webview Pane Check
+
+Read from the VS Code documentation the pane form the draft adopts, a webview panel in the editor area created with `window.createWebviewPanel`, confirm its API facts against the `vscode.d.ts` of the installed VS Code 1.143.0, and record it as a dated entry in "What was checked of VS Code" of `ideas/vscode_extension.md`, with the pages read added under Sources. Rewrite that section's "were not checked" sentence to name only what still stands unchecked and why it no longer matters, the side-bar tree the pane replaced and publication outside the Marketplace among it, check no surface that no recorded decision relies on, and list whatever the documentation leaves unstated among the draft's questions for the work. It is verified by every API fact of the new entry being found in the installed definitions and by each source page being listed with its read date.
+
+---
+
+## Rewrite the Parts Around the Mission Pane
+
+Rewrite "The parts" of `ideas/vscode_extension.md`, and "The constraint" where it lists what the extension reads, to state the design the "Per-mission pane", "Mission page state", "Page question-state source", and "Live state source" decisions chose: one pane in the editor area with one page per live mission and a way on the pane to move between missions, replacing both the side-bar tree and the custom editor (the extension contributes no tree and claims no file); a page label built only from what the documents hold now (`started` or `defined`, whether any question lacks alternatives or a pick, whether the question list is empty, whether tasks remain) that gates no button; the question facts read from the extension's own in-process parse of `open_questions.xml`, checked in its tests against `core/tools/open_questions.py list --without-alternatives` and `--without-recommendation`; and `started` or `defined` read from the `live` query of a byte-identical `missions.py` shipped inside the extension, with no installed plugin looked up. Each choice gets its entry under "Decided on 2026-11-19." and the "Where the live state comes from" question is removed. It is verified by no design section still describing a side-bar tree, a claimed file, the tool's `list` as the page's source, or an installed-plugin lookup, and by each of the four choices standing once in its section and once in Decided.
+
+---
+
+## Rewrite the Question View for Heading-First Screening
+
+Rewrite the "Question view" part of `ideas/vscode_extension.md`, and the bullets of "The constraint" and "What it costs" that leave a tool-side render open, to state the design the "Question document renderer" and "Heading-first question screening" decisions chose: the extension reads `open_questions.xml` itself, in process, with an XML parser of its own written against the format the open-question tool's module docstring states, the plugin unchanged and no plugin tool called to draw the view; and each question shows collapsed by default to one row holding its Short Title and the id of its picked alternative, the question-level buttons on the row, the alternative buttons inside the opened row, and expand-all and collapse-all controls on the view. Each choice gets its entry under "Decided on 2026-11-19." and the "What renders the question document" question is removed. It is verified by the view being described as part of the mission's page rather than a custom editor, by no sentence still offering a tool-side render as the extension's renderer, and by both choices standing in their part and in Decided.
+
+---
+
+## Rewrite Recipes Around the Shipped Snippet File
+
+Rewrite the "Recipes" part of `ideas/vscode_extension.md` to state the design the "Shipped recipe source", "Snippet rename step", "Recipe names across hosts", "Non-chain snippet blocks", "Standalone shell steps", "Shipped host lines", "Own recipe file location", and "Recipe bounded repeat" decisions chose: the shipped recipes are the `###` blocks under the `## Claude Code` and `## Antigravity` headings of `snippets/GURITA_USAGE.md` (Codex gets no shipped lines), each identified by a heading unique across the file and offered on the pane grouped by host, `docs/ways-of-using.md` staying separately written; the changes the file still needs as a shipped document are stated as steps of the work and not made here (`<mission_path>` becomes `<path>`, the two personal blocks leave, each repeated heading names its host, the five non-chain blocks move under one reference heading the reader never reads); a person's own recipes are one per-user file outside the project at a default path changeable through a VS Code user setting, a flat list of `###` recipes that replace or add by heading and may carry shell steps of the person's own; and a recipe is a flat, ordered list run once per click, with no repeat construct. Each choice gets its entry under "Decided on 2026-11-19.", and the "What a recipe file is", "Whether a recipe is only a list", and "Which hosts' lines ship" questions are removed. It is verified by the part no longer naming the ways-of-using page as the shipped source, by `snippets/GURITA_USAGE.md` and `docs/ways-of-using.md` standing unchanged in the diff, and by each choice standing in the part and in Decided.
+
+---
+
+## Record Where Each Button Line Comes From
+
+Rewrite the parts of `ideas/vscode_extension.md` that describe the buttons outside the chain recipes to state the design the "New-mission button", "Interactive line source", and "Answer button line source" decisions chose: a new-mission button that asks for the goal in an input box and opens a terminal on an interactive `discuss-mission-goal` session, beside the kept button for the headless `define-mission-goal --at <scope> <goal>` line, so the draft names two ways to start a mission; the interactive `discuss-open-question --mission <path> <Short Title>` and `discuss-mission-goal <goal>` lines written out literally as entries of their own in the shipped snippet file; and one complete headless line there, a `###` recipe under a fixed name, for each of `answer-open-question-with-alternative`, `answer-open-question`, `answer-open-question-with-recommendation`, and `define-mission-goal`, a person's own recipe of the same name replacing a shipped one. The lines are stated as what the shipped file gains, the file itself unchanged here, and each choice gets its entry under "Decided on 2026-11-19.". It is verified by every button of the draft naming the shipped recipe its line comes from, and by no sentence leaving the extension a host flag, model, or effort of its own.
+
+---
+
+## Rewrite Running a Line Around the Runner
+
+Rewrite "Running a line" of `ideas/vscode_extension.md`, and the sentence of "The constraint" that leaves a runner shipped as a plugin tool open, to state the design the "Headless line execution", "Run outcome reading", "Runner language and home", "Chain shell session", and "Line kind recognition" decisions chose: a chain runs under one stdlib-only Python file (Python 3.9+, no `uv`, no third-party package) bundled in the extension and started as a terminal's own process through `TerminalOptions.shellPath` and `shellArgs` with `isTransient` set; the chain is one shell session, every substituted value placed in its environment and referenced from the line, no character refused or escaped; a line carrying a trailing `# interactive` comment inherits the terminal, an unmarked line holding a `gurita:` skill invocation is headless and read, and every other line is a shell step; and a headless line runs exactly as written, only the first line of its final message looked up in the `## Fixed console lines` table of `docs/skill-reference.md`, the exit code not read. Each choice gets its entry under "Decided on 2026-11-19.", the "How a headless line runs and how its outcome is read" and "What the runner needs, if there is one" questions are removed, and what Codex's plain print opens with is listed among the questions for the work. It is verified by the section no longer offering shell integration or a child process of the extension as the way a headless line runs, by its quoting bullet no longer refusing or escaping a value, and by each choice standing in the section and in Decided.
+
+---
+
+## Write the Looped Task Recipe Into the Draft
+
+Write into `ideas/vscode_extension.md` the task loop the "Extension-run task loop", "Looped recipe form", "Looped run task title", and "Per-task line composition" decisions chose, amending "The constraint" and the "Recipes" part to name the loop's order as the one order the extension holds: an execution recipe of its own beside the unchanged `complete-all-tasks` line, marked by a reserved slot line written last (for example `<task line>`), under which the runner, started once for the whole run, re-reads the top remaining heading before each task, starts a fresh shell session with the task's title and the mission path in its environment, runs the recipe's own shell steps and then one of the recipe file's named single-task lines, and stops on any first line other than `Task completed.`. Rewrite the "Kepala" section as the "Kepala boundary" decision states, the runner walking only the `Listed` self-loop with the person choosing every other edge, and give each choice its entry under "Decided on 2026-11-19.". It is verified by the draft still saying the extension composes no line and holds no host flag, model name, or effort level, and by each choice standing in its section and in Decided.
+
+---
+
+## Write Per-Task Assignment Into the Draft
+
+Write into `ideas/vscode_extension.md` the assignment design the "Per-task model assignment", "Assignment preview evaluation", "Assignment override timing", and "Own recipe file location" decisions chose: rules in a tracked project file outside every mission directory map patterns over a task's title and brief, read in Python's `re` dialect alone, to the name of a single-task line, with a default for tasks no rule matches; the runner is their only evaluator, its preview mode run as a short-lived child process when the looped recipe is clicked so the page shows every remaining task with its assignment; overrides are made there before the loop starts, held for that run only and passed to the runner as arguments, the started loop never waiting for the person; and a rule naming a line the person's recipe file lacks shows as unresolved in the preview and stops the loop at that task. Each choice gets its entry under "Decided on 2026-11-19.". It is verified by the draft stating that the extension writes nothing for the assignment and that neither the plugin nor the task format changes, and by each choice standing in its section and in Decided.
+
+---
+
+## Add the Dropped Ideas List
+
+Add to `ideas/vscode_extension.md` a section of its own, "Considered and dropped", placed after "Decided", listing with a one-line reason each idea of the 2026-11-19 conversation decided as dropped and each part of an adopted or refined idea that the refinement set aside (for example the extension that no longer calls `complete-all-tasks`), together with the bounded repeat the "Recipe bounded repeat" decision places there by name. It holds no option of the draft's ten questions and no part of the 2026-11-17 draft that a decision replaced, since those carry their reasons in the Decided entries. It is verified by walking `ideas/vscode_extension_improvement_transcript.md` idea by idea and finding each either written into a section of the draft or listed here, so the list stands as the one record of what the conversation proposed once the transcript is removed.
+
+---
+
+## Rewrite the Questions for the Work
+
+Rewrite "Questions for the work" of `ideas/vscode_extension.md` so that it holds none of the ten questions the mission settled and lists as a question each unknown the recorded decisions leave: what Codex's plain print opens with, registry publication deferred until the experiment is judged, whatever the VS Code documentation left unstated, and each name, path, or format a decision leaves to the work. Bring the opening paragraph's account of what the draft records in line with the sections it now has. It is verified by reading every `###` entry of the mission's `## Decisions` against the draft and finding each stated in the section it bears on and, where it settles a choice, entered under "Decided on 2026-11-19.", with no settled question left standing.
+
+---
+
+## Remove the Conversation Transcript
+
+Remove `ideas/vscode_extension_improvement_transcript.md` from the repository as the last step of the revision, once the draft carries the conversation: every adopted or refined idea written into a section of `ideas/vscode_extension.md`, every dropped one in its dropped-ideas list, and the three reasons in "Why an extension". It is verified by that walk finding nothing of the transcript unaccounted for, by the file being gone from the tree, and by no file outside the mission directory still referring to it.
+
+---
