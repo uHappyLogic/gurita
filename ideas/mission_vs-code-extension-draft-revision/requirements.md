@@ -54,7 +54,7 @@ The path-form record holds two finished missions, both root-scoped: `mission_ren
 
 ### Extension repository home
 
-The extension's code lives in this repository, in a directory outside `core/` that is rendered into no host tree. Its build and tests run as steps of the existing one-job drift-gate workflow, among them a check of the extension's recipes and fixed lines against `docs/ways-of-using.md` and the `## Fixed console lines` table of `docs/skill-reference.md`, so a plugin change that moves a line the extension relies on fails CI in the same commit. While the extension is an experiment it is not released beside the three host trees: it is packaged from this repository as a VSIX and installed by hand. The draft's first question for the work is settled this way, and the draft states it.
+The extension's code lives in this repository, in a directory outside `core/` that is rendered into no host tree. Its build and tests run as steps of the existing one-job drift-gate workflow, among them a check of the extension's fixed lines against the `## Fixed console lines` table of `docs/skill-reference.md`, so a plugin change that moves a fixed line the extension relies on fails CI in the same commit. While the extension is an experiment it is not released beside the three host trees: it is packaged from this repository as a VSIX and installed by hand. The draft's first question for the work is settled this way, and the draft states it.
 
 ### Per-mission pane
 
@@ -127,6 +127,10 @@ A task run under a host, model, and effort chosen for it uses one of the recipe 
 ### Publication venue
 
 While the extension is an experiment it is published to no registry and no release page: it is packaged as a VSIX and installed by hand into the maintainer's own editor, and anyone else who wants it builds it from source. No publisher account, token, or publish step joins the release of the three host trees, so no publisher id or extension name is reserved for good before the experiment has proved out. The draft records registry publication as deferred, not ruled out, to be decided once the experiment is judged.
+
+### Shipped recipe source
+
+The extension's shipped recipes are the blocks of `snippets/GURITA_USAGE.md`, each recipe read as one of its `###` headings and that heading's fenced block. The file is first made a maintained, shipped document: its title and install block are brought to the Gurita name and checkout, its `<mission_path>` placeholder becomes `<path>`, and its personal lines (the `.env_anthropic` source, `claude-wait`) are either kept as shell steps or moved out. `docs/ways-of-using.md` stays separately written, with no generation from and no check against the snippet file.
 
 ## Out of Scope
 
