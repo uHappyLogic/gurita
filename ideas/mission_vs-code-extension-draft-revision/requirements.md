@@ -68,5 +68,9 @@ The revised draft records all three reasons the 2026-11-19 conversation gives fo
 
 A recipe is only a flat, ordered list of command lines with placeholders, run once per click: the recipe format has no repeat construct and the button no repeat option. A further requirements iteration is the person clicking the same recipe again after reading how the last run ended, which the extension shows. The draft records the bounded repeat among its dropped ideas with a one-line reason: the maintainer screens the questions between rounds and stops by judgment, never on convergence, so a repeat would run unscreened exactly the rounds the maintainer chooses to screen.
 
+### Headless line execution
+
+The extension runs a chain under a runner process started as a terminal's own process, through `TerminalOptions.shellPath` and `shellArgs` with an argument list and `isTransient` set, or through a task's `ProcessExecution`, which gives the same process. The runner starts each headless line of the chain itself, reads its output through a pipe, and decides whether to go on; an interactive last line inherits the terminal. The run stays in view in a real terminal while stopping a chain rests on nothing a person's shell setup can switch off, and the chain logic lands in one part a person can start by hand outside the editor.
+
 ## Out of Scope
 
