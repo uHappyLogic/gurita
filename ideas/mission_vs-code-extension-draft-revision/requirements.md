@@ -168,5 +168,9 @@ The extension ships command lines for two hosts, Claude Code and Antigravity, th
 
 A person's own recipe file lives outside the project as one per-user file serving every project, at a per-user path the extension reads: a default location, changeable through a VS Code user setting. Its lines carry a person's own hosts, models, and efforts, so nothing personal stands in any tree to ignore or commit by accident. A tracked rule naming a single-task line that file lacks leaves that task's assignment unresolved: the extension shows the missing name, in the preview before the loop starts, where the person overrides the task or adds the line, and the loop stops at that task rather than running it under any other line.
 
+### Answer button line source
+
+The shipped snippet file gains one complete headless line for each of four skills: `answer-open-question-with-alternative --mission <path> <Short Title>. <Alternative Id>`, `answer-open-question --mission <path> <Short Title>. <answer text>`, `answer-open-question-with-recommendation --mission <path> <Short Title>`, and `define-mission-goal --at <scope> <goal>`. Each is a `###` recipe of its own under a fixed name, written with its host binary, model, and effort as the file's other lines are and using the usage page's placeholder names; the define line is a one-line recipe of its own, not the head of a chain. Each button runs the shipped recipe of its fixed name, and a person's own recipe of the same name replaces it, as for every other recipe. Every button's line thus comes from the one shipped source by the one reading rule, the extension composes no line and holds no host flag, model, or effort, and `docs/ways-of-using.md` is untouched.
+
 ## Out of Scope
 
