@@ -707,6 +707,31 @@
   </open-question>
   <open-question id="Moved draft facts">
     <question>What does the revision do with the facts in the draft that have moved since it was written on 2026-11-17 (the fixed-line count, now 87 rather than 94; the live-mission and answer-commit counts; the snippet file, now tracked as `snippets/GURITA_USAGE.md` with two placeholders rather than personal and untracked): bring them all to today&apos;s values under a new date, correct only those a decision of this mission touches, or leave the dated sections as written?</question>
+    <alternative id="Refresh all, new date">
+      Every figure and description the draft dates to 2026-11-17 is read again from the repository and replaced by today&apos;s value, the question-document sizes measured again with the rest: the fixed-line count and its split (87: 16 success, 25 no-op, 45 stop, one verdict), the live-mission count, the answer counts and the hand-made share (60 of 722), the finished-mission and answer figures under &quot;What it costs&quot;, and the snippet file&apos;s description in &quot;The hand work&quot; (tracked as `snippets/GURITA_USAGE.md`, placeholders `&lt;mission_path&gt;` and `&lt;Task Title&gt;`). &quot;What was measured&quot; and the draft&apos;s opening line carry the new date, and the old values are not kept in the text.
+      <advantage>The revised draft reads true as a whole on the day it is finished, with one as-of date for every figure, so no later reader has to work out which statement still holds.</advantage>
+      <drawback>It is the most work, a full re-measurement the goal does not ask for, and the figures start moving again at the next commit, so the draft will again be out of date by the time any extension work is defined; the old values survive only in the git history.</drawback>
+    </alternative>
+    <alternative id="Moved facts, both values">
+      Only the facts known to have moved are changed, and each keeps its 2026-11-17 value beside today&apos;s with both dates written (for instance &quot;94 on 2026-11-17, 87 on 2026-11-19&quot;); the snippet file&apos;s description is corrected with a note of when it became tracked. Figures not measured again, the question-document sizes, stay as written under their 2026-11-17 date.
+      <advantage>Nothing the draft recorded is lost and every number says when it held, so the draft stays an honest dated record while also showing the present, without the cost of a full re-measurement.</advantage>
+      <drawback>The measurement section ends up with mixed dates and paired figures, which reads more heavily than a single snapshot and invites the same doubling at every later revision.</drawback>
+    </alternative>
+    <alternative id="Descriptions only">
+      The present-tense descriptions that are now wrong are corrected in place, chiefly the snippet file in &quot;The hand work&quot; (no longer personal and untracked, now `snippets/GURITA_USAGE.md` with two placeholders), while the dated measurements (the fixed-line count, the live-mission and answer counts, the cost figures) are left as written, their 2026-11-17 date marking them as that day&apos;s record.
+      <advantage>It separates what a date already qualifies from what the draft asserts as standing fact, so the one kind of error a reader cannot detect from the date, a wrong description of a file the work will read, is fixed at small cost.</advantage>
+      <drawback>The counts stay stale even where the revision leans on them (the fixed-line table the outcome reading matches against, the hand-answer share behind the question view), so a reader has to know to re-measure them.</drawback>
+    </alternative>
+    <alternative id="Decision-touched only">
+      A moved fact is corrected only where a section the revision rewrites for one of this mission&apos;s decisions states it, in place and under that section&apos;s own date; every other moved fact stays as written in its dated section.
+      <advantage>The revision touches only text it already has a reason to change, keeping its diff tied to the decisions and the unchanged sections byte for byte as they were.</advantage>
+      <drawback>Which facts get corrected depends on how sibling questions settle (the recipe source, the run outcome reading, how settled choices are recorded), so the snippet file&apos;s wrong description may survive in &quot;The hand work&quot; if no decision rewrites that section, leaving a draft that is partly current and partly not with no mark of which.</drawback>
+    </alternative>
+    <alternative id="Leave as written">
+      No moved fact is changed: every dated section keeps its 2026-11-17 text, the snippet file&apos;s description included, and the revision adds nothing about what has since moved.
+      <advantage>It costs nothing and keeps the draft&apos;s dated sections an untouched record of what was read on the day, which is what their dates promise.</advantage>
+      <drawback>The draft keeps describing the snippet file as personal and untracked with one placeholder, which the transcript and the repository both contradict, so a reader or a later recipe decision built on that section is misled; the stale counts are flagged only by their date.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Further VS Code checks">
     <question>Does this mission check the VS Code documentation for what its decisions newly rely on (a pane other than the custom editor, the side-bar tree, publication outside the Marketplace) and record the result in the draft&apos;s dated check section, or does it list each as an unchecked unknown among the draft&apos;s questions for the work?</question>
