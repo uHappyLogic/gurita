@@ -80,5 +80,9 @@ The extension ships its own byte-identical copy of `missions.py`, found by the e
 
 The extension reads `open_questions.xml` itself, in its own language and in process, with an XML parser of its own written against the document format the open-question tool's module docstring states, and builds the question view and its buttons from what it parses. The plugin is unchanged, with no new subcommand, output form, or tool, and the extension calls no plugin tool to draw the view. The view then shows everything a block holds, the advantages, drawbacks, dependencies, and principles included, and a redraw after a run costs one file read with no process started.
 
+### Moved draft facts
+
+The revision corrects in place only the present-tense descriptions that are now wrong, chiefly the snippet file in "The hand work", which is no longer personal and untracked but the tracked `snippets/GURITA_USAGE.md` with two placeholders. The dated measurements (the fixed-line count, the live-mission and answer counts, the cost figures) are left as written, their 2026-11-17 date marking them as that day's record, and nothing is measured again.
+
 ## Out of Scope
 
