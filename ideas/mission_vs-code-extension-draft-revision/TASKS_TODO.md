@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Record the Extension Home and Publication
-
-Rewrite the sections of `ideas/vscode_extension.md` that the "Extension repository home" and "Publication venue" decisions bear on, "What it costs" and "What waits" among them, to state the design as chosen: the code lives in this repository in a directory outside `core/` rendered into no host tree, its build and tests run as steps of the existing one-job drift-gate workflow with a check of the extension's fixed lines against the `## Fixed console lines` table of `docs/skill-reference.md`, and while it is an experiment it is published to no registry and no release page, packaged as a VSIX and installed by hand, with registry publication recorded as deferred, not ruled out. Add a "Decided on 2026-11-19." line to the Decided section beside the 2026-11-17 one, with one bulleted entry per choice naming it and its reason, and remove the "Where it lives" and "Where it is published" questions. It is verified by the draft no longer giving a separate repository, a marketplace publisher, or a release beside the three host trees as the design, and by both choices standing once in their sections and once under the new Decided line.
-
----
-
 ## Look Up and Record the Extension Name
 
 Look up the slug `gurita-vscode` directly on the extension registries (the Visual Studio Marketplace and Open VSX) and on GitHub, and record in `ideas/vscode_extension.md` the dated result with its sources beside the name the "Extension name" decision gives: a descriptive name carrying the plugin's name with a qualifier, display name "Gurita for VS Code" and slug `gurita-vscode`, coining no word, leaving Kepala and Kepalagurita to `ideas/kepala.md`, and reserving nothing while the extension is unpublished. The choice gets its entry under "Decided on 2026-11-19.", the "Its name" question is removed, and the opening paragraph's sentence that the extension has no name of its own is corrected; a slug found taken is recorded as found and the name is listed among the questions for the work instead. It is verified by the draft carrying the lookup's date, each place searched, and what each returned.
