@@ -92,5 +92,9 @@ Every choice this mission settles, each of the ten former questions and each ado
 
 The page tells apart only what the documents hold now: `started` or `defined` from `missions.py live`, whether any question lacks alternatives or a pick (the open-question tool's `list` with `--without-alternatives` and `--without-recommendation`), whether the question list is empty, and whether tasks remain (the `##` headings of `TASKS_TODO.md`). It reads no run's output and no commit subject, so every fact is re-read from the project on each refresh and the extension keeps no memory of its own runs; the finer states `ideas/kepala.md` names are not told apart. The state is shown as a label on the page only: every recipe button stays offered whatever the label reads, and the skills' own stop lines stay the only gate.
 
+### Heading-first question screening
+
+The question view shows each question collapsed by default to one row holding its Short Title and the id of its picked alternative, with no pick shown when it carries none. The question-level buttons (discuss, answer in the person's own words, record the recommendation) stand on the row; opening the row shows the question whole as the draft describes, with the alternative buttons inside it, and the view carries expand-all and collapse-all controls. The draft's Question view part is rewritten to say so.
+
 ## Out of Scope
 
