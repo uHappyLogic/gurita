@@ -200,5 +200,9 @@ Bringing the title and install block of `snippets/GURITA_USAGE.md` to the Gurita
 
 The draft adopts the 2026-11-19 conversation's new-mission button as stated: it asks for the goal in an input box and opens a terminal running an interactive `discuss-mission-goal` session with that goal as the skill's text, where the person carries the conversation on to its proposed goal and `--at` scope and runs `/define-mission-goal` from inside the session. The draft's existing button for the headless `define-mission-goal --at <scope> <goal>` line, its goal and scope typed into input boxes, stays beside it for a goal that is already crisp, so the draft names two ways to start a mission.
 
+### Recipe names across hosts
+
+As part of making it a shipped document, the snippet file is edited so that every `###` heading is unique across the whole file, each repeated heading naming its host (for example "First run (Antigravity)"), and a check that no heading repeats joins the extension's tests in the drift-gate workflow. A recipe is then identified by its `###` heading alone. The pane offers every shipped recipe grouped under the file's `##` host headings, those headings being display grouping only. A person's own recipe file is a flat list of `###` recipes, an own recipe replacing the shipped one of the same heading and adding a recipe otherwise.
+
 ## Out of Scope
 
