@@ -96,5 +96,9 @@ The page tells apart only what the documents hold now: `started` or `defined` fr
 
 The question view shows each question collapsed by default to one row holding its Short Title and the id of its picked alternative, with no pick shown when it carries none. The question-level buttons (discuss, answer in the person's own words, record the recommendation) stand on the row; opening the row shows the question whole as the draft describes, with the alternative buttons inside it, and the view carries expand-all and collapse-all controls. The draft's Question view part is rewritten to say so.
 
+### Run outcome reading
+
+The extension runs each headless line exactly as the recipe writes it, with no output flag added, and reads only the run's plain print: the first line of the final message is looked up in the `## Fixed console lines` table of `docs/skill-reference.md`, a success or no-op line continuing the chain and a stop line, or any line the table does not hold, stopping it. The process's exit code is not read, and nothing tells a host-level failure apart from an unlisted line. What Codex's plain print opens with stays to be checked.
+
 ## Out of Scope
 
