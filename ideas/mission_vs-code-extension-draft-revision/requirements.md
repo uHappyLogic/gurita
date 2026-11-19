@@ -118,7 +118,7 @@ When tasks are run one at a time, each task's host, model, and effort come from 
 
 ### Kepala boundary
 
-Whatever ordering the extension does itself (a task loop, a bounded repeat) sits in the part the draft already keeps apart from the VS Code interface, beside the recipes, the fixed-line reading, and the state read. The Kepala section is rewritten so that the runner walks only the edges a recipe names (for a task loop the `Listed` self-loop task by task, for a bounded repeat the review repeated until its verdict line), with the person choosing every other edge. Whether Kepala reuses that part stays Kepala's question, as the section says today.
+The ordering the extension does itself, the task loop alone, sits in the part the draft already keeps apart from the VS Code interface, beside the recipes, the fixed-line reading, and the state read. The Kepala section is rewritten so that the runner walks only the `Listed` self-loop, task by task, with the person choosing every other edge, the review repeated after its verdict line included. Whether Kepala reuses that part stays Kepala's question, as the section says today.
 
 ### Per-task line composition
 
