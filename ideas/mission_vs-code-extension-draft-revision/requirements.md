@@ -52,5 +52,9 @@ The path-form record holds two finished missions, both root-scoped: `mission_ren
 
 ## Decisions
 
+### Extension repository home
+
+The extension's code lives in this repository, in a directory outside `core/` that is rendered into no host tree. Its build and tests run as steps of the existing one-job drift-gate workflow, among them a check of the extension's recipes and fixed lines against `docs/ways-of-using.md` and the `## Fixed console lines` table of `docs/skill-reference.md`, so a plugin change that moves a line the extension relies on fails CI in the same commit. The extension is released from this repository beside the three host trees. The draft's first question for the work is settled this way, and the draft states it.
+
 ## Out of Scope
 
