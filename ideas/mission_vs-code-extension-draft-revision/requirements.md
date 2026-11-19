@@ -84,5 +84,9 @@ The extension reads `open_questions.xml` itself, in its own language and in proc
 
 The revision corrects in place only the present-tense descriptions that are now wrong, chiefly the snippet file in "The hand work", which is no longer personal and untracked but the tracked `snippets/GURITA_USAGE.md` with two placeholders. The dated measurements (the fixed-line count, the live-mission and answer counts, the cost figures) are left as written, their 2026-11-17 date marking them as that day's record, and nothing is measured again.
 
+### Settled choice record form
+
+Every choice this mission settles, each of the ten former questions and each adopted or refined idea alike, is recorded in the draft twice. The section it bears on (The constraint, Recipes, Question view, Mission list, Running a line, Kepala, What it costs, and the rest) is rewritten to state the design as chosen, and a bulleted entry naming the choice and its reason is added to the draft's Decided section under a new "Decided on 2026-11-19." line beside the existing 2026-11-17 one. Each settled question is removed from "Questions for the work".
+
 ## Out of Scope
 
