@@ -72,5 +72,9 @@ A recipe is only a flat, ordered list of command lines with placeholders, run on
 
 The extension runs a chain under a runner process started as a terminal's own process, through `TerminalOptions.shellPath` and `shellArgs` with an argument list and `isTransient` set, or through a task's `ProcessExecution`, which gives the same process. The runner starts each headless line of the chain itself, reads its output through a pipe, and decides whether to go on; an interactive last line inherits the terminal. The run stays in view in a real terminal while stopping a chain rests on nothing a person's shell setup can switch off, and the chain logic lands in one part a person can start by hand outside the editor.
 
+### Live state source
+
+The extension ships its own byte-identical copy of `missions.py`, found by the extension's own path, and runs its `live` query with `python3` for both the live list and `started` or `defined`; no installed plugin is looked up. The copy is pinned to the plugin version the extension is built against, so the state comes from the plugin's own tested definition of the discovery pattern and the started test, with no per-host install lookup and no setup step.
+
 ## Out of Scope
 

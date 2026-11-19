@@ -1,43 +1,4 @@
 <open-questions>
-  <open-question id="Live state source">
-    <question>From what does the extension read which missions are live and whether each is started: the plugin&apos;s installed `missions.py`, which needs the plugin&apos;s installed location found per host, or a glob of the discovery pattern in the workspace, which needs no install but is a second copy of the pattern and cannot tell `started` from `defined`?</question>
-    <recommendation option="Bundled tool copy">It runs the tested tool itself, so the live list and `started` or `defined` come from the plugin&apos;s own definition of both, with no per-host install lookup and no setup step. The copy is pinned to the plugin version the extension is built against, and the discovery pattern and the started test are rules the plugin holds as invariants, so the window in which the copy and an installed plugin disagree is narrow.</recommendation>
-    <alternative id="Bundled tool copy">
-      The extension ships its own byte-identical copy of `missions.py`, found by the extension&apos;s own path, and runs its `live` query with `python3` for both the live list and `started` or `defined`; no installed plugin is looked up.
-      <advantage>It needs no install lookup and no setup and still runs the tested tool rather than a reimplementation, the tool being one self-contained stdlib file built to be copied byte-identical.</advantage>
-      <drawback>The copy is pinned to the extension&apos;s release rather than to the plugin the person runs, so a plugin change to the pattern or the started test shows a different state from what the skills and the gate read until the extension is re-released; whether it can sit beside the tool sources depends on where the extension&apos;s code lives, which another question settles.</drawback>
-    </alternative>
-    <alternative id="Installed tool, host lookup">
-      The extension runs the plugin&apos;s installed `missions.py live` with `python3` from the workspace root and reads both the live list and `started` or `defined` from its print. It finds the installed copy per host as `host_tests/conftest.py` does: the fixed `~/.gemini/config/plugins/gurita` on Antigravity, and `&lt;cli&gt; plugin list --json` on Claude Code and Codex. The extension holds no copy of the discovery pattern or the started test.
-      <advantage>The state shown is exactly what every skill and the scope gate read, from the one tested definition of the pattern and the started test, so it cannot drift from the plugin the person&apos;s lines actually run, and it needs only the `python3` the plugin already requires.</advantage>
-      <drawback>The extension carries each host&apos;s install lookup (a fixed path for one host, a CLI listing and its JSON shape for two), knowledge of host mechanisms the draft otherwise keeps out of it, which breaks whenever a host moves its plugin store or changes its listing; with no plugin installed for any host it shows nothing.</drawback>
-    </alternative>
-    <alternative id="Installed tool, configured path">
-      The extension runs the plugin&apos;s installed `missions.py live` for both the live list and `started` or `defined`, but takes the tool&apos;s location from a setting the person fills in once (the plugin root or the tool&apos;s path), and looks up no host&apos;s install location itself.
-      <advantage>It keeps the single tested definition of live and started while holding no host-specific lookup, so a host changing its plugin store never breaks the extension and any host, including one not yet supported, works the same way.</advantage>
-      <drawback>Every person does a setup step before the list shows anything, and the setting goes stale silently when a plugin update moves the installed copy or the person uses a different host&apos;s copy than the one their lines run.</drawback>
-    </alternative>
-    <alternative id="Workspace glob, no started">
-      The extension globs `**/mission_*/requirements.md` in the workspace in its own language for the live list and the title from each file&apos;s first `# ` heading, and shows no `started` or `defined`; it runs no tool, no `python3`, and no git.
-      <advantage>It needs no install, no setup, no Python, and no git call, and updates from file-system events at no cost, so the list is always present and current in the editor.</advantage>
-      <drawback>It is a second copy of the discovery pattern that drifts silently if the pattern changes, counts an untracked `requirements.md` the tool would not, and cannot tell `started` from `defined`, which is viable only if the states the mission page tells apart leave that distinction out.</drawback>
-    </alternative>
-    <alternative id="Workspace glob, own log read">
-      The extension globs the discovery pattern in the workspace for the live list and, per mission, runs `git log -1 --diff-filter=M` on its `TASKS_TODO.md` itself for `started` or `defined`, reimplementing both rules in its own language with no installed or bundled tool.
-      <advantage>It shows the same live and started distinction as `missions.py live` with no install lookup, no setup, and no Python, reading only the workspace and git.</advantage>
-      <drawback>It holds second copies of both the discovery pattern and the started test, the latter the subtler rule (log, not list contents; tracked files only), and any change to either in the plugin leaves the extension showing a state the gate does not read, with no shared test catching it.</drawback>
-    </alternative>
-    <alternative id="Workspace glob, list contents">
-      The extension globs the discovery pattern in the workspace for the live list and approximates `started` from whether the mission&apos;s `TASKS_TODO.md` holds any `##` section, reading files only, with no tool and no git.
-      <advantage>It gives a started-like marker from files alone, at no process cost, beside the remaining task headings the list already reads.</advantage>
-      <drawback>It reads a mission whose every task completed but which nobody finished as `defined`, exactly the case the plugin reads from the log so that such a mission still holds its scope, so the marker disagrees with the scope gate where the difference matters, on top of being a second copy of the pattern.</drawback>
-    </alternative>
-    <alternative id="Installed tool, glob fallback">
-      The extension runs the installed `missions.py live`, located per host, for the live list and `started` or `defined` whenever an installed copy is found, and falls back to a workspace glob of the discovery pattern with no `started` or `defined` when none is.
-      <advantage>It shows the tool&apos;s exact state wherever the plugin is installed and still shows a list where it is not, so the extension is never empty for want of an install.</advantage>
-      <drawback>It carries both the host install lookup and a second copy of the pattern, two code paths whose displays differ in what they show, so the person may not know which state they are looking at; the fallback&apos;s lack of `started` is acceptable only as far as the states the mission page tells apart allow.</drawback>
-    </alternative>
-  </open-question>
   <open-question id="Question document renderer">
     <question>What turns `open_questions.xml` into the extension&apos;s question view: a reader of the XML inside the extension, or a read-only render added to the plugin&apos;s tools, whose output the view shows?</question>
     <recommendation option="Extension XML reader">It keeps the plugin unchanged, reads the document as the invariant already allows a display to, and shows everything the view needs, the advantages, drawbacks, dependencies, and principles the existing read subcommands do not print. The format is small and written only in the tool&apos;s canonical form, so a second reader is a modest copy of the contract, and a redraw after every run costs one file read with no process started.</recommendation>
@@ -155,7 +116,6 @@
   </open-question>
   <open-question id="Mission page state">
     <question>Which states of a mission does the extension tell apart, from what does it read them, and does a state only show or also decide which buttons are offered: the `started` or `defined` of `missions.py live` with the open-question and task lists, or the finer states `ideas/kepala.md` names (Scoped through Done), which that draft reads from the last run&apos;s fixed first line?</question>
-    <depends-on question="Live state source" option="Bundled tool copy"/>
     <recommendation option="Coarse state, shown only">Every fact is re-read from the project on each refresh, so the label is right after a restart, a hand run, or a pull, and the extension keeps no skill order and no memory of its own runs. The one distinction it lacks, review due against converged, is one the snippet file&apos;s execution blocks already pass over by deriving tasks straight after the sweep, and the skills&apos; own stop lines stay the only gate.</recommendation>
     <alternative id="Coarse state, shown only">
       The page tells apart only what the documents hold now: `started` or `defined` from `missions.py live`, whether any question lacks alternatives or a pick (the open-question tool&apos;s `list` with `--without-alternatives` and `--without-recommendation`), whether the question list is empty, and whether tasks remain (the `##` headings of `TASKS_TODO.md`). It reads no run&apos;s output and no commit subject. The state is shown as a label on the page, and every recipe button stays offered whatever it reads.
