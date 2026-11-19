@@ -156,5 +156,9 @@ The extension takes a descriptive name that carries the plugin's name with a qua
 
 The mission page reads whether any question lacks alternatives or a pick from the extension's own in-process parse of `open_questions.xml`, the one read the question view already makes, so the page label and the view cannot disagree on a block and a refresh starts no process. Nothing beyond `missions.py` is bundled and no installed plugin is looked up. The extension's tests, run as steps of the drift-gate workflow, run this repository's own `core/tools/open_questions.py list --without-alternatives` and `--without-recommendation` over the committed question documents or fixtures and fail when the parse selects different blocks, so a plugin change that moves the filters' meaning fails in the same commit. The page state's account of its source names the parse, with the tool's two filters named as what the parse is checked against.
 
+### Interactive line source
+
+The interactive lines behind the extension's buttons are written out literally, host binary, model, and effort included, as entries of their own in the shipped recipe source, `snippets/GURITA_USAGE.md`, beside its blocks: a `discuss-open-question --mission <path> <Short Title>` line and a `discuss-mission-goal <goal>` line in the interactive form (`claude "…"` with no `-p`, `agy -i "…"` on Antigravity). The extension fills `<path>`, `<Short Title>`, and `<goal>` and hands the line to a terminal, and a person's own recipe of the same name replaces a shipped line. The buttons then work with no recipe file of the person's own, the extension still holds no host flag, model, or effort, and `docs/ways-of-using.md` stays as it is, holding headless lines only.
+
 ## Out of Scope
 
