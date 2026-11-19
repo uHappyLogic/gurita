@@ -172,5 +172,9 @@ A person's own recipe file lives outside the project as one per-user file servin
 
 The shipped snippet file gains one complete headless line for each of four skills: `answer-open-question-with-alternative --mission <path> <Short Title>. <Alternative Id>`, `answer-open-question --mission <path> <Short Title>. <answer text>`, `answer-open-question-with-recommendation --mission <path> <Short Title>`, and `define-mission-goal --at <scope> <goal>`. Each is a `###` recipe of its own under a fixed name, written with its host binary, model, and effort as the file's other lines are and using the usage page's placeholder names; the define line is a one-line recipe of its own, not the head of a chain. Each button runs the shipped recipe of its fixed name, and a person's own recipe of the same name replaces it, as for every other recipe. Every button's line thus comes from the one shipped source by the one reading rule, the extension composes no line and holds no host flag, model, or effort, and `docs/ways-of-using.md` is untouched.
 
+### Non-chain snippet blocks
+
+The five blocks of `snippets/GURITA_USAGE.md` that are not chains of host command lines (the two lists of bare slash commands, the Antigravity install block, the `agy models` line, and the `git log` one-liner that lists every mission) stay in the file, moved under one reference heading of their own (for example `## Reference`) standing apart from the host headings. The reader takes as recipes only the `###` blocks under `## Claude Code` and `## Antigravity` and never reads that section, so a shipped recipe is each `###` heading under a host heading, and the draft states that the reference section holds lines for hand use only. The file stays the one usage reference a person reads by hand, and no block that cannot run is offered as a button.
+
 ## Out of Scope
 
