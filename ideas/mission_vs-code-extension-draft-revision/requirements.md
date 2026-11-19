@@ -108,5 +108,9 @@ The runner is one stdlib-only Python file (Python 3.9+, no `uv`, no third-party 
 
 A chain runs as one shell session started for that run, so a recipe's shell step of the person's own (sourcing an environment file, calling a shell function such as the snippet file's `claude-wait`) takes effect for every line after it. A substituted value (`<path>`, `<Short Title>`, `<Alternative Id>`, `<goal>`, `<scope>`, `<answer text>`) never enters the line's text: the extension puts it in the session's environment when it starts the session, all of a chain's values being fixed when its button is clicked, and writes the placeholder into the line as a variable reference suited to the placeholder's quoting (as is inside a double-quoted prompt, and on a Codex line by closing and reopening the single quotes around it), which the shell expands without parsing what the value holds. No character is refused or escaped.
 
+### Extension-run task loop
+
+The draft adopts the task loop in a refined form. The extension carries out the loop itself (the top remaining heading re-read before each run, one `complete-task` line per task, a stop on any first line other than `Task completed.`), but as an execution recipe of its own beside the unchanged `complete-all-tasks` line, which the execution recipes keep, so a uniform run loses nothing and each task of a looped run can go under its own host, model, and effort with the plugin unchanged. "The constraint" and the Recipes part are amended to name the loop's order as the one order the extension holds.
+
 ## Out of Scope
 
