@@ -184,5 +184,9 @@ The two standalone personal blocks, `source .env_anthropic` (API KEY usage) and 
 
 The recipe form gains one mark the shell ignores, carried only by an interactive line: a trailing `# interactive` comment. The runner infers the rest. A marked line is started with the terminal inherited and not read; an unmarked line holding a `gurita:` skill invocation (written `/gurita:` or `$gurita:`) is headless, its output piped and its final message's first line read against the fixed-line table; every other unmarked line is a shell step, run in the chain's shell session and not read, the chain going on after it. A headless last line is therefore still read, as the looped run and the blocks that close on a headless line need, and the snippet file's shell steps and headless lines stay as written.
 
+### Looped recipe form
+
+The looped recipe holds no lines that run once before the loop: only its own shell steps and a reserved slot line written last (for example `<task line>`), and that slot line is what marks the recipe as the looped one. Every line other than the slot runs at the head of each task's session, followed by the single-task line the rules chose for that task, so no rule splits once-only lines from per-task ones. The answer sweep and `derive-tasks` run from an ordinary flat recipe that the person clicks first, an execution block without its `complete-all-tasks` line; the task list is then already derived when the looped recipe is clicked, so the page's preview holds every task the run will take. The one-click execution blocks stay for a uniform run.
+
 ## Out of Scope
 
