@@ -50,6 +50,46 @@
   </open-question>
   <open-question id="Heading-first question screening">
     <question>Does the question view show each question collapsed to its title and its pick until the person opens it, to fit the maintainer&apos;s report that most questions are screened by their heading alone and only one or two are read in full, or does it show every question whole as the draft describes?</question>
+    <alternative id="Whole questions as drafted">
+      The question view stays as the draft&apos;s Question view part describes it: every question is shown whole and open, with its question text, its pick and rationale, every alternative with its what-it-is, advantage, and drawback, its dependencies, and its applied principles. There is no collapsed form and no collapse control. The maintainer&apos;s heading-first screening is left to scrolling, and the draft&apos;s Question view text is not changed.
+      <advantage>Nothing is added to the view or to the draft: one rendering, nothing hidden behind a click, and every alternative&apos;s record button visible at once for the person who does read a question in full.</advantage>
+      <drawback>It fits the reading the maintainer reports least well: most questions are passed over by their heading, so a document of twenty-odd questions with several alternatives each is mostly scrolled past, which is the hand work the extension exists to cut.</drawback>
+    </alternative>
+    <alternative id="Title and pick rows">
+      Each question is shown collapsed by default to one row holding its Short Title and the id of its picked alternative (no pick shown when it carries none). The question-level buttons (discuss, answer in the person&apos;s own words, record the recommendation) stand on the row; opening the row shows the question whole as the draft describes, with the alternative buttons inside it. The view carries expand-all and collapse-all controls. The draft&apos;s Question view part is rewritten to say so.
+      <advantage>It is the shape the maintainer&apos;s report describes: the heading decides whether the question matters, and the pick&apos;s id beside it says what will be recorded if nothing is done, so a question is opened only to disagree.</advantage>
+      <drawback>An option id alone may not say what the pick does, so judging whether the recommendation is fine can still mean opening the question; and the collapsed rendering needs a fold the renderer supports, which depends on what the Question document renderer question settles.</drawback>
+    </alternative>
+    <alternative id="Title, pick, and rationale rows">
+      Each question is shown collapsed by default to its Short Title, its picked alternative&apos;s id, and the pick&apos;s one-line rationale (the line `lift` prints), with the question-level buttons on the row; opening it shows the question whole with the alternative buttons. Expand-all and collapse-all controls are carried. The draft&apos;s Question view part is rewritten to say so.
+      <advantage>The collapsed row says why the pick was made, so &quot;is the recommendation mostly fine&quot; can be judged for most questions without opening any, and the sweep then records what was screened.</advantage>
+      <drawback>Rows grow to two or three lines each, so the list is longer to scroll than a heading list, partly undoing the screening by heading alone; the fold itself depends on what the Question document renderer question settles.</drawback>
+    </alternative>
+    <alternative id="Title-only rows">
+      Each question is shown collapsed by default to its Short Title alone, the heading in the literal sense; the pick, rationale, and alternatives appear only on opening. Question-level buttons stand on the row, alternative buttons inside, with expand-all and collapse-all controls. The draft&apos;s Question view part is rewritten to say so.
+      <advantage>The shortest list there can be, matching exactly the &quot;read the heading, do I care, next&quot; step the maintainer reports, with nothing on a row a person is going to skip anyway.</advantage>
+      <drawback>A question that matters shows no pick until opened, so every question the person cares about costs a click even when its pick would have been accepted at a glance; a Short Title of two to five words may also be too terse to tell whether the question matters.</drawback>
+    </alternative>
+    <alternative id="Title, question, and pick rows">
+      Each question is shown collapsed by default to its Short Title, its full question text, and its picked alternative&apos;s id; the alternatives with their advantages and drawbacks, the rationale, the dependencies, and the principles appear only on opening. Question-level buttons stand on the row, alternative buttons inside, with expand-all and collapse-all controls. The draft&apos;s Question view part is rewritten to say so.
+      <advantage>It takes &quot;heading&quot; as what a person reading the document actually screens on, the title together with the question it asks, so a terse Short Title never hides what is being decided, while the long alternative bodies, the bulk of each block, stay folded.</advantage>
+      <drawback>Question texts here run to two or four lines, so the collapsed list is several times longer than a title list and screening it is closer to reading; the fold depends on what the Question document renderer question settles.</drawback>
+    </alternative>
+    <alternative id="Whole by default, collapsible">
+      Every question is shown whole by default, as the draft describes, and the view adds a collapse-all control and a per-question fold that reduce questions to their Short Title and picked alternative&apos;s id, with the question-level buttons on the collapsed row. The draft&apos;s Question view part keeps its text and gains the control.
+      <advantage>A first-time or occasional reader sees everything, as the draft intends, while the maintainer&apos;s heading-first screening is one click away, so neither way of reading is imposed.</advantage>
+      <drawback>The person who screens by heading, the extension&apos;s first and likely main user, pays the click on every opening of the view unless the choice is remembered, which is state the extension would keep; it also renders and tests two forms of the same view.</drawback>
+    </alternative>
+    <alternative id="Screen in the mission tree">
+      The question view stays whole as drafted, and screening happens one level up: the side-bar tree, which already lists each live mission&apos;s open questions beneath it, shows each question as its Short Title and picked alternative&apos;s id, with the question-level buttons on that entry, and opening an entry shows that one question whole in the question view. The draft&apos;s Mission list and Question view parts are rewritten to say so.
+      <advantage>It reuses a list the draft already has, so the screening needs no fold in the rendered document and the question view stays one simple whole rendering.</advantage>
+      <drawback>It rests on the side-bar tree surviving, which depends on what the Per-mission pane question settles, and it splits one sitting across two surfaces, the tree to screen and the view to read, where one view held both.</drawback>
+    </alternative>
+    <alternative id="Leave to the work">
+      The revision settles nothing about how questions are displayed now: the draft&apos;s Question view text is left as it stands, and the screening report is written into the draft&apos;s questions for the work as an open question (collapsed by default or whole, and what a collapsed row carries), to be decided when the view is built.
+      <advantage>The display is decided against a working view and real documents rather than in prose, where the cost of a click or a long row can actually be seen.</advantage>
+      <drawback>The one usage fact the conversation gives about reading questions goes unapplied in the draft that recorded it, and the mission&apos;s goal of settling the transcript&apos;s ideas leaves this one as a further question.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Conversation reasons record">
     <question>Does the revised draft record the reasons the 2026-11-19 conversation gives for the extension (a host offers two usable layers, an agent and its subagents, so what orders the skills sits outside it; VS Code supplies the terminal and git integration an application of its own would have to build; the extension is an experiment that a deeper integration or such an application may follow), and if so where in the draft?</question>
