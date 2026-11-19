@@ -180,5 +180,9 @@ The five blocks of `snippets/GURITA_USAGE.md` that are not chains of host comman
 
 The two standalone personal blocks, `source .env_anthropic` (API KEY usage) and `claude-wait` (Wait for next quota reset), leave `snippets/GURITA_USAGE.md`, so the shipped file keeps no personal line, and the recipe format gains nothing. A person who wants a shell step in a run writes it as an ordinary line inside a recipe of their own recipe file: a variant of a shipped chain (for example an "Execute tasks of normal difficulty (API key)" opening with `source .env_anthropic`, or one opening with `claude-wait;`), which adds to the shipped set or replaces the shipped recipe of the same name. The step runs because it stands ahead of the chain's lines in the same recipe, and so in the same shell session; it can also stand mid-chain, before a second `complete-all-tasks` line. The extension gives no line its own handling for this, at the cost of one copied chain for each variant a person actually runs.
 
+### Line kind recognition
+
+The recipe form gains one mark the shell ignores, carried only by an interactive line: a trailing `# interactive` comment. The runner infers the rest. A marked line is started with the terminal inherited and not read; an unmarked line holding a `gurita:` skill invocation (written `/gurita:` or `$gurita:`) is headless, its output piped and its final message's first line read against the fixed-line table; every other unmarked line is a shell step, run in the chain's shell session and not read, the chain going on after it. A headless last line is therefore still read, as the looped run and the blocks that close on a headless line need, and the snippet file's shell steps and headless lines stay as written.
+
 ## Out of Scope
 
