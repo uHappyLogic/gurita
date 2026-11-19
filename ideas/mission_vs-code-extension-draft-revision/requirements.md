@@ -88,5 +88,9 @@ The revision corrects in place only the present-tense descriptions that are now 
 
 Every choice this mission settles, each of the ten former questions and each adopted or refined idea alike, is recorded in the draft twice. The section it bears on (The constraint, Recipes, Question view, Mission list, Running a line, Kepala, What it costs, and the rest) is rewritten to state the design as chosen, and a bulleted entry naming the choice and its reason is added to the draft's Decided section under a new "Decided on 2026-11-19." line beside the existing 2026-11-17 one. Each settled question is removed from "Questions for the work".
 
+### Mission page state
+
+The page tells apart only what the documents hold now: `started` or `defined` from `missions.py live`, whether any question lacks alternatives or a pick (the open-question tool's `list` with `--without-alternatives` and `--without-recommendation`), whether the question list is empty, and whether tasks remain (the `##` headings of `TASKS_TODO.md`). It reads no run's output and no commit subject, so every fact is re-read from the project on each refresh and the extension keeps no memory of its own runs; the finer states `ideas/kepala.md` names are not told apart. The state is shown as a label on the page only: every recipe button stays offered whatever the label reads, and the skills' own stop lines stay the only gate.
+
 ## Out of Scope
 
