@@ -3,7 +3,10 @@
 // them, each showing the mission's title with its path as a tooltip, with the two mission-starting
 // buttons and the refresh control at the row's end and the selected mission's page beneath; or the
 // one failure state in place of the pages, the refresh control and the two mission-starting buttons
-// staying on the pane above it. The refresh control asks the extension to re-read everything, and
+// staying on the pane above it. Every click of a mission's tab, the tab already selected included,
+// posts the clicked mission's path to the extension, which brings forward and focuses the terminal
+// of that mission's running runner when it has one and does nothing more, with no notification,
+// when it has none. The refresh control asks the extension to re-read everything, and
 // after every answer the page stays on the mission it showed unless that mission is no longer
 // live, when it falls back to the first. A page opens on the workflow diagram, drawn by this script
 // with no Mermaid: the choices a person makes as one line of seven neutral blocks joined by arrows,
@@ -353,7 +356,11 @@ declare function acquireVsCodeApi(): VsCodeApi;
       tab.title = mission.path;
       tab.setAttribute('role', 'tab');
       tab.setAttribute('aria-selected', String(mission.path === selected));
-      tab.addEventListener('click', () => select(mission.path));
+      // Posted on every click, selected or not, so the extension can show the mission's run terminal.
+      tab.addEventListener('click', () => {
+        vscode.postMessage({ type: 'missionTab', mission: mission.path });
+        select(mission.path);
+      });
       list.append(tab);
     }
     tabs.append(drawStarting());

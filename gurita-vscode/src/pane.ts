@@ -31,7 +31,11 @@
 // other missions' pages, and the two mission-starting buttons stay enabled. The extension posts the
 // paths of the missions with a running runner to the page when a run starts and when its terminal closes, and
 // with every redraw, so a hidden pane shown again draws them too; a click that still reaches the
-// extension for such a mission is refused as before. When a run's terminal closes the pane is
+// extension for such a mission is refused as before. The page posts the clicked mission's path on
+// every click of a mission's tab, the tab already selected included, and the extension answers by
+// calling `show()` on the terminal the run note keeps for that mission, bringing it forward and
+// focusing it, and does nothing more, with no notification, when the mission has no running
+// runner. When a run's terminal closes the pane is
 // re-read and the fresh parse posted to the page. A click on a looped recipe's button shows that recipe's preview on the
 // page before anything runs: the extension gathers the named single-task lines from the recipes,
 // read afresh, runs the runner's `preview` with them, the mission, and the rule file at the
@@ -60,7 +64,7 @@ import { PreviewRead, SingleTaskLine, loopArguments, ruleFile, runOverrides, run
 import { BUTTON_RECIPES, PageRecipe, Recipe, buttonRecipe, ownRecipesFile, pageRecipes, readRecipes } from './recipes';
 import { FileEventKind, RefreshBatch, RefreshQueue, WATCHED_PATTERN, eventEffect } from './refresh';
 import { OPTIONAL_PLACEHOLDERS } from './placeholders';
-import { refuseWhileRunning, runnerFile, runningMissions, startChain, startLoop } from './runs';
+import { refuseWhileRunning, runnerFile, runningMissions, showRun, startChain, startLoop } from './runs';
 import { MissionWorkflow, missionWorkflow, reviewCount } from './workflow';
 
 const VIEW_TYPE = 'gurita.missionPane';
@@ -79,6 +83,7 @@ type MissionButton = 'discussGoal' | 'defineMission';
 type PageMessage =
   | { type: 'ready' }
   | { type: 'refresh' }
+  | { type: 'missionTab'; mission: string }
   | { type: 'runRecipe'; mission: string; recipe: string }
   | { type: 'questionButton'; button: QuestionButton; mission: string; question: string }
   | { type: 'alternativeButton'; mission: string; question: string; alternative: string }
@@ -218,6 +223,10 @@ export function openMissionPane(context: vscode.ExtensionContext): void {
     (message: PageMessage) => {
       if (message?.type === 'ready' || message?.type === 'refresh') {
         void answer(context, created);
+      } else if (message?.type === 'missionTab') {
+        if (typeof message.mission === 'string') {
+          showRun(message.mission);
+        }
       } else if (message?.type === 'runRecipe') {
         runRecipe(context, message.mission, message.recipe);
       } else if (message?.type === 'questionButton') {

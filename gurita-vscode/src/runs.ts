@@ -7,8 +7,11 @@
 // terminal closes, and with every redraw, and the page of a mission with a running runner shows
 // every action button disabled and its workflow diagram's filled block pulsing. As a fallback, a
 // click that still reaches the extension for that mission starts nothing and queues nothing,
-// shows a notification, and reveals that run's terminal. A run a mission-starting button starts
-// belongs to no mission and is refused for none. A looped run is started the same way, its
+// shows a notification, and reveals that run's terminal. A click on a mission's tab, whether or
+// not that tab is already selected, brings forward and focuses the terminal of that mission's
+// running runner when it has one, and does nothing more, with no notification, when it has none.
+// A run a mission-starting button starts belongs to no mission and is refused for none, and no
+// tab shows its terminal. A looped run is started the same way, its
 // arguments the runner's `loop` command line, the runner filling the loop's values itself. The
 // extension learns that a run ended when its terminal closes, which the runner delays until the
 // person dismisses it, and then re-reads the pane.
@@ -67,6 +70,20 @@ export function refuseWhileRunning(mission: string): boolean {
     return false;
   }
   void vscode.window.showInformationMessage(ALREADY_RUNNING);
+  terminal.show();
+  return true;
+}
+
+/**
+ * Brings forward and focuses the terminal of the running runner of the mission at `mission`, as a
+ * click on that mission's tab asks, `show()` taking the focus, and returns whether it had one. A
+ * mission with no running runner shows nothing and no notification.
+ */
+export function showRun(mission: string): boolean {
+  const terminal = running.terminal(mission);
+  if (terminal === undefined) {
+    return false;
+  }
   terminal.show();
   return true;
 }

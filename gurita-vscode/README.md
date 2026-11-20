@@ -40,8 +40,9 @@ Every Node command runs under Node 22 through nvm, in a subshell, from the repos
   one emitted file per source file, with no bundler.
 - `npm test` compiles, then runs the unit tests of the recipe reader, the `open_questions.xml`
   parser, and the `TASKS_TODO.md` heading read, among others, with Node's built-in `node:test`
-  over the compiled files under `out/test/`; the run path is tested against a stub of the
-  `vscode` module, and the page script against a small stand-in for the DOM. Nothing runs
+  over the compiled files under `out/test/`; the run path and the pane's answer to a tab click
+  are tested against a stub of the `vscode` module, and the page script against a small
+  stand-in for the DOM. Nothing runs
   inside an editor.
 - `npm run package` runs `vsce package`, which first runs the `vscode:prepublish` script: the
   compile, then `scripts/bundle.js`, the extension's own build step, which copies
@@ -155,7 +156,10 @@ disabled, and the workflow diagram's filled block pulses. The tabs, the **Open q
 other missions' pages, and **New mission** and **Define mission** stay enabled, and the page is
 drawn this way again whenever it is redrawn, after the pane was hidden and shown included.
 Should a click still reach the extension for that mission, it starts nothing: a notification
-says a chain is already running and the run's terminal is shown.
+says a chain is already running and the run's terminal is shown. Clicking a mission's tab,
+whether or not it is the tab already selected, brings the terminal of that mission's run
+forward and focuses it while a run started for the mission is going; when none is, the click
+only shows the mission's page, with no notification.
 
 The pane re-reads by itself after each of its runs, once you dismiss the run's terminal, and on
 changes to any mission's `requirements.md`, `open_questions.xml`, or `TASKS_TODO.md`; git state

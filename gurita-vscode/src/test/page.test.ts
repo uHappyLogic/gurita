@@ -283,6 +283,38 @@ test("a running mission's page disables its action buttons and pulses its filled
   assertRunning(page);
 });
 
+test("every tab click posts its mission's path, the tab already selected included", () => {
+  const page = loadPage();
+  page.send(live([]));
+  let count = page.posted.length;
+  named(page, 'Alpha').click();
+  assert.deepStrictEqual(page.posted.slice(count), [{ type: 'missionTab', mission: ALPHA }], 'the selected tab posts its path');
+  count = page.posted.length;
+  named(page, 'Beta').click();
+  assert.deepStrictEqual(page.posted.slice(count), [{ type: 'missionTab', mission: BETA }], 'an unselected tab posts its path');
+  const shownTab = page.root.all().filter((each) => each.getAttribute('role') === 'tab' && !each.has('pane-tab') && each.getAttribute('aria-selected') === 'true');
+  assert.deepStrictEqual(shownTab.map((each) => each.textContent), ['Beta'], 'the unselected tab clicked is shown');
+  count = page.posted.length;
+  named(page, 'Beta').click();
+  assert.deepStrictEqual(page.posted.slice(count), [{ type: 'missionTab', mission: BETA }], 'a second click on it posts again');
+});
+
+test("a running mission's tab stays enabled and posts its path, selected or not", () => {
+  const page = loadPage();
+  page.send(live([ALPHA, BETA]));
+  for (const [tab, missionPath] of [
+    ['Alpha', ALPHA],
+    ['Beta', BETA],
+    ['Beta', BETA],
+    ['Alpha', ALPHA],
+  ]) {
+    assert.strictEqual(named(page, tab).disabled, false, `${tab} stays enabled`);
+    const count = page.posted.length;
+    named(page, tab).click();
+    assert.deepStrictEqual(page.posted.slice(count), [{ type: 'missionTab', mission: missionPath }]);
+  }
+});
+
 test("another mission's page is unaffected by a run it does not hold", () => {
   const page = loadPage();
   page.send(live([ALPHA]));
