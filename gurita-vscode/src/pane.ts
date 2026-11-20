@@ -2,9 +2,12 @@
 // `webview.html` is set once, to a page shell whose script, loaded from the output directory
 // through `asWebviewUri` under a content security policy, posts a ready message on every load
 // and draws what the extension answers. The extension answers every ready message with the live
-// missions, read afresh, or with the one failure state the read gives.
+// missions, read afresh, each carrying its documents as the in-process readers parse them, or
+// with the one failure state the live read gives; the page redraws its rows in place from every
+// such message.
 
 import * as vscode from 'vscode';
+import { MissionDocuments, readMissionDocuments } from './documents';
 import { LiveRead, readLive } from './live';
 
 const VIEW_TYPE = 'gurita.missionPane';
@@ -15,7 +18,7 @@ type PageMessage = { type: 'ready' };
 
 /** A message the extension posts to the page. */
 type PaneMessage =
-  | { type: 'live'; missions: { path: string; state: string; title: string }[] }
+  | { type: 'live'; missions: ({ path: string; state: string; title: string } & MissionDocuments)[] }
   | { type: 'liveFailure'; cause: string };
 
 let panel: vscode.WebviewPanel | undefined;
@@ -58,7 +61,10 @@ async function answer(context: vscode.ExtensionContext, target: vscode.WebviewPa
   const read: LiveRead = await readLive(folder, context.asAbsolutePath('bundled/missions.py'));
   const message: PaneMessage =
     read.state === 'read'
-      ? { type: 'live', missions: read.missions }
+      ? {
+          type: 'live',
+          missions: read.missions.map((mission) => ({ ...mission, ...readMissionDocuments(read.root, mission.path) })),
+        }
       : { type: 'liveFailure', cause: read.cause };
   try {
     await target.webview.postMessage(message);
@@ -98,7 +104,20 @@ function pageShell(webview: vscode.Webview, script: vscode.Uri): string {
   .facts { display: grid; grid-template-columns: max-content auto; gap: 0.25em 1em; margin: 1em 0; }
   .facts dt { opacity: 0.7; }
   .facts dd { margin: 0; }
-  .failure pre { white-space: pre-wrap; font-family: var(--vscode-editor-font-family); }
+  .failure pre, .notice pre { white-space: pre-wrap; font-family: var(--vscode-editor-font-family); }
+  .label { display: flex; flex-wrap: wrap; gap: 0.4em; list-style: none; padding: 0; margin: 0 0 1em; }
+  .label li { border: 1px solid var(--vscode-panel-border); border-radius: 1em; padding: 0.1em 0.7em; }
+  .notice { border-left: 3px solid var(--vscode-inputValidation-warningBorder); padding: 0.2em 0.8em; }
+  .controls { display: flex; gap: 0.5em; margin-bottom: 0.5em; }
+  button.control { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: none; padding: 0.25em 0.8em; cursor: pointer; font: inherit; }
+  .row { border-bottom: 1px solid var(--vscode-panel-border); }
+  button.row-head { display: flex; gap: 0.6em; width: 100%; text-align: left; background: none; color: var(--vscode-foreground); border: none; padding: 0.4em 0; cursor: pointer; font: inherit; }
+  .row-head .pick-id { margin-left: auto; opacity: 0.75; }
+  .row .body { padding: 0 0 0.8em 1.4em; }
+  .alternative { margin: 0.4em 0; padding-left: 0.6em; border-left: 2px solid var(--vscode-panel-border); }
+  .alternative.picked { border-left-color: var(--vscode-focusBorder); }
+  .body h4, .body h5 { margin: 0.6em 0 0.2em; }
+  button.link { background: none; border: none; padding: 0; color: var(--vscode-textLink-foreground); cursor: pointer; font: inherit; text-decoration: underline; }
 </style>
 </head>
 <body>
