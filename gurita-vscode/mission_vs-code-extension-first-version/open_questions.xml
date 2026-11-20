@@ -58,6 +58,31 @@
   </open-question>
   <open-question id="Follow-up document layout">
     <question>The mission&apos;s goal has everything the first version of the VS Code extension (`gurita-vscode`) leaves out written into one or more new documents under `ideas/` as potential follow-up work. Is that one document or several, and what is each called?</question>
+    <alternative id="One follow-up document">
+      One new document, `ideas/vscode_extension_follow_up.md`, flat in `ideas/` beside the draft and named after its stem in the folder&apos;s snake_case form. It holds every item the first version leaves out, each in a section of its own, grouped by kind under a few `##` headings: guards of a long-lived extension (drift-gate Node steps, the fixed-line, parse, and heading cross-checks, any tests left out), checks left unmade, and deferred product work such as publication.
+      <advantage>Everything left out has one place to look, one file name the task and the maintainer can know up front, and one diff in the commit that writes it. A short list of small items does not end up as a scatter of thin files.</advantage>
+      <drawback>It breaks the convention every `ideas/` draft follows, one draft for one prospective mission (`short_title_characters.md`, `kepala.md`), so a later mission taking up one item works from a document that is mostly about other work. Whether the document is long or short depends on what the drift-gate, test, and Codex-check siblings leave out.</drawback>
+    </alternative>
+    <alternative id="Guards apart from features">
+      Two new documents, flat in `ideas/`, split by kind. `ideas/vscode_extension_guards.md` holds what only guards a long-lived extension: the drift-gate Node steps, the cross-checks against the fixed-line table, the open-question tool, and the snippet headings, and any automated tests left out. `ideas/vscode_extension_follow_up.md` holds everything else left out: checks left unmade, deferred product work, and publication.
+      <advantage>It follows the line the goal itself draws between guards that may be left out and what the person sees and clicks. The guards, which are likely to be taken up together as one CI-and-tests mission, get a draft of their own, while there are still only two names to know.</advantage>
+      <drawback>The split is fixed before the left-out set is known. If the siblings carry most guards or leave out little else, one of the two documents is nearly empty. An item that is both a guard and an unmade check, such as checking Codex&apos;s print, has to be filed under one of the two by judgment.</drawback>
+    </alternative>
+    <alternative id="One draft per follow-up">
+      Several new documents, flat in `ideas/`, one per prospective follow-up mission. Each is written in the form of the existing drafts (&quot;A draft … for a mission not yet defined&quot;) and named for its own change in snake_case under a common `vscode_extension_` prefix, for example `vscode_extension_drift_gate.md` or `vscode_extension_codex_print.md`. How many there are, and which items share a file, follows from how the left-out items group into missions that could be defined on their own.
+      <advantage>It matches what `ideas/` already is, a flat folder of one draft per mission not yet defined. Each follow-up can be taken up, revised, or dropped on its own, and `/discuss-mission-goal` starts from a draft about exactly that work.</advantage>
+      <drawback>Neither the names nor the count can be fixed now: they depend on what the drift-gate, test, and Codex-check siblings leave out. Several thin drafts make the follow-up harder to see as a whole, and the shared prefix is the only thing that ties them to the extension in a folder that will keep growing.</drawback>
+    </alternative>
+    <alternative id="Follow-up subdirectory">
+      Several new documents in a new subdirectory, `ideas/vscode_extension_follow_up/`, one file per left-out item, each named for its item in snake_case (for example `drift_gate_node_steps.md`, `codex_print_check.md`, `publication.md`). The directory&apos;s name is what ties them to the extension.
+      <advantage>The follow-up is grouped in one place, so it can be listed and seen whole, while each item stays its own file that can be revised or dropped alone. The flat `ideas/` folder gains one entry instead of several.</advantage>
+      <drawback>It adds the first subdirectory to an `ideas/` folder that CLAUDE.md&apos;s layout describes as flat drafts, so the layout entry needs a change. One file per item, rather than per prospective mission, can split work a later mission would take up as one. The file names again depend on what the siblings leave out.</drawback>
+    </alternative>
+    <alternative id="Leave to the writing task">
+      Fix no layout now. The task that writes the follow-up chooses the count and the names once the left-out set is known, bound only by the goal: new documents under `ideas/`, following the folder&apos;s snake_case convention.
+      <advantage>The layout is chosen against the actual list of left-out items, which several open siblings (drift-gate guards, tests, the Codex check) are still settling. Nothing is fixed that the outcome could make awkward, and no decision is spent on a file name.</advantage>
+      <drawback>The task derived from this mission has no named deliverable. Its acceptance bar then checks only that some new document exists under `ideas/`, the choice is made unattended inside a completion run, and no recorded decision says where the follow-up stands, so the draft revision, the documentation, and the maintainer cannot point to it by name in advance.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Draft after delivery">
     <question>Once the VS Code extension (`gurita-vscode`) exists, the design draft `ideas/vscode_extension.md` still says that nothing of it is carried out and still lists as open the names, paths, and formats this mission settles. Does the mission revise the draft, and if so how far?</question>
