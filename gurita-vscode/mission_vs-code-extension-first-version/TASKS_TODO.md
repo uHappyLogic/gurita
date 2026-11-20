@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Question Document Parser With Unit Tests
-
-Write the extension's in-process parser of `open_questions.xml` as a TypeScript module importing nothing from `vscode`, against the format the module docstring of `core/tools/open_questions.py` states: it returns every block whole (its Short Title, question, applied principles, dependencies with their question and option, recommendation with its option, and each alternative's id, what-it-is, advantage, and drawback, entities reversed), so that which blocks lack alternatives or a recommendation and whether the document is empty follow from it, and it reports a document that does not parse, conflict markers included, with a message of its own. The question view and the page's label are drawn from it. Verified by `node:test` unit tests over the committed question documents under `tests/fixtures/` and small fixtures of its own, run by the npm test script.
-
----
-
 ## Task List Heading Reader With Unit Tests
 
 Write the read of a mission's `TASKS_TODO.md` as a TypeScript module importing nothing from `vscode`: it returns the remaining tasks' `##` headings in file order and reports a file holding a conflict-marker line (`<<<<<<<`, `=======`, or `>>>>>>>` at column 0) as unreadable. The page's remaining-task headings and its tasks-remain fact are drawn from it. Verified by `node:test` unit tests over `tests/fixtures/task_list_todo.md` and small fixtures of its own, run by the npm test script.

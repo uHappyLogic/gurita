@@ -1,0 +1,11 @@
+<open-questions>
+<<<<<<< HEAD
+  <open-question id="Cache size">
+    <question>How large is the cache?</question>
+  </open-question>
+=======
+  <open-question id="Cache warmup">
+    <question>Is the cache warmed before its first read?</question>
+  </open-question>
+>>>>>>> other
+</open-questions>

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- A hand-written block holding every element kind. -->
+<open-questions>
+  <open-question id="  Cache   size ">
+    <question>How large is
+      the cache?</question>
+    <applied-principle>Smallest &#38; simplest</applied-principle>
+    <applied-principle>Measure first</applied-principle>
+    <depends-on question="Storage backend" option='SQLite file'/>
+    <depends-on question="Retry limit" option="Three retries"></depends-on>
+    <recommendation option="Hundred entries">A &lt;small&gt; cap keeps a scan &#x26; a warmup short.</recommendation>
+    <alternative id="Hundred entries">
+      Cap the cache at 100 entries.
+      <advantage>A scan stays short.</advantage>
+      <drawback>More reads miss.</drawback>
+      <advantage>Warmup is quick.</advantage>
+      Entries past the cap are evicted.
+    </alternative>
+    <alternative id="No cap">
+      <![CDATA[Let the cache grow <unbounded> & unchecked.]]>
+      <advantage>No read misses for size.</advantage>
+    </alternative>
+  </open-question>
+  <open-question id="Cache warmup">
+    <question>Is the cache warmed before its first read?</question>
+  </open-question>
+</open-questions>
