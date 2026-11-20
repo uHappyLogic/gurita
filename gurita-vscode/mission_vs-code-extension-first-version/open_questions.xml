@@ -1607,4 +1607,19 @@
       <drawback>Nothing is enforced. A plugin commit that moves a fixed line, a filter&apos;s meaning, or a heading&apos;s uniqueness passes CI, and the drift shows only at the next hand run. That gives up the same-commit failure the draft gives as the reason for keeping the extension in this repository. The fixed-line table also gains a TypeScript reader beside the Python one. The option holds only if the TypeScript side gets a test runner, which the sibling question on TypeScript test coverage settles.</drawback>
     </alternative>
   </open-question>
+  <open-question id="Mission page navigation">
+    <question>The mission pane of the VS Code extension (`gurita-vscode`) holds one page per live mission, and a way on the pane itself moves between the missions. By what control does a person move from one mission&apos;s page to another&apos;s, and which mission&apos;s page does the pane show when it is opened while several missions are live?</question>
+  </open-question>
+  <open-question id="Mission document read failure">
+    <question>A mission&apos;s page in the VS Code extension (`gurita-vscode`) draws its question view and its label from the extension&apos;s own parse of that mission&apos;s `open_questions.xml`, and its remaining tasks from the `##` headings of `TASKS_TODO.md`. What does the page show when one of those two files is missing or cannot be parsed, as when a merge left conflict markers in the question document?</question>
+  </open-question>
+  <open-question id="Unreadable rule file">
+    <question>The runner of the VS Code extension (`gurita-vscode`) reads the project&apos;s tracked rule file to choose each task&apos;s single-task line, in its preview mode and in a looped task run. What do the preview and the run do when that file exists but cannot be read as rules, as when a line is written in no rule form or holds a pattern that Python&apos;s `re` refuses to compile?</question>
+  </open-question>
+  <open-question id="Rule file for this repository">
+    <question>A looped task run of the VS Code extension (`gurita-vscode`) takes each task&apos;s single-task line from a rule file tracked in the project it runs in, and this repository, where the maintainer first tries the extension, holds no such file. Does this mission add a rule file for this repository itself, and if so what does it hold: only a default line, or also rules for particular kinds of tasks?</question>
+  </open-question>
+  <open-question id="Single-task line headings">
+    <question>A rule in a project&apos;s tracked rule file, and an override in the looped run&apos;s preview, names a single-task line of the VS Code extension (`gurita-vscode`) by its recipe&apos;s `###` heading. `snippets/GURITA_USAGE.md` heads its two single-task lines `Single tasks with Opus xHigh` (under Claude Code) and `Single tasks with Opus High` (under Antigravity), names that give the model and effort but not the host. In what form is a shipped single-task line&apos;s `###` heading written, for the two lines the file holds and any it gains?</question>
+  </open-question>
 </open-questions>
