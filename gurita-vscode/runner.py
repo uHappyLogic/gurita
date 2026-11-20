@@ -14,10 +14,13 @@ interactive when it ends in a `# interactive` comment, headless when it otherwis
 chain is composed into one script, run by the shell `$SHELL` names as an interactive shell
 (`-i`, so it reads the person's startup files), or by `/bin/sh` with no startup files when
 `$SHELL` is unset or names a shell outside the sh, bash, zsh family. Before every line the
-script prints one marker line to the terminal, `Line N of TOTAL: ` and the line's text as the
-session holds it, quoted so nothing in it is expanded, and outside the `tee` below, so it never
-reaches the file a check step reads. Shell steps and interactive lines stand in the script as
-written. Each headless line's output goes through `tee` to the terminal and to a run-local
+script prints one marker line to the terminal, `Step N of TOTAL: ` and the line's text with
+every session-variable reference in it (`$GURITA_NAME` or `${GURITA_NAME}`, outside single quotes
+and not escaped) shown as the value the session holds for it, a reference to a variable the
+session does not hold left as written; nothing else in the line is expanded, the marker is
+printed quoted, and the line that runs stays as written. The marker stands outside the `tee`
+below, so it never reaches the file a check step reads. Shell steps and interactive lines stand
+in the script as written. Each headless line's output goes through `tee` to the terminal and to a run-local
 file, and is followed by a check step, this runner started as `runner.py check`, which reads
 that line's verdict from the whole print the file holds, since a host may print several
 messages for one line (an interim message each time the skill's background agents wake its
@@ -62,8 +65,8 @@ a chain's is, with `GURITA_PATH` and `GURITA_TASK_TITLE` in its environment from
 filled from `--mission` and the re-read heading: the recipe's own lines at its head and the
 chosen single-task line in the slot line's place, every `<path>` and `<Task Title>` in them
 written as a reference to its variable in the form its quoting needs, so the values never
-enter a line's text. The run goes on to the next task only when the session ran to its end and
-the line the slot line's check read from its print, as a chain's check reads one, was
+enter a line's text, only its step marker. The run goes on to the next task only when the
+session ran to its end and the line the slot line's check read from its print, as a chain's check reads one, was
 `Task completed.`, stops on any other line read, and ends when no heading remains; it closes as a chain does, on its report and a keypress.
 """
 
@@ -82,6 +85,7 @@ HEADLESS = "headless"
 SHELL_STEP = "shell"
 
 INVOCATION = re.compile(r"[/$]gurita:")
+SESSION_REFERENCE = re.compile(r"\$(?:\{(GURITA_[A-Za-z0-9_]*)\}|(GURITA_[A-Za-z0-9_]*))")
 INTERACTIVE_MARK = re.compile(r"(?:^|\s)#\s*interactive\s*$")
 
 CONTINUING_KINDS = ("success", "no-op")
@@ -195,14 +199,48 @@ def session_shell(environ: Dict[str, str]) -> List[str]:
     return [FALLBACK_SHELL]
 
 
-def step_marker(number: int, total: int, line: str) -> str:
-    """The marker line printed to the terminal before a chain's line runs."""
-    return f"Line {number} of {total}: {line}"
+def show_session_values(line: str, values: Dict[str, str]) -> str:
+    """The line with each session-variable reference, `$GURITA_NAME` or `${GURITA_NAME}`, that
+    the shell would expand (outside single quotes, not escaped) written as its value in
+    `values`; a reference to a variable `values` does not hold, and everything else in the
+    line, stays as written."""
+    shown: List[str] = []
+    quote = ""
+    index = 0
+    while index < len(line):
+        char = line[index]
+        if char == "$" and quote != "'":
+            found = SESSION_REFERENCE.match(line, index)
+            if found is not None:
+                name = found.group(1) or found.group(2)
+                if name in values:
+                    shown.append(values[name])
+                    index = found.end()
+                    continue
+        shown.append(char)
+        index += 1
+        if char == "\\" and quote != "'" and index < len(line):
+            shown.append(line[index])
+            index += 1
+        elif quote == "" and char in "'\"":
+            quote = char
+        elif char == quote:
+            quote = ""
+    return "".join(shown)
 
 
-def compose_script(lines: List[str], run_dir: str, fixed_lines: str) -> str:
+def step_marker(number: int, total: int, line: str, values: Optional[Dict[str, str]] = None) -> str:
+    """The marker line printed to the terminal before a chain's line runs, its session-variable
+    references shown as their values in `values`."""
+    return f"Step {number} of {total}: {show_session_values(line, values or {})}"
+
+
+def compose_script(
+    lines: List[str], run_dir: str, fixed_lines: str, values: Optional[Dict[str, str]] = None
+) -> str:
     """The one shell script a chain runs as, every run-local path written out quoted; before
-    each line it prints that line's marker, outside a headless line's `tee` group."""
+    each line it prints that line's marker, its session-variable references shown as their
+    values in `values`, outside a headless line's `tee` group."""
     progress = shlex.quote(os.path.join(run_dir, PROGRESS_FILE))
     verdicts = shlex.quote(os.path.join(run_dir, VERDICTS_FILE))
     check = " ".join(
@@ -212,7 +250,7 @@ def compose_script(lines: List[str], run_dir: str, fixed_lines: str) -> str:
     parts = []
     for number, line in enumerate(lines, start=1):
         parts.append(f"printf '%s\\n' {number} >| {progress}")
-        parts.append(f"printf '%s\\n' {shlex.quote(step_marker(number, total, line))}")
+        parts.append(f"printf '%s\\n' {shlex.quote(step_marker(number, total, line, values))}")
         if line_kind(line) == HEADLESS:
             output = shlex.quote(os.path.join(run_dir, f"out-{number}.txt"))
             parts.append("{")
@@ -332,7 +370,7 @@ def run_chain(lines: List[str]) -> int:
         read_fixed_lines(fixed_lines)
     run_dir = tempfile.mkdtemp(prefix="gurita-run-")
     try:
-        script = compose_script(lines, run_dir, fixed_lines)
+        script = compose_script(lines, run_dir, fixed_lines, dict(os.environ))
         process = subprocess.Popen(session_shell(dict(os.environ)) + ["-c", script])
         status = wait_for_shell(process)
         printed, finished = report(lines, run_dir, status)
@@ -663,9 +701,9 @@ def run_task_session(lines: List[str], slot: int, values: Dict[str, str]) -> Tup
     start; its report, and whether the task completed."""
     run_dir = tempfile.mkdtemp(prefix="gurita-task-")
     try:
-        script = compose_script(lines, run_dir, FIXED_LINES_FILE)
         environ = dict(os.environ)
         environ.update(values)
+        script = compose_script(lines, run_dir, FIXED_LINES_FILE, environ)
         process = subprocess.Popen(session_shell(environ) + ["-c", script], env=environ)
         status = wait_for_shell(process)
         printed, _ = report(lines, run_dir, status)

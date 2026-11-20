@@ -236,8 +236,11 @@ the project root. It composes the chain into one script and runs it in one shell
 the shell `$SHELL` names as an interactive shell (so it reads `~/.zshrc` or `~/.bashrc`), or
 `/bin/sh` with no startup files when `$SHELL` is unset or names a shell outside the sh, bash, zsh
 family. Before each line it prints a marker naming the line's number, the total, and its text,
-such as `Line 3 of 4: claude -p ...`, in a chain and in each task's run of a looped run alike;
-the marker is never part of the output a headless line's check reads. When the chain ends it
+such as `Step 3 of 4: claude -p ...`, in a chain and in each task's run of a looped run alike.
+The marker shows every session-variable reference in the line, such as `${GURITA_PATH}` or
+`${GURITA_TASK_TITLE}`, as its value, so it names the real mission path and task title; nothing
+else in the line is expanded, and the line that runs keeps its references as written. The marker
+is never part of the output a headless line's check reads. When the chain ends it
 prints the line the run ended on and the recipe line it stopped at, then waits for a keypress;
 the terminal closes, and the pane re-reads, once you dismiss it.
 
