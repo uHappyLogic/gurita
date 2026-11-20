@@ -737,6 +737,46 @@
   </open-question>
   <open-question id="Own recipe setting name">
     <question>What is the VS Code user setting called that changes the path of a person&apos;s own recipe file for the VS Code extension (`gurita-vscode`)?</question>
+    <alternative id="gurita.ownRecipesFile">
+      The setting is `gurita.ownRecipesFile`: its section is the plugin&apos;s name `gurita`, not the extension&apos;s slug, it sits flat directly under that section, and its leaf uses the draft&apos;s own vocabulary for the file, &quot;own recipes&quot;, ending in &quot;File&quot; because its value is the path of one file.
+      <advantage>The name says exactly what the draft and the extension&apos;s documentation call the thing, a person&apos;s own recipe file, under the short prefix that matches the `gurita:` namespace every recipe line already carries, so it is quick to type into `settings.json` and needs no translation between docs and settings.</advantage>
+      <drawback>The section is not the extension&apos;s own name `gurita-vscode`, so it departs from the VS Code convention of keying an extension&apos;s settings by its name, and the `gurita` section would be shared by any later Gurita extension or tool that contributes settings to the editor.</drawback>
+    </alternative>
+    <alternative id="gurita.userRecipesFile">
+      The setting is `gurita.userRecipesFile`: its section is the plugin&apos;s name `gurita`, it sits flat directly under that section, and its leaf uses VS Code&apos;s own vocabulary, &quot;user&quot;, for the per-user file, ending in &quot;File&quot;.
+      <advantage>&quot;User&quot; matches the VS Code user settings the value is meant to be set in and the per-user, outside-every-project nature the draft fixes for the file, so the name tells a person at a glance that this is their file and not the project&apos;s.</advantage>
+      <drawback>It departs from the draft&apos;s and the docs&apos; term &quot;own recipes&quot;, so the setting, the documentation, and the page name one file two ways, and &quot;user&quot; sits ambiguously beside VS Code&apos;s own user-settings layer; the `gurita` section also departs from keying settings by the extension name `gurita-vscode`.</drawback>
+    </alternative>
+    <alternative id="gurita.recipes.ownFile">
+      The setting is `gurita.recipes.ownFile`: its section is the plugin&apos;s name `gurita`, it is grouped one level deeper under a `recipes` group, and its leaf uses the draft&apos;s &quot;own&quot; vocabulary, ending in &quot;File&quot;.
+      <advantage>A `recipes` group leaves room for any later recipe setting to stand beside this one under one heading in the Settings editor, without renaming the first setting when a second arrives.</advantage>
+      <drawback>The first version contributes only this one recipe setting, so the extra level is structure for settings nobody has decided on, a longer key to type, and the `gurita` section still departs from keying settings by the extension name `gurita-vscode`.</drawback>
+    </alternative>
+    <alternative id="gurita.recipes.userFile">
+      The setting is `gurita.recipes.userFile`: its section is the plugin&apos;s name `gurita`, it is grouped under a `recipes` group, and its leaf uses VS Code&apos;s &quot;user&quot; vocabulary, ending in &quot;File&quot;.
+      <advantage>It combines room for later recipe settings under one group with a leaf that names the file by the VS Code user settings it is set in.</advantage>
+      <drawback>It carries both costs of its parts: a grouping level for settings nobody has decided on and a leaf that departs from the draft&apos;s &quot;own recipes&quot; term, under a `gurita` section that is not the extension&apos;s name.</drawback>
+    </alternative>
+    <alternative id="gurita-vscode.ownRecipesFile">
+      The setting is `gurita-vscode.ownRecipesFile`: its section is the extension&apos;s slug `gurita-vscode`, it sits flat directly under that section, and its leaf uses the draft&apos;s &quot;own recipes&quot; vocabulary, ending in &quot;File&quot;.
+      <advantage>Keying the setting by the extension&apos;s own name follows VS Code&apos;s convention, makes the setting unmistakably this extension&apos;s and no other Gurita tool&apos;s, and keeps the draft&apos;s term for the file.</advantage>
+      <drawback>The prefix is longer and hyphenated, and its &quot;vscode&quot; part is redundant inside VS Code&apos;s own settings, so the key is clumsier to type and read than a `gurita` one for no gain while the extension contributes a single setting.</drawback>
+    </alternative>
+    <alternative id="gurita-vscode.userRecipesFile">
+      The setting is `gurita-vscode.userRecipesFile`: its section is the extension&apos;s slug `gurita-vscode`, it sits flat directly under that section, and its leaf uses VS Code&apos;s &quot;user&quot; vocabulary, ending in &quot;File&quot;.
+      <advantage>It follows the convention of keying settings by the extension&apos;s name and names the file by the user settings it is set in, both terms taken from VS Code rather than from the plugin.</advantage>
+      <drawback>The long hyphenated prefix is redundant inside VS Code, and the &quot;user&quot; leaf departs from the draft&apos;s and docs&apos; &quot;own recipes&quot; term, so the file is named two ways.</drawback>
+    </alternative>
+    <alternative id="gurita-vscode.recipes.ownFile">
+      The setting is `gurita-vscode.recipes.ownFile`: its section is the extension&apos;s slug `gurita-vscode`, it is grouped under a `recipes` group, and its leaf uses the draft&apos;s &quot;own&quot; vocabulary, ending in &quot;File&quot;.
+      <advantage>It is the most structured name: keyed by the extension&apos;s own name per convention, with room for later recipe settings in one group, and the draft&apos;s term kept for the file.</advantage>
+      <drawback>It is the longest key on offer, a hyphenated, redundant prefix plus a grouping level for settings nobody has decided on, for an extension whose first version contributes one setting.</drawback>
+    </alternative>
+    <alternative id="gurita-vscode.recipes.userFile">
+      The setting is `gurita-vscode.recipes.userFile`: its section is the extension&apos;s slug `gurita-vscode`, it is grouped under a `recipes` group, and its leaf uses VS Code&apos;s &quot;user&quot; vocabulary, ending in &quot;File&quot;.
+      <advantage>It takes every term from VS Code&apos;s own conventions, the extension name as the section and the user settings as the file&apos;s name, with room for later recipe settings in one group.</advantage>
+      <drawback>It is as long as the longest key on offer and also departs from the draft&apos;s &quot;own recipes&quot; term, so it pays the length of the structured form while naming the file differently from the documentation.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Rule file location">
     <question>The rules that choose each task&apos;s single-task line in a looped task run of the VS Code extension (`gurita-vscode`) are one tracked file of the project the extension works in, outside every mission directory. What is that file called, and where in the project does it stand?</question>
