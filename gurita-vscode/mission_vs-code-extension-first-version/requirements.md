@@ -70,6 +70,8 @@ No other mission is live, so nothing holds or shares the scope. The record holds
 
 - **TypeScript tests.** The recipe reader, the `open_questions.xml` parser, and the `TASKS_TODO.md` heading read are each a module importing nothing from `vscode`, and each gets unit tests written with Node 22's built-in `node:test` and `node:assert`, run over the TypeScript compiler's output by an npm test script, against the repository's committed fixtures and small fixtures of their own. Nothing runs inside an editor.
 
+- **Drift-gate guards.** None of the four guards the draft assigns to the drift-gate workflow is carried out. `.github/workflows/drift-gate.yml` keeps its five steps unchanged, with no Node set up, and no test anywhere checks the extension's fixed lines against the `## Fixed console lines` table, its `open_questions.xml` parse against `open_questions.py list --without-alternatives` and `--without-recommendation`, or the snippet file's `###` headings for repeats. All four are written into the follow-up document under `ideas/` as later work.
+
 ### Documents
 
 - **Follow-up document.** Everything the first version leaves out is written into one new document, `ideas/vscode_extension_follow_up.md`, flat in `ideas/` beside the draft. Each left-out item has a section of its own, grouped by kind under a few `##` headings: guards of a long-lived extension (the drift-gate Node steps, the fixed-line, parse, and heading cross-checks, any tests left out), checks left unmade, and deferred product work such as publication.
