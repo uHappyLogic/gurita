@@ -140,5 +140,7 @@ No other mission is live, so nothing holds or shares the scope. The record holds
 
 - **Live query failure.** The pane shows one failure state in place of the mission pages: one fixed line saying the live missions could not be read, with the cause verbatim beneath it, which is the missions tool's `Error:` line from stderr when it ran and failed, the spawn error when `python3` could not be started, or that no folder is open when the extension never ran the query. The extension classifies nothing, and the two mission-starting buttons stay on the pane.
 
+- **Project root.** The extension takes only the first workspace folder, ignoring every other, and uses as the project root the top level of the git work tree holding that folder, read by `git rev-parse --show-toplevel` run in it, with no override. `missions.py live` and every recipe line run from that top level.
+
 ## Out of Scope
 
