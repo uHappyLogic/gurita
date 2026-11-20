@@ -66,6 +66,8 @@ No other mission is live, so nothing holds or shares the scope. The record holds
 
 - **Runner tests.** The runner gets pytest tests standing beside the extension under `gurita-vscode/`, with a conftest of their own, and `pyproject.toml`'s `testpaths` gains that directory so both CI pytest runs collect them, the 3.9 floor run included. They cover the runner's decisions only (the preview print, rule matching and the default, line-kind inference, and the fixed-line verdict) and start no shell session and no stub host command.
 
+- **Codex print check.** This mission makes no check of what a Codex line's plain print opens with. The open item the draft names under "Questions for the work" is carried into the follow-up document under `ideas/` as potential follow-up work, stated there as unchecked, and the runner reads every headless line, a Codex one in a person's own recipe file included, by the one rule it has for all hosts.
+
 ### Documents
 
 - **Follow-up document.** Everything the first version leaves out is written into one new document, `ideas/vscode_extension_follow_up.md`, flat in `ideas/` beside the draft. Each left-out item has a section of its own, grouped by kind under a few `##` headings: guards of a long-lived extension (the drift-gate Node steps, the fixed-line, parse, and heading cross-checks, any tests left out), checks left unmade, and deferred product work such as publication.
