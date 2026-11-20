@@ -1,0 +1,14 @@
+# Single-task line rules for this repository's looped task runs.
+# Each rule is a pattern, then " -> ", then a single-task line's name as its recipe's heading
+# reads. A pattern is matched case-insensitively against a task's title and brief; the first
+# matching rule wins, and the bare "*" line names the line for every task no rule matches.
+
+# Critical tasks: the stdlib tools, Python files, tests, parsers, and the runner.
+core/tools/ -> Single task with Opus xHigh (Claude Code)
+\.py\b -> Single task with Opus xHigh (Claude Code)
+\b(py)?tests?\b -> Single task with Opus xHigh (Claude Code)
+\bparsers?\b -> Single task with Opus xHigh (Claude Code)
+\brunner\b -> Single task with Opus xHigh (Claude Code)
+
+# Every other task.
+* -> Single task with Opus High (Claude Code)

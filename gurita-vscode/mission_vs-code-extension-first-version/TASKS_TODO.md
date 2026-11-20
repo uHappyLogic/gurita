@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Add the Rule File for This Repository
-
-Add the tracked rule file `task_line_rules.txt` at the project root for this repository itself: its default line sends a task to `Single task with Opus High (Claude Code)`, and a few pattern rules send the tasks this repository treats as critical, those whose title or brief names a stdlib tool under `core/tools/`, a `.py` file, a test, a parser, or the runner, to `Single task with Opus xHigh (Claude Code)`. It gives a looped run its assignments in the project the maintainer first tries the extension in. Verified by running `runner.py preview` over it with the shipped single-task lines against a task list holding critical and ordinary tasks: every line reads `resolved` under the expected line name.
-
----
-
 ## Mission Pane Panel and Navigation
 
 Build the pane's frame: the contributed command `gurita.openMissionPane`, titled "Gurita: Open Mission Pane", creates the one webview panel in the editor area or reveals the one the extension holds, with nothing done at startup and no `WebviewPanelSerializer`, status bar item, menu entry, default keybinding, or automatic opening, and `webview.html` is set once to a page shell under a content security policy whose script, loaded through `asWebviewUri`, posts a ready message on every load and draws what the extension answers. The extension answers with the live missions, read by running the bundled `missions.py live` with `python3` at the git top level (`git rev-parse --show-toplevel`) of the first workspace folder, and the page draws a row of tabs, one per mission in that order (its title, its path as a tooltip), with the selected mission's path, title, and `started` or `defined` beneath, the first mission shown on opening, or the one failure state of the Live query failure decision in place of the pages. Verified by the compile, the unit tests, and the package build passing and by reading the code against the Opening, Restart, Project root, Navigation, and Live query failure decisions.
