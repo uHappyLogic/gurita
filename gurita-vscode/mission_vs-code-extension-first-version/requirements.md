@@ -142,5 +142,7 @@ No other mission is live, so nothing holds or shares the scope. The record holds
 
 - **Project root.** The extension takes only the first workspace folder, ignoring every other, and uses as the project root the top level of the git work tree holding that folder, read by `git rev-parse --show-toplevel` run in it, with no override. `missions.py live` and every recipe line run from that top level.
 
+- **Restart.** The extension registers no `WebviewPanelSerializer` and does nothing at startup, so the pane does not survive a restart or a window reload, and the person opens it again through the entry point the extension contributes. The new pane re-reads the live missions and draws its first page fresh, keeping no page or row state from before.
+
 ## Out of Scope
 
