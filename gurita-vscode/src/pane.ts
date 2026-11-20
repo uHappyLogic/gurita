@@ -14,14 +14,21 @@
 // buttons. The Short Title and the Alternative Id come from the row clicked, every typed value from
 // VS Code's own input box, one line per value, and each value reaches its line only as its
 // `GURITA_*` session variable. When a run's terminal closes the pane is re-read and the fresh parse
-// posted to the page.
+// posted to the page. A click on a looped recipe's button shows that recipe's preview on the
+// page before anything runs: the extension gathers the named single-task lines from the recipes,
+// read afresh, runs the runner's `preview` with them, the mission, and the rule file at the
+// project root as a short-lived child process, and posts what it printed. The person may override
+// any task's line by picking another named single-task line, and starting the run launches the
+// runner's `loop` in the run terminal with every named line and every override, whether or not a
+// task is still unresolved.
 
 import * as os from 'node:os';
 import * as vscode from 'vscode';
 import { MissionDocuments, readMissionDocuments } from './documents';
 import { LiveRead, projectRoot, readLive } from './live';
+import { PreviewRead, SingleTaskLine, loopArguments, ruleFile, runOverrides, runPreview, singleTaskLines } from './loop';
 import { BUTTON_RECIPES, PageRecipe, Recipe, buttonRecipe, ownRecipesFile, pageRecipes, readRecipes } from './recipes';
-import { refuseWhileRunning, startChain } from './runs';
+import { refuseWhileRunning, runnerFile, startChain, startLoop } from './runs';
 
 const VIEW_TYPE = 'gurita.missionPane';
 const PANEL_TITLE = 'Gurita Missions';
@@ -41,7 +48,9 @@ type PageMessage =
   | { type: 'runRecipe'; mission: string; recipe: string }
   | { type: 'questionButton'; button: QuestionButton; mission: string; question: string }
   | { type: 'alternativeButton'; mission: string; question: string; alternative: string }
-  | { type: 'missionButton'; button: MissionButton };
+  | { type: 'missionButton'; button: MissionButton }
+  | { type: 'previewLoop'; mission: string; recipe: string }
+  | { type: 'startLoop'; mission: string; recipe: string; overrides: Record<string, string> };
 
 /** The recipe list every mission page shows, or the cause it could not be read. */
 type RecipePart = { state: 'read'; recipes: PageRecipe[] } | { state: 'failed'; cause: string };
@@ -53,7 +62,26 @@ type PaneMessage =
       missions: ({ path: string; state: string; title: string } & MissionDocuments)[];
       recipes: RecipePart;
     }
-  | { type: 'liveFailure'; cause: string };
+  | { type: 'liveFailure'; cause: string }
+  | {
+      type: 'preview';
+      mission: string;
+      recipe: string;
+      /** The looped recipe's lines as written, the slot line last. */
+      lines: string[];
+      /** The named single-task lines' names, the choices an override picks from. */
+      names: string[];
+      result: PreviewRead;
+    }
+  | { type: 'loopStarted'; mission: string };
+
+/** What a mission's latest preview ran with, which starting its run passes on unchanged. */
+interface HeldPreview {
+  root: string;
+  recipe: string;
+  recipeLines: string[];
+  lines: SingleTaskLine[];
+}
 
 /**
  * What the latest answer posted: the project root, the live missions' paths, the recipes, and the
@@ -68,6 +96,9 @@ interface Posted {
 
 let panel: vscode.WebviewPanel | undefined;
 let posted: Posted | undefined;
+
+/** Each mission's latest preview, by the mission's path. */
+const previews = new Map<string, HeldPreview>();
 
 /** Re-reads the pane, when the extension holds one, and posts the fresh parse to its page. */
 export function refreshMissionPane(context: vscode.ExtensionContext): void {
@@ -101,6 +132,10 @@ export function openMissionPane(context: vscode.ExtensionContext): void {
         runAlternativeButton(context, message.mission, message.question, message.alternative);
       } else if (message?.type === 'missionButton') {
         void runMissionButton(context, message.button);
+      } else if (message?.type === 'previewLoop') {
+        void previewLoop(context, created, message.mission, message.recipe);
+      } else if (message?.type === 'startLoop') {
+        runLoop(context, created, message.mission, message.recipe, message.overrides);
       }
     },
     undefined,
@@ -110,6 +145,7 @@ export function openMissionPane(context: vscode.ExtensionContext): void {
     () => {
       if (panel === created) {
         panel = undefined;
+        previews.clear();
       }
     },
     undefined,
@@ -117,12 +153,16 @@ export function openMissionPane(context: vscode.ExtensionContext): void {
   );
 }
 
+/** Reads the shipped snippet file and the person's own recipe file into the merged recipe list. */
+function readAllRecipes(context: vscode.ExtensionContext): Recipe[] {
+  const setting = vscode.workspace.getConfiguration('gurita').get<string>('ownRecipesFile');
+  return readRecipes(context.asAbsolutePath('bundled/GURITA_USAGE.md'), ownRecipesFile(setting, os.homedir()));
+}
+
 /** Reads the shipped snippet file and the person's own recipe file into a page's recipe list. */
 function readPageRecipes(context: vscode.ExtensionContext): RecipePart {
-  const setting = vscode.workspace.getConfiguration('gurita').get<string>('ownRecipesFile');
   try {
-    const recipes = readRecipes(context.asAbsolutePath('bundled/GURITA_USAGE.md'), ownRecipesFile(setting, os.homedir()));
-    return { state: 'read', recipes: pageRecipes(recipes, PAGE_PLACEHOLDERS) };
+    return { state: 'read', recipes: pageRecipes(readAllRecipes(context), PAGE_PLACEHOLDERS) };
   } catch (error) {
     return { state: 'failed', cause: error instanceof Error ? error.message : String(error) };
   }
@@ -180,6 +220,96 @@ function runRecipe(context: vscode.ExtensionContext, mission: string, recipe: st
   startChain(context, posted.root, mission, listed.name, listed.lines, { path: mission });
 }
 
+async function post(target: vscode.WebviewPanel, message: PaneMessage): Promise<void> {
+  try {
+    await target.webview.postMessage(message);
+  } catch {
+    // The panel was closed; there is no page left to answer.
+  }
+}
+
+/**
+ * Shows the preview of the looped recipe named `recipe`, as the latest answer listed it, for the
+ * live mission at `mission`: the recipes read afresh, the named single-task lines gathered from
+ * them, and the runner's `preview` run with those lines, the mission, and the rule file, its print
+ * posted to the page. A name or mission the latest answer did not list, or a mission with a
+ * running chain, runs nothing.
+ */
+async function previewLoop(context: vscode.ExtensionContext, target: vscode.WebviewPanel, mission: string, recipe: string): Promise<void> {
+  const listed = posted?.recipes.find((entry) => entry.name === recipe);
+  if (posted === undefined || !posted.missions.has(mission) || listed === undefined || listed.kind !== 'looped') {
+    return;
+  }
+  if (refuseWhileRunning(mission)) {
+    return;
+  }
+  const root = posted.root;
+  let recipes: Recipe[];
+  try {
+    recipes = readAllRecipes(context);
+  } catch (error) {
+    previews.delete(mission);
+    const cause = `The recipes could not be read: ${error instanceof Error ? error.message : String(error)}`;
+    await post(target, { type: 'preview', mission, recipe, lines: listed.lines, names: [], result: { state: 'failed', cause } });
+    return;
+  }
+  const looped = pageRecipes(recipes, PAGE_PLACEHOLDERS).find((entry) => entry.name === recipe && entry.kind === 'looped');
+  if (looped === undefined) {
+    previews.delete(mission);
+    const cause = `No looped recipe is named ${recipe}.`;
+    await post(target, { type: 'preview', mission, recipe, lines: listed.lines, names: [], result: { state: 'failed', cause } });
+    return;
+  }
+  const lines = singleTaskLines(recipes);
+  const result = await runPreview(runnerFile(context), root, mission, lines);
+  if (result.state === 'read') {
+    previews.set(mission, { root, recipe, recipeLines: looped.lines, lines });
+  } else {
+    previews.delete(mission);
+  }
+  await post(target, { type: 'preview', mission, recipe, lines: looped.lines, names: lines.map((line) => line.name), result });
+}
+
+/**
+ * Starts the looped run of the recipe named `recipe` for the live mission at `mission`, with the
+ * named single-task lines and the looped recipe's lines its latest preview ran with and every
+ * override the person picked, whether or not a task is still unresolved. A mission with no
+ * preview of that recipe starts nothing, and a mission with a running chain is refused as any
+ * click is.
+ */
+function runLoop(
+  context: vscode.ExtensionContext,
+  target: vscode.WebviewPanel,
+  mission: string,
+  recipe: string,
+  overrides: unknown,
+): void {
+  const held = previews.get(mission);
+  if (posted === undefined || !posted.missions.has(mission) || held === undefined || held.recipe !== recipe) {
+    return;
+  }
+  const picked: Record<string, string> = {};
+  if (typeof overrides === 'object' && overrides !== null) {
+    for (const [title, name] of Object.entries(overrides)) {
+      if (typeof name === 'string') {
+        picked[title] = name;
+      }
+    }
+  }
+  const args = loopArguments(
+    runnerFile(context),
+    mission,
+    ruleFile(held.root),
+    held.lines,
+    runOverrides(picked, held.lines),
+    held.recipeLines,
+  );
+  if (startLoop(held.root, mission, recipe, args)) {
+    previews.delete(mission);
+    void post(target, { type: 'loopStarted', mission });
+  }
+}
+
 /** The placeholder values each question-row button fills, beyond the mission's path and the Short Title. */
 const QUESTION_BUTTONS: Record<QuestionButton, { recipe: string; typed: string[] }> = {
   discussQuestion: { recipe: BUTTON_RECIPES.discussQuestion, typed: [] },
@@ -209,10 +339,9 @@ const PROMPTS: Record<string, { prompt: string; placeHolder?: string }> = {
  * is told in an error notification and yields nothing.
  */
 function readButtonRecipe(context: vscode.ExtensionContext, name: string, fillable: readonly string[]): Recipe | undefined {
-  const setting = vscode.workspace.getConfiguration('gurita').get<string>('ownRecipesFile');
   let recipes: Recipe[];
   try {
-    recipes = readRecipes(context.asAbsolutePath('bundled/GURITA_USAGE.md'), ownRecipesFile(setting, os.homedir()));
+    recipes = readAllRecipes(context);
   } catch (error) {
     void vscode.window.showErrorMessage(`The recipes could not be read: ${error instanceof Error ? error.message : String(error)}`);
     return undefined;
@@ -396,6 +525,11 @@ function pageShell(webview: vscode.Webview, script: vscode.Uri): string {
   button.recipe { background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; padding: 0.3em 0.9em; cursor: pointer; font: inherit; }
   button.recipe:hover { background: var(--vscode-button-hoverBackground); }
   .recipe-unknown { border: 1px dashed var(--vscode-inputValidation-warningBorder); padding: 0.3em 0.9em; opacity: 0.85; }
+  .preview { border-top: 1px solid var(--vscode-panel-border); margin-top: 1em; }
+  .preview-tasks { border-collapse: collapse; margin: 0.5em 0; width: 100%; }
+  .preview-tasks th, .preview-tasks td { text-align: left; padding: 0.25em 0.8em 0.25em 0; vertical-align: top; }
+  .preview-tasks tr.unresolved td:nth-child(2) { color: var(--vscode-errorForeground); }
+  .preview-tasks select { background: var(--vscode-dropdown-background); color: var(--vscode-dropdown-foreground); border: 1px solid var(--vscode-dropdown-border); font: inherit; }
   button.link { background: none; border: none; padding: 0; color: var(--vscode-textLink-foreground); cursor: pointer; font: inherit; text-decoration: underline; }
 </style>
 </head>

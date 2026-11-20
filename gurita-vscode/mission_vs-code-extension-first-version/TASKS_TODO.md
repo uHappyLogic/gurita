@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Looped Recipe Preview and Overrides
-
-Make a click on the looped recipe show its preview before anything runs: the extension gathers the named single-task lines by the Single-task line recognition test, runs `runner.py preview` as a short-lived child process with them, the mission, and the rule file `task_line_rules.txt` at the project root, and the page lists every remaining task with the line the rules give it or as unresolved, showing the missing line's name, the notice that the project holds no rule file with the path looked for, or the unreadable file's error with each line's number and reason. The person overrides any task by picking another named single-task line, and starting the run launches `runner.py loop` in the run terminal with every `--line` and `--override`, whether or not a task is still unresolved. Verified by the compile, the unit tests, and the package build passing and by reading the code against the Missing file, Unreadable file, Preview print, and Command line decisions.
-
----
-
 ## Pane Refresh From File Events
 
 Keep the pane current beyond its own runs and its opening: a `workspace.createFileSystemWatcher` over the mission documents (`**/mission_*/requirements.md`, `open_questions.xml`, and `TASKS_TODO.md`), debounced so that a burst of writes causes one re-read, re-reads a mission's documents in process on a change to its question document or task list and also re-runs `missions.py live` when a `requirements.md` is created or deleted or a `TASKS_TODO.md` changes, while a hidden panel is only marked stale and re-read when shown. A refresh control on the page and a contributed command that does the same remain as the manual fallback, the page stays on the mission shown unless that mission is no longer live, when it falls back to the first, and git state is not watched. Verified by the compile, the unit tests, and the package build passing and by reading the code against the Refresh and Navigation decisions.

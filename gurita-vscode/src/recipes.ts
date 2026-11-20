@@ -229,6 +229,13 @@ export type PageRecipe =
       lines: string[];
     }
   | {
+      kind: 'looped';
+      name: string;
+      group: RecipeGroup;
+      /** The recipe's lines as written, the slot line last. */
+      lines: string[];
+    }
+  | {
       kind: 'unknown';
       name: string;
       group: RecipeGroup;
@@ -239,12 +246,16 @@ export type PageRecipe =
       file: string;
     };
 
+/** The placeholders a looped run fills itself, from its mission and each task's heading. */
+export const LOOPED_PLACEHOLDERS: readonly string[] = ['path', 'Task Title'];
+
 /**
  * The recipes a mission page lists, given the placeholder names the page holds a value for. A
  * recipe holding a placeholder the extension does not know is listed as a non-runnable entry
- * naming it and its file. A recipe holding a known placeholder the page has no value for is left
- * off silently, staying reachable by name for the button or loop that fills it, and so is the
- * looped recipe, run through its preview rather than as a chain, and a recipe with no line.
+ * naming it and its file. A looped recipe is listed as its own kind, run through its preview
+ * rather than as a chain, when every placeholder it holds is one a looped run fills itself. A
+ * recipe holding a known placeholder the page has no value for is left off silently, staying
+ * reachable by name for the button or loop that fills it, and so is a recipe with no line.
  */
 export function pageRecipes(recipes: Recipe[], fillable: readonly string[]): PageRecipe[] {
   const listed: PageRecipe[] = [];
@@ -260,7 +271,13 @@ export function pageRecipes(recipes: Recipe[], fillable: readonly string[]): Pag
       });
       continue;
     }
-    if (recipe.looped || recipe.lines.length === 0) {
+    if (recipe.looped) {
+      if (recipe.knownPlaceholders.every((name) => LOOPED_PLACEHOLDERS.includes(name))) {
+        listed.push({ kind: 'looped', name: recipe.name, group: recipe.group, lines: [...recipe.lines] });
+      }
+      continue;
+    }
+    if (recipe.lines.length === 0) {
       continue;
     }
     if (recipe.knownPlaceholders.some((name) => !fillable.includes(name))) {

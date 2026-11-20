@@ -5,8 +5,9 @@
 // in-memory note of which mission has a running runner: a click on a mission's page while one is
 // running starts nothing and queues nothing, shows a notification, and reveals that run's
 // terminal. A run a mission-starting button starts belongs to no mission and is refused for none.
-// The extension learns that a run ended when its terminal closes, which the runner delays until
-// the person dismisses it, and then re-reads the pane.
+// A looped run is started the same way, its arguments the runner's `loop` command line, the runner
+// filling the loop's values itself. The extension learns that a run ended when its terminal
+// closes, which the runner delays until the person dismisses it, and then re-reads the pane.
 
 import * as vscode from 'vscode';
 import { fillPlaceholders, sessionEnvironment } from './placeholders';
@@ -81,12 +82,41 @@ export function startChain(
     return;
   }
   const filled = lines.map((line) => fillPlaceholders(line, KNOWN_PLACEHOLDERS));
+  launch(root, mission, recipe, [runnerFile(context), 'chain', '--', ...filled], sessionEnvironment(values));
+}
+
+/** The bundled runner's path. */
+export function runnerFile(context: vscode.ExtensionContext): string {
+  return context.asAbsolutePath(RUNNER_FILE);
+}
+
+/**
+ * Starts the runner's `loop` for the mission at `mission`, unless a run for that mission is
+ * running, `args` the runner's whole argument list, its file first. The loop fills `<path>` and
+ * `<Task Title>` itself, so the terminal's environment carries no session variable of the
+ * extension's. Returns whether the run started.
+ */
+export function startLoop(root: string, mission: string, recipe: string, args: readonly string[]): boolean {
+  if (refuseWhileRunning(mission)) {
+    return false;
+  }
+  launch(root, mission, recipe, [...args], {});
+  return true;
+}
+
+function launch(
+  root: string | undefined,
+  mission: string | undefined,
+  recipe: string,
+  args: string[],
+  env: Record<string, string>,
+): void {
   const terminal = vscode.window.createTerminal({
     name: mission === undefined ? `Gurita: ${recipe}` : `Gurita: ${recipe} (${mission})`,
     shellPath: PYTHON,
-    shellArgs: [context.asAbsolutePath(RUNNER_FILE), 'chain', '--', ...filled],
+    shellArgs: args,
     cwd: root,
-    env: sessionEnvironment(values),
+    env,
     isTransient: true,
   });
   if (mission === undefined) {

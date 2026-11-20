@@ -167,6 +167,7 @@ test('a page lists the recipes it can fill, in the merged order, and names each 
     listed.map((entry) => [entry.kind, entry.group, entry.name]),
     [
       ['runnable', 'Claude Code', 'Chain'],
+      ['looped', 'Claude Code', 'Loop'],
       ['unknown', 'Claude Code', 'Fenced heading'],
       ['runnable', 'Antigravity', 'Two fences'],
       ['unknown', 'own', 'My second own recipe'],
@@ -178,11 +179,17 @@ test('a page lists the recipes it can fill, in the merged order, and names each 
     group: 'Claude Code',
     lines: ['claude-wait;', 'claude -p "/gurita:review-mission-requirements --mission <path>" --model "opus";'],
   });
-  const fenced = listed[1];
+  assert.deepStrictEqual(listed[1], {
+    kind: 'looped',
+    name: 'Loop',
+    group: 'Claude Code',
+    lines: ['source .env_fixture', '<single-task line>'],
+  });
+  const fenced = listed[2];
   assert.ok(fenced.kind === 'unknown');
   assert.deepStrictEqual(fenced.placeholders, ['mystery thing']);
   assert.strictEqual(fenced.file, SHIPPED);
-  const second = listed[3];
+  const second = listed[4];
   assert.ok(second.kind === 'unknown');
   assert.deepStrictEqual(second.placeholders, ['unknown one']);
   assert.strictEqual(second.file, OWN);
@@ -193,7 +200,15 @@ test('a recipe holding a placeholder the page cannot fill is left off, and liste
   assert.ok(!names(['path']).includes('answer-open-question'));
   assert.ok(!names(['path']).includes('Single task (Claude Code)'));
   assert.ok(names(['path', 'Short Title', 'answer text']).includes('answer-open-question'));
-  assert.ok(!names(['path', 'Task Title']).includes('Loop'));
+  assert.ok(names(['path']).includes('Loop'));
+});
+
+test('a looped recipe is listed as its own kind only when a looped run fills every placeholder it holds', () => {
+  const looped = (text: string) =>
+    pageRecipes(parseOwnRecipes(text, OWN), ['path']).map((entry) => [entry.kind, entry.name]);
+  assert.deepStrictEqual(looped('### Loop\n```\necho <path> <Task Title>\n<single-task line>\n```\n'), [['looped', 'Loop']]);
+  assert.deepStrictEqual(looped('### Loop\n```\necho <goal>\n<single-task line>\n```\n'), []);
+  assert.deepStrictEqual(looped('### Loop\n```\necho <odd one>\n<single-task line>\n```\n'), [['unknown', 'Loop']]);
 });
 
 test('the own recipe file defaults to ~/.gurita/recipes.md and honours the setting, expanding a leading ~', () => {

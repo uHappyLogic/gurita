@@ -9,6 +9,11 @@
 // "Your recipes", each button carrying its recipe's lines as written in its hover text and
 // starting that recipe's chain for the page's mission when clicked, and each recipe holding a
 // placeholder the extension does not know shown as a non-runnable entry naming it and its file.
+// A looped recipe's button asks the extension for its preview instead, drawn on the page beneath
+// the recipes: every remaining task with the line the rules give it or as unresolved, naming the
+// missing line, and above them what the runner said about a missing or unreadable rule file,
+// verbatim. Each task's line may be overridden by picking another named single-task line, and the
+// start button starts the run with every override picked, whether or not a task is unresolved.
 // The question view shows one collapsed row per
 // question, its Short Title and the id of its picked alternative, each row opening to everything
 // its block holds, with expand-all and collapse-all controls. Each row carries the discuss,
@@ -75,13 +80,33 @@ declare function acquireVsCodeApi(): VsCodeApi;
 
   type PageRecipe =
     | { kind: 'runnable'; name: string; group: RecipeGroup; lines: string[] }
+    | { kind: 'looped'; name: string; group: RecipeGroup; lines: string[] }
     | { kind: 'unknown'; name: string; group: RecipeGroup; lines: string[]; placeholders: string[]; file: string };
 
   type RecipePart = { state: 'read'; recipes: PageRecipe[] } | { state: 'failed'; cause: string };
 
+  interface PreviewTask {
+    state: 'resolved' | 'missing';
+    name: string;
+    title: string;
+  }
+
+  type PreviewRead = { state: 'read'; tasks: PreviewTask[]; notice?: string } | { state: 'failed'; cause: string };
+
+  interface Preview {
+    recipe: string;
+    lines: string[];
+    names: string[];
+    result: PreviewRead;
+    /** The line name picked for each overridden task, by its title. */
+    overrides: Map<string, string>;
+  }
+
   type PaneMessage =
     | { type: 'live'; missions: Mission[]; recipes: RecipePart }
-    | { type: 'liveFailure'; cause: string };
+    | { type: 'liveFailure'; cause: string }
+    | { type: 'preview'; mission: string; recipe: string; lines: string[]; names: string[]; result: PreviewRead }
+    | { type: 'loopStarted'; mission: string };
 
   interface PageState {
     selected?: string;
@@ -92,6 +117,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
   const FAILURE_LINE = 'The live missions could not be read.';
   const NO_MISSION_LINE = 'No mission is live.';
   const RECIPE_FAILURE_LINE = 'The recipes could not be read.';
+  const PREVIEW_FAILURE_LINE = 'The preview could not be run.';
   /** The buttons on a question's row, each with its label and hover text. */
   const QUESTION_BUTTONS: [string, string, string][] = [
     ['discussQuestion', 'Discuss', 'Open an interactive discussion of this question'],
@@ -114,6 +140,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
   );
   let missions: Mission[] = [];
   let recipes: RecipePart = { state: 'read', recipes: [] };
+  /** Each mission's preview, by its path, while it stands on the page. */
+  const previews = new Map<string, Preview>();
   /** The rows of the drawn page by Short Title, so a dependency link can scroll to its sibling. */
   let rows = new Map<string, HTMLElement>();
 
@@ -427,6 +455,12 @@ declare function acquireVsCodeApi(): VsCodeApi;
           );
           run.title = recipe.lines.join('\n');
           list.append(run);
+        } else if (recipe.kind === 'looped') {
+          const preview = button(recipe.name, 'recipe', () =>
+            vscode.postMessage({ type: 'previewLoop', mission: mission.path, recipe: recipe.name }),
+          );
+          preview.title = recipe.lines.join('\n');
+          list.append(preview);
         } else {
           const named = recipe.placeholders.map((placeholder) => `<${placeholder}>`).join(', ');
           const entry = element('span', `${recipe.name}: ${recipe.placeholders.length === 1 ? 'unknown placeholder' : 'unknown placeholders'} ${named} in ${recipe.file}`, 'recipe-unknown');
@@ -436,6 +470,105 @@ declare function acquireVsCodeApi(): VsCodeApi;
       }
       view.append(list);
     }
+    return view;
+  }
+
+  /** What the rules give a task, as the preview printed it. */
+  function rulesResult(task: PreviewTask): string {
+    if (task.state === 'resolved') {
+      return task.name;
+    }
+    if (task.name !== '') {
+      return `Unresolved: the rules name "${task.name}", which no single-task line carries`;
+    }
+    return 'Unresolved: no rule gives this task a line';
+  }
+
+  function drawPreview(mission: Mission, preview: Preview): HTMLElement {
+    const view = element('section', undefined, 'preview');
+    view.append(element('h3', `Preview: ${preview.recipe}`));
+    const close = button('Close preview', 'control', () => {
+      previews.delete(mission.path);
+      draw();
+    });
+    const result = preview.result;
+    if (result.state === 'failed') {
+      const box = element('div', undefined, 'notice');
+      box.setAttribute('role', 'alert');
+      box.append(element('p', PREVIEW_FAILURE_LINE), element('pre', result.cause));
+      const controls = element('div', undefined, 'controls');
+      controls.append(close);
+      view.append(box, controls);
+      return view;
+    }
+    if (result.notice !== undefined) {
+      const box = element('div', undefined, 'notice');
+      box.setAttribute('role', 'alert');
+      box.append(element('pre', result.notice));
+      view.append(box);
+    }
+    let unresolved = 0;
+    if (result.tasks.length === 0) {
+      view.append(element('p', 'No task remains.'));
+    } else {
+      const table = element('table', undefined, 'preview-tasks');
+      const head = element('tr');
+      head.append(element('th', 'Task'), element('th', 'The rules give'), element('th', 'Line to run'));
+      table.append(head);
+      for (const task of result.tasks) {
+        const picked = preview.overrides.get(task.title);
+        if (picked === undefined && task.state !== 'resolved') {
+          unresolved += 1;
+        }
+        const row = element('tr', undefined, picked === undefined && task.state !== 'resolved' ? 'unresolved' : undefined);
+        const choice = element('select');
+        choice.setAttribute('aria-label', `The line to run for ${task.title}`);
+        const ruled = element('option', task.state === 'resolved' ? `As the rules give: ${task.name}` : 'Unresolved: the run stops here');
+        ruled.value = '';
+        choice.append(ruled);
+        for (const name of preview.names) {
+          const option = element('option', name);
+          option.value = name;
+          option.selected = name === picked;
+          choice.append(option);
+        }
+        choice.addEventListener('change', () => {
+          if (choice.value === '') {
+            preview.overrides.delete(task.title);
+          } else {
+            preview.overrides.set(task.title, choice.value);
+          }
+          draw();
+        });
+        const cell = element('td');
+        cell.append(choice);
+        row.append(element('td', task.title), element('td', rulesResult(task)), cell);
+        table.append(row);
+      }
+      view.append(table);
+    }
+    if (unresolved > 0) {
+      view.append(
+        element(
+          'p',
+          unresolved === 1
+            ? '1 task is unresolved: the run stops before it, without running it.'
+            : `${unresolved} tasks are unresolved: the run stops before the first of them, without running it.`,
+        ),
+      );
+    }
+    const controls = element('div', undefined, 'controls');
+    const start = button('Start run', 'recipe', () =>
+      vscode.postMessage({
+        type: 'startLoop',
+        mission: mission.path,
+        recipe: preview.recipe,
+        overrides: Object.fromEntries(preview.overrides),
+      }),
+    );
+    start.title = preview.lines.join('\n');
+    controls.append(start, close);
+    view.append(controls);
     return view;
   }
 
@@ -450,7 +583,12 @@ declare function acquireVsCodeApi(): VsCodeApi;
     ]) {
       facts.append(element('dt', label), element('dd', value));
     }
-    page.append(facts, drawLabel(mission), drawRecipes(mission), drawQuestions(mission), drawTasks(mission));
+    page.append(facts, drawLabel(mission), drawRecipes(mission));
+    const preview = previews.get(mission.path);
+    if (preview !== undefined) {
+      page.append(drawPreview(mission, preview));
+    }
+    page.append(drawQuestions(mission), drawTasks(mission));
     return page;
   }
 
@@ -480,9 +618,30 @@ declare function acquireVsCodeApi(): VsCodeApi;
     if (message.type === 'live') {
       missions = message.missions;
       recipes = message.recipes;
+      for (const mission of [...previews.keys()]) {
+        if (!missions.some((each) => each.path === mission)) {
+          previews.delete(mission);
+        }
+      }
       draw();
     } else if (message.type === 'liveFailure') {
       drawFailure(message.cause);
+    } else if (message.type === 'preview') {
+      previews.set(message.mission, {
+        recipe: message.recipe,
+        lines: message.lines,
+        names: message.names,
+        result: message.result,
+        overrides: new Map(),
+      });
+      if (missions.some((mission) => mission.path === message.mission)) {
+        selected = message.mission;
+        save();
+      }
+      draw();
+    } else if (message.type === 'loopStarted') {
+      previews.delete(message.mission);
+      draw();
     }
   });
 
