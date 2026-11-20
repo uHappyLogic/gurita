@@ -104,5 +104,7 @@ No other mission is live, so nothing holds or shares the scope. The record holds
 
 - **Unfillable placeholders.** A recipe holding a known placeholder the page has no value for there (`<Task Title>`, `<Short Title>`, `<Alternative Id>`, `<goal>`, `<scope>`, `<answer text>`) is left off the page's recipe list silently and stays reachable by name for the button or loop that fills it. A recipe holding a placeholder name the extension does not know is shown on the page as a non-runnable entry naming the unknown placeholder and the file it came from.
 
+- **Own recipe placement.** Every own recipe that replaces no shipped recipe is listed on each mission's page in one group of its own, under a fixed heading of the extension's such as "Your recipes", below the Claude Code and Antigravity groups. Within it the recipes keep the order the person's file lists them in, and the extension reads nothing of a recipe's lines to place it.
+
 ## Out of Scope
 
