@@ -21,6 +21,12 @@ claude -p "/gurita:provide-alternatives-to-all-open-questions --mission <path>" 
 claude "/gurita:recommend-all-open-questions --mission <path>" --dangerously-skip-permissions --model "fable" --effort xhigh; # interactive
 ```
 
+### Prepare tasks
+```
+claude -p "/gurita:answer-all-open-questions-with-recommendation --mission <path>" --dangerously-skip-permissions --model "fable" --effort high;
+claude -p "/gurita:derive-tasks --mission <path>" --dangerously-skip-permissions --model "fable" --effort xhigh;
+```
+
 ### Execute tasks of normal difficulty
 ```
 claude -p "/gurita:answer-all-open-questions-with-recommendation --mission <path>" --dangerously-skip-permissions --model "fable" --effort high;
@@ -46,15 +52,55 @@ claude -p "/gurita:derive-tasks --mission <path>" --dangerously-skip-permissions
 claude "/gurita:complete-all-tasks --mission <path>" --dangerously-skip-permissions --model "opus" --effort high; # interactive
 ```
 
+### Execute tasks one at a time
+```
+<single-task line>
+```
+
 ### Single task with Opus xHigh (Claude Code)
 
 ```
 claude -p "/gurita:complete-task --mission <path> <Task Title>" --dangerously-skip-permissions --model "opus" --effort xhigh;
 ```
 
+### Single task with Opus High (Claude Code)
+```
+claude -p "/gurita:complete-task --mission <path> <Task Title>" --dangerously-skip-permissions --model "opus" --effort high;
+```
+
 ### Finish mission
 ```
 claude -p "/gurita:finish-mission --mission <path>" --dangerously-skip-permissions --model "opus" --effort high;
+```
+
+### discuss-open-question
+```
+claude "/gurita:discuss-open-question --mission <path> <Short Title>" --dangerously-skip-permissions --model "fable" --effort xhigh; # interactive
+```
+
+### discuss-mission-goal
+```
+claude "/gurita:discuss-mission-goal <goal>" --dangerously-skip-permissions --model "fable" --effort xhigh; # interactive
+```
+
+### answer-open-question
+```
+claude -p "/gurita:answer-open-question --mission <path> <Short Title>. <answer text>" --dangerously-skip-permissions --model "fable" --effort high;
+```
+
+### answer-open-question-with-recommendation
+```
+claude -p "/gurita:answer-open-question-with-recommendation --mission <path> <Short Title>" --dangerously-skip-permissions --model "fable" --effort high;
+```
+
+### answer-open-question-with-alternative
+```
+claude -p "/gurita:answer-open-question-with-alternative --mission <path> <Short Title>. <Alternative Id>" --dangerously-skip-permissions --model "fable" --effort high;
+```
+
+### define-mission-goal
+```
+claude -p "/gurita:define-mission-goal --at <scope> <goal>" --dangerously-skip-permissions --model "sonnet" --effort medium;
 ```
 
 ## Antigravity
@@ -80,6 +126,12 @@ agy -p "/gurita:answer-all-open-questions-with-recommendation --mission <path>" 
 agy -p "/gurita:review-mission-requirements --mission <path>" --dangerously-skip-permissions --model "gemini-4-argon" --effort medium;
 agy -p "/gurita:provide-alternatives-to-all-open-questions --mission <path>" --dangerously-skip-permissions --model "claude-opus-5-5" --effort high;
 agy -i "/gurita:recommend-all-open-questions --mission <path>" --dangerously-skip-permissions --model "gemini-4-argon" --effort medium; # interactive
+```
+
+### Prepare tasks (Antigravity)
+```
+agy -p "/gurita:answer-all-open-questions-with-recommendation --mission <path>" --dangerously-skip-permissions --model "gemini-4-argon" --effort medium;
+agy -p "/gurita:derive-tasks --mission <path>" --dangerously-skip-permissions --model "gemini-4-argon" --effort medium;
 ```
 
 ### Execute tasks of normal difficulty (Antigravity)

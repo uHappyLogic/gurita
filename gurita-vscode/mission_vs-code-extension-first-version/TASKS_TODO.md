@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Add Button Loop and Preparation Recipes
-
-Add to `snippets/GURITA_USAGE.md` the recipes the extension's buttons and looped run need, each as its Snippet file decision states it: under `## Claude Code` the six one-line button recipes headed `### discuss-open-question`, `### discuss-mission-goal`, `### answer-open-question`, `### answer-open-question-with-recommendation`, `### answer-open-question-with-alternative`, and `### define-mission-goal`, the looped recipe `### Execute tasks one at a time` holding only the slot line `<single-task line>`, and a third single-task line, `complete-task` under `opus` at `high`, headed `Single task with Opus High (Claude Code)`; and under each host a two-line preparation recipe, `Prepare tasks` and `Prepare tasks (Antigravity)`, holding the first two lines of that host's "Execute tasks of normal difficulty" block. Verified by reading each new block against its decision, the two interactive button lines carrying `# interactive`, every `--mission` naming `<path>`, and no `###` heading under the two host headings repeating.
-
----
-
 ## Scaffold the Extension Node Project
 
 Create the extension's Node project under `gurita-vscode/`: a `package.json` naming `gurita-vscode`, display name Gurita for VS Code, publisher `uhappylogic`, version `0.1.0`, `engines.vscode` `^1.143.0`, and `@types/vscode` pinned exactly to `1.140.0`; two `tsc` project configurations, one compiling the extension host code to CommonJS with one emitted file per source file and no bundler, the other compiling the webview page's script with the DOM library; an npm test script running `node:test` tests over the compiler's output; and a package script running `vsce package --out` to the fixed, git-ignored path `gurita-vscode/dist/gurita-vscode.vsix`, with a minimal activation entry so the project compiles. Every later extension task builds on it. Verified under Node 22 through nvm in the form the goal states: install, compile, the test script, and the package script each succeed, the VSIX lands at the fixed path holding nothing of the mission directory, and `git status` lists no generated file.
