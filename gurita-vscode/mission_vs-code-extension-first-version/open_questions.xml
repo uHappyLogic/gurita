@@ -644,6 +644,36 @@
   </open-question>
   <open-question id="Shipped single-task lines">
     <question>A looped task run in the VS Code extension (`gurita-vscode`) gives each task one of the recipe file&apos;s named single-task lines, and `snippets/GURITA_USAGE.md` holds two today: `complete-task` under Opus at `xhigh` on Claude Code and under Opus at `high` on Antigravity. Does the shipped file keep just those two, or gain further host, model, and effort combinations, and which?</question>
+    <alternative id="Keep the two">
+      The shipped file carries exactly the two single-task lines it holds today, `complete-task` under Opus at `xhigh` on Claude Code and under `claude-opus-5-5` at `high` on Antigravity, with `&lt;mission_path&gt;` renamed `&lt;path&gt;` and nothing else added; every further combination comes only from a person&apos;s own recipe file.
+      <advantage>Nothing is written for it: the lines are the ones the maintainer already pastes, every looped-run line stays one already run by hand, and the draft&apos;s view that hosts, models, and efforts are personal is honoured by leaving every extra combination to the per-user file that exists for exactly that.</advantage>
+      <drawback>A project with no own recipe file has no Claude Code line below `xhigh` and no stronger-model line, so the draft&apos;s own use case, a few generation tasks under a stronger model and the many others under a cheaper default, cannot be expressed from the shipped file alone; on Claude Code every looped task runs at `xhigh`, which costs more than the `high` the normal-difficulty execution block uses. How painful that is depends on what the rule file&apos;s default may name (the rule file format and missing rule file questions).</drawback>
+    </alternative>
+    <alternative id="Add Claude Opus high">
+      The shipped file keeps the two lines and gains one: `complete-task` on Claude Code under `opus` at `high`, the combination the Claude Code &quot;Execute tasks of normal difficulty&quot; and &quot;extra requirement surface stretch&quot; blocks already run `complete-all-tasks` with, so the single-task lines become exactly the combinations the file&apos;s execution blocks complete tasks under.
+      <advantage>Every per-task line mirrors a combination the file already runs for task completion, so a looped run can reproduce any shipped execution recipe task by task and give Claude Code a normal and a critical tier, while nothing untried enters the file.</advantage>
+      <drawback>It still ships no stronger-model line, so routing generation work to Fable, the case the 2026-11-19 conversation named, needs a person&apos;s own recipe file, and the shipped tracked file gains a third line the maintainer must keep current when a model or flag is renamed.</drawback>
+    </alternative>
+    <alternative id="Add Claude Fable xhigh">
+      The shipped file keeps the two lines and gains one: `complete-task` on Claude Code under `fable` at `xhigh`, the model and effort the file already gives its starting-state, review, and recommendation lines, as the stronger-model line for generation-type work; no line at Claude Code `high` is added.
+      <advantage>It is the smallest addition that lets the shipped rules route the conversation&apos;s few generation tasks to a stronger model out of the box, the capability the looped run exists to deliver.</advantage>
+      <drawback>Fable has never run `complete-task` or `complete-all-tasks` in the file, so its cost and behaviour on task completion are untried, and Claude Code still has no line at the `high` effort the normal-difficulty block uses, leaving a Claude Code default at `xhigh` or on the other host.</drawback>
+    </alternative>
+    <alternative id="Add Opus high and Fable">
+      The shipped file keeps the two lines and gains two on Claude Code: `complete-task` under `opus` at `high` and under `fable` at `xhigh`, so Claude Code carries a normal, a critical, and a stronger-model line and Antigravity keeps its one.
+      <advantage>The shipped file alone covers the tiers the draft names as the combinations in real use, a default, a stronger model for generation work, and another host, so a project&apos;s rule file can express the 140-task case without any own recipe file.</advantage>
+      <drawback>Two new tracked lines, one of them a model never run for task completion in the file, and four single-task lines to keep current; it also moves toward shipping choices the draft calls personal, which a person&apos;s own file would otherwise hold.</drawback>
+    </alternative>
+    <alternative id="Add Gemini on Antigravity">
+      The shipped file keeps the two lines and gains one: `complete-task` on Antigravity under `gemini-4-argon` at `medium`, the model and effort every other Gemini line of the file carries, as a cheaper line on the second host; Claude Code gains nothing.
+      <advantage>It gives the shipped file a line below Opus for the many ordinary tasks of a long list, on the host whose cheaper model the file already uses for sweeps and derivation, while adding only one line.</advantage>
+      <drawback>Gemini has never completed a task in the file, every `complete-all-tasks` line on Antigravity going to `claude-opus-5-5`, so the quality of the tasks it would take is untried, and Claude Code still has neither a `high` nor a stronger-model line.</drawback>
+    </alternative>
+    <alternative id="Full two-host palette">
+      The shipped file keeps the two lines and gains three: on Claude Code `complete-task` under `opus` at `high` and under `fable` at `xhigh`, and on Antigravity under `gemini-4-argon` at `medium`, so every model the file&apos;s lines name on either host has a single-task line, Opus at both efforts on Claude Code.
+      <advantage>The rules can route any task to any host and model the file already uses, a cheaper default, a stronger model, or the other host, with nothing written in an own recipe file.</advantage>
+      <drawback>Five shipped single-task lines, two of them on models never run for task completion in the file, make the largest tracked set to keep current through host and model renames, and the shipped file becomes a catalogue of combinations the draft holds to be personal rather than the maintainer&apos;s working set.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Snippet file first line">
     <question>The first line of `snippets/GURITA_USAGE.md` is a bare `&lt;mission_path&gt;` placeholder standing above the file&apos;s `#` title. When the file becomes the shipped recipe source of the VS Code extension (`gurita-vscode`) and its placeholder is renamed `&lt;path&gt;`, does that line stay, change, or go?</question>
