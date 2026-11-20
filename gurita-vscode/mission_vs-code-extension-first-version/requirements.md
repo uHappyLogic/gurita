@@ -88,5 +88,7 @@ No other mission is live, so nothing holds or shares the scope. The record holds
 
 - **Button recipe lines.** All six button recipes stand under `## Claude Code` and carry `--dangerously-skip-permissions`. The two interactive lines, `claude "/gurita:discuss-open-question --mission <path> <Short Title>"` and `claude "/gurita:discuss-mission-goal <goal>"`, run on `fable` at `xhigh`; the three answer lines (`answer-open-question`, `answer-open-question-with-alternative`, `answer-open-question-with-recommendation`) are `claude -p` on `fable` at `high`; and the `define-mission-goal --at <scope> <goal>` line is `claude -p` on `sonnet` at `medium`.
 
+- **Slot line.** The looped recipe's slot line reads `<single-task line>`, alone on its line, lower case, with no trailing `;`.
+
 ## Out of Scope
 
