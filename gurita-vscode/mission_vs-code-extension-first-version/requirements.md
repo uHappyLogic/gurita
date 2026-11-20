@@ -54,5 +54,7 @@ No other mission is live, so nothing holds or shares the scope. The record holds
 
 - **Toolchain.** The extension host code is TypeScript compiled by `tsc` to CommonJS files in an output directory, one emitted file per source file, which the VSIX ships as they are, with no bundler. The webview page is plain HTML with a script of its own, written in TypeScript and compiled by `tsc` through a second project configuration using the DOM library, loaded from the output directory through `asWebviewUri` under a content security policy, with no UI framework.
 
+- **VS Code version.** The manifest declares `engines.vscode` as `^1.143.0`, the installed editor's version, and the extension builds against `@types/vscode` pinned exactly, with no caret or tilde, to `1.140.0`, the newest published typings not ahead of that floor: the registry holds no `1.141.0`, `1.142.0`, or `1.143.0` and goes from `1.140.0` straight to `1.144.0`.
+
 ## Out of Scope
 
