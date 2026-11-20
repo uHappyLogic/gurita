@@ -110,5 +110,9 @@ No other mission is live, so nothing holds or shares the scope. The record holds
 
 - **Own recipe setting.** The VS Code user setting that changes the path of a person's own recipe file is `gurita.ownRecipesFile`, sitting flat directly under the `gurita` section, the plugin's name and not the extension's slug.
 
+### Rule file
+
+- **Location.** The rule file stands at one fixed path directly in the project root, named `task_line_rules` in the snake_case form of the root-level principle store `answer_decision_principles.md`, its file extension the one the rule file's format takes, with no `gurita` prefix, no directory of its own, and no setting that moves it.
+
 ## Out of Scope
 
