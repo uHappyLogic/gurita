@@ -38,12 +38,11 @@ Every Node command runs under Node 22 through nvm, in a subshell, from the repos
 - `npm run compile` compiles the extension host code (`tsconfig.json`, CommonJS) and the
   webview page's script (`tsconfig.webview.json`, with the DOM library) from `src/` into `out/`,
   one emitted file per source file, with no bundler.
-- `npm test` compiles, then runs the unit tests of the recipe reader, the `open_questions.xml`
-  parser, and the `TASKS_TODO.md` heading read, among others, with Node's built-in `node:test`
-  over the compiled files under `out/test/`; the run path and the pane's answer to a tab click
-  are tested against a stub of the `vscode` module, and the page script against a small
-  stand-in for the DOM. Nothing runs
-  inside an editor.
+- `npm test` compiles, then runs the unit tests of the recipe reader and the stage filter of a
+  page's recipe list, the `open_questions.xml` parser, and the `TASKS_TODO.md` heading read,
+  among others, with Node's built-in `node:test` over the compiled files under `out/test/`; the
+  run path and the pane's answer to a tab click are tested against a stub of the `vscode` module,
+  and the page script against a small stand-in for the DOM. Nothing runs inside an editor.
 - `npm run package` runs `vsce package`, which first runs the `vscode:prepublish` script: the
   compile, then `scripts/bundle.js`, the extension's own build step, which copies
   `core/tools/missions.py` and `snippets/GURITA_USAGE.md` verbatim into `bundled/` and writes
@@ -96,7 +95,8 @@ from that root:
 - A row of tabs across the top, one per live mission, each showing the mission's title with its
   path as a tooltip, and at its end the two mission-starting buttons, **New mission** (runs the
   `discuss-mission-goal` recipe) and **Define mission** (runs the `define-mission-goal` recipe).
-- Under the selected tab, the mission's page: the workflow diagram, the recipe buttons, and two
+- Under the selected tab, the mission's page: the workflow diagram, the recipe buttons of the
+  recipes that fit the step its diagram fills (see The recipes a page lists), and two
   panes behind one row of two headers, **Open questions**, holding the question view parsed from
   `open_questions.xml`, and **Remaining tasks**, holding the remaining task headings of
   `TASKS_TODO.md` and the **New task** button. The two headers are of equal width and together
@@ -194,9 +194,28 @@ trimmed. A recipe with no `Stage:` line before its fence, with more than one, or
 reader does not know (`define`, or a step's name spelled otherwise, capitals included) is
 undeclared; a `Stage:` line inside the fence is an ordinary line of the recipe, and one after the
 fence is not read. The same rule reads the shipped file and your own file, and an own recipe
-that replaces a shipped one carries its own declaration, not the shipped one's. The reader
-records the declared step with each recipe; the mission page's recipe list described below does
-not depend on it.
+that replaces a shipped one carries its own declaration, not the shipped one's. The declared step
+chooses the mission pages that list the recipe.
+
+### The recipes a page lists
+
+Each mission's page lists only the recipes that fit the step its workflow diagram fills, the
+step to run next:
+
+- every recipe declaring that step;
+- beside them, when **derive tasks** is filled, every recipe declaring **additional review
+  round**, and when **finish** is filled, every recipe declaring **follow up tasks**, the
+  optional step you may take there instead of moving on;
+- every undeclared recipe, whatever the step.
+
+A page whose diagram fills no block, because a document or the git read the choice needs did not
+read, lists every recipe. The page's other rules hold within that list as described below: the
+recipes stay grouped under Claude Code and Antigravity with your own under **Your recipes**, a
+recipe holding a placeholder the page cannot fill is left off, and one holding a placeholder the
+extension does not know is shown as a non-runnable entry. The list follows the step, so it changes
+whenever a run or a change to a mission document moves the diagram's filled block. The buttons
+that run a recipe by its fixed name (on the question card and its alternatives, **New task**,
+**New mission**, and **Define mission**) are offered whatever the step.
 
 ### The shipped recipe file
 
@@ -219,8 +238,10 @@ Every chain in the file declares the one step it runs and spans no other:
   mission's tasks are derived by `Prepare tasks` before an execution chain completes them.
 - **finish**: `Finish mission` and `Finish mission (Antigravity)`.
 
-No shipped recipe declares **follow up tasks**. Besides the chains, the file carries the
-following, none of which declares a step:
+A page filling **derive tasks** thus lists the two `Prepare tasks` chains beside the three
+additional review round chains, and one filling **execute tasks** the four `complete-all-tasks`
+chains and `Execute tasks one at a time`. No shipped recipe declares **follow up tasks**. Besides
+the chains, the file carries the following, none of which declares a step:
 
 - The seven button recipes, under `## Claude Code`, each named by the skill its one line invokes:
   `discuss-open-question`, `discuss-mission-goal`, `discuss-new-task`, `answer-open-question`,
@@ -246,7 +267,8 @@ The file is a flat list of `###` recipes, each heading followed by a fenced bloc
 that recipe in place, a button recipe included; every other own recipe is listed below the
 Claude Code and Antigravity groups under **Your recipes**, in the order your file lists them.
 An own recipe may declare its step by a `Stage:` line, as a shipped one does (see the stage line
-above). For example:
+above), and is then listed only on the pages that step fits; an undeclared one is listed on every
+page. For example:
 
 ````
 ### Review twice

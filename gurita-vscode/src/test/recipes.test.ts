@@ -10,6 +10,7 @@ import {
   isHeadless,
   mergeRecipes,
   ownRecipesFile,
+  PAIRED_STAGES,
   pageRecipes,
   parseOwnRecipes,
   parseShippedRecipes,
@@ -17,8 +18,9 @@ import {
   Recipe,
   SLOT_LINE,
   STAGE_NAMES,
+  stageRecipes,
 } from '../recipes';
-import { WORKFLOW_STEPS } from '../workflow';
+import { WORKFLOW_STEPS, WorkflowStep } from '../workflow';
 
 const FIXTURES = path.join(__dirname, '..', '..', 'src', 'test', 'fixtures', 'recipes');
 const SHIPPED = path.join(FIXTURES, 'shipped.md');
@@ -322,6 +324,123 @@ test('no shipped execute recipe holds a derive-tasks line, each holding its comp
     'claude "/gurita:complete-all-tasks --mission <path>" --dangerously-skip-permissions --model "opus" --effort xhigh; # interactive',
   ]);
   assert.deepStrictEqual(byName(recipes, 'Execute tasks one at a time').lines, [SLOT_LINE]);
+});
+
+/**
+ * An own-file list of one undeclared recipe, then one recipe declaring each step a stage line can
+ * name, in the diagram's order, each named by the stage it declares, then one whose stage line
+ * names a step the reader does not know.
+ */
+function staged(): Recipe[] {
+  const declared = [...STAGE_NAMES.keys()].map((name) => `### ${name}\nStage: ${name}\n\`\`\`\necho ${name} <path>\n\`\`\`\n`);
+  const text = ['### Undeclared\n```\necho <path>\n```\n', ...declared, '### Unknown stage\nStage: deploy\n```\necho <path>\n```\n'].join('\n');
+  return parseOwnRecipes(text, OWN);
+}
+
+/** The names of the recipes of `staged` a page whose diagram fills `step` lists. */
+function listedAt(step: WorkflowStep | undefined): string[] {
+  return stageRecipes(staged(), step).map((recipe) => recipe.name);
+}
+
+test('a page whose diagram fills a step lists the recipes declaring it and every undeclared recipe', () => {
+  assert.deepStrictEqual(
+    staged().map((recipe) => [recipe.name, recipe.stage]),
+    [
+      ['Undeclared', undefined],
+      ['first review round', 'first-review'],
+      ['additional review round', 'additional-review'],
+      ['derive tasks', 'derive'],
+      ['execute tasks', 'execute'],
+      ['follow up tasks', 'follow-up'],
+      ['finish', 'finish'],
+      ['Unknown stage', undefined],
+    ],
+  );
+  assert.deepStrictEqual(listedAt('first-review'), ['Undeclared', 'first review round', 'Unknown stage']);
+  assert.deepStrictEqual(listedAt('additional-review'), ['Undeclared', 'additional review round', 'Unknown stage']);
+  assert.deepStrictEqual(listedAt('execute'), ['Undeclared', 'execute tasks', 'Unknown stage']);
+  assert.deepStrictEqual(listedAt('follow-up'), ['Undeclared', 'follow up tasks', 'Unknown stage']);
+  assert.deepStrictEqual(listedAt('define'), ['Undeclared', 'Unknown stage']);
+});
+
+test("derive tasks lists the additional review round's recipes beside its own, and finish follow up tasks'", () => {
+  assert.deepStrictEqual([...PAIRED_STAGES], [
+    ['derive', 'additional-review'],
+    ['finish', 'follow-up'],
+  ]);
+  assert.deepStrictEqual(listedAt('derive'), ['Undeclared', 'additional review round', 'derive tasks', 'Unknown stage']);
+  assert.deepStrictEqual(listedAt('finish'), ['Undeclared', 'follow up tasks', 'finish', 'Unknown stage']);
+  assert.ok(!listedAt('additional-review').includes('derive tasks'), 'the pair lists the optional step beside the filled one only');
+  assert.ok(!listedAt('follow-up').includes('finish'), 'the pair lists the optional step beside the filled one only');
+});
+
+test('an undeclared recipe is listed whatever the step, and a page with no step chosen lists every recipe in order', () => {
+  for (const step of [...WORKFLOW_STEPS, undefined]) {
+    assert.ok(listedAt(step).includes('Undeclared'), String(step));
+    assert.ok(listedAt(step).includes('Unknown stage'), String(step));
+  }
+  const recipes = staged();
+  const every = stageRecipes(recipes, undefined);
+  assert.deepStrictEqual(every, recipes);
+  assert.notStrictEqual(every, recipes, 'a fresh list');
+  assert.deepStrictEqual(stageRecipes([], 'execute'), []);
+});
+
+test('the stage filter holds the host groups, the own group, and the unfillable-placeholder rule within it', () => {
+  const merged = mergeRecipes(shipped(), own());
+  const at = (step: WorkflowStep | undefined) =>
+    pageRecipes(stageRecipes(merged, step), ['path']).map((entry) => [entry.kind, entry.group, entry.name]);
+  const every = [
+    ['runnable', 'Claude Code', 'Chain'],
+    ['looped', 'Claude Code', 'Loop'],
+    ['unknown', 'Claude Code', 'Fenced heading'],
+    ['runnable', 'Antigravity', 'Two fences'],
+    ['unknown', 'own', 'My second own recipe'],
+  ];
+  assert.deepStrictEqual(at(undefined), every);
+  assert.deepStrictEqual(at('execute'), every, 'the own replacement of Chain is undeclared');
+  assert.deepStrictEqual(at('finish'), every.filter(([, , name]) => name !== 'Loop'));
+  const declared = (step: WorkflowStep | undefined) =>
+    pageRecipes(stageRecipes(shipped(), step), ['path']).map((entry) => entry.name);
+  assert.deepStrictEqual(declared('derive'), ['Chain', 'Fenced heading', 'Two fences']);
+  assert.deepStrictEqual(declared('execute'), ['Loop', 'Fenced heading', 'Two fences']);
+  assert.deepStrictEqual(declared('first-review'), ['Fenced heading', 'Two fences']);
+});
+
+test('each step lists exactly the shipped chains that fit it, and no step chosen lists every chain', () => {
+  const recipes = parseShippedRecipes(fs.readFileSync(SNIPPETS, 'utf8'), SNIPPETS);
+  const at = (step: WorkflowStep | undefined) =>
+    pageRecipes(stageRecipes(recipes, step), ['path']).map((entry) => [entry.group, entry.name]);
+  const review = [
+    ['Claude Code', 'Requirements iteration'],
+    ['Antigravity', 'Requirements iteration (Antigravity)'],
+    ['Antigravity', 'Mixed-agent requirements review (Gemini reviews, Claude annotates)'],
+  ];
+  assert.deepStrictEqual(at('first-review'), [
+    ['Claude Code', 'First run'],
+    ['Antigravity', 'First run (Antigravity)'],
+  ]);
+  assert.deepStrictEqual(at('additional-review'), review);
+  assert.deepStrictEqual(at('derive'), [
+    ['Claude Code', 'Requirements iteration'],
+    ['Claude Code', 'Prepare tasks'],
+    ['Antigravity', 'Requirements iteration (Antigravity)'],
+    ['Antigravity', 'Prepare tasks (Antigravity)'],
+    ['Antigravity', 'Mixed-agent requirements review (Gemini reviews, Claude annotates)'],
+  ]);
+  assert.deepStrictEqual(at('execute'), [
+    ['Claude Code', 'Execute tasks of normal difficulty'],
+    ['Claude Code', 'Execute tasks (critical tasks)'],
+    ['Claude Code', 'Execute tasks one at a time'],
+    ['Antigravity', 'Execute tasks of normal difficulty (Antigravity)'],
+    ['Antigravity', 'Execute tasks (critical tasks) (Antigravity)'],
+  ]);
+  assert.deepStrictEqual(at('finish'), [
+    ['Claude Code', 'Finish mission'],
+    ['Antigravity', 'Finish mission (Antigravity)'],
+  ]);
+  assert.deepStrictEqual(at(undefined), pageRecipes(recipes, ['path']).map((entry) => [entry.group, entry.name]));
+  assert.strictEqual(at(undefined).length, 14);
 });
 
 test('a page lists the recipes it can fill, in the merged order, and names each unknown placeholder and its file', () => {

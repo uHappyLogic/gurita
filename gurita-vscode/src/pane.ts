@@ -9,12 +9,17 @@
 // carries once git holds two or more; the pane its page opens on beneath its two pane headers,
 // Open questions and Remaining tasks, chosen from the same count: Remaining tasks when git holds
 // at least one review commit for the mission and no question is open, and Open questions
-// otherwise, a failed git read included; and with the recipe list every mission page shows, read
-// afresh from the shipped snippet file and the person's own recipe file; or with the one failure
-// state the live read gives. The page redraws its question card in place from every such message,
-// keeping the pane the person clicked while the mission stays shown.
-// A click on a recipe button starts that recipe's chain for the page's mission at once. The
-// buttons outside the chains each run the recipe of its fixed name, shipped or replaced by an own recipe of the same name, read afresh at the click,
+// otherwise, a failed git read included; and the recipe list its page shows, out of the recipes
+// read afresh from the shipped snippet file and the person's own recipe file: only those whose
+// declared stage is the step its diagram fills, beside them the additional review round's when
+// derive tasks is filled and follow up tasks' when finish is, and every undeclared recipe, or every
+// recipe when no step is chosen, laid out within that by the page's other rules, its host groups,
+// its own group, and the leaving off of a recipe holding a placeholder the page cannot fill; or
+// with the one failure state the live read gives. The page redraws its question card in place from
+// every such message, keeping the pane the person clicked while the mission stays shown.
+// A click on a recipe button starts that recipe's chain for the page's mission at once, and a
+// recipe the latest answer did not list on that mission's page starts nothing. The
+// buttons outside the chains, untouched by the step, each run the recipe of its fixed name, shipped or replaced by an own recipe of the same name, read afresh at the click,
 // through the same run path: on a question's card the discuss, answer, and answer-with-
 // recommendation buttons, on an alternative on that card the answer-with-alternative button,
 // and on the pane at the tab row's end, in its failure state too, the two mission-starting
@@ -48,8 +53,8 @@
 // mission documents under the project root, created with the first live read that succeeds and
 // disposed with the panel, debounced so that a burst of writes causes one re-read. A change to a
 // mission's question document or task list re-reads that mission's documents in process against
-// the live list last read, choosing its next step and its default pane and counting its review
-// commits afresh, and creating or deleting a `requirements.md`, or changing a `TASKS_TODO.md`, also re-runs
+// the live list last read, choosing its next step, and with it the recipes its page lists, and its
+// default pane and counting its review commits afresh, and creating or deleting a `requirements.md`, or changing a `TASKS_TODO.md`, also re-runs
 // `missions.py live`. While the panel is hidden an event only marks the page stale, and a stale
 // page is re-read when the panel is shown. The refresh control on the page and the refresh command
 // each re-read everything, as a fallback. Git state is not watched.
@@ -61,11 +66,11 @@ import * as vscode from 'vscode';
 import { MissionDocuments, readMissionDocuments } from './documents';
 import { LiveMission, LiveRead, projectRoot, readLive } from './live';
 import { PreviewRead, SingleTaskLine, loopArguments, ruleFile, runOverrides, runPreview, singleTaskLines } from './loop';
-import { BUTTON_RECIPES, PageRecipe, Recipe, buttonRecipe, ownRecipesFile, pageRecipes, readRecipes } from './recipes';
+import { BUTTON_RECIPES, PageRecipe, Recipe, buttonRecipe, ownRecipesFile, pageRecipes, readRecipes, stageRecipes } from './recipes';
 import { FileEventKind, RefreshBatch, RefreshQueue, WATCHED_PATTERN, eventEffect } from './refresh';
 import { OPTIONAL_PLACEHOLDERS } from './placeholders';
 import { refuseWhileRunning, runnerFile, runningMissions, showRun, startChain, startLoop } from './runs';
-import { MissionWorkflow, missionWorkflow, reviewCount } from './workflow';
+import { MissionWorkflow, WorkflowStep, missionWorkflow, reviewCount } from './workflow';
 
 const VIEW_TYPE = 'gurita.missionPane';
 const PANEL_TITLE = 'Gurita Missions';
@@ -92,7 +97,10 @@ type PageMessage =
   | { type: 'previewLoop'; mission: string; recipe: string }
   | { type: 'startLoop'; mission: string; recipe: string; overrides: Record<string, string> };
 
-/** The recipe list every mission page shows, or the cause it could not be read. */
+/** The merged recipe list as read from the two recipe files, or the cause it could not be read. */
+type RecipeRead = { state: 'read'; recipes: Recipe[] } | { state: 'failed'; cause: string };
+
+/** The recipe list one mission's page shows, or the cause the recipes could not be read. */
 type RecipePart = { state: 'read'; recipes: PageRecipe[] } | { state: 'failed'; cause: string };
 
 /** A message the extension posts to the page. */
@@ -101,11 +109,10 @@ type PaneMessage =
       type: 'live';
       /**
        * Each live mission with its documents, the step its diagram fills, left out when none is
-       * chosen, the count its additional review round carries, left out while there is none, and
-       * the pane its page opens on.
+       * chosen, the count its additional review round carries, left out while there is none, the
+       * pane its page opens on, and the recipe list its page shows, the recipes that fit that step.
        */
-      missions: ({ path: string; state: string; title: string } & MissionDocuments & MissionWorkflow)[];
-      recipes: RecipePart;
+      missions: ({ path: string; state: string; title: string } & MissionDocuments & MissionWorkflow & { recipes: RecipePart })[];
       /** The paths of the missions with a running runner, whose pages are drawn as running. */
       running: string[];
     }
@@ -136,27 +143,28 @@ interface HeldPreview {
 }
 
 /**
- * What the latest answer posted: the project root, the live missions' paths, the recipes, and the
- * Short Titles each mission's question view showed, each with its alternatives' ids.
+ * What the latest answer posted: the project root, the live missions' paths, the recipes each
+ * mission's page listed, and the Short Titles each mission's question view showed, each with its
+ * alternatives' ids.
  */
 interface Posted {
   root: string;
   missions: Set<string>;
-  recipes: PageRecipe[];
+  recipes: Map<string, PageRecipe[]>;
   questions: Map<string, Map<string, Set<string>>>;
 }
 
 /**
  * What the latest successful live read gave and the pane last drew: the project root, the live
  * missions in the order printed, each one's documents as last read and what its diagram draws, and
- * the recipes.
+ * the merged recipes, out of which each page's list is chosen for its step.
  */
 interface Current {
   root: string;
   live: LiveMission[];
   documents: Map<string, MissionDocuments>;
   workflows: Map<string, MissionWorkflow>;
-  recipes: RecipePart;
+  recipes: RecipeRead;
 }
 
 let panel: vscode.WebviewPanel | undefined;
@@ -318,8 +326,8 @@ function readWorkflow(root: string, mission: LiveMission, documents: MissionDocu
 /**
  * Acts on one debounced burst of the watcher's events: a hidden panel is only marked stale; a
  * burst that moves the live list re-reads everything; any other re-reads in process the documents
- * of each live mission it touched, chooses what its diagram draws and its default pane afresh, and
- * posts the fresh parse.
+ * of each live mission it touched, chooses what its diagram draws, and with it the recipes its page
+ * lists, and its default pane afresh, and posts the fresh parse.
  */
 async function flushEvents(context: vscode.ExtensionContext, target: vscode.WebviewPanel, batch: RefreshBatch): Promise<void> {
   if (panel !== target) {
@@ -357,13 +365,26 @@ function readAllRecipes(context: vscode.ExtensionContext): Recipe[] {
   return readRecipes(context.asAbsolutePath('bundled/GURITA_USAGE.md'), ownRecipesFile(setting, os.homedir()));
 }
 
-/** Reads the shipped snippet file and the person's own recipe file into a page's recipe list. */
-function readPageRecipes(context: vscode.ExtensionContext): RecipePart {
+/** Reads the shipped snippet file and the person's own recipe file into the merged list, or the cause they could not be read. */
+function readRecipeList(context: vscode.ExtensionContext): RecipeRead {
   try {
-    return { state: 'read', recipes: pageRecipes(readAllRecipes(context), PAGE_PLACEHOLDERS) };
+    return { state: 'read', recipes: readAllRecipes(context) };
   } catch (error) {
     return { state: 'failed', cause: error instanceof Error ? error.message : String(error) };
   }
+}
+
+/**
+ * The recipe list the page of a mission whose diagram fills `step` shows, out of the merged list
+ * `read`: the recipes `stageRecipes` keeps for that step, every recipe when `step` is undefined,
+ * as `pageRecipes` lists them for a page holding its mission's path. A failed read is posted to the
+ * page as it stands.
+ */
+function missionRecipes(read: RecipeRead, step: WorkflowStep | undefined): RecipePart {
+  if (read.state === 'failed') {
+    return read;
+  }
+  return { state: 'read', recipes: pageRecipes(stageRecipes(read.recipes, step), PAGE_PLACEHOLDERS) };
 }
 
 /**
@@ -394,7 +415,7 @@ async function answer(context: vscode.ExtensionContext, target: vscode.WebviewPa
       live: read.missions,
       documents,
       workflows: new Map(read.missions.map((mission, index) => [mission.path, workflows[index]])),
-      recipes: readPageRecipes(context),
+      recipes: readRecipeList(context),
     };
     message = publish(current);
   } else {
@@ -405,13 +426,20 @@ async function answer(context: vscode.ExtensionContext, target: vscode.WebviewPa
   await post(target, message);
 }
 
-/** The page's message for what `shown` holds, noting what it lists as what the latest answer posted. */
+/**
+ * The page's message for what `shown` holds, each mission carrying the recipe list its page shows
+ * for the step its diagram fills, noting what it lists as what the latest answer posted.
+ */
 function publish(shown: Current): PaneMessage {
-  const missions = shown.live.map((mission) => ({
-    ...mission,
-    ...(shown.documents.get(mission.path) as MissionDocuments),
-    ...(shown.workflows.get(mission.path) as MissionWorkflow),
-  }));
+  const missions = shown.live.map((mission) => {
+    const workflow = shown.workflows.get(mission.path) as MissionWorkflow;
+    return {
+      ...mission,
+      ...(shown.documents.get(mission.path) as MissionDocuments),
+      ...workflow,
+      recipes: missionRecipes(shown.recipes, workflow.step),
+    };
+  });
   const questions = new Map<string, Map<string, Set<string>>>();
   for (const mission of missions) {
     if (mission.questions.state === 'read') {
@@ -429,19 +457,19 @@ function publish(shown: Current): PaneMessage {
   posted = {
     root: shown.root,
     missions: new Set(shown.live.map((mission) => mission.path)),
-    recipes: shown.recipes.state === 'read' ? shown.recipes.recipes : [],
+    recipes: new Map(missions.map((mission) => [mission.path, mission.recipes.state === 'read' ? mission.recipes.recipes : []])),
     questions,
   };
-  return { type: 'live', missions, recipes: shown.recipes, running: runningMissions() };
+  return { type: 'live', missions, running: runningMissions() };
 }
 
 /**
- * Starts the chain of the recipe named `recipe`, as the latest answer listed it, for the live
- * mission at `mission`, its path its one value. A name or mission the latest answer did not list
- * starts nothing.
+ * Starts the chain of the recipe named `recipe`, as the latest answer listed it on the page of the
+ * live mission at `mission`, for that mission, its path its one value. A mission the latest answer
+ * did not list, or a name it did not list on that mission's page, starts nothing.
  */
 function runRecipe(context: vscode.ExtensionContext, mission: string, recipe: string): void {
-  const listed = posted?.recipes.find((entry) => entry.name === recipe);
+  const listed = posted?.recipes.get(mission)?.find((entry) => entry.name === recipe);
   if (posted === undefined || !posted.missions.has(mission) || listed === undefined || listed.kind !== 'runnable') {
     return;
   }
@@ -457,14 +485,15 @@ async function post(target: vscode.WebviewPanel, message: PaneMessage): Promise<
 }
 
 /**
- * Shows the preview of the looped recipe named `recipe`, as the latest answer listed it, for the
- * live mission at `mission`: the recipes read afresh, the named single-task lines gathered from
- * them, and the runner's `preview` run with those lines, the mission, and the rule file, its print
- * posted to the page. A name or mission the latest answer did not list, or a mission with a
- * running chain, runs nothing.
+ * Shows the preview of the looped recipe named `recipe`, as the latest answer listed it on the
+ * page of the live mission at `mission`, for that mission: the recipes read afresh, the named
+ * single-task lines gathered from them, and the runner's `preview` run with those lines, the
+ * mission, and the rule file, its print posted to the page. A mission the latest answer did not
+ * list, a name it did not list on that mission's page, or a mission with a running chain, runs
+ * nothing.
  */
 async function previewLoop(context: vscode.ExtensionContext, target: vscode.WebviewPanel, mission: string, recipe: string): Promise<void> {
-  const listed = posted?.recipes.find((entry) => entry.name === recipe);
+  const listed = posted?.recipes.get(mission)?.find((entry) => entry.name === recipe);
   if (posted === undefined || !posted.missions.has(mission) || listed === undefined || listed.kind !== 'looped') {
     return;
   }

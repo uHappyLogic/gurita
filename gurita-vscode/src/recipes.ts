@@ -8,12 +8,16 @@
 // diagram it belongs to, by one `Stage: <step name>` line standing outside any fence between its
 // `###` heading and its first fence, in the shipped file and in a person's own file alike, the
 // step named as the diagram labels its block (first review round, additional review round, derive
-// tasks, execute tasks, follow up tasks, or finish), so that a mission page can list the recipes of
-// the step its diagram fills. A recipe with no such line, with more than one, or with a name the
-// reader does not know, `define` included, counts as undeclared. In the shipped file every chain
-// declares its one step and spans no other, each execution chain holding its `complete-all-tasks`
-// line alone, while the button recipes and the single-task lines declare nothing. This module
-// imports nothing from `vscode`.
+// tasks, execute tasks, follow up tasks, or finish). A recipe with no such line, with more than one,
+// or with a name the reader does not know, `define` included, counts as undeclared. A mission page
+// lists only the recipes that fit the step its diagram fills: those declaring that step, beside them
+// the additional review round's when derive tasks is filled and follow up tasks' when finish is, and
+// every undeclared recipe whatever the step, while a page whose step could not be chosen lists every
+// recipe; the page's other rules, its host groups and own group and the placeholders it cannot
+// fill, hold within that list, and the buttons that run a recipe by its fixed name are untouched by
+// it. In the shipped file every chain declares its one step and spans no other, each execution chain
+// holding its `complete-all-tasks` line alone, while the button recipes and the single-task lines
+// declare nothing. This module imports nothing from `vscode`.
 
 import * as fs from 'node:fs';
 import type { WorkflowStep } from './workflow';
@@ -73,7 +77,10 @@ export interface Recipe {
   knownPlaceholders: string[];
   /** The placeholder names its lines hold that the extension does not know, likewise. */
   unknownPlaceholders: string[];
-  /** The workflow step its one stage line declares, left out when the recipe is undeclared. */
+  /**
+   * The workflow step its one stage line declares, left out when the recipe is undeclared: it
+   * chooses the mission pages that list the recipe, an undeclared one being listed on every page.
+   */
   stage?: WorkflowStep;
 }
 
@@ -138,6 +145,32 @@ function blocks(text: string): Block[] {
  */
 export function declaredStage(stages: readonly string[]): WorkflowStep | undefined {
   return stages.length === 1 ? STAGE_NAMES.get(stages[0]) : undefined;
+}
+
+/**
+ * The step whose recipes a mission page lists beside those of the step its workflow diagram fills:
+ * the additional review round's beside derive tasks and follow up tasks' beside finish, the two
+ * optional steps a person may take there instead of moving on.
+ */
+export const PAIRED_STAGES: ReadonlyMap<WorkflowStep, WorkflowStep> = new Map<WorkflowStep, WorkflowStep>([
+  ['derive', 'additional-review'],
+  ['finish', 'follow-up'],
+]);
+
+/**
+ * The recipes a mission page whose workflow diagram fills `step` lists, in the order given: every
+ * recipe declaring `step`, every recipe declaring the step `PAIRED_STAGES` pairs with it, and every
+ * undeclared recipe. A page whose step could not be chosen, `step` left undefined, lists every
+ * recipe.
+ */
+export function stageRecipes<T extends { stage?: WorkflowStep }>(recipes: readonly T[], step: WorkflowStep | undefined): T[] {
+  if (step === undefined) {
+    return [...recipes];
+  }
+  const paired = PAIRED_STAGES.get(step);
+  return recipes.filter(
+    (recipe) => recipe.stage === undefined || recipe.stage === step || (paired !== undefined && recipe.stage === paired),
+  );
 }
 
 /** Whether a line is headless: it holds a `gurita:` invocation and carries no `# interactive` mark. */
@@ -297,7 +330,8 @@ export type PageRecipe =
 export const LOOPED_PLACEHOLDERS: readonly string[] = ['path', 'Task Title'];
 
 /**
- * The recipes a mission page lists, given the placeholder names the page holds a value for. A
+ * The recipes a mission page lists out of `recipes`, for a page the part of the merged list
+ * `stageRecipes` keeps for its step, given the placeholder names the page holds a value for. A
  * recipe holding a placeholder the extension does not know is listed as a non-runnable entry
  * naming it and its file. A looped recipe is listed as its own kind, run through its preview
  * rather than as a chain, when every placeholder it holds is one a looped run fills itself. A

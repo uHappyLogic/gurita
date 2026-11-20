@@ -34,7 +34,11 @@
 // is held in this script's memory only, never saved with `setState`, so every switch of the shown
 // mission (a tab click, a preview of another mission, a fall back to the first, the failure
 // state) and every load of the page, a reopening or a hidden pane shown again, opens on the
-// default afresh. The recipe buttons: the shipped recipes grouped
+// default afresh. The recipe buttons: the recipe list the extension posts with the page's mission,
+// holding only the recipes that fit the step its diagram fills, those declaring that step, beside
+// them those declaring the additional review round when derive tasks is filled and follow up tasks
+// when finish is, and every recipe declaring no step, whichever block is filled, or every recipe
+// when no block is filled, so each mission's page draws its own list; the shipped recipes in it grouped
 // under Claude Code and Antigravity and, below them, the own recipes that replace none under
 // "Your recipes", each button carrying its recipe's lines as written in its hover text and
 // starting that recipe's chain for the page's mission when clicked, and each recipe holding a
@@ -119,6 +123,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
     additionalRounds?: number;
     /** The pane the page opens on; Open questions when absent. */
     defaultPane?: MissionPane;
+    /** The recipe list its page shows, the recipes that fit its step, or the cause the recipes could not be read. */
+    recipes: RecipePart;
   }
 
   type RecipeGroup = 'Claude Code' | 'Antigravity' | 'own';
@@ -148,7 +154,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
   }
 
   type PaneMessage =
-    | { type: 'live'; missions: Mission[]; recipes: RecipePart; running: string[] }
+    | { type: 'live'; missions: Mission[]; running: string[] }
     | { type: 'liveFailure'; cause: string }
     | { type: 'running'; missions: string[] }
     | { type: 'preview'; mission: string; recipe: string; lines: string[]; names: string[]; result: PreviewRead }
@@ -204,7 +210,6 @@ declare function acquireVsCodeApi(): VsCodeApi;
   let selected: string | undefined = saved.selected;
   const positions = new Map<string, Position>(Object.entries(saved.positions ?? {}));
   let missions: Mission[] = [];
-  let recipes: RecipePart = { state: 'read', recipes: [] };
   /** The paths of the missions with a running runner, whose pages are drawn as running. */
   let running = new Set<string>();
   /** What the pane last drew from the extension's answer: nothing yet, the mission pages, or the failure state. */
@@ -597,9 +602,11 @@ declare function acquireVsCodeApi(): VsCodeApi;
     return view;
   }
 
+  /** The recipe buttons of the mission's page, drawn from the recipe list posted with the mission. */
   function drawRecipes(mission: Mission, busy: boolean): HTMLElement {
     const view = element('section', undefined, 'recipes');
     view.append(element('h3', 'Recipes'));
+    const recipes = mission.recipes;
     if (recipes.state === 'failed') {
       const box = element('div', undefined, 'notice');
       box.setAttribute('role', 'alert');
@@ -815,7 +822,6 @@ declare function acquireVsCodeApi(): VsCodeApi;
     const message = event.data;
     if (message.type === 'live') {
       missions = message.missions;
-      recipes = message.recipes;
       running = new Set(message.running ?? []);
       drawn = 'live';
       for (const mission of [...previews.keys()]) {

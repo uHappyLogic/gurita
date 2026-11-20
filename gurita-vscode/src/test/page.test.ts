@@ -180,11 +180,13 @@ function loadPage(measure?: (element: FakeElement) => number): Page {
 const ALPHA = 'lib/mission_alpha/';
 const BETA = 'mission_beta/';
 
+/** A live mission as the extension posts it, with `RECIPES` as its page's recipe list unless `workflow` gives another. */
 function mission(missionPath: string, title: string, workflow: Record<string, unknown> = { step: 'derive' }): unknown {
   return {
     path: missionPath,
     state: 'started',
     title,
+    recipes: RECIPES,
     ...workflow,
     questions: {
       state: 'read',
@@ -210,7 +212,7 @@ const RECIPES = {
 };
 
 function live(running: string[]): unknown {
-  return { type: 'live', missions: [mission(ALPHA, 'Alpha'), mission(BETA, 'Beta')], recipes: RECIPES, running };
+  return { type: 'live', missions: [mission(ALPHA, 'Alpha'), mission(BETA, 'Beta')], running };
 }
 
 function buttons(page: Page): FakeElement[] {
@@ -324,6 +326,73 @@ test("another mission's page is unaffected by a run it does not hold", () => {
   assert.deepStrictEqual(page.posted[page.posted.length - 1], { type: 'runRecipe', mission: BETA, recipe: 'review' });
 });
 
+/** The names of the recipe entries drawn on the page shown, buttons and non-runnable entries alike, in the order drawn. */
+function recipeNames(page: Page): string[] {
+  const section = page.root.all().find((each) => each.has('recipes'));
+  assert.ok(section !== undefined, 'no recipe section');
+  return section.all().filter((each) => each.has('recipe') || each.has('recipe-unknown')).map((each) => each.textContent);
+}
+
+/** The group headings drawn above the recipes on the page shown, in the order drawn. */
+function recipeGroups(page: Page): string[] {
+  const section = page.root.all().find((each) => each.has('recipes'));
+  assert.ok(section !== undefined, 'no recipe section');
+  return section.all().filter((each) => each.tagName === 'h4').map((each) => each.textContent);
+}
+
+test("each mission's page draws the recipe list posted with its mission, grouped as before", () => {
+  const derive = {
+    state: 'read',
+    recipes: [
+      { kind: 'runnable', name: 'Requirements iteration', group: 'Claude Code', lines: ['claude -p "/gurita:review-mission-requirements --mission <path>"'] },
+      { kind: 'runnable', name: 'Prepare tasks', group: 'Claude Code', lines: ['claude -p "/gurita:derive-tasks --mission <path>"'] },
+      { kind: 'runnable', name: 'Prepare tasks (Antigravity)', group: 'Antigravity', lines: ['agy -p "/gurita:derive-tasks --mission <path>"'] },
+      { kind: 'runnable', name: 'Mine everywhere', group: 'own', lines: ['echo <path>'] },
+    ],
+  };
+  const finish = {
+    state: 'read',
+    recipes: [
+      { kind: 'runnable', name: 'Finish mission', group: 'Claude Code', lines: ['claude -p "/gurita:finish-mission --mission <path>"'] },
+      { kind: 'unknown', name: 'Odd follow up', group: 'own', lines: ['echo <odd>'], placeholders: ['odd'], file: '/home/someone/.gurita/recipes.md' },
+    ],
+  };
+  const page = loadPage();
+  page.send({
+    type: 'live',
+    missions: [mission(ALPHA, 'Alpha', { step: 'derive', recipes: derive }), mission(BETA, 'Beta', { step: 'finish', recipes: finish })],
+    running: [],
+  });
+  assert.deepStrictEqual(recipeNames(page), ['Requirements iteration', 'Prepare tasks', 'Prepare tasks (Antigravity)', 'Mine everywhere']);
+  assert.deepStrictEqual(recipeGroups(page), ['Claude Code', 'Antigravity', 'Your recipes']);
+  named(page, 'Prepare tasks').click();
+  assert.deepStrictEqual(page.posted[page.posted.length - 1], { type: 'runRecipe', mission: ALPHA, recipe: 'Prepare tasks' });
+  named(page, 'Beta').click();
+  assert.deepStrictEqual(recipeNames(page), [
+    'Finish mission',
+    'Odd follow up: unknown placeholder <odd> in /home/someone/.gurita/recipes.md',
+  ]);
+  assert.deepStrictEqual(recipeGroups(page), ['Claude Code', 'Your recipes']);
+  named(page, 'Finish mission').click();
+  assert.deepStrictEqual(page.posted[page.posted.length - 1], { type: 'runRecipe', mission: BETA, recipe: 'Finish mission' });
+});
+
+test("a mission's page draws the recipe failure posted with its mission", () => {
+  const page = loadPage();
+  page.send({
+    type: 'live',
+    missions: [mission(ALPHA, 'Alpha', { step: 'derive', recipes: { state: 'failed', cause: 'EACCES: recipes.md' } })],
+    running: [],
+  });
+  const section = page.root.all().find((each) => each.has('recipes'));
+  assert.ok(section !== undefined);
+  assert.deepStrictEqual(
+    section.all().filter((each) => each.tagName === 'p' || each.tagName === 'pre').map((each) => each.textContent),
+    ['The recipes could not be read.', 'EACCES: recipes.md'],
+  );
+  assert.deepStrictEqual(recipeNames(page), []);
+});
+
 test('a run posted as started draws the page running, and its terminal closing draws it idle again', () => {
   const page = loadPage();
   page.send(live([]));
@@ -383,7 +452,7 @@ function blocks(page: Page): FakeElement[] {
 /** A page drawn for one mission whose diagram draws `workflow`. */
 function diagramPage(workflow: Record<string, unknown>, running: string[] = []): Page {
   const page = loadPage();
-  page.send({ type: 'live', missions: [mission(ALPHA, 'Alpha', workflow)], recipes: RECIPES, running });
+  page.send({ type: 'live', missions: [mission(ALPHA, 'Alpha', workflow)], running });
   return page;
 }
 
@@ -466,7 +535,7 @@ const ROW_WIDTH = 800;
  */
 function laidOutPage(pane: { width: number }, workflow: Record<string, unknown>, running: string[] = []): Page {
   const page = loadPage((element) => (element.has('workflow') ? pane.width : element.has('flow') ? ROW_WIDTH : 0));
-  page.send({ type: 'live', missions: [mission(ALPHA, 'Alpha', workflow)], recipes: RECIPES, running });
+  page.send({ type: 'live', missions: [mission(ALPHA, 'Alpha', workflow)], running });
   return page;
 }
 
@@ -556,7 +625,7 @@ function liveWith(alpha: PaneName | undefined, beta: PaneName | undefined, live:
   const each = (missionPath: string, title: string, pane: PaneName | undefined) =>
     mission(missionPath, title, { step: 'derive', ...(pane === undefined ? {} : { defaultPane: pane }) });
   const all = [each(ALPHA, 'Alpha', alpha), each(BETA, 'Beta', beta)];
-  return { type: 'live', missions: all.filter((_, index) => live.includes([ALPHA, BETA][index])), recipes: RECIPES, running: [] };
+  return { type: 'live', missions: all.filter((_, index) => live.includes([ALPHA, BETA][index])), running: [] };
 }
 
 test('a mission page draws one row of two pane headers with only the selected pane beneath it', () => {
