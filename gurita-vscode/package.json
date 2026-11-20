@@ -22,7 +22,7 @@
   "scripts": {
     "compile": "tsc -p tsconfig.json && tsc -p tsconfig.webview.json",
     "test": "npm run compile && node --test \"out/test/**/*.test.js\"",
-    "vscode:prepublish": "npm run compile",
+    "vscode:prepublish": "npm run compile && node scripts/bundle.js",
     "package": "node -e \"require('fs').mkdirSync('dist',{recursive:true})\" && vsce package --out dist/gurita-vscode.vsix"
   },
   "devDependencies": {

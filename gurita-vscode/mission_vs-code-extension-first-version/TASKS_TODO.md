@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Bundle Plugin Files at Package Time
-
-Add the extension's own build step, run from its `vscode:prepublish` script so that every `vsce package` runs it: it copies `core/tools/missions.py` and `snippets/GURITA_USAGE.md` verbatim into a git-ignored directory under `gurita-vscode/` and writes beside them a fixed-line data file holding every row of the `## Fixed console lines` table of `docs/skill-reference.md` as one line of its kind, a tab, and its line, stop and verdict lines included. The pane's live query, the recipe reader, and the runner's verdict read these shipped files at run time. Verified by running the package script: the VSIX lists all three files, the two copies are byte-identical to their sources, the data file holds one line per table row, and none of the three is tracked.
-
----
-
 ## Recipe Reader Module With Unit Tests
 
 Write the recipe reader as a TypeScript module importing nothing from `vscode`: it reads the shipped snippet file, taking only the `###` blocks under `## Claude Code` and `## Antigravity` as recipes with their host group, and a person's own recipe file as a flat list of `###` recipes in which one carrying a shipped heading replaces that recipe, and it tells for each recipe whether it is a single-task line (exactly one headless line holding `<Task Title>`), whether it is the looped recipe (its slot line `<single-task line>`), and which known and unknown placeholders it holds. The pane's recipe list, its buttons, and the looped run are built from it. Verified by `node:test` unit tests over small fixtures of its own, run by the npm test script.
