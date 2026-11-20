@@ -146,5 +146,7 @@ No other mission is live, so nothing holds or shares the scope. The record holds
 
 - **Recipe click.** A click on a recipe button starts the runner at once, with no confirmation dialog, page state, or second click. Every recipe button on the page carries its recipe's lines, as written with their placeholders, in a row that can be expanded under the button or in its hover text, so the person can read them before clicking.
 
+- **Navigation.** A row of tabs stands across the top of the pane, one per live mission in the order `missions.py live` prints them, each tab showing the mission's title with its path as a tooltip, with the selected tab's page beneath and the two mission-starting buttons at the row's end. Clicking a tab switches the page in place. When opened, the pane shows the page of the first mission in that order, holding no memory of an earlier choice, and after a refresh it stays on the page shown unless that mission is no longer live, when it falls back to the first.
+
 ## Out of Scope
 
