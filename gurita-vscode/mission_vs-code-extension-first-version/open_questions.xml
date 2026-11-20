@@ -1,23 +1,4 @@
 <open-questions>
-  <open-question id="Manifest publisher value">
-    <question>Packaging a VSIX needs a `publisher` in the extension&apos;s manifest, and that value becomes part of the installed extension&apos;s id, while the VS Code extension this mission builds (`gurita-vscode`) is published nowhere and reserves no publisher id. What publisher value does its manifest carry?</question>
-    <recommendation option="Owner account name">It names the account the source and distribution repositories already stand under, the publisher a later publication would most plausibly use, so the hand-installed copy would then be updated in place rather than left beside a second extension, and writing the value into the manifest reserves nothing on any registry.</recommendation>
-    <alternative id="Owner account name">
-      The manifest&apos;s `publisher` is the name of the account that owns the source and distribution repositories, `uHappyLogic` (written `uhappylogic`, extension ids comparing case-insensitively), so the installed extension&apos;s id is `uhappylogic.gurita-vscode`. The value names the publisher a later publication would most likely use, but nothing is registered under it: no Marketplace or Open VSX publisher is created, looked up, or reserved, as the draft&apos;s decision to publish nowhere while the extension is an experiment requires.
-      <advantage>If the deferred publication later goes ahead under that account, the hand-installed copy and the published one share one extension id, so the published version updates the hand-installed copy in place and keeps its stored state rather than standing beside it as a second extension.</advantage>
-      <drawback>It ties the manifest to a publisher id that nobody holds and the draft deliberately leaves unreserved, and whether it is free on either registry was never checked. If someone else takes it, or publication goes ahead under another name, the value has to change anyway, and until then it suggests the extension comes from a publisher that does not exist.</drawback>
-    </alternative>
-    <alternative id="Plugin name publisher">
-      The manifest&apos;s `publisher` is the plugin&apos;s own name, `gurita`, so the installed extension&apos;s id is `gurita.gurita-vscode`. Like the other options it is written into the manifest only, with no publisher created, looked up, or reserved on any registry.
-      <advantage>The id is made only of names the project already owns in its repository and namespace (`gurita` and the slug the draft settled), tied to no person or account. It reads as the extension&apos;s family at a glance and matches the `gurita:` namespace every host tree already uses.</advantage>
-      <drawback>The word appears twice in the id. Whether `gurita` is free as a publisher id on the Visual Studio Marketplace or Open VSX was never looked up (the draft searched only extension names), so a later publication may have to change it, and the published extension would then have a different id from the hand-installed one and install beside it rather than replacing it.</drawback>
-    </alternative>
-    <alternative id="Local-only marker">
-      The manifest&apos;s `publisher` is a value that marks the build as unpublished and that no real publisher would use, such as `local`, so the installed extension&apos;s id is `local.gurita-vscode`. The value is meant to be replaced if the extension is ever published, and nothing is registered under it.
-      <advantage>It says in the id what the draft decided, that the extension is an experiment published nowhere. It makes no claim to a publisher the project does not hold and points at no account that a later publication decision would feel committed to, so that decision stays fully open.</advantage>
-      <drawback>Any later publication has to change the publisher, so the published extension gets a new id. The hand-installed copy is then a different extension that VS Code neither updates nor removes, its stored state is not carried over, and the maintainer has to uninstall it by hand.</drawback>
-    </alternative>
-  </open-question>
   <open-question id="VSIX artifact handling">
     <question>Is the packaged VSIX of the VS Code extension this mission builds (`gurita-vscode`) committed to the repository or left as ignored build output, and where does the build leave it for the maintainer to install by hand?</question>
     <recommendation option="Ignored output directory, fixed name">One stable ignored path lets the README and the maintainer&apos;s install step name a single install command that never changes with the version, keeps a binary out of history, and keeps the package apart from the sources under one ignore entry.</recommendation>

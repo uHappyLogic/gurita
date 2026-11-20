@@ -58,5 +58,7 @@ No other mission is live, so nothing holds or shares the scope. The record holds
 
 - **Extension version.** The extension carries a version of its own, independent of `VERSION`, starting at `0.1.0` and bumped by hand whenever the extension itself changes. `scripts/set_version.py` and the release path are untouched, and the version number does not express the plugin version the bundled files come from.
 
+- **Publisher.** The manifest's `publisher` is `uhappylogic`, the lower-case form of the name of the account that owns the source and distribution repositories, so the installed extension's id is `uhappylogic.gurita-vscode`. Nothing is registered under it: no Marketplace or Open VSX publisher is created, looked up, or reserved.
+
 ## Out of Scope
 
