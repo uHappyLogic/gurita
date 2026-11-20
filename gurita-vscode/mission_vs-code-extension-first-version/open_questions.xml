@@ -93,6 +93,26 @@
   </open-question>
   <open-question id="Reference heading name">
     <question>The five blocks of `snippets/GURITA_USAGE.md` that are not chains of host command lines (the two lists of bare slash commands, the Antigravity install block, the `agy models` line, and the `git log` one-liner) move under one heading of their own, which the VS Code extension&apos;s recipe reader never reads. What is that heading called?</question>
+    <alternative id="Reference">
+      The heading is `## Reference`, the draft&apos;s own example, a generic genre name saying neither what the five blocks hold nor why the recipe reader skips them; it stands at the `##` level beside `## Claude Code` and `## Antigravity`.
+      <advantage>It is the name `ideas/vscode_extension.md` already writes in both its Recipes part and its Decided entry, so the draft, the shipped file, and any follow-up document under `ideas/` agree with no rewording, and it is short and stable whatever blocks are later added under it.</advantage>
+      <drawback>The draft calls the whole snippet file &quot;the one usage reference a person reads by hand&quot;, so a `## Reference` section inside it reads as redundant and does not tell a reader that the host sections are the extension&apos;s recipes while this one is not; the word also echoes `docs/skill-reference.md`, an unrelated document.</drawback>
+    </alternative>
+    <alternative id="Manual use">
+      The heading names the blocks&apos; mode of use, as `## Manual use` (or the equivalent `## By hand`), matching the draft&apos;s wording that the section &quot;holds lines for hand use only&quot;; it stands at the `##` level beside the two host headings.
+      <advantage>It states the reason the reader never offers these blocks as buttons, so a person editing the file sees at the heading itself why a block placed here does not appear on the pane, the one layout rule (a `###` block is a recipe only under a host heading) made visible without a comment.</advantage>
+      <drawback>Every chain under the host headings is also run by hand today (the maintainer pastes them, and the draft keeps manual use unchanged), so naming only this section manual implies the host sections are not for hand use, a contrast that is not true of the file.</drawback>
+    </alternative>
+    <alternative id="Content name">
+      The heading names what the five blocks are, for example `## Commands and setup`, covering the in-session slash-command lists, the Antigravity install block, the `agy models` check, and the `git log` mission listing; it stands at the `##` level beside the two host headings and says nothing of the extension.
+      <advantage>It describes the section in the same terms a person scanning the file by hand looks for (where is the install line, which slash commands exist), with no reference to the extension or to how a reader treats it, so the file reads as a usage document first.</advantage>
+      <drawback>The five blocks are heterogeneous, so any content name is either loose (the slash lists are not setup, the `git log` line is neither) or grows with each kind of block added, and it carries no hint that blocks under it are never offered as buttons.</drawback>
+    </alternative>
+    <alternative id="Not recipes">
+      The heading states the extension&apos;s reading rule directly, for example `## Not recipes`, marking the section by what the VS Code extension&apos;s recipe reader does with it; it stands at the `##` level beside the two host headings.
+      <advantage>It names exactly the contract that matters to anyone maintaining the shipped file as the extension&apos;s recipe source, so no one moves a chain under it expecting a button or moves a hand-only block out of it by mistake.</advantage>
+      <drawback>It defines the section negatively and in the extension&apos;s vocabulary inside a file whose title, &quot;Gurita CLI usage snippets&quot;, and whose readers are mostly about typing lines by hand, so a person not using the extension meets a term (&quot;recipe&quot;) the file explains nowhere.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Host-named heading form">
     <question>Six `###` headings of `snippets/GURITA_USAGE.md` repeat under both `## Claude Code` and `## Antigravity` (First run, Requirements iteration, the three Execute tasks headings, and Finish mission), and each repeated heading is to name its host so that every recipe heading in the file is unique. In what form does a repeated heading name its host?</question>
