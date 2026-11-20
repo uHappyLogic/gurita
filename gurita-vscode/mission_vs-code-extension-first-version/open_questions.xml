@@ -16,6 +16,36 @@
   </open-question>
   <open-question id="VSIX artifact handling">
     <question>Is the packaged VSIX of the VS Code extension this mission builds (`gurita-vscode`) committed to the repository or left as ignored build output, and where does the build leave it for the maintainer to install by hand?</question>
+    <alternative id="Ignored at vsce default">
+      The VSIX is not committed. The build runs `vsce package` with no output option, so the file lands where `@vscode/vsce` puts it by default, in the extension&apos;s package root `gurita-vscode/` under its versioned default name `&lt;name&gt;-&lt;version&gt;.vsix`, and one ignore entry for `*.vsix` (in the root `.gitignore` or one under `gurita-vscode/`) keeps every such file out of the tree&apos;s status. The maintainer installs it with `code --install-extension` on that path.
+      <advantage>It takes the packaging tool&apos;s own behaviour unchanged, so the build command needs no option and the file name itself tells which version a given VSIX is.</advantage>
+      <drawback>The install path changes whenever the manifest&apos;s version changes (owned by the extension-version sibling), so the documented install command carries a version that has to be kept current, and older VSIX files pile up beside the sources until removed by hand.</drawback>
+    </alternative>
+    <alternative id="Ignored output directory, fixed name">
+      The VSIX is not committed. The build runs `vsce package --out` into a dedicated output directory under the extension, for example `gurita-vscode/dist/gurita-vscode.vsix`, a fixed file name overwritten by each build, and that directory is listed as ignored. The maintainer installs it with `code --install-extension` on that one fixed path.
+      <advantage>One stable path serves every build, so the install step, the documentation, and the maintainer&apos;s own task can name it once and never change, and the output stands apart from the sources under one ignore entry.</advantage>
+      <drawback>The fixed name no longer says which version the file holds, and a stale VSIX from an earlier build can be installed without sign if a later build failed; the directory may also collide with the compiler or bundler output directory the Node-toolchain sibling chooses, which would have to be kept apart or shared on purpose.</drawback>
+    </alternative>
+    <alternative id="Ignored under root temp">
+      The VSIX is not committed. The build writes it with `vsce package --out` into the repository&apos;s existing ignored `temp/` directory at the root, for example `temp/gurita-vscode.vsix`, so no new ignore entry is added, and the maintainer installs it from there.
+      <advantage>It needs no change to `.gitignore` at all, reusing a directory the repository already keeps out of version control.</advantage>
+      <drawback>`temp/` is a general scratch directory outside the scope `gurita-vscode/`, so the extension&apos;s build reaches outside its own directory to a location whose purpose is not packaging, and a person clearing scratch files there removes the installable build with them.</drawback>
+    </alternative>
+    <alternative id="Outside the repository">
+      The VSIX is not committed and never stands in the working tree: the build writes it with `vsce package --out` to a location outside the repository, a fresh `mktemp -d` directory or a path the maintainer passes, prints that path, and the maintainer installs it from there. No ignore entry is added.
+      <advantage>The tree can never hold the artifact, so it cannot be committed by accident and no ignore rule is needed to guard it.</advantage>
+      <drawback>The path differs from build to build or rests on an argument, so no document or task can name one install command, and a build run unattended leaves the maintainer to find the printed path in its output.</drawback>
+    </alternative>
+    <alternative id="Left untracked, not ignored">
+      The VSIX is neither committed nor ignored: the build leaves it at `vsce`&apos;s default location in `gurita-vscode/` under its default versioned name, and `.gitignore` stays as it is, the file showing as untracked in `git status`.
+      <advantage>Nothing is added to the repository for the artifact, neither an ignore entry nor an option on the build command, and the plugin&apos;s path-scoped commits never pick up an untracked file.</advantage>
+      <drawback>The file stands in every `git status` as untracked noise, and any hand-made `git add -A` or `git add gurita-vscode` commits a binary into history, the very accident an ignore entry exists to prevent.</drawback>
+    </alternative>
+    <alternative id="Committed at fixed path">
+      The VSIX is committed: the build writes it with `vsce package --out` to one fixed tracked path, for example `gurita-vscode/gurita-vscode.vsix`, and every change to the extension&apos;s sources is committed together with the rebuilt VSIX, in the way the `hosts/` trees are committed build output. The maintainer, or anyone with a clone, installs it from that path without building.
+      <advantage>A clone carries an installable extension at a known path, so installing it needs no Node, npm, or build step, which suits a maintainer task that only installs and tries it.</advantage>
+      <drawback>Every rebuild adds a binary to the history, and a VSIX is a zip whose bytes are not reproducible, so unlike `hosts/` no drift gate can check that the committed file matches the sources (the drift-gate sibling owns what the workflow checks); a source change committed without a rebuild leaves a stale VSIX standing silently.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Drift-gate guards carried">
     <question>The design draft `ideas/vscode_extension.md` assigns four things to the drift-gate workflow for the VS Code extension (`gurita-vscode`): its build and tests as Node steps, a check of the fixed console lines it carries against the `## Fixed console lines` table of `docs/skill-reference.md`, a check of its `open_questions.xml` parse against `open_questions.py list --without-alternatives` and `--without-recommendation`, and a check that no `###` heading of `snippets/GURITA_USAGE.md` repeats. The mission&apos;s goal allows such guards to be left out and written up as follow-up work. Which of the four does this mission carry out, and which does it leave out?</question>
