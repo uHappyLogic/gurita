@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Scaffold the Extension Node Project
-
-Create the extension's Node project under `gurita-vscode/`: a `package.json` naming `gurita-vscode`, display name Gurita for VS Code, publisher `uhappylogic`, version `0.1.0`, `engines.vscode` `^1.143.0`, and `@types/vscode` pinned exactly to `1.140.0`; two `tsc` project configurations, one compiling the extension host code to CommonJS with one emitted file per source file and no bundler, the other compiling the webview page's script with the DOM library; an npm test script running `node:test` tests over the compiler's output; and a package script running `vsce package --out` to the fixed, git-ignored path `gurita-vscode/dist/gurita-vscode.vsix`, with a minimal activation entry so the project compiles. Every later extension task builds on it. Verified under Node 22 through nvm in the form the goal states: install, compile, the test script, and the package script each succeed, the VSIX lands at the fixed path holding nothing of the mission directory, and `git status` lists no generated file.
-
----
-
 ## Bundle Plugin Files at Package Time
 
 Add the extension's own build step, run from its `vscode:prepublish` script so that every `vsce package` runs it: it copies `core/tools/missions.py` and `snippets/GURITA_USAGE.md` verbatim into a git-ignored directory under `gurita-vscode/` and writes beside them a fixed-line data file holding every row of the `## Fixed console lines` table of `docs/skill-reference.md` as one line of its kind, a tab, and its line, stop and verdict lines included. The pane's live query, the recipe reader, and the runner's verdict read these shipped files at run time. Verified by running the package script: the VSIX lists all three files, the two copies are byte-identical to their sources, the data file holds one line per table row, and none of the three is tracked.

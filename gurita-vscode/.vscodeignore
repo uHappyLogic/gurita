@@ -1,0 +1,9 @@
+mission_*/**
+src/**
+out/test/**
+dist/**
+node_modules/**
+.gitignore
+.vscodeignore
+tsconfig*.json
+package-lock.json

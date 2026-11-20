@@ -1,0 +1,34 @@
+{
+  "name": "gurita-vscode",
+  "displayName": "Gurita for VS Code",
+  "description": "A mission pane for the Gurita plugin's missions, questions, and recipes.",
+  "publisher": "uhappylogic",
+  "version": "0.1.0",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/uHappyLogic/gurita.git",
+    "directory": "gurita-vscode"
+  },
+  "engines": {
+    "vscode": "^1.143.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./out/extension.js",
+  "activationEvents": [],
+  "contributes": {},
+  "scripts": {
+    "compile": "tsc -p tsconfig.json && tsc -p tsconfig.webview.json",
+    "test": "npm run compile && node --test \"out/test/**/*.test.js\"",
+    "vscode:prepublish": "npm run compile",
+    "package": "node -e \"require('fs').mkdirSync('dist',{recursive:true})\" && vsce package --out dist/gurita-vscode.vsix"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "@types/vscode": "1.140.0",
+    "@vscode/vsce": "4.1.1",
+    "typescript": "7.0.2"
+  }
+}
