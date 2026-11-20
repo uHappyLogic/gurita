@@ -84,5 +84,7 @@ No other mission is live, so nothing holds or shares the scope. The record holds
 
 - **Reference heading.** The five blocks of `snippets/GURITA_USAGE.md` that are not chains of host command lines move under one heading naming their mode of use, `## Manual use`, standing at the `##` level beside the two host headings, which the recipe reader never reads.
 
+- **Repeated headings.** Only the six Antigravity copies of the repeated headings change, each gaining the host's full name in parentheses at its end: "First run (Antigravity)", "Requirements iteration (Antigravity)", "Execute tasks of normal difficulty (Antigravity)", "Execute tasks (critical tasks) (Antigravity)", "Execute tasks with extra requirement surface stretch (Antigravity)", and "Finish mission (Antigravity)". The six Claude Code headings keep their names unchanged.
+
 ## Out of Scope
 
