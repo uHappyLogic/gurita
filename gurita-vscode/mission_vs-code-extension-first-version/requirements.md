@@ -102,5 +102,7 @@ No other mission is live, so nothing holds or shares the scope. The record holds
 
 - **Single-task line recognition.** A recipe counts as a single-task line by content alone, with nothing declared: it holds exactly one line, that line is headless (it holds a `gurita:` invocation and carries no `# interactive` mark), and it holds the `<Task Title>` placeholder. The heading is free and carries no kind. The same test applies to the shipped file and to a person's own recipe file, and the extension applies it when it gathers the named lines it lists in the preview's override list and hands to the runner.
 
+- **Unfillable placeholders.** A recipe holding a known placeholder the page has no value for there (`<Task Title>`, `<Short Title>`, `<Alternative Id>`, `<goal>`, `<scope>`, `<answer text>`) is left off the page's recipe list silently and stays reachable by name for the button or loop that fills it. A recipe holding a placeholder name the extension does not know is shown on the page as a non-runnable entry naming the unknown placeholder and the file it came from.
+
 ## Out of Scope
 
