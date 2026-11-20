@@ -786,6 +786,41 @@
   </open-question>
   <open-question id="Pane opening">
     <question>How does a person open the mission pane of the VS Code extension (`gurita-vscode`), that is, which command or other entry point does the extension contribute for it?</question>
+    <alternative id="Command only">
+      The extension contributes exactly one command, for example `gurita.openMissionPane` titled &quot;Gurita: Open Mission Pane&quot;, offered in the Command Palette in every workspace whether or not a mission is live, and activates on that command alone. Running it creates the one webview panel in the editor area, or calls `reveal` on the panel it already holds, as the guide&apos;s example does. No status bar item, no menu entry, no default keybinding, and no automatic opening.
+      <advantage>The least to build and the fewest surfaces to get wrong: one manifest entry, no startup activation, and nothing added to the person&apos;s status bar or menus, which suits an experiment installed into one editor and matches the draft&apos;s &quot;the least to build&quot; reasoning for the pane itself; a person who wants a shortcut can still bind the command in Keyboard Shortcuts.</advantage>
+      <drawback>The pane is reachable only by remembering and typing the command&apos;s name, so every session starts with a palette search and nothing in the editor shows that the extension is there or that the open project holds missions.</drawback>
+    </alternative>
+    <alternative id="Command with keybinding">
+      The same single palette command, offered in every workspace and activating on the command alone, plus a default keybinding for it contributed under `contributes.keybindings`. No status bar item, no menu entry, and no automatic opening.
+      <advantage>Opening or re-revealing the pane is one chord, the fastest path for a person who switches between the pane and code all day, at the cost of one manifest entry and still no startup activation.</advantage>
+      <drawback>Free chords are scarce: a default binding can collide with VS Code&apos;s own or another extension&apos;s, and its value over the person binding the command themselves is small, while the pane still shows no visible sign of itself in the editor.</drawback>
+    </alternative>
+    <alternative id="Command with status bar">
+      The palette command, offered in every workspace, plus a status bar item that runs it, created when the extension activates on `workspaceContains:**/mission_*/requirements.md`, so the item stands only in a workspace holding a mission directory. No menu entry, no default keybinding, and no automatic opening.
+      <advantage>A visible one-click way back to the pane in exactly the projects that use the workflow, without the person having to know any command name, and without opening anything they did not ask for.</advantage>
+      <drawback>The extension activates at startup in every mission workspace rather than on first use, the item takes status bar space permanently, and in a project with no mission yet, where the pane&apos;s start-mission buttons matter most, the item is absent and only the palette leads there.</drawback>
+    </alternative>
+    <alternative id="Command with explorer menu">
+      The palette command, offered in every workspace, takes an optional folder argument, and an `explorer/context` menu entry runs it on a folder whose name opens with `mission_`, opening or revealing the pane on that mission&apos;s page (on the pane&apos;s default page when the folder holds no live mission). Activation stays on the command alone. No status bar item, no default keybinding, and no automatic opening.
+      <advantage>The person reaches a mission&apos;s page from the mission directory they are already looking at, which uses the pane&apos;s page-per-mission shape, and the menu entry is declarative, so it costs no startup activation.</advantage>
+      <drawback>The command gains an argument and a path-to-page mapping that must agree with the live query&apos;s paths, which depends on the sibling question of which directory is the project root, and the entry is discoverable only by right-clicking the right folder, leaving the pane otherwise as hidden as the palette-only form.</drawback>
+    </alternative>
+    <alternative id="Command, status bar, explorer menu">
+      The palette command, offered in every workspace and taking an optional folder argument, plus both launchers: a status bar item in workspaces holding a mission directory, activated on `workspaceContains:**/mission_*/requirements.md`, and an `explorer/context` entry on `mission_` folders opening the pane on that mission&apos;s page. No default keybinding and no automatic opening.
+      <advantage>Every natural route to the pane exists: a visible status bar click from anywhere, a targeted open from the mission directory, and the palette for everything else, so the person never has to remember the command.</advantage>
+      <drawback>The most manifest surface and code for an experiment: startup activation in every mission workspace, the folder-argument mapping that rests on the sibling project-root question, and two launchers to keep consistent with the pane&apos;s pages.</drawback>
+    </alternative>
+    <alternative id="Command with auto-open">
+      The palette command, offered in every workspace, plus automatic opening: the extension activates on `workspaceContains:**/mission_*/requirements.md` and, when the window opens such a workspace and no pane is already shown, opens the pane once by itself. No status bar item, no menu entry, and no default keybinding; after the person closes the pane it comes back only through the palette.
+      <advantage>In a project using the workflow the pane is simply there when the editor opens, the surface the buttons hang on needing no step at all, which fits a person who drives every mission from it.</advantage>
+      <drawback>It opens an editor tab the person did not ask for on every window open, including when they came only to edit code, and its value overlaps the sibling question of whether the pane is restored after a restart through a `WebviewPanelSerializer`, the two needing to agree so that the pane is not opened twice or fought over.</drawback>
+    </alternative>
+    <alternative id="Auto-open with launchers">
+      The palette command, offered in every workspace and taking an optional folder argument, plus automatic opening once at window open in a workspace holding a mission directory (activated on `workspaceContains:**/mission_*/requirements.md`), plus a status bar item in such workspaces and an `explorer/context` entry on `mission_` folders opening the pane on that mission&apos;s page. No default keybinding.
+      <advantage>The pane is there from the start and, once closed, is one visible click or one right-click away, so neither the first opening nor any later one asks the person to know a command.</advantage>
+      <drawback>It combines every cost: an unrequested tab on each window open, startup activation, two launchers and the folder-argument mapping that rests on the sibling project-root question, and an overlap with the sibling restore-after-restart question that must be reconciled.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Input method">
     <question>Some buttons of the VS Code extension (`gurita-vscode`) ask the person for a goal, a scope, or an answer text before running a line. Are those typed into VS Code&apos;s own input box, which holds one line, or into a field on the pane&apos;s page?</question>
