@@ -128,5 +128,9 @@ No other mission is live, so nothing holds or shares the scope. The record holds
 
 - **One session.** Before it starts, the runner composes one shell script from the whole chain (one per task's session in a looped run) and runs it as a single shell process that keeps the terminal as its own input and output. Shell steps and interactive lines stand in the script as written, so an interactive line inherits the terminal as any command in a shell does. Each headless line is wrapped so its output goes through `tee` both to the terminal and to a run-local file, and is followed by a check step, the runner itself started in a check mode, that reads the first line of that file's final message and makes the shell exit when the line stops the chain. The runner process waits for the shell and reads the check's verdict to report how the run ended.
 
+### Pane
+
+- **Redraw.** The extension sets `webview.html` once, to a page shell whose script draws the question view. After a run it posts the fresh parse to the visible page, which redraws the rows in place and keeps open those already open. The page saves its set of open Short Titles with `setState` on every toggle and reads it back with `getState` when it is re-created. `retainContextWhenHidden` stays off: a hidden pane loses its page, and on every load the page's script posts a ready message and the extension answers with the current parse, so a run that ended while the pane was hidden reaches the page when it is shown again.
+
 ## Out of Scope
 
