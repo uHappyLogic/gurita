@@ -144,5 +144,7 @@ No other mission is live, so nothing holds or shares the scope. The record holds
 
 - **Restart.** The extension registers no `WebviewPanelSerializer` and does nothing at startup, so the pane does not survive a restart or a window reload, and the person opens it again through the entry point the extension contributes. The new pane re-reads the live missions and draws its first page fresh, keeping no page or row state from before.
 
+- **Recipe click.** A click on a recipe button starts the runner at once, with no confirmation dialog, page state, or second click. Every recipe button on the page carries its recipe's lines, as written with their placeholders, in a row that can be expanded under the button or in its hover text, so the person can read them before clicking.
+
 ## Out of Scope
 
