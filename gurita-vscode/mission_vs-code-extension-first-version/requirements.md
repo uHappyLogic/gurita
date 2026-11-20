@@ -116,5 +116,7 @@ No other mission is live, so nothing holds or shares the scope. The record holds
 
 - **Format.** The rule file is plain UTF-8 text in a format of the runner's own, one rule per line: the pattern, then ` -> `, then the single-task line's name exactly as its recipe's `###` heading reads, the line split at its last ` -> ` so a pattern may hold the arrow. Blank lines and lines opening with `#` are skipped. The default is the one line whose pattern is a bare `*`, which is never a valid `re` pattern, so it cannot collide with a rule, and more than one `*` line is refused. Each pattern is applied with `re.search` and `re.IGNORECASE` to the task's title and brief joined by a newline, and when several rules match, the first in file order wins.
 
+- **Missing file.** A missing rule file is read as a file holding no rule and no default, so every remaining task's assignment is unresolved. The preview lists every task as unresolved, saying that the project holds no rule file and naming the path the runner looked for, and the person overrides each task there by hand, one at a time, as for any other unresolved task. The loop starts either way: a task with an override runs under it, and the first task without one, a task that entered the list after the loop started included, stops the loop before anything runs for that task.
+
 ## Out of Scope
 
