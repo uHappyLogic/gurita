@@ -3,7 +3,12 @@
 // them, each showing the mission's title with its path as a tooltip, and the selected mission's
 // page beneath; or the one failure state in place of the pages. A page shows its mission's path,
 // title, and state, the label's facts, the question view, and the remaining task headings, all
-// drawn from the parse the extension posts. The question view shows one collapsed row per
+// drawn from the parse the extension posts, and the recipe buttons: the shipped recipes grouped
+// under Claude Code and Antigravity and, below them, the own recipes that replace none under
+// "Your recipes", each button carrying its recipe's lines as written in its hover text and
+// starting that recipe's chain for the page's mission when clicked, and each recipe holding a
+// placeholder the extension does not know shown as a non-runnable entry naming it and its file.
+// The question view shows one collapsed row per
 // question, its Short Title and the id of its picked alternative, each row opening to everything
 // its block holds, with expand-all and collapse-all controls. Every message the extension posts
 // redraws the rows in place, and the rows open before it stay open: the page keeps its set of
@@ -62,8 +67,16 @@ declare function acquireVsCodeApi(): VsCodeApi;
     facts: LabelFacts;
   }
 
+  type RecipeGroup = 'Claude Code' | 'Antigravity' | 'own';
+
+  type PageRecipe =
+    | { kind: 'runnable'; name: string; group: RecipeGroup; lines: string[] }
+    | { kind: 'unknown'; name: string; group: RecipeGroup; lines: string[]; placeholders: string[]; file: string };
+
+  type RecipePart = { state: 'read'; recipes: PageRecipe[] } | { state: 'failed'; cause: string };
+
   type PaneMessage =
-    | { type: 'live'; missions: Mission[] }
+    | { type: 'live'; missions: Mission[]; recipes: RecipePart }
     | { type: 'liveFailure'; cause: string };
 
   interface PageState {
@@ -74,6 +87,13 @@ declare function acquireVsCodeApi(): VsCodeApi;
 
   const FAILURE_LINE = 'The live missions could not be read.';
   const NO_MISSION_LINE = 'No mission is live.';
+  const RECIPE_FAILURE_LINE = 'The recipes could not be read.';
+  /** The page's recipe groups in the order drawn, each with its heading. */
+  const RECIPE_GROUPS: [RecipeGroup, string][] = [
+    ['Claude Code', 'Claude Code'],
+    ['Antigravity', 'Antigravity'],
+    ['own', 'Your recipes'],
+  ];
 
   const vscode = acquireVsCodeApi();
   const root = document.getElementById('root') as HTMLElement;
@@ -83,6 +103,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
     Object.entries(saved.open ?? {}).map(([mission, titles]) => [mission, new Set(titles)]),
   );
   let missions: Mission[] = [];
+  let recipes: RecipePart = { state: 'read', recipes: [] };
   /** The rows of the drawn page by Short Title, so a dependency link can scroll to its sibling. */
   let rows = new Map<string, HTMLElement>();
 
@@ -343,6 +364,42 @@ declare function acquireVsCodeApi(): VsCodeApi;
     return view;
   }
 
+  function drawRecipes(mission: Mission): HTMLElement {
+    const view = element('section', undefined, 'recipes');
+    view.append(element('h3', 'Recipes'));
+    if (recipes.state === 'failed') {
+      const box = element('div', undefined, 'notice');
+      box.setAttribute('role', 'alert');
+      box.append(element('p', RECIPE_FAILURE_LINE), element('pre', recipes.cause));
+      view.append(box);
+      return view;
+    }
+    for (const [group, heading] of RECIPE_GROUPS) {
+      const entries = recipes.recipes.filter((recipe) => recipe.group === group);
+      if (entries.length === 0) {
+        continue;
+      }
+      view.append(element('h4', heading));
+      const list = element('div', undefined, 'recipe-list');
+      for (const recipe of entries) {
+        if (recipe.kind === 'runnable') {
+          const run = button(recipe.name, 'recipe', () =>
+            vscode.postMessage({ type: 'runRecipe', mission: mission.path, recipe: recipe.name }),
+          );
+          run.title = recipe.lines.join('\n');
+          list.append(run);
+        } else {
+          const named = recipe.placeholders.map((placeholder) => `<${placeholder}>`).join(', ');
+          const entry = element('span', `${recipe.name}: ${recipe.placeholders.length === 1 ? 'unknown placeholder' : 'unknown placeholders'} ${named} in ${recipe.file}`, 'recipe-unknown');
+          entry.title = recipe.lines.join('\n');
+          list.append(entry);
+        }
+      }
+      view.append(list);
+    }
+    return view;
+  }
+
   function drawPage(mission: Mission): HTMLElement {
     const page = element('section', undefined, 'page');
     page.setAttribute('role', 'tabpanel');
@@ -354,7 +411,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
     ]) {
       facts.append(element('dt', label), element('dd', value));
     }
-    page.append(facts, drawLabel(mission), drawQuestions(mission), drawTasks(mission));
+    page.append(facts, drawLabel(mission), drawRecipes(mission), drawQuestions(mission), drawTasks(mission));
     return page;
   }
 
@@ -381,6 +438,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
     const message = event.data;
     if (message.type === 'live') {
       missions = message.missions;
+      recipes = message.recipes;
       draw();
     } else if (message.type === 'liveFailure') {
       drawFailure(message.cause);

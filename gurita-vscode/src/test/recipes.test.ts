@@ -6,6 +6,8 @@ import * as path from 'node:path';
 import {
   isHeadless,
   mergeRecipes,
+  ownRecipesFile,
+  pageRecipes,
   parseOwnRecipes,
   parseShippedRecipes,
   readRecipes,
@@ -155,4 +157,47 @@ test('readRecipes reads both files and treats a missing own file as holding no r
 test('CRLF line ends are read like LF ones', () => {
   const text = fs.readFileSync(SHIPPED, 'utf8').replace(/\n/g, '\r\n');
   assert.deepStrictEqual(parseShippedRecipes(text, SHIPPED), shipped());
+});
+
+test('a page lists the recipes it can fill, in the merged order, and names each unknown placeholder and its file', () => {
+  const listed = pageRecipes(mergeRecipes(shipped(), own()), ['path']);
+  assert.deepStrictEqual(
+    listed.map((entry) => [entry.kind, entry.group, entry.name]),
+    [
+      ['runnable', 'Claude Code', 'Chain'],
+      ['unknown', 'Claude Code', 'Fenced heading'],
+      ['runnable', 'Antigravity', 'Two fences'],
+      ['unknown', 'own', 'My second own recipe'],
+    ],
+  );
+  assert.deepStrictEqual(listed[0], {
+    kind: 'runnable',
+    name: 'Chain',
+    group: 'Claude Code',
+    lines: ['claude-wait;', 'claude -p "/gurita:review-mission-requirements --mission <path>" --model "opus";'],
+  });
+  const fenced = listed[1];
+  assert.ok(fenced.kind === 'unknown');
+  assert.deepStrictEqual(fenced.placeholders, ['mystery thing']);
+  assert.strictEqual(fenced.file, SHIPPED);
+  const second = listed[3];
+  assert.ok(second.kind === 'unknown');
+  assert.deepStrictEqual(second.placeholders, ['unknown one']);
+  assert.strictEqual(second.file, OWN);
+});
+
+test('a recipe holding a placeholder the page cannot fill is left off, and listed once the page can fill it', () => {
+  const names = (fillable: string[]) => pageRecipes(shipped(), fillable).map((entry) => entry.name);
+  assert.ok(!names(['path']).includes('answer-open-question'));
+  assert.ok(!names(['path']).includes('Single task (Claude Code)'));
+  assert.ok(names(['path', 'Short Title', 'answer text']).includes('answer-open-question'));
+  assert.ok(!names(['path', 'Task Title']).includes('Loop'));
+});
+
+test('the own recipe file defaults to ~/.gurita/recipes.md and honours the setting, expanding a leading ~', () => {
+  assert.strictEqual(ownRecipesFile(undefined, '/home/someone'), '/home/someone/.gurita/recipes.md');
+  assert.strictEqual(ownRecipesFile('  ', '/home/someone'), '/home/someone/.gurita/recipes.md');
+  assert.strictEqual(ownRecipesFile('~/notes/recipes.md', '/home/someone/'), '/home/someone/notes/recipes.md');
+  assert.strictEqual(ownRecipesFile('/srv/recipes.md', '/home/someone'), '/srv/recipes.md');
+  assert.strictEqual(ownRecipesFile('$HOME/recipes.md', '/home/someone'), '$HOME/recipes.md');
 });

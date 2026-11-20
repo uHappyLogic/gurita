@@ -196,3 +196,77 @@ export function readRecipes(shippedFile: string, ownFile?: string): Recipe[] {
   }
   return mergeRecipes(shipped, own);
 }
+
+/** The default path of a person's own recipe file, under their home directory. */
+export const DEFAULT_OWN_RECIPES_FILE = '~/.gurita/recipes.md';
+
+/**
+ * The path of a person's own recipe file: the `gurita.ownRecipesFile` setting's value when it is
+ * set and not blank, otherwise the default, a leading `~` expanded to the home directory `home`
+ * and no environment variable read.
+ */
+export function ownRecipesFile(setting: string | undefined, home: string): string {
+  const chosen = setting !== undefined && setting.trim() !== '' ? setting.trim() : DEFAULT_OWN_RECIPES_FILE;
+  if (chosen === '~') {
+    return home;
+  }
+  if (chosen.startsWith('~/')) {
+    return `${home.replace(/\/+$/, '')}/${chosen.slice(2)}`;
+  }
+  return chosen;
+}
+
+/** The heading of the page's group of own recipes that replace no shipped recipe. */
+export const OWN_GROUP_HEADING = 'Your recipes';
+
+/** One entry of a mission page's recipe list, in the merged list's order. */
+export type PageRecipe =
+  | {
+      kind: 'runnable';
+      name: string;
+      group: RecipeGroup;
+      /** The recipe's lines as written, placeholders included. */
+      lines: string[];
+    }
+  | {
+      kind: 'unknown';
+      name: string;
+      group: RecipeGroup;
+      lines: string[];
+      /** The placeholder names the extension does not know, in order of first appearance. */
+      placeholders: string[];
+      /** The file the recipe came from. */
+      file: string;
+    };
+
+/**
+ * The recipes a mission page lists, given the placeholder names the page holds a value for. A
+ * recipe holding a placeholder the extension does not know is listed as a non-runnable entry
+ * naming it and its file. A recipe holding a known placeholder the page has no value for is left
+ * off silently, staying reachable by name for the button or loop that fills it, and so is the
+ * looped recipe, run through its preview rather than as a chain, and a recipe with no line.
+ */
+export function pageRecipes(recipes: Recipe[], fillable: readonly string[]): PageRecipe[] {
+  const listed: PageRecipe[] = [];
+  for (const recipe of recipes) {
+    if (recipe.unknownPlaceholders.length > 0) {
+      listed.push({
+        kind: 'unknown',
+        name: recipe.name,
+        group: recipe.group,
+        lines: [...recipe.lines],
+        placeholders: [...recipe.unknownPlaceholders],
+        file: recipe.file,
+      });
+      continue;
+    }
+    if (recipe.looped || recipe.lines.length === 0) {
+      continue;
+    }
+    if (recipe.knownPlaceholders.some((name) => !fillable.includes(name))) {
+      continue;
+    }
+    listed.push({ kind: 'runnable', name: recipe.name, group: recipe.group, lines: [...recipe.lines] });
+  }
+  return listed;
+}

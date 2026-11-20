@@ -26,7 +26,18 @@
         "command": "gurita.openMissionPane",
         "title": "Gurita: Open Mission Pane"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "Gurita",
+      "properties": {
+        "gurita.ownRecipesFile": {
+          "type": "string",
+          "default": "",
+          "scope": "application",
+          "markdownDescription": "The path of your own recipe file, read beside the shipped recipes. Left empty, `~/.gurita/recipes.md` is read. A leading `~` stands for your home directory."
+        }
+      }
+    }
   },
   "scripts": {
     "compile": "tsc -p tsconfig.json && tsc -p tsconfig.webview.json",
