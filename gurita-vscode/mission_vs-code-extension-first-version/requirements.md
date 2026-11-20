@@ -56,5 +56,7 @@ No other mission is live, so nothing holds or shares the scope. The record holds
 
 - **VS Code version.** The manifest declares `engines.vscode` as `^1.143.0`, the installed editor's version, and the extension builds against `@types/vscode` pinned exactly, with no caret or tilde, to `1.140.0`, the newest published typings not ahead of that floor: the registry holds no `1.141.0`, `1.142.0`, or `1.143.0` and goes from `1.140.0` straight to `1.144.0`.
 
+- **Extension version.** The extension carries a version of its own, independent of `VERSION`, starting at `0.1.0` and bumped by hand whenever the extension itself changes. `scripts/set_version.py` and the release path are untouched, and the version number does not express the plugin version the bundled files come from.
+
 ## Out of Scope
 
