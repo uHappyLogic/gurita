@@ -1,33 +1,4 @@
 <open-questions>
-  <open-question id="Session variable names">
-    <question>Every value the VS Code extension (`gurita-vscode`) substitutes into a recipe line (`&lt;path&gt;`, `&lt;Short Title&gt;`, `&lt;Alternative Id&gt;`, `&lt;goal&gt;`, `&lt;scope&gt;`, `&lt;answer text&gt;`, `&lt;Task Title&gt;`) reaches the line as a reference to a variable in the shell session&apos;s environment. What are those variables called?</question>
-    <recommendation option="Prefixed mechanical names">One rule derives every name from its placeholder, so neither side keeps a table, a person can work out any variable from the recipe line they wrote, and the prefix keeps the exported values clear of whatever a person&apos;s environment or a host CLI already reads.</recommendation>
-    <alternative id="Prefixed mechanical names">
-      Each variable is named by one fixed rule applied to its placeholder: the prefix `GURITA_`, then the placeholder&apos;s text upper-cased with every space turned into an underscore, giving `GURITA_PATH`, `GURITA_SHORT_TITLE`, `GURITA_ALTERNATIVE_ID`, `GURITA_GOAL`, `GURITA_SCOPE`, `GURITA_ANSWER_TEXT`, and `GURITA_TASK_TITLE`. The names are a stated, stable part of the extension, so a shell step in a person&apos;s own recipe may read them, for example to log the task title of a looped run.
-      <advantage>One rule names every variable, so the mapping from a placeholder to its variable needs no table in the runner or the extension, a reader can work out any name from the recipe line alone, and a placeholder added later gets its name without a fresh decision.</advantage>
-      <drawback>`GURITA_PATH` reads like a search path or the plugin&apos;s own root rather than the mission&apos;s path, and once stated the seven names are a contract that a person&apos;s own recipes may rely on, so renaming one later breaks those recipes.</drawback>
-    </alternative>
-    <alternative id="Prefixed vocabulary names">
-      Each variable carries the prefix `GURITA_` and a name chosen by hand from the plugin&apos;s own vocabulary for the value rather than from the placeholder&apos;s text, for example `GURITA_MISSION_DIR` for `&lt;path&gt;` (the runtime prose&apos;s name for a resolved mission), `GURITA_SHORT_TITLE`, `GURITA_ALTERNATIVE_ID`, `GURITA_GOAL`, `GURITA_SCOPE`, `GURITA_ANSWER`, and `GURITA_TASK_TITLE`, held as one fixed seven-entry table. The names are a stated, stable part of the extension that a person&apos;s own shell steps may read.
-      <advantage>Every name says what its value is in the plugin&apos;s own terms, so nothing reads as a search path and a person who knows the skills recognizes each variable at once.</advantage>
-      <drawback>The placeholder-to-variable mapping is a table that the runner, the extension, and their documentation must each carry and keep in step with the placeholder set, a name cannot be derived from the recipe line, and every new placeholder needs its own naming decision.</drawback>
-    </alternative>
-    <alternative id="Unprefixed plain names">
-      The variables carry no namespace prefix and are named by hand, since the mechanical rule without a prefix would make `&lt;path&gt;` the shell&apos;s own `PATH`: `MISSION_PATH`, `SHORT_TITLE`, `ALTERNATIVE_ID`, `GOAL`, `SCOPE`, `ANSWER_TEXT`, and `TASK_TITLE`. The names are a stated, stable part of the extension that a person&apos;s own shell steps may read.
-      <advantage>The names are the shortest and plainest on offer, so a reference reads almost like the placeholder it replaced wherever the line is shown in the terminal.</advantage>
-      <drawback>Generic names such as `GOAL` and `SCOPE` may already be set by a person&apos;s environment or startup files, or be read by some tool the line starts, since every value is exported to every child process, `claude` and `agy` included; how far that bites depends on whether the session reads the person&apos;s startup files, which the session-shell question settles.</drawback>
-    </alternative>
-    <alternative id="Private namespaced names">
-      The variables follow the mechanical rule under a prefix marked private, `_GURITA_` (`_GURITA_PATH`, `_GURITA_SHORT_TITLE`, `_GURITA_ALTERNATIVE_ID`, `_GURITA_GOAL`, `_GURITA_SCOPE`, `_GURITA_ANSWER_TEXT`, `_GURITA_TASK_TITLE`), and are an internal detail of the runner: nothing documents them for a person&apos;s own recipes, and a later version may rename them freely.
-      <advantage>The names stay free to change with the runner, and the leading underscore tells a reader of a printed line that the variable is the extension&apos;s plumbing rather than something to set or rely on.</advantage>
-      <drawback>A person&apos;s own shell step that wants the task title or mission path of a looped run has no stable name to read and may break on any update, and an internal name still has to be written out in every line the terminal shows, so it is no less visible than a stated one.</drawback>
-    </alternative>
-    <alternative id="Left to the runner task">
-      No names are fixed now: the task that writes the bundled runner chooses them as an implementation detail, with whatever rule or table it finds convenient, and the mission records only that each value reaches its line as an environment variable reference.
-      <advantage>No naming decision is spent ahead of the code that uses the names, and the runner&apos;s author picks names that fit the shell and reference form the other session questions settle.</advantage>
-      <drawback>The names become a de facto contract, seen in every line the terminal shows and readable by a person&apos;s own shell steps, without having been reviewed, and the extension side that writes the references and any documentation must then follow whatever the runner happened to choose.</drawback>
-    </alternative>
-  </open-question>
   <open-question id="One-session mechanism">
     <question>The runner of the VS Code extension (`gurita-vscode`) runs a chain&apos;s lines in one shell session, so that an earlier shell step takes effect for the lines after it, yet it must read each headless line&apos;s output on its own, decide after it whether to go on, and hand the terminal to an interactive line. By what mechanism does one session span a chain&apos;s lines?</question>
     <recommendation option="Generated script, in-session check">It is one real shell session with no protocol between runner and shell, so functions, sourced files, and directory changes carry forward and an interactive line gets the terminal as any command does. Composing the script and judging a first line are plain functions the runner&apos;s tests cover without starting a shell.</recommendation>

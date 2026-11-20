@@ -124,5 +124,7 @@ No other mission is live, so nothing holds or shares the scope. The record holds
 
 - **Preview print.** Each preview line is three tab-separated fields in the layout of `missions.py live`: a state word (`resolved` when the named line is among the single-task lines the runner was given, `missing` when it is not), then the line name the rules give the task (the missing name in a `missing` line), then the task's `##` title last. The runner alone decides resolved or missing, and the print carries nothing else.
 
+- **Session variables.** Each variable is named by one fixed rule applied to its placeholder: the prefix `GURITA_`, then the placeholder's text upper-cased with every space turned into an underscore, giving `GURITA_PATH`, `GURITA_SHORT_TITLE`, `GURITA_ALTERNATIVE_ID`, `GURITA_GOAL`, `GURITA_SCOPE`, `GURITA_ANSWER_TEXT`, and `GURITA_TASK_TITLE`. The names are a stated, stable part of the extension, so a shell step in a person's own recipe may read them, for example to log the task title of a looped run.
+
 ## Out of Scope
 
