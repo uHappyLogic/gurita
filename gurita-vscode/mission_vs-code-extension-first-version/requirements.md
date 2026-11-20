@@ -138,5 +138,7 @@ No other mission is live, so nothing holds or shares the scope. The record holds
 
 - **Second click.** Every button stays enabled. A click on a mission's page while a chain started for that mission is running starts nothing and queues nothing: the extension shows a VS Code notification saying a chain is already running for this mission and reveals that run's terminal, and the person clicks again once it has ended. The only state held is the extension's in-memory note of which mission has a running runner, read at click time and never drawn on the page.
 
+- **Live query failure.** The pane shows one failure state in place of the mission pages: one fixed line saying the live missions could not be read, with the cause verbatim beneath it, which is the missions tool's `Error:` line from stderr when it ran and failed, the spawn error when `python3` could not be started, or that no folder is open when the extension never ran the query. The extension classifies nothing, and the two mission-starting buttons stay on the pane.
+
 ## Out of Scope
 
