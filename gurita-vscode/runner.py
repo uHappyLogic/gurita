@@ -5,6 +5,7 @@ Stdlib only, Python 3.9 or later, shipped in the extension's package beside its 
 directory and runnable by hand outside the editor.
 
     runner.py chain -- LINE...
+    runner.py loop --mission PATH --rules FILE --line NAME LINE... [--override TITLE NAME]... -- LINE...
     runner.py preview --mission PATH --rules FILE --line NAME LINE...
 
 Each LINE is one argument after `--`. A line is one of three kinds, inferred from its text:
@@ -41,6 +42,21 @@ whole: stderr carries a `Rule file refused:` line naming it and, beneath, one li
 unreadable line with its number and reason, and every task is printed unresolved. Either way
 the task lines are printed and the exit status is 0; a task list that cannot be read prints
 one `Error:` line and exits 1.
+
+`loop` is the looped task run, started once for the whole run. Its lines after `--` are the
+looped recipe's, exactly one of them the slot line `<single-task line>`. Before each task it
+re-reads the top remaining `##` heading of the mission's `TASKS_TODO.md` and chooses that task's
+single-task line: the `--override` given for the task's title when there is one, and otherwise
+the rules' result as `preview` gives it, the task unresolved when the name chosen is not among
+the `--line` names or none is chosen. It shows the assignment it used, and an unresolved task
+stops the run before anything runs for it. Otherwise it runs a fresh shell session, started as
+a chain's is, with `GURITA_PATH` and `GURITA_TASK_TITLE` in its environment from its start,
+filled from `--mission` and the re-read heading: the recipe's own lines at its head and the
+chosen single-task line in the slot line's place, every `<path>` and `<Task Title>` in them
+written as a reference to its variable in the form its quoting needs, so the values never
+enter a line's text. The run goes on to the next task only when the session ran to its end and
+the slot line's final message opened with `Task completed.`, stops on any other first line,
+and ends when no heading remains; it closes as a chain does, on its report and a keypress.
 """
 
 import argparse
@@ -87,6 +103,12 @@ RULES_REFUSED = "refused"
 
 RESOLVED = "resolved"
 MISSING = "missing"
+
+SLOT_LINE = "<single-task line>"
+TASK_COMPLETED = "Task completed."
+LOOP_PLACEHOLDERS = ("<path>", "<Task Title>")
+BY_OVERRIDE = "override"
+BY_RULES = "rules"
 
 
 class RunnerError(Exception):
@@ -265,6 +287,15 @@ def wait_for_key() -> None:
         termios.tcsetattr(fd, termios.TCSADRAIN, saved)
 
 
+def wait_for_shell(process: "subprocess.Popen[bytes]") -> int:
+    """The session shell's exit status, an interrupt meant for the shell never ending the wait."""
+    while True:
+        try:
+            return process.wait()
+        except KeyboardInterrupt:
+            continue
+
+
 def run_chain(lines: List[str]) -> int:
     fixed_lines = FIXED_LINES_FILE
     if any(line_kind(line) == HEADLESS for line in lines):
@@ -273,12 +304,7 @@ def run_chain(lines: List[str]) -> int:
     try:
         script = compose_script(lines, run_dir, fixed_lines)
         process = subprocess.Popen(session_shell(dict(os.environ)) + ["-c", script])
-        while True:
-            try:
-                status = process.wait()
-                break
-            except KeyboardInterrupt:
-                continue
+        status = wait_for_shell(process)
         printed, finished = report(lines, run_dir, status)
     finally:
         shutil.rmtree(run_dir, ignore_errors=True)
@@ -493,6 +519,185 @@ def run_preview(mission: str, rules: str, lines: List[Tuple[str, str]]) -> int:
     return 0
 
 
+class Choice:
+    """The single-task line a looped run takes for one task: its state word, the line name
+    (empty when none is named), and whether an override or the rules named it."""
+
+    def __init__(self, state: str, name: str, source: str) -> None:
+        self.state = state
+        self.name = name
+        self.source = source
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, Choice) and (self.state, self.name, self.source) == (
+            other.state,
+            other.name,
+            other.source,
+        )
+
+    def __repr__(self) -> str:
+        return f"Choice({self.state!r}, {self.name!r}, {self.source!r})"
+
+
+def choose_line(
+    rule_file: RuleFile, names: List[str], overrides: Dict[str, str], title: str, brief: str
+) -> Choice:
+    """A task's override when one was made for its title, and otherwise the rules' result; an
+    override or a rule naming no line among `names` leaves the task unresolved."""
+    if title in overrides:
+        name = overrides[title]
+        return Choice(RESOLVED if name in names else MISSING, name, BY_OVERRIDE)
+    state, name = assignment(rule_file, names, title, brief)
+    return Choice(state, name, BY_RULES)
+
+
+def describe_choice(choice: Choice) -> str:
+    """The assignment line a looped run shows before each task."""
+    if choice.state == RESOLVED:
+        return f"Line: {choice.name} (by {choice.source})"
+    if choice.name:
+        who = "the override names" if choice.source == BY_OVERRIDE else "the rules name"
+        return f'Line: unresolved — {who} "{choice.name}", which no single-task line given carries'
+    return "Line: unresolved — no rule gives the task a line"
+
+
+def session_variable(placeholder: str) -> str:
+    """The session variable a placeholder is filled through: `GURITA_`, then its text
+    upper-cased with every space turned into an underscore."""
+    return "GURITA_" + placeholder.strip("<>").upper().replace(" ", "_")
+
+
+def fill_placeholders(line: str, placeholders: Tuple[str, ...] = LOOP_PLACEHOLDERS) -> str:
+    """The line with each placeholder written as a reference to its session variable, in the
+    form its quoting needs: `${NAME}` inside double quotes, `'"${NAME}"'` inside single quotes,
+    and `"${NAME}"` outside them. The value itself never enters the line."""
+    filled: List[str] = []
+    quote = ""
+    index = 0
+    while index < len(line):
+        found = next((p for p in placeholders if line.startswith(p, index)), None)
+        if found is not None:
+            reference = "${" + session_variable(found) + "}"
+            if quote == '"':
+                filled.append(reference)
+            elif quote == "'":
+                filled.append(f"'\"{reference}\"'")
+            else:
+                filled.append(f'"{reference}"')
+            index += len(found)
+            continue
+        char = line[index]
+        filled.append(char)
+        index += 1
+        if char == "\\" and quote != "'" and index < len(line):
+            filled.append(line[index])
+            index += 1
+        elif quote == "" and char in "'\"":
+            quote = char
+        elif char == quote:
+            quote = ""
+    return "".join(filled)
+
+
+def slot_number(lines: List[str]) -> int:
+    """The 1-based number of the looped recipe's one slot line, refused unless exactly one
+    line is the slot line."""
+    numbers = [number for number, line in enumerate(lines, start=1) if line.strip() == SLOT_LINE]
+    if len(numbers) != 1:
+        raise RunnerError(
+            f"the looped recipe holds {len(numbers)} slot lines {SLOT_LINE}; it must hold exactly one"
+        )
+    return numbers[0]
+
+
+def session_lines(lines: List[str], slot: int, task_line: str) -> List[str]:
+    """One task's session: the recipe's own lines with the chosen single-task line in the
+    slot line's place, every `<path>` and `<Task Title>` written as its session variable."""
+    composed = list(lines)
+    composed[slot - 1] = task_line
+    return [fill_placeholders(line) for line in composed]
+
+
+def task_completed(progress: Optional[str], records: List[Tuple[int, str, str]], slot: int) -> bool:
+    """The looped verdict: a task's session takes the run to the next task only when it ran to
+    its end and the slot line's final message opened with `Task completed.`; any other first
+    line, the no-op line included, stops the run."""
+    if progress != END_MARK:
+        return False
+    read = [line for number, _, line in records if number == slot]
+    return bool(read) and read[-1] == TASK_COMPLETED
+
+
+def run_task_session(lines: List[str], slot: int, values: Dict[str, str]) -> Tuple[List[str], bool]:
+    """Run one task's session in a fresh shell holding `values` in its environment from its
+    start; its report, and whether the task completed."""
+    run_dir = tempfile.mkdtemp(prefix="gurita-task-")
+    try:
+        script = compose_script(lines, run_dir, FIXED_LINES_FILE)
+        environ = dict(os.environ)
+        environ.update(values)
+        process = subprocess.Popen(session_shell(environ) + ["-c", script], env=environ)
+        status = wait_for_shell(process)
+        printed, _ = report(lines, run_dir, status)
+        completed = task_completed(read_progress(run_dir), read_verdicts(run_dir), slot)
+    finally:
+        shutil.rmtree(run_dir, ignore_errors=True)
+    return printed, completed
+
+
+def say(lines: List[str]) -> None:
+    sys.stdout.write("\n".join(lines) + "\n")
+    sys.stdout.flush()
+
+
+def run_loop(
+    mission: str,
+    rules: str,
+    named: List[Tuple[str, str]],
+    overrides: List[Tuple[str, str]],
+    lines: List[str],
+) -> int:
+    slot = slot_number(lines)
+    read_fixed_lines(FIXED_LINES_FILE)
+    texts: Dict[str, str] = {}
+    for name, text in named:
+        texts.setdefault(name, text)
+    names = list(texts)
+    chosen = dict(overrides)
+    rule_file = read_rules(rules)
+    notice = rule_notice(rule_file)
+    if notice:
+        say(notice)
+    completed = 0
+    finished = False
+    while True:
+        try:
+            tasks = read_tasks(mission)
+        except RunnerError as error:
+            ending = [f"Loop stopped: {error}"]
+            break
+        if not tasks:
+            ending = ["Loop finished: no task remains"]
+            finished = True
+            break
+        title, brief = tasks[0]
+        choice = choose_line(rule_file, names, chosen, title, brief)
+        say(["", f"Task: {title}", describe_choice(choice)])
+        if choice.state != RESOLVED:
+            ending = [f"Loop stopped before running task: {title}", "Its assignment is unresolved."]
+            break
+        values = {"GURITA_PATH": mission, "GURITA_TASK_TITLE": title}
+        printed, done = run_task_session(session_lines(lines, slot, texts[choice.name]), slot, values)
+        say(printed)
+        if not done:
+            ending = [f"Loop stopped after task: {title}", f"It did not end on {TASK_COMPLETED}"]
+            break
+        completed += 1
+    say(["", *ending, f"Tasks completed: {completed}"])
+    wait_for_key()
+    return 0 if finished else 1
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="runner.py",
@@ -536,6 +741,37 @@ def build_parser() -> argparse.ArgumentParser:
         dest="lines",
         help="a named single-task line: its name and its raw text; repeatable",
     )
+    loop = commands.add_parser(
+        "loop",
+        help="run the remaining tasks one at a time, a fresh shell session per task",
+        description="Before each task re-read the top remaining heading of the mission's "
+        "TASKS_TODO.md, take its override or else the rules' result, and run the looped "
+        "recipe's lines given after -- in a fresh shell session, the chosen single-task line in "
+        f"the place of the slot line {SLOT_LINE}. Go on only when a task's run ends on the line "
+        f"'{TASK_COMPLETED}', stop before "
+        "running a task whose assignment is unresolved, and end when no heading remains.",
+    )
+    loop.add_argument("--mission", required=True, metavar="PATH", help="the mission directory")
+    loop.add_argument("--rules", required=True, metavar="FILE", help="the rule file")
+    loop.add_argument(
+        "--line",
+        required=True,
+        nargs=2,
+        action="append",
+        metavar=("NAME", "LINE"),
+        dest="named",
+        help="a named single-task line: its name and its raw text; repeatable",
+    )
+    loop.add_argument(
+        "--override",
+        nargs=2,
+        action="append",
+        default=[],
+        metavar=("TITLE", "NAME"),
+        dest="overrides",
+        help="the single-task line name a task takes in place of the rules' result; repeatable",
+    )
+    loop.add_argument("lines", nargs="+", metavar="LINE")
     return parser
 
 
@@ -544,6 +780,14 @@ def main(argv: Optional[List[str]] = None) -> int:
     try:
         if args.command == "chain":
             return run_chain(args.lines)
+        if args.command == "loop":
+            return run_loop(
+                args.mission,
+                args.rules,
+                [tuple(pair) for pair in args.named],
+                [tuple(pair) for pair in args.overrides],
+                args.lines,
+            )
         if args.command == "preview":
             return run_preview(args.mission, args.rules, [tuple(pair) for pair in args.lines])
         return run_check(args.fixed_lines, args.output, args.verdicts, args.line)

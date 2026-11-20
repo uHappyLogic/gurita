@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Runner Loop Subcommand for Task Runs
-
-Add to `runner.py` the subcommand `runner.py loop --mission PATH --rules FILE --line NAME LINE... [--override TITLE NAME]... -- LINE...`, the looped task run: before each task it re-reads the top remaining `##` heading of the mission's `TASKS_TODO.md`, takes that task's override or else the rules' result, shows the assignment it used, and runs a fresh shell session with `GURITA_PATH` and `GURITA_TASK_TITLE` in its environment, filled from `--mission` and the re-read heading, the recipe's own lines at its head and the chosen single-task line in the place of the slot line `<single-task line>`. It goes on only on `Task completed.`, stops before running anything at the first task whose assignment is unresolved, ends when no heading remains, and closes as a chain does, on its report and a keypress. Verified by pytest tests of the per-task choice between override, rule, and unresolved and of the looped verdict, starting no shell session and passing in both pytest runs.
-
----
-
 ## Add the Rule File for This Repository
 
 Add the tracked rule file `task_line_rules.txt` at the project root for this repository itself: its default line sends a task to `Single task with Opus High (Claude Code)`, and a few pattern rules send the tasks this repository treats as critical, those whose title or brief names a stdlib tool under `core/tools/`, a `.py` file, a test, a parser, or the runner, to `Single task with Opus xHigh (Claude Code)`. It gives a looped run its assignments in the project the maintainer first tries the extension in. Verified by running `runner.py preview` over it with the shipped single-task lines against a task list holding critical and ordinary tasks: every line reads `resolved` under the expected line name.
