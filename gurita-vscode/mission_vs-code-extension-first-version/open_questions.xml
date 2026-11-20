@@ -60,6 +60,41 @@
   </open-question>
   <open-question id="Extension version number">
     <question>What version does the VS Code extension this mission builds (`gurita-vscode`) carry in its manifest, and does it follow the plugin&apos;s `VERSION` (2.0.0 today), which `scripts/set_version.py` writes together with its mirrors?</question>
+    <alternative id="Lockstep mirror of VERSION">
+      The manifest&apos;s `version` follows the plugin&apos;s `VERSION`: it reads 2.0.0 now, and `scripts/set_version.py` gains `gurita-vscode/package.json` as a fourth mirrored surface (with the root version entry of the extension&apos;s npm lockfile wherever one is committed), so every release writes it in lockstep with the other mirrors and the `Release: &lt;VERSION&gt;` commit carries it.
+      <advantage>The extension&apos;s version states exactly which plugin version its bundled `missions.py` copy and recipes were taken from, which is the pin the design draft asks for, and it can never drift, because the one script that bumps the plugin also bumps the extension.</advantage>
+      <drawback>Every plugin release bumps the extension even when nothing in it changed, and an extension-only fix cannot get a version of its own without a plugin release; it also widens the release path, since `set_version.py` and its docstring, the &quot;three mirrors&quot; wording in `CLAUDE.md` and `CONTRIBUTING.md`, and the explicit path list of the release skill&apos;s `Release:` commit all have to name the new surface (and its lockfile, depending on the Node toolchain sibling&apos;s outcome).</drawback>
+    </alternative>
+    <alternative id="VERSION stamped at packaging">
+      The extension follows the plugin&apos;s `VERSION`, but the committed manifest holds a fixed placeholder version and is never bumped; the extension&apos;s packaging command reads the root `VERSION` file and passes it to `vsce package` with `--no-update-package-json`, so the packaged VSIX carries 2.0.0 today while `set_version.py` and the release path stay unchanged.
+      <advantage>The VSIX always carries the plugin version it was built against with no new mirrored surface, so neither `set_version.py` nor the release skill&apos;s commit changes, and no release commit touches the extension.</advantage>
+      <drawback>The committed manifest no longer tells the version the extension ships under, so a reader of `package.json` and a plain `vsce package` run see the placeholder, and the extension&apos;s build depends on a file outside its own directory, tying its packaging script to the repository&apos;s layout (how that script is shaped turns on the Node toolchain and bundled-file sourcing siblings).</drawback>
+    </alternative>
+    <alternative id="VERSION copied once">
+      The manifest&apos;s `version` is set by hand to the plugin&apos;s current `VERSION`, 2.0.0, when the extension is created, and nothing keeps it equal afterwards: `set_version.py`, the release path, and the tests are left unchanged, and the two versions agree only until the next plugin release.
+      <advantage>It costs a single literal and no change to any script, skill, or document, while the first version still reads as built against plugin 2.0.0.</advantage>
+      <drawback>The match is silent and temporary: the next `set_version.py` run leaves the extension at 2.0.0 with no signal, so its version soon claims a plugin version it no longer pins, which is worse than a version that never claimed one.</drawback>
+    </alternative>
+    <alternative id="VERSION matched by a test">
+      The manifest&apos;s `version` equals the plugin&apos;s `VERSION` (2.0.0 now) and is bumped by hand, while a pytest check under `tests/` asserts that the two literals agree; `set_version.py` writes nothing new, so a release whose version bump forgot the extension fails the suite the release skill runs before it changes anything.
+      <advantage>The equality is enforced without adding a written surface to `set_version.py` or its &quot;three mirrors&quot; contract, and a forgotten bump is caught loudly before a release lands rather than shipped silently.</advantage>
+      <drawback>It keeps the lockstep cost of the mirror (every plugin release bumps the extension) while adding a hand edit to every release and a test that only polices what the script could simply write, and the release skill&apos;s commit path list must still name `package.json` for the hand-edited bump to ride in the `Release:` commit.</drawback>
+    </alternative>
+    <alternative id="Own pre-1.0 version">
+      The extension carries a version of its own, independent of `VERSION`, starting below 1.0 (0.1.0), and is bumped by hand whenever the extension itself changes; `set_version.py` and the release path are untouched, and the plugin version its bundled files come from is not expressed by the version number.
+      <advantage>The version describes the extension alone, so a plugin release does not bump an unchanged extension and an extension fix can be versioned on its own, while the pre-1.0 number honestly marks an unpublished first version whose interface may still change.</advantage>
+      <drawback>The draft&apos;s pin of the bundled `missions.py` copy to a plugin version is not visible in the version, so which plugin release the copy came from must be read from history or recorded somewhere else, and remembering to bump by hand is one more thing a change to the extension can forget.</drawback>
+    </alternative>
+    <alternative id="Own 1.0.0 version">
+      The extension carries a version of its own, independent of `VERSION`, starting at 1.0.0, and is bumped by hand whenever the extension itself changes; `set_version.py` and the release path are untouched.
+      <advantage>It versions the extension on its own terms, like the pre-1.0 option, while presenting the delivered first version as a complete release rather than an experiment, matching the mission&apos;s framing of a first version carrying all three of the draft&apos;s layers.</advantage>
+      <drawback>It claims a stability the extension has not earned, being unpublished and untried until the maintainer&apos;s own install at the mission&apos;s end, so the follow-up work the mission writes up under `ideas/` may soon force a 2.0.0 for interface changes; like the pre-1.0 option it leaves the plugin pin unexpressed and the bump to memory.</drawback>
+    </alternative>
+    <alternative id="Fixed placeholder version">
+      The manifest carries one fixed version that is never bumped (0.0.1), since the extension is published nowhere and installed only by hand from a locally built VSIX; neither the extension nor the plugin&apos;s release path manages it, and no version relation to `VERSION` is expressed.
+      <advantage>Nothing is maintained at all: no script, test, release step, or habit of bumping, which fits a package that has no marketplace listing and no users beyond the maintainer.</advantage>
+      <drawback>Every built VSIX carries the same version, so an installed copy cannot be told from a newer build, the editor treats a rebuilt package as the version already installed (a reinstall needs forcing), and the version must be revisited anyway once publication, which the draft defers, comes up.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Manifest publisher value">
     <question>Packaging a VSIX needs a `publisher` in the extension&apos;s manifest, and that value becomes part of the installed extension&apos;s id, while the VS Code extension this mission builds (`gurita-vscode`) is published nowhere and reserves no publisher id. What publisher value does its manifest carry?</question>
