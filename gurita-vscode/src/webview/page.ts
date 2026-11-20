@@ -38,8 +38,14 @@
 // position, the Short Title shown and its place in the list, saved with `setState` on every move
 // and read back with `getState` when the page is re-created, and when a run removes the question
 // shown the view stays at the same place in the list, clamped to its last card. A part drawn from
-// a file that did not read is replaced by that file's notice alone. Every value is drawn as text,
-// never as markup, since it comes from the workspace.
+// a file that did not read is replaced by that file's notice alone. While a chain started for a
+// mission is running, as the extension posts when a run starts, when its terminal closes, and with
+// every redraw, that mission's page draws every action button on it disabled, its recipe buttons,
+// its question card's buttons, its preview's start button, and its New task button, and its
+// workflow diagram's filled block pulses; the tabs, the refresh control, the question view's
+// previous and next buttons and dependency links, the preview's close button, the other missions'
+// pages, and the two mission-starting buttons stay enabled. Every value is drawn as text, never as
+// markup, since it comes from the workspace.
 
 interface VsCodeApi {
   postMessage(message: unknown): void;
@@ -114,8 +120,9 @@ declare function acquireVsCodeApi(): VsCodeApi;
   }
 
   type PaneMessage =
-    | { type: 'live'; missions: Mission[]; recipes: RecipePart }
+    | { type: 'live'; missions: Mission[]; recipes: RecipePart; running: string[] }
     | { type: 'liveFailure'; cause: string }
+    | { type: 'running'; missions: string[] }
     | { type: 'preview'; mission: string; recipe: string; lines: string[]; names: string[]; result: PreviewRead }
     | { type: 'loopStarted'; mission: string };
 
@@ -182,6 +189,10 @@ declare function acquireVsCodeApi(): VsCodeApi;
   const positions = new Map<string, Position>(Object.entries(saved.positions ?? {}));
   let missions: Mission[] = [];
   let recipes: RecipePart = { state: 'read', recipes: [] };
+  /** The paths of the missions with a running runner, whose pages are drawn as running. */
+  let running = new Set<string>();
+  /** What the pane last drew from the extension's answer: nothing yet, the mission pages, or the failure state. */
+  let drawn: 'nothing' | 'live' | 'failure' = 'nothing';
   /** Each mission's preview, by its path, while it stands on the page. */
   const previews = new Map<string, Preview>();
   /** The card drawn on the page, so a dependency link can scroll to the card it jumped to. */
@@ -202,6 +213,13 @@ declare function acquireVsCodeApi(): VsCodeApi;
     const node = element('button', text, className);
     node.type = 'button';
     node.addEventListener('click', onClick);
+    return node;
+  }
+
+  /** An action button of a mission's page, drawn disabled while a chain started for it is running. */
+  function action(text: string, className: string, busy: boolean, onClick: () => void): HTMLButtonElement {
+    const node = button(text, className, onClick);
+    node.disabled = busy;
     return node;
   }
 
@@ -316,9 +334,10 @@ declare function acquireVsCodeApi(): VsCodeApi;
   /**
    * The workflow diagram: the two frames side by side joined by the handoff arrow, each frame's
    * blocks in a row joined by arrows, and under the first frame's row the dashed loop from answer
-   * back to review. The block of `step` is filled; every block is display only.
+   * back to review. The block of `step` is filled, and pulses while `busy`, a chain started for
+   * the mission running; every block is display only.
    */
-  function drawWorkflow(step: WorkflowStep | undefined): HTMLElement {
+  function drawWorkflow(step: WorkflowStep | undefined, busy: boolean): HTMLElement {
     const diagram = element('section', undefined, 'workflow');
     diagram.setAttribute('aria-label', 'Workflow');
     WORKFLOW_FRAMES.forEach(([kind, heading, blocks], frameIndex) => {
@@ -339,12 +358,12 @@ declare function acquireVsCodeApi(): VsCodeApi;
           arrow.style.gridColumn = String(index * 2);
           flow.append(arrow);
         }
-        const block = element('div', name, each === step ? 'block next' : 'block');
+        const block = element('div', name, each !== step ? 'block' : busy ? 'block next running' : 'block next');
         block.setAttribute('role', 'listitem');
         block.style.gridColumn = String(index * 2 + 1);
         if (each === step) {
           block.setAttribute('aria-current', 'step');
-          block.title = 'The step to run next';
+          block.title = busy ? 'The step to run next; a chain is running for this mission' : 'The step to run next';
         }
         flow.append(block);
       });
@@ -368,7 +387,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
    * the card's buttons, the question text in its area of fixed height, the pick and its rationale,
    * the alternatives, the dependencies, and the principles.
    */
-  function drawCard(mission: Mission, question: Question, questions: Question[]): HTMLElement {
+  function drawCard(mission: Mission, question: Question, questions: Question[], busy: boolean): HTMLElement {
     const body = element('article', undefined, 'card');
     body.setAttribute('aria-label', question.id);
 
@@ -377,11 +396,11 @@ declare function acquireVsCodeApi(): VsCodeApi;
     title.title = question.id;
     const actions = element('div', undefined, 'card-actions');
     for (const [kind, label, hover] of QUESTION_BUTTONS) {
-      const action = button(label, 'action', () =>
+      const run = action(label, 'action', busy, () =>
         vscode.postMessage({ type: 'questionButton', button: kind, mission: mission.path, question: question.id }),
       );
-      action.title = hover;
-      actions.append(action);
+      run.title = hover;
+      actions.append(run);
     }
     head.append(title, actions);
     body.append(head);
@@ -407,7 +426,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
         const entry = element('div', undefined, picked ? 'alternative picked' : 'alternative');
         const line = element('div', undefined, 'alternative-head');
         line.append(element('h6', picked ? `${alternative.id} (picked)` : alternative.id));
-        const answer = button('Answer with this alternative', 'action', () =>
+        const answer = action('Answer with this alternative', 'action', busy, () =>
           vscode.postMessage({ type: 'alternativeButton', mission: mission.path, question: question.id, alternative: alternative.id }),
         );
         answer.title = `Record ${alternative.id} as the decision`;
@@ -464,7 +483,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
   }
 
   /** The question view: the position counter and its previous and next buttons above the one card shown. */
-  function drawQuestions(mission: Mission): HTMLElement {
+  function drawQuestions(mission: Mission, busy: boolean): HTMLElement {
     const view = element('section', undefined, 'questions');
     view.append(element('h3', 'Open questions'));
     const part = mission.questions;
@@ -495,15 +514,15 @@ declare function acquireVsCodeApi(): VsCodeApi;
     const counter = element('span', `${index + 1} / ${questions.length}`, 'counter');
     counter.setAttribute('aria-live', 'polite');
     pager.append(previous, counter, next);
-    card = drawCard(mission, questions[index], questions);
+    card = drawCard(mission, questions[index], questions, busy);
     view.append(pager, card);
     return view;
   }
 
-  function drawTasks(mission: Mission): HTMLElement {
+  function drawTasks(mission: Mission, busy: boolean): HTMLElement {
     const view = element('section', undefined, 'tasks');
     const head = element('div', undefined, 'section-head');
-    const add = button('New task', 'action', () => vscode.postMessage({ type: 'taskButton', mission: mission.path }));
+    const add = action('New task', 'action', busy, () => vscode.postMessage({ type: 'taskButton', mission: mission.path }));
     add.title = 'Type an issue and open an interactive discussion of it into tasks for this mission';
     head.append(element('h3', 'Remaining tasks'), add);
     view.append(head);
@@ -522,7 +541,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
     return view;
   }
 
-  function drawRecipes(mission: Mission): HTMLElement {
+  function drawRecipes(mission: Mission, busy: boolean): HTMLElement {
     const view = element('section', undefined, 'recipes');
     view.append(element('h3', 'Recipes'));
     if (recipes.state === 'failed') {
@@ -541,13 +560,13 @@ declare function acquireVsCodeApi(): VsCodeApi;
       const list = element('div', undefined, 'recipe-list');
       for (const recipe of entries) {
         if (recipe.kind === 'runnable') {
-          const run = button(recipe.name, 'recipe', () =>
+          const run = action(recipe.name, 'recipe', busy, () =>
             vscode.postMessage({ type: 'runRecipe', mission: mission.path, recipe: recipe.name }),
           );
           run.title = recipe.lines.join('\n');
           list.append(run);
         } else if (recipe.kind === 'looped') {
-          const preview = button(recipe.name, 'recipe', () =>
+          const preview = action(recipe.name, 'recipe', busy, () =>
             vscode.postMessage({ type: 'previewLoop', mission: mission.path, recipe: recipe.name }),
           );
           preview.title = recipe.lines.join('\n');
@@ -575,7 +594,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
     return 'Unresolved: no rule gives this task a line';
   }
 
-  function drawPreview(mission: Mission, preview: Preview): HTMLElement {
+  function drawPreview(mission: Mission, preview: Preview, busy: boolean): HTMLElement {
     const view = element('section', undefined, 'preview');
     view.append(element('h3', `Preview: ${preview.recipe}`));
     const close = button('Close preview', 'control', () => {
@@ -649,7 +668,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
       );
     }
     const controls = element('div', undefined, 'controls');
-    const start = button('Start run', 'recipe', () =>
+    const start = action('Start run', 'recipe', busy, () =>
       vscode.postMessage({
         type: 'startLoop',
         mission: mission.path,
@@ -666,12 +685,13 @@ declare function acquireVsCodeApi(): VsCodeApi;
   function drawPage(mission: Mission): HTMLElement {
     const page = element('section', undefined, 'page');
     page.setAttribute('role', 'tabpanel');
-    page.append(drawWorkflow(mission.step), drawRecipes(mission));
+    const busy = running.has(mission.path);
+    page.append(drawWorkflow(mission.step, busy), drawRecipes(mission, busy));
     const preview = previews.get(mission.path);
     if (preview !== undefined) {
-      page.append(drawPreview(mission, preview));
+      page.append(drawPreview(mission, preview, busy));
     }
-    page.append(drawQuestions(mission), drawTasks(mission));
+    page.append(drawQuestions(mission, busy), drawTasks(mission, busy));
     return page;
   }
 
@@ -711,6 +731,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
     if (message.type === 'live') {
       missions = message.missions;
       recipes = message.recipes;
+      running = new Set(message.running ?? []);
+      drawn = 'live';
       for (const mission of [...previews.keys()]) {
         if (!missions.some((each) => each.path === mission)) {
           previews.delete(mission);
@@ -718,7 +740,13 @@ declare function acquireVsCodeApi(): VsCodeApi;
       }
       draw();
     } else if (message.type === 'liveFailure') {
+      drawn = 'failure';
       drawFailure(message.cause);
+    } else if (message.type === 'running') {
+      running = new Set(message.missions);
+      if (drawn === 'live') {
+        draw();
+      }
     } else if (message.type === 'preview') {
       previews.set(message.mission, {
         recipe: message.recipe,

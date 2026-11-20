@@ -1,9 +1,15 @@
 import * as vscode from 'vscode';
-import { openMissionPane, refreshMissionPane } from './pane';
+import { openMissionPane, postRunning, refreshMissionPane } from './pane';
 import { registerRuns } from './runs';
 
 export function activate(context: vscode.ExtensionContext): void {
-  registerRuns(context, () => refreshMissionPane(context));
+  registerRuns(context, {
+    started: () => postRunning(),
+    ended: () => {
+      postRunning();
+      refreshMissionPane(context);
+    },
+  });
   context.subscriptions.push(
     vscode.commands.registerCommand('gurita.openMissionPane', () => openMissionPane(context)),
     vscode.commands.registerCommand('gurita.refreshMissionPane', () => refreshMissionPane(context)),

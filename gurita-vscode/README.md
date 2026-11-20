@@ -39,8 +39,10 @@ Every Node command runs under Node 22 through nvm, in a subshell, from the repos
   webview page's script (`tsconfig.webview.json`, with the DOM library) from `src/` into `out/`,
   one emitted file per source file, with no bundler.
 - `npm test` compiles, then runs the unit tests of the recipe reader, the `open_questions.xml`
-  parser, and the `TASKS_TODO.md` heading read with Node's built-in `node:test` over the
-  compiled files under `out/test/`. Nothing runs inside an editor.
+  parser, and the `TASKS_TODO.md` heading read, among others, with Node's built-in `node:test`
+  over the compiled files under `out/test/`; the run path is tested against a stub of the
+  `vscode` module, and the page script against a small stand-in for the DOM. Nothing runs
+  inside an editor.
 - `npm run package` runs `vsce package`, which first runs the `vscode:prepublish` script: the
   compile, then `scripts/bundle.js`, the extension's own build step, which copies
   `core/tools/missions.py` and `snippets/GURITA_USAGE.md` verbatim into `bundled/` and writes
@@ -128,8 +130,15 @@ Every value a button needs (a goal, a scope typed as a path from the project roo
 an issue description, a discussion note) is typed into VS Code's own input box, one line per
 value. Only the discussion note may be left empty. A click on a recipe button starts its
 run at once in a terminal; every recipe button shows its lines, placeholders included, before
-you click. While a run started for a mission is going, another click on that mission's page
-starts nothing: a notification says a chain is already running and the run's terminal is shown.
+you click. While a run started for a mission is going, until you dismiss its terminal, that
+mission's page shows it: every action button on the page (the recipe buttons, the buttons on
+the question card and its alternatives, a preview's **Start run**, and **New task**) is
+disabled, and the workflow diagram's filled block pulses. The tabs, **Refresh**, the question
+view's **Previous** and **Next**, the other missions' pages, and **New mission** and **Define
+mission** stay enabled, and the page is drawn this way again whenever it is redrawn, after the
+pane was hidden and shown included. Should a click still reach the extension for that mission,
+it starts nothing: a notification says a chain is already running and the run's terminal is
+shown.
 
 The pane re-reads by itself after each of its runs, once you dismiss the run's terminal, and on
 changes to any mission's `requirements.md`, `open_questions.xml`, or `TASKS_TODO.md`; git state

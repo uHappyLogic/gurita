@@ -20,8 +20,15 @@
 // `GURITA_*` session variable. The discuss button always asks for an optional discussion note,
 // the one value a box accepts empty: a note typed is carried after the Short Title as
 // `<Short Title>. <note>`, an empty one leaves the line as if it held no note, and Escape starts
-// nothing. When a run's terminal closes the pane is re-read and the fresh parse
-// posted to the page. A click on a looped recipe's button shows that recipe's preview on the
+// nothing. While a chain started for a mission is running, from its start until its terminal
+// closes, that mission's page draws every action button on it disabled, its recipe buttons, its
+// question card's buttons, its preview's start button, and its New task button, and pulses its
+// workflow diagram's filled block, while the tabs, the refresh control, the other missions' pages,
+// and the two mission-starting buttons stay enabled. The extension posts the paths of the
+// missions with a running runner to the page when a run starts and when its terminal closes, and
+// with every redraw, so a hidden pane shown again draws them too; a click that still reaches the
+// extension for such a mission is refused as before. When a run's terminal closes the pane is
+// re-read and the fresh parse posted to the page. A click on a looped recipe's button shows that recipe's preview on the
 // page before anything runs: the extension gathers the named single-task lines from the recipes,
 // read afresh, runs the runner's `preview` with them, the mission, and the rule file at the
 // project root as a short-lived child process, and posts what it printed. The person may override
@@ -48,7 +55,7 @@ import { PreviewRead, SingleTaskLine, loopArguments, ruleFile, runOverrides, run
 import { BUTTON_RECIPES, PageRecipe, Recipe, buttonRecipe, ownRecipesFile, pageRecipes, readRecipes } from './recipes';
 import { FileEventKind, RefreshBatch, RefreshQueue, WATCHED_PATTERN, eventEffect } from './refresh';
 import { OPTIONAL_PLACEHOLDERS } from './placeholders';
-import { refuseWhileRunning, runnerFile, startChain, startLoop } from './runs';
+import { refuseWhileRunning, runnerFile, runningMissions, startChain, startLoop } from './runs';
 import { WorkflowStep, missionStep, reviewCommitted } from './workflow';
 
 const VIEW_TYPE = 'gurita.missionPane';
@@ -85,8 +92,15 @@ type PaneMessage =
       /** Each live mission with its documents and the step its diagram fills, left out when none is chosen. */
       missions: ({ path: string; state: string; title: string; step?: WorkflowStep } & MissionDocuments)[];
       recipes: RecipePart;
+      /** The paths of the missions with a running runner, whose pages are drawn as running. */
+      running: string[];
     }
   | { type: 'liveFailure'; cause: string }
+  | {
+      type: 'running';
+      /** The paths of the missions with a running runner, whose pages are drawn as running. */
+      missions: string[];
+    }
   | {
       type: 'preview';
       mission: string;
@@ -164,6 +178,17 @@ export function refreshMissionPane(context: vscode.ExtensionContext): void {
     return;
   }
   void answer(context, panel);
+}
+
+/**
+ * Posts the paths of the missions with a running runner to the page, when the extension holds a
+ * pane, so their pages are drawn as running. A hidden pane holds no page, and the next redraw,
+ * answering the ready message its page posts when shown again, carries them instead.
+ */
+export function postRunning(): void {
+  if (panel !== undefined) {
+    void post(panel, { type: 'running', missions: runningMissions() });
+  }
 }
 
 /** Creates the one mission pane, or reveals the one the extension already holds. */
@@ -385,7 +410,7 @@ function publish(shown: Current): PaneMessage {
     recipes: shown.recipes.state === 'read' ? shown.recipes.recipes : [],
     questions,
   };
-  return { type: 'live', missions, recipes: shown.recipes };
+  return { type: 'live', missions, recipes: shown.recipes, running: runningMissions() };
 }
 
 /**
@@ -723,6 +748,8 @@ function pageShell(webview: vscode.Webview, script: vscode.Uri): string {
   .workflow .block, .workflow .flow > .arrow { grid-row: 1; }
   .workflow .block { border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 0.3em 0.8em; white-space: nowrap; }
   .workflow .block.next { background: #9333ea; border-color: #9333ea; color: #ffffff; }
+  .workflow .block.next.running { animation: running-pulse 1.6s ease-in-out infinite; }
+  @keyframes running-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
   .workflow .arrow { opacity: 0.7; }
   .workflow .arrow-label { opacity: 0.7; font-size: 0.85em; white-space: nowrap; }
   .workflow .handoff { display: flex; flex-direction: column; align-items: center; }
@@ -734,7 +761,8 @@ function pageShell(webview: vscode.Webview, script: vscode.Uri): string {
   button.control { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: none; padding: 0.25em 0.8em; cursor: pointer; font: inherit; }
   button.control:disabled { opacity: 0.5; cursor: default; }
   button.action { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: none; padding: 0.15em 0.6em; cursor: pointer; font: inherit; white-space: nowrap; }
-  button.action:hover { background: var(--vscode-button-secondaryHoverBackground); }
+  button.action:hover:not(:disabled) { background: var(--vscode-button-secondaryHoverBackground); }
+  button.action:disabled, button.recipe:disabled { opacity: 0.5; cursor: default; }
   .pager { display: flex; align-items: center; gap: 0.8em; margin-bottom: 0.5em; }
   .pager .counter { font-variant-numeric: tabular-nums; min-width: 4em; text-align: center; }
   .card { border: 1px solid var(--vscode-panel-border); padding: 0.6em 0.8em; }
@@ -755,7 +783,7 @@ function pageShell(webview: vscode.Webview, script: vscode.Uri): string {
   .recipes h4 { margin: 0.8em 0 0.3em; }
   .recipe-list { display: flex; flex-wrap: wrap; gap: 0.4em; }
   button.recipe { background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; padding: 0.3em 0.9em; cursor: pointer; font: inherit; }
-  button.recipe:hover { background: var(--vscode-button-hoverBackground); }
+  button.recipe:hover:not(:disabled) { background: var(--vscode-button-hoverBackground); }
   .recipe-unknown { border: 1px dashed var(--vscode-inputValidation-warningBorder); padding: 0.3em 0.9em; opacity: 0.85; }
   .preview { border-top: 1px solid var(--vscode-panel-border); margin-top: 1em; }
   .preview-tasks { border-collapse: collapse; margin: 0.5em 0; width: 100%; }

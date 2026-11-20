@@ -2,15 +2,20 @@
 // process, created with `shellPath` `python3`, `shellArgs` the runner file's path and its
 // arguments, and `isTransient`, at the project root, the values its lines reference set only in
 // the terminal's environment as their `GURITA_*` session variables. The only state held is an
-// in-memory note of which mission has a running runner: a click on a mission's page while one is
-// running starts nothing and queues nothing, shows a notification, and reveals that run's
-// terminal. A run a mission-starting button starts belongs to no mission and is refused for none.
-// A looped run is started the same way, its arguments the runner's `loop` command line, the runner
-// filling the loop's values itself. The extension learns that a run ended when its terminal
-// closes, which the runner delays until the person dismisses it, and then re-reads the pane.
+// in-memory note of which mission has a running runner, held from the run's start until its
+// terminal closes. The pane draws it: it is posted to the page when a run starts, when its
+// terminal closes, and with every redraw, and the page of a mission with a running runner shows
+// every action button disabled and its workflow diagram's filled block pulsing. As a fallback, a
+// click that still reaches the extension for that mission starts nothing and queues nothing,
+// shows a notification, and reveals that run's terminal. A run a mission-starting button starts
+// belongs to no mission and is refused for none. A looped run is started the same way, its
+// arguments the runner's `loop` command line, the runner filling the loop's values itself. The
+// extension learns that a run ended when its terminal closes, which the runner delays until the
+// person dismisses it, and then re-reads the pane.
 
 import * as vscode from 'vscode';
 import { buildLine, sessionEnvironment } from './placeholders';
+import { RunningRuns } from './running';
 
 /** The notification a click shows while a chain started for its mission is running. */
 export const ALREADY_RUNNING = 'A chain is already running for this mission.';
@@ -18,42 +23,46 @@ export const ALREADY_RUNNING = 'A chain is already running for this mission.';
 const RUNNER_FILE = 'runner.py';
 const PYTHON = 'python3';
 
-/** The terminal of each mission's running runner, keyed by the mission's path. */
-const running = new Map<string, vscode.Terminal>();
+/** The terminal of each mission's running runner and of each run a mission-starting button started. */
+const running = new RunningRuns<vscode.Terminal>();
 
-/** The terminals of the running runners a mission-starting button started. */
-const starting = new Set<vscode.Terminal>();
+/** What the extension does when a run starts and when one's terminal closes. */
+export interface RunListeners {
+  /** Called once a run's terminal is created, its note already held. */
+  started: () => void;
+  /** Called once a run's terminal closed, its note already cleared. */
+  ended: () => void;
+}
 
-let ended: (() => void) | undefined;
+let listeners: RunListeners | undefined;
 
 /**
- * Registers the listener that clears a mission's running note when its run's terminal closes and
- * then calls `onEnded`, the pane's re-read.
+ * Registers the listener that clears a run's note when its terminal closes and then calls
+ * `ended`; `started` is called after every run starts.
  */
-export function registerRuns(context: vscode.ExtensionContext, onEnded: () => void): void {
-  ended = onEnded;
+export function registerRuns(context: vscode.ExtensionContext, on: RunListeners): void {
+  listeners = on;
   context.subscriptions.push(
     vscode.window.onDidCloseTerminal((terminal) => {
-      let cleared = starting.delete(terminal);
-      for (const [mission, held] of running) {
-        if (held === terminal) {
-          running.delete(mission);
-          cleared = true;
-        }
-      }
-      if (cleared) {
-        ended?.();
+      if (running.close(terminal)) {
+        listeners?.ended();
       }
     }),
   );
 }
 
+/** The paths of the missions with a running runner, sorted. */
+export function runningMissions(): string[] {
+  return running.missions();
+}
+
 /**
  * Whether the mission at `mission` has a running runner. When it has, shows the notification and
- * reveals that run's terminal.
+ * reveals that run's terminal: the fallback for a click that reaches the extension although the
+ * page draws that mission's action buttons disabled.
  */
 export function refuseWhileRunning(mission: string): boolean {
-  const terminal = running.get(mission);
+  const terminal = running.terminal(mission);
   if (terminal === undefined) {
     return false;
   }
@@ -119,10 +128,7 @@ function launch(
     env,
     isTransient: true,
   });
-  if (mission === undefined) {
-    starting.add(terminal);
-  } else {
-    running.set(mission, terminal);
-  }
+  running.hold(mission, terminal);
   terminal.show();
+  listeners?.started();
 }
