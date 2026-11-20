@@ -60,5 +60,7 @@ No other mission is live, so nothing holds or shares the scope. The record holds
 
 - **Publisher.** The manifest's `publisher` is `uhappylogic`, the lower-case form of the name of the account that owns the source and distribution repositories, so the installed extension's id is `uhappylogic.gurita-vscode`. Nothing is registered under it: no Marketplace or Open VSX publisher is created, looked up, or reserved.
 
+- **VSIX artifact.** The VSIX is not committed. The build runs `vsce package --out` into a dedicated output directory under the extension, listed as ignored, under a fixed file name each build overwrites, for example `gurita-vscode/dist/gurita-vscode.vsix`, and the maintainer installs it with `code --install-extension` on that one fixed path.
+
 ## Out of Scope
 
