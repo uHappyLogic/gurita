@@ -1,5 +1,6 @@
-"""The fixed-line verdict: a headless line's final message continues the chain only when its
-first line is a success or no-op line of the bundled fixed-line file."""
+"""The fixed-line verdict: a headless line's print continues the chain only when the last whole
+line of it that is a success, no-op, or stop line of the bundled fixed-line file is a success or
+no-op line, verdict-kind lines never counting and a print holding no such line stopping it."""
 
 import pytest
 
@@ -13,7 +14,7 @@ import pytest
         "  Task completed.  \r\nmore\n",
     ],
 )
-def test_a_success_or_no_op_first_line_continues(runner, fixed_lines, message):
+def test_a_success_or_no_op_line_continues(runner, fixed_lines, message):
     goes_on, line = runner.verdict(message, fixed_lines)
     assert goes_on
     assert line in ("Task completed.", "No task completed — no file changed.")
@@ -31,12 +32,74 @@ def test_a_success_or_no_op_first_line_continues(runner, fixed_lines, message):
             "Requirements converged — ready for task derivation.\n",
             "Requirements converged — ready for task derivation.",
         ),
-        ("Error: something went wrong\nTask completed.\n", "Error: something went wrong"),
         ("Task completed\n", "Task completed"),
+        ("Error: something went wrong\n", "Error: something went wrong"),
     ],
 )
-def test_a_stop_verdict_or_unlisted_first_line_stops(runner, fixed_lines, message, expected):
+def test_a_stop_verdict_or_unlisted_line_stops(runner, fixed_lines, message, expected):
     assert runner.verdict(message, fixed_lines) == (False, expected)
+
+
+# A print of several messages: a host prints one message per turn when a skill's background
+# agents wake its session, so the line read is the print's last success, no-op, or stop line.
+
+INTERIM = (
+    "I've started 15 background agents, one per open question; I'll embed their returns as they land.\n"
+    "\n"
+    "Three agents have returned; waiting on the rest.\n"
+    "\n"
+)
+
+
+def test_interim_text_above_a_success_line_continues(runner, fixed_lines):
+    message = INTERIM + "Task completed.\n"
+    assert runner.verdict(message, fixed_lines) == (True, "Task completed.")
+
+
+def test_interim_text_above_a_stop_line_stops(runner, fixed_lines):
+    message = INTERIM + "Scope gate closed — the scope is held or could not be checked.\nmission_a/\n"
+    assert runner.verdict(message, fixed_lines) == (
+        False,
+        "Scope gate closed — the scope is held or could not be checked.",
+    )
+
+
+def test_a_success_line_followed_by_a_still_open_list_and_the_verdict_line_continues(runner, fixed_lines):
+    message = (
+        "Checking the requirements against the recorded decisions.\n"
+        "\n"
+        "Requirements reviewed.\n"
+        "\n"
+        "Still open:\n"
+        "- Rule File Location\n"
+        "\n"
+        "Requirements converged — ready for task derivation.\n"
+    )
+    assert runner.verdict(message, fixed_lines) == (True, "Requirements reviewed.")
+
+
+def test_the_last_fixed_line_wins_over_an_earlier_one(runner, fixed_lines):
+    assert runner.verdict("Task completed.\nNo task matches the given name.\n", fixed_lines) == (
+        False,
+        "No task matches the given name.",
+    )
+    assert runner.verdict("Error: something went wrong\nTask completed.\n", fixed_lines) == (
+        True,
+        "Task completed.",
+    )
+
+
+def test_a_fixed_line_counts_only_as_a_whole_line(runner, fixed_lines):
+    message = "The skill printed Task completed. at last.\nDone for now.\n"
+    assert runner.verdict(message, fixed_lines) == (False, "Done for now.")
+
+
+def test_a_print_of_several_messages_with_no_fixed_line_stops(runner, fixed_lines):
+    message = INTERIM + "All agents have returned.\nRequirements converged — ready for task derivation.\n"
+    assert runner.verdict(message, fixed_lines) == (
+        False,
+        "Requirements converged — ready for task derivation.",
+    )
 
 
 @pytest.mark.parametrize("message", ["", "\n", "  \n\t\n"])
@@ -96,6 +159,20 @@ def test_the_check_step_exits_1_on_a_stopping_line_and_records_it(runner, fixed_
         "1\tcontinue\tNo task completed — no file changed.",
         "3\tstop\tNo task matches the given name.",
     ]
+
+
+def test_the_check_step_reads_the_last_fixed_line_of_a_print_of_several_messages(
+    runner, fixed_lines_file, tmp_path
+):
+    status, recorded = run_check(runner, fixed_lines_file, tmp_path, INTERIM + "Task completed.\n", 2)
+    assert status == 0
+    assert recorded == "2\tcontinue\tTask completed.\n"
+
+
+def test_the_check_step_stops_on_a_print_with_no_fixed_line(runner, fixed_lines_file, tmp_path):
+    status, recorded = run_check(runner, fixed_lines_file, tmp_path, INTERIM, 4)
+    assert status == 1
+    assert recorded == "4\tstop\tThree agents have returned; waiting on the rest.\n"
 
 
 def test_the_report_names_the_line_read_and_the_recipe_line_stopped_at(runner, tmp_path):

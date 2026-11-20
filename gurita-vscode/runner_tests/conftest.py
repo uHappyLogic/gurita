@@ -25,6 +25,7 @@ import runner as runner_module  # noqa: E402
 
 FIXED_LINE_ROWS = (
     ("success", "Task completed."),
+    ("success", "Requirements reviewed."),
     ("no-op", "No task completed — no file changed."),
     ("stop", "No task matches the given name."),
     ("stop", "Scope gate closed — the scope is held or could not be checked."),
@@ -40,7 +41,7 @@ def runner():
 
 @pytest.fixture
 def fixed_lines_file(tmp_path):
-    """A fixed-line file in the bundled `kind<TAB>line` form, one row of each kind."""
+    """A fixed-line file in the bundled `kind<TAB>line` form, at least one row of each kind."""
     path = tmp_path / "fixed_lines.tsv"
     path.write_text("".join(f"{kind}\t{line}\n" for kind, line in FIXED_LINE_ROWS), encoding="utf-8")
     return path

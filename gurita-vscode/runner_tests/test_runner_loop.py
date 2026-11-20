@@ -239,7 +239,7 @@ def test_an_override_is_used_for_its_task_and_the_rules_for_the_rest(runner, cap
     assert f"Line: {HIGH} (by override)" in out
 
 
-def test_the_loop_stops_on_any_first_line_but_task_completed(runner, capsys, monkeypatch, mission, rules_file):
+def test_the_loop_stops_on_any_line_read_but_task_completed(runner, capsys, monkeypatch, mission, rules_file):
     (mission / "TASKS_TODO.md").write_text(task_list("Add the Parser", "Write the README"), encoding="utf-8")
     sessions = Sessions(mission, [False])
     monkeypatch.setattr(runner, "run_task_session", sessions)

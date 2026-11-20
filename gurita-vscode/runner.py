@@ -19,11 +19,16 @@ session holds it, quoted so nothing in it is expanded, and outside the `tee` bel
 reaches the file a check step reads. Shell steps and interactive lines stand in the script as
 written. Each headless line's output goes through `tee` to the terminal and to a run-local
 file, and is followed by a check step, this runner started as `runner.py check`, which reads
-the first line of that final message and makes the shell exit unless the line is a success or
-no-op line of the bundled fixed-line file `bundled/fixed_lines.tsv` (one `kind<TAB>line` row
-per line of the plugin's fixed console line table). Once the shell has exited the runner
-prints the line the run ended on and the recipe line it stopped at, then waits for a keypress
-before exiting.
+that line's verdict from the whole print the file holds, since a host may print several
+messages for one line (an interim message each time the skill's background agents wake its
+session, above its final one). The line read is the last whole line of the print, stripped of
+outer whitespace, that is a success, no-op, or stop line of the bundled fixed-line file
+`bundled/fixed_lines.tsv` (one `kind<TAB>line` row per line of the plugin's fixed console line
+table); a verdict-kind line never counts, so the review's convergence line below its first
+line is passed over. The check makes the shell exit unless that line is a success or no-op
+line, and a print holding no such line stops the chain, its last non-blank line reported as
+the line read. Once the shell has exited the runner prints the line the run ended on and the
+recipe line it stopped at, then waits for a keypress before exiting.
 
 The values a line references reach it through the environment the runner is started in, as
 `"$GURITA_*"` session variables; the command line carries none.
@@ -58,8 +63,8 @@ filled from `--mission` and the re-read heading: the recipe's own lines at its h
 chosen single-task line in the slot line's place, every `<path>` and `<Task Title>` in them
 written as a reference to its variable in the form its quoting needs, so the values never
 enter a line's text. The run goes on to the next task only when the session ran to its end and
-the slot line's final message opened with `Task completed.`, stops on any other first line,
-and ends when no heading remains; it closes as a chain does, on its report and a keypress.
+the line the slot line's check read from its print, as a chain's check reads one, was
+`Task completed.`, stops on any other line read, and ends when no heading remains; it closes as a chain does, on its report and a keypress.
 """
 
 import argparse
@@ -80,6 +85,7 @@ INVOCATION = re.compile(r"[/$]gurita:")
 INTERACTIVE_MARK = re.compile(r"(?:^|\s)#\s*interactive\s*$")
 
 CONTINUING_KINDS = ("success", "no-op")
+READ_KINDS = CONTINUING_KINDS + ("stop",)
 SHELL_FAMILY = ("sh", "bash", "zsh")
 FALLBACK_SHELL = "/bin/sh"
 
@@ -145,9 +151,18 @@ def read_fixed_lines(path: str) -> Dict[str, str]:
     return fixed
 
 
-def first_line(message: str) -> Optional[str]:
-    """The first non-blank line of a final message, stripped, or None when it holds none."""
-    for line in message.splitlines():
+def fixed_line(message: str, fixed: Dict[str, str]) -> Optional[str]:
+    """The last whole line of a print, stripped, that is a success, no-op, or stop line of
+    `fixed`, or None when it holds none; a verdict-kind line never counts."""
+    for line in reversed(message.splitlines()):
+        if fixed.get(line.strip()) in READ_KINDS:
+            return line.strip()
+    return None
+
+
+def last_line(message: str) -> Optional[str]:
+    """The last non-blank line of a print, stripped, or None when it holds none."""
+    for line in reversed(message.splitlines()):
         if line.strip():
             return line.strip()
     return None
@@ -156,11 +171,15 @@ def first_line(message: str) -> Optional[str]:
 def verdict(message: str, fixed: Dict[str, str]) -> Tuple[bool, Optional[str]]:
     """Whether the chain goes on after a headless line printing `message`, and the line read.
 
-    It goes on only when the message's first line is a success or no-op line; a stop or
-    verdict line, any line the file does not hold, and an empty print all stop it.
+    The line read is the print's last success, no-op, or stop line, so interim messages above
+    the final one and a list or verdict line below its first line are passed over; it goes on
+    only when that line is a success or no-op line. A print holding no such line stops it, its
+    last non-blank line given as the line read, and an empty print stops it with none.
     """
-    line = first_line(message)
-    return (line is not None and fixed.get(line) in CONTINUING_KINDS), line
+    line = fixed_line(message, fixed)
+    if line is not None:
+        return fixed[line] in CONTINUING_KINDS, line
+    return False, last_line(message)
 
 
 def session_shell(environ: Dict[str, str]) -> List[str]:
@@ -631,8 +650,8 @@ def session_lines(lines: List[str], slot: int, task_line: str) -> List[str]:
 
 def task_completed(progress: Optional[str], records: List[Tuple[int, str, str]], slot: int) -> bool:
     """The looped verdict: a task's session takes the run to the next task only when it ran to
-    its end and the slot line's final message opened with `Task completed.`; any other first
-    line, the no-op line included, stops the run."""
+    its end and the line its check read from the slot line's print is `Task completed.`; any
+    other line read, the no-op line included, stops the run."""
     if progress != END_MARK:
         return False
     read = [line for number, _, line in records if number == slot]
@@ -720,14 +739,15 @@ def build_parser() -> argparse.ArgumentParser:
         "chain",
         help="run the chain's lines, given one argument each after --",
         description="Run the chain's lines in one shell session, stopping after a headless "
-        "line whose final message does not open with a success or no-op fixed line.",
+        "line whose print's last success, no-op, or stop fixed line is not a success or no-op "
+        "line, or whose print holds none.",
     )
     chain.add_argument("lines", nargs="+", metavar="LINE")
     check = commands.add_parser(
         "check",
         help="the check step a chain's script runs after each headless line",
-        description="Read the first line of one headless line's final message, record the "
-        "verdict, and exit 1 unless the line is a success or no-op fixed line.",
+        description="Read the last success, no-op, or stop fixed line of one headless line's "
+        "print, record the verdict, and exit 1 unless the line is a success or no-op fixed line.",
     )
     check.add_argument("--fixed-lines", required=True, metavar="FILE")
     check.add_argument("--output", required=True, metavar="FILE")

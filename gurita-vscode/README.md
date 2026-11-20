@@ -158,8 +158,12 @@ claude -p "/gurita:review-mission-requirements --mission <path>" --dangerously-s
 Each line is one of three kinds, read from its text:
 
 - **Headless** when it holds a `gurita:` invocation (`/gurita:` or `$gurita:`) and carries no
-  `# interactive` mark: its output is checked, and the chain goes on only when its final
-  message opens with a success or no-op line of the plugin's fixed console lines.
+  `# interactive` mark: its output is checked, and the chain goes on only when the last whole
+  line of its print that is a success, no-op, or stop line of the plugin's fixed console lines
+  is a success or no-op line. The whole print is read because a host may print several messages
+  for one line (an interim one each time the skill's background agents wake its session), and
+  lines of the verdict kind, such as the review's convergence line, never count. A print holding
+  no success, no-op, or stop line stops the chain.
 - **Interactive** when it ends in a `# interactive` comment: it runs in the terminal as written.
 - **A shell step** otherwise: it runs as written.
 
@@ -183,8 +187,8 @@ single-task line the rule file gives it. Every recipe holding exactly one headle
 `<Task Title>`, shipped or your own, counts as a named single-task line. In the preview you may
 override any task's line by picking another named line. **Start run** then starts the loop,
 which before each task re-reads the top remaining heading of `TASKS_TODO.md`, runs the recipe's
-lines with that task's line in the slot, goes on only when the task's run ends on
-`Task completed.`, and stops, without running it, at the first task left unresolved, a task added
+lines with that task's line in the slot, goes on only when the line read from the single-task
+line's print, as any headless line's is read, is `Task completed.`, and stops, without running it, at the first task left unresolved, a task added
 after the run started included.
 
 The rule file is `task_line_rules.txt`, directly in the project root, at a fixed path no setting
