@@ -17,4 +17,4 @@ package = false
 
 [tool.pytest.ini_options]
 pythonpath = ["core/tools"]
-testpaths = ["tests"]
+testpaths = ["tests", "gurita-vscode/runner_tests"]

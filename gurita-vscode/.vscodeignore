@@ -8,3 +8,5 @@ node_modules/**
 tsconfig*.json
 package-lock.json
 scripts/**
+runner_tests/**
+**/__pycache__/**
