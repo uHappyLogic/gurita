@@ -33,7 +33,7 @@ Gurita (Indonesian for octopus) brings all the important questions up to be deci
 Gurita was published as Cairn up to 1.9.0; the old names no longer work, and the upgrade steps for an existing install are under [Installation](#installation).
 
 ```mermaid
-%%{init: {'theme':'base','themeVariables':{'fontFamily':'ui-sans-serif, system-ui','lineColor':'#94a3b8','primaryBorderColor':'#475569'},'flowchart':{'wrappingWidth':9999,'curve':'basis'}}}%%
+%%{init: {'theme':'base','themeVariables':{'fontFamily':'ui-sans-serif, system-ui','lineColor':'#94a3b8','primaryBorderColor':'#475569','edgeLabelBackground':'#ffffff'},'flowchart':{'wrappingWidth':9999,'curve':'basis'}}}%%
 flowchart LR
     subgraph upfront["Decide upfront"]
         define["define"]
@@ -45,19 +45,18 @@ flowchart LR
     subgraph agents["Hand execution to agents"]
         derive["derive"]
         complete["complete"]
+        finish["finish"]
     end
 
     define --> review --> alternatives --> recommend --> answer
     answer -.->|until no open questions remain| review
     answer -->|handoff| derive
-    derive --> complete
+    derive --> complete --> finish
 
-    classDef decide fill:#faf5ff,stroke:#9333ea,color:#581c87;
-    classDef execute fill:#ecfdf5,stroke:#059669,color:#064e3b;
-    class define,review,alternatives,recommend,answer decide;
-    class derive,complete execute;
-    style upfront fill:#ffffff,stroke:#9333ea,color:#581c87;
-    style agents fill:#ffffff,stroke:#059669,color:#064e3b;
+    classDef step fill:#ffffff,stroke:#475569,color:#0f172a;
+    class define,review,alternatives,recommend,answer,derive,complete,finish step;
+    style upfront fill:#ffffff,stroke:#94a3b8,color:#334155;
+    style agents fill:#ffffff,stroke:#94a3b8,color:#334155;
 ```
 
 ## Installation
