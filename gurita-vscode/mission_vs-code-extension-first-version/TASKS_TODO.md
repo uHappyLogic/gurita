@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Task List Heading Reader With Unit Tests
-
-Write the read of a mission's `TASKS_TODO.md` as a TypeScript module importing nothing from `vscode`: it returns the remaining tasks' `##` headings in file order and reports a file holding a conflict-marker line (`<<<<<<<`, `=======`, or `>>>>>>>` at column 0) as unreadable. The page's remaining-task headings and its tasks-remain fact are drawn from it. Verified by `node:test` unit tests over `tests/fixtures/task_list_todo.md` and small fixtures of its own, run by the npm test script.
-
----
-
 ## Runner Chain Subcommand and Fixed-Line Verdict
 
 Create the runner, `runner.py`, one stdlib-only Python 3.9+ file under `gurita-vscode/` that the VSIX ships, with its `runner.py chain -- LINE...` subcommand as the Runner decisions state it: it infers each line's kind (interactive by its trailing `# interactive`, headless by a `gurita:` invocation, otherwise a shell step), composes the whole chain into one script run by the shell `$SHELL` names as an interactive shell (`/bin/sh` when it is unset or outside the sh, bash, zsh family), sends each headless line's output through `tee` to a run-local file and follows it with a check step that stops the chain unless the first line of the final message is a success or no-op line of the bundled fixed-line file, then prints the line the run ended on and the recipe line it stopped at and waits for a keypress. Its pytest tests stand beside the extension under `gurita-vscode/` with a conftest of their own, `pyproject.toml`'s `testpaths` gaining that directory, and cover line-kind inference and the fixed-line verdict while starting no shell session and no stub host command. Verified by both pytest runs passing, the 3.9 floor run included, and by running a chain of plain shell steps through it.
