@@ -17,8 +17,17 @@
     "Other"
   ],
   "main": "./out/extension.js",
-  "activationEvents": [],
-  "contributes": {},
+  "activationEvents": [
+    "onCommand:gurita.openMissionPane"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "gurita.openMissionPane",
+        "title": "Gurita: Open Mission Pane"
+      }
+    ]
+  },
   "scripts": {
     "compile": "tsc -p tsconfig.json && tsc -p tsconfig.webview.json",
     "test": "npm run compile && node --test \"out/test/**/*.test.js\"",

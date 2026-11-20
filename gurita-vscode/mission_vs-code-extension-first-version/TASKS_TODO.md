@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Mission Pane Panel and Navigation
-
-Build the pane's frame: the contributed command `gurita.openMissionPane`, titled "Gurita: Open Mission Pane", creates the one webview panel in the editor area or reveals the one the extension holds, with nothing done at startup and no `WebviewPanelSerializer`, status bar item, menu entry, default keybinding, or automatic opening, and `webview.html` is set once to a page shell under a content security policy whose script, loaded through `asWebviewUri`, posts a ready message on every load and draws what the extension answers. The extension answers with the live missions, read by running the bundled `missions.py live` with `python3` at the git top level (`git rev-parse --show-toplevel`) of the first workspace folder, and the page draws a row of tabs, one per mission in that order (its title, its path as a tooltip), with the selected mission's path, title, and `started` or `defined` beneath, the first mission shown on opening, or the one failure state of the Live query failure decision in place of the pages. Verified by the compile, the unit tests, and the package build passing and by reading the code against the Opening, Restart, Project root, Navigation, and Live query failure decisions.
-
----
-
 ## Question View and Task Headings
 
 Draw each mission's documents on its page from the in-process readers: the label's facts (whether any question lacks alternatives or a pick, whether the question list is empty, whether tasks remain), the question view with one collapsed row per question showing its Short Title and the id of its picked alternative, each row opening to everything its block holds, with expand-all and collapse-all controls, and the remaining task headings. The page redraws its rows in place from each parse the extension posts, keeping open rows open, and saves its set of open Short Titles with `setState` on every toggle, reading it back with `getState`, while a missing or unparsable `open_questions.xml` or `TASKS_TODO.md` replaces only the parts drawn from it with the notice the Mission document read failure decision states. Verified by the compile, the unit tests, and the package build passing and by reading the page's script against the Redraw and Mission document read failure decisions and the draft's Question view.
