@@ -1,33 +1,4 @@
 <open-questions>
-  <open-question id="Own recipe file path">
-    <question>A person&apos;s own recipes for the VS Code extension (`gurita-vscode`) are one per-user file outside every project, at a default path a VS Code user setting changes. What is that default path?</question>
-    <recommendation option="Home dot directory">One literal path reads the same in the README, in a message, and in a terminal, beside the hosts&apos; own per-user directories, with no environment lookup or per-platform branch for a file the setting can move anyway.</recommendation>
-    <alternative id="Home dot directory">
-      The default is a fixed path under the person&apos;s home directory in a dot directory named for the plugin, `~/.gurita/recipes.md`, spelled the same on every operating system, read by expanding the home directory and honouring no environment variable.
-      <advantage>One short path that reads the same in the documentation, on every platform, and in a terminal, standing beside the hosts&apos; own `~/.claude/`-style directories where a person already keeps per-user agent configuration, and leaving room in the same directory for any later per-user file of the plugin.</advantage>
-      <drawback>Adds one more dot directory to the home directory and ignores the XDG and platform conventions a tidy-minded user may expect, and it is a directory nothing else creates, so the extension or the person must create it before the first own recipe is written.</drawback>
-    </alternative>
-    <alternative id="XDG config directory">
-      The default is `$XDG_CONFIG_HOME/gurita/recipes.md`, falling back to `~/.config/gurita/recipes.md` when that variable is unset, the same rule on macOS and Linux alike rather than a platform-native directory.
-      <advantage>Follows the widely used per-user configuration convention, so the file sits where dotfile managers and backups of `~/.config` already reach, and a person who relocates their configuration with `XDG_CONFIG_HOME` gets the file moved with it and no new top-level dot directory.</advantage>
-      <drawback>The default is no longer one literal path, so the documentation and any message naming a missing file must state a rule with a fallback, and the extension carries an environment lookup; on macOS it departs from the system&apos;s own Application Support convention, and on Windows it names a directory with no standing there, its fitness depending on which operating systems the first version supports, a condition the session shell and platform question owns.</drawback>
-    </alternative>
-    <alternative id="Platform-native config directory">
-      The default is the operating system&apos;s own per-user application configuration directory with a `gurita` subdirectory and a `recipes.md` file: `~/Library/Application Support/gurita/recipes.md` on macOS, `$XDG_CONFIG_HOME/gurita/recipes.md` (else `~/.config/gurita/recipes.md`) on Linux, and `%APPDATA%\gurita\recipes.md` on Windows.
-      <advantage>Each platform&apos;s file stands where that platform&apos;s tools and users look for an application&apos;s per-user configuration, so the default is correct by convention wherever the extension runs.</advantage>
-      <drawback>Three defaults to implement, document, and test where the maintainer runs one platform, and the macOS path holds a space, which a person pasting it into a shell must quote; how much of the branching is ever exercised depends on which operating systems the first version supports, a condition the session shell and platform question owns.</drawback>
-    </alternative>
-    <alternative id="Extension global storage">
-      The default is a `recipes.md` file inside the directory VS Code allots the extension for per-user data, its `ExtensionContext.globalStorageUri` (on macOS `~/Library/Application Support/Code/User/globalStorage/&lt;publisher&gt;.gurita-vscode/recipes.md`), resolved by the editor at run time rather than spelled by the extension.
-      <advantage>No path convention to choose or implement: the editor hands over a per-user, per-extension directory outside every project that exists on every platform VS Code runs on, and the extension never writes into the home directory on its own account.</advantage>
-      <drawback>A long, editor-internal path a person would never find or type by hand, which changes with the editor build (Code, Insiders, or a fork) and embeds the extension&apos;s id, so its spelling depends on the publisher value the manifest question owns; VS Code may clear an extension&apos;s global storage when the extension is uninstalled, putting a person&apos;s hand-written recipes at risk on a reinstall of the hand-installed VSIX, and the file cannot be shared with a terminal-side copy of the same lines.</drawback>
-    </alternative>
-    <alternative id="No default path">
-      The setting defaults to empty, and an empty setting means no own recipe file is read at all, so the page shows only the shipped recipes until the person sets the setting to a path of their choosing; the premise that the file has a default path is rejected.
-      <advantage>The extension invents no location and reads no file the person did not name, so nothing is created or looked for on a machine whose user never writes an own recipe, and a person who already keeps a file of lines elsewhere points the setting at it directly.</advantage>
-      <drawback>Departs from the design draft&apos;s recorded decision that the file stands at a default path a setting changes, which the mission&apos;s goal keeps for what the person sees, and every person who wants one own recipe, a Codex line or a `claude-wait` variant, must first find and set the setting, with no conventional place documentation can point them to.</drawback>
-    </alternative>
-  </open-question>
   <open-question id="Own recipe setting name">
     <question>What is the VS Code user setting called that changes the path of a person&apos;s own recipe file for the VS Code extension (`gurita-vscode`)?</question>
     <applied-principle>Prefer domain-neutral terms</applied-principle>

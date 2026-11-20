@@ -106,5 +106,7 @@ No other mission is live, so nothing holds or shares the scope. The record holds
 
 - **Own recipe placement.** Every own recipe that replaces no shipped recipe is listed on each mission's page in one group of its own, under a fixed heading of the extension's such as "Your recipes", below the Claude Code and Antigravity groups. Within it the recipes keep the order the person's file lists them in, and the extension reads nothing of a recipe's lines to place it.
 
+- **Own recipe file path.** The default path of a person's own recipe file is `~/.gurita/recipes.md`, a fixed path in a dot directory named for the plugin under the person's home directory, spelled the same on every operating system, read by expanding the home directory and honouring no environment variable.
+
 ## Out of Scope
 
