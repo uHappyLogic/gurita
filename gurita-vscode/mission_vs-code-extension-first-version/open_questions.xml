@@ -421,6 +421,41 @@
   </open-question>
   <open-question id="Host-named heading form">
     <question>Six `###` headings of `snippets/GURITA_USAGE.md` repeat under both `## Claude Code` and `## Antigravity` (First run, Requirements iteration, the three Execute tasks headings, and Finish mission), and each repeated heading is to name its host so that every recipe heading in the file is unique. In what form does a repeated heading name its host?</question>
+    <alternative id="Antigravity suffix in parentheses">
+      Only the six Antigravity copies change, each gaining the host&apos;s full name in parentheses at its end, the form the draft&apos;s example gives: &quot;First run (Antigravity)&quot;, &quot;Requirements iteration (Antigravity)&quot;, &quot;Execute tasks of normal difficulty (Antigravity)&quot;, &quot;Execute tasks (critical tasks) (Antigravity)&quot;, &quot;Execute tasks with extra requirement surface stretch (Antigravity)&quot;, &quot;Finish mission (Antigravity)&quot;. The six Claude Code headings keep their names unchanged.
+      <advantage>It is the smallest edit to the file and the form the design draft already wrote down as its example, so the draft and the shipped file agree with no revision, and the Claude Code headings, the maintainer&apos;s main host, keep the names the maintainer already uses.</advantage>
+      <drawback>A bare heading then silently means Claude Code, so a person&apos;s own recipe named &quot;First run&quot; replaces the Claude Code chain without saying so, and a later third host (Codex) would have to repeat the rule of which host stays bare; the parentheses also nest awkwardly in &quot;Execute tasks (critical tasks) (Antigravity)&quot; and share the parenthesized form the draft uses for a person&apos;s own variants, such as &quot;(API key)&quot;.</drawback>
+    </alternative>
+    <alternative id="Both hosts suffixed in parentheses">
+      Both copies of each of the six repeated headings change, each gaining its own host&apos;s full name, as its `##` heading spells it, in parentheses at its end: &quot;First run (Claude Code)&quot; and &quot;First run (Antigravity)&quot;, likewise for the other five, &quot;Execute tasks (critical tasks) (Claude Code)&quot; included. Headings that do not repeat keep their names.
+      <advantage>No host is the implicit default: every repeated recipe states its host in its name, so an own recipe replacing one names exactly which host&apos;s chain it replaces, and a later host&apos;s heading follows the same rule with no ordering between hosts.</advantage>
+      <drawback>Twelve headings change instead of six, the Claude Code names the maintainer already works from change too, and the draft&apos;s example no longer matches the file; the nested parentheses on the critical-tasks heading and the overlap with the parenthesized own-variant convention remain, and every repeated button on the pane repeats a host its group heading already shows.</drawback>
+    </alternative>
+    <alternative id="Antigravity suffix after a hyphen">
+      Only the six Antigravity copies change, each gaining the host&apos;s full name after a spaced ASCII hyphen at its end: &quot;First run - Antigravity&quot;, &quot;Execute tasks (critical tasks) - Antigravity&quot;, and likewise for the other four. The six Claude Code headings keep their names unchanged.
+      <advantage>It keeps the edit to six headings and the Claude Code names untouched while leaving parentheses to the headings&apos; own wording and to a person&apos;s own variants, so &quot;Execute tasks (critical tasks) - Antigravity&quot; and a variant such as &quot;Execute tasks of normal difficulty - Antigravity (API key)&quot; read without nested or stacked parentheses.</advantage>
+      <drawback>As with any one-host form, a bare heading silently means Claude Code and a later host must repeat which host stays bare; it departs from the draft&apos;s written example, and the spaced hyphen is a separator a person typing an own recipe&apos;s heading must reproduce exactly.</drawback>
+    </alternative>
+    <alternative id="Both hosts suffixed after a hyphen">
+      Both copies of each of the six repeated headings change, each gaining its own host&apos;s full name after a spaced ASCII hyphen at its end: &quot;First run - Claude Code&quot; and &quot;First run - Antigravity&quot;, likewise for the other five. Headings that do not repeat keep their names.
+      <advantage>It combines no implicit default host with a separator that never collides with the parentheses already in &quot;Execute tasks (critical tasks)&quot; or with a person&apos;s parenthesized variants, so the host part is always the text after the last &quot; - &quot;.</advantage>
+      <drawback>Twelve headings change, the Claude Code names the maintainer works from included, it matches neither the draft&apos;s example nor any existing heading&apos;s style, and every repeated button repeats a host its group heading already shows.</drawback>
+    </alternative>
+    <alternative id="Both hosts as a prefix">
+      Both copies of each of the six repeated headings change, each opening with its own host&apos;s full name followed by a colon: &quot;Claude Code: First run&quot; and &quot;Antigravity: First run&quot;, likewise for the other five, &quot;Antigravity: Execute tasks (critical tasks)&quot; included. Headings that do not repeat keep their names.
+      <advantage>The host reads first, so in a flat list, a person&apos;s own recipe file or a sorted listing of names, the repeated recipes group by host, the recipe&apos;s own wording stays intact at the end with no nested parentheses, and no host is the implicit default.</advantage>
+      <drawback>Twelve headings change and the repeated recipes no longer sort beside their non-repeated siblings under the same host, which keep bare names, so names in one host group mix prefixed and unprefixed forms; it departs furthest from the draft&apos;s example, and a colon in a fixed name is one more character an own recipe must copy exactly.</drawback>
+    </alternative>
+    <alternative id="Antigravity binary suffix">
+      Only the six Antigravity copies change, each gaining the host&apos;s binary name, as its command lines invoke it, in parentheses at its end: &quot;First run (agy)&quot;, &quot;Execute tasks (critical tasks) (agy)&quot;, and likewise for the other four. The six Claude Code headings keep their names unchanged.
+      <advantage>It is the shortest marker, keeping button labels and own-recipe headings compact, and it names the host exactly as the recipe&apos;s own lines do, so the heading and the command it runs say the same word.</advantage>
+      <drawback>The marker differs from the `##` heading it stands under (&quot;Antigravity&quot;), so the file names one host two ways, and a bare heading still silently means Claude Code; the nested parentheses on the critical-tasks heading remain.</drawback>
+    </alternative>
+    <alternative id="Both hosts binary suffix">
+      Both copies of each of the six repeated headings change, each gaining its own host&apos;s binary name in parentheses at its end: &quot;First run (claude)&quot; and &quot;First run (agy)&quot;, likewise for the other five. Headings that do not repeat keep their names.
+      <advantage>It is the shortest symmetric marker, with no host as the implicit default and each heading naming its host exactly as the lines beneath it invoke it.</advantage>
+      <drawback>Twelve headings change, the Claude Code names the maintainer works from included, and the file then names each host two ways, product name in its `##` heading and binary in its recipe headings, which reads oddly on a pane whose groups use the product names; the nested parentheses on the critical-tasks heading remain.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Button recipe names">
     <question>The snippet file `snippets/GURITA_USAGE.md` gains six one-line recipes that the buttons of the VS Code extension (`gurita-vscode`) run by fixed name, one each for `discuss-open-question`, `discuss-mission-goal`, `answer-open-question`, `answer-open-question-with-recommendation`, `answer-open-question-with-alternative`, and `define-mission-goal`. What is the `###` heading of each of the six?</question>
