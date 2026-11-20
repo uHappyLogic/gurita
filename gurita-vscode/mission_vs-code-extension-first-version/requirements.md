@@ -132,5 +132,7 @@ No other mission is live, so nothing holds or shares the scope. The record holds
 
 - **Redraw.** The extension sets `webview.html` once, to a page shell whose script draws the question view. After a run it posts the fresh parse to the visible page, which redraws the rows in place and keeps open those already open. The page saves its set of open Short Titles with `setState` on every toggle and reads it back with `getState` when it is re-created. `retainContextWhenHidden` stays off: a hidden pane loses its page, and on every load the page's script posts a ready message and the extension answers with the current parse, so a run that ended while the pane was hidden reaches the page when it is shown again.
 
+- **Opening.** The extension contributes exactly one command, for example `gurita.openMissionPane` titled "Gurita: Open Mission Pane", offered in the Command Palette in every workspace whether or not a mission is live, and activates on that command alone. Running it creates the one webview panel in the editor area or calls `reveal` on the panel it already holds. There is no status bar item, no menu entry, no default keybinding, and no automatic opening.
+
 ## Out of Scope
 
