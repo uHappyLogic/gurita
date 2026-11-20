@@ -126,5 +126,7 @@ No other mission is live, so nothing holds or shares the scope. The record holds
 
 - **Session variables.** Each variable is named by one fixed rule applied to its placeholder: the prefix `GURITA_`, then the placeholder's text upper-cased with every space turned into an underscore, giving `GURITA_PATH`, `GURITA_SHORT_TITLE`, `GURITA_ALTERNATIVE_ID`, `GURITA_GOAL`, `GURITA_SCOPE`, `GURITA_ANSWER_TEXT`, and `GURITA_TASK_TITLE`. The names are a stated, stable part of the extension, so a shell step in a person's own recipe may read them, for example to log the task title of a looped run.
 
+- **One session.** Before it starts, the runner composes one shell script from the whole chain (one per task's session in a looped run) and runs it as a single shell process that keeps the terminal as its own input and output. Shell steps and interactive lines stand in the script as written, so an interactive line inherits the terminal as any command in a shell does. Each headless line is wrapped so its output goes through `tee` both to the terminal and to a run-local file, and is followed by a check step, the runner itself started in a check mode, that reads the first line of that file's final message and makes the shell exit when the line stops the chain. The runner process waits for the shell and reads the check's verdict to report how the run ended.
+
 ## Out of Scope
 
