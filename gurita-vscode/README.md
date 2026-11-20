@@ -1,0 +1,227 @@
+# Gurita for VS Code
+
+Gurita for VS Code (`gurita-vscode`) puts the Gurita plugin's live missions in one pane in the
+editor area: a page per live mission with its question view and remaining tasks, buttons that
+run the plugin's skills as recipes in a terminal, and a looped task run that completes a
+mission's tasks one at a time. It drives the `claude` and `agy` command-line tools with the
+Gurita plugin installed in them; it does not replace the plugin.
+
+This file covers building, packaging, installing, and using the extension. The extension is
+not published to any marketplace: it is built from this repository and installed by hand.
+
+## Requirements
+
+- VS Code 1.143.0 or later (the manifest declares `engines.vscode` `^1.143.0`), with its `code`
+  command on `PATH` for the command-line install.
+- Node 22 through nvm under `$HOME/.nvm`, to build and package. Node is needed only for the
+  build; the installed extension needs no Node install of its own.
+- `python3`, 3.9 or later, on `PATH`: the extension runs the bundled missions tool and its own
+  runner with it.
+- `git`: the project root is the top level of a git work tree.
+- `claude` and, for the Antigravity recipes, `agy`, each with the Gurita plugin installed, on the
+  `PATH` of the shell the runner starts.
+- macOS or Linux. On Windows only through Remote-WSL, where the extension runs on the Linux side.
+
+## Building and packaging
+
+Every Node command runs under Node 22 through nvm, in a subshell, from the repository root:
+
+```
+(source "$HOME/.nvm/nvm.sh" && nvm use 22 && cd gurita-vscode && npm ci)
+(source "$HOME/.nvm/nvm.sh" && nvm use 22 && cd gurita-vscode && npm run compile)
+(source "$HOME/.nvm/nvm.sh" && nvm use 22 && cd gurita-vscode && npm test)
+(source "$HOME/.nvm/nvm.sh" && nvm use 22 && cd gurita-vscode && npm run package)
+```
+
+- `npm ci` installs the pinned build dependencies from `package-lock.json` into
+  `node_modules/`: TypeScript, `@types/vscode` 1.140.0, `@types/node`, and `@vscode/vsce`.
+- `npm run compile` compiles the extension host code (`tsconfig.json`, CommonJS) and the
+  webview page's script (`tsconfig.webview.json`, with the DOM library) from `src/` into `out/`,
+  one emitted file per source file, with no bundler.
+- `npm test` compiles, then runs the unit tests of the recipe reader, the `open_questions.xml`
+  parser, and the `TASKS_TODO.md` heading read with Node's built-in `node:test` over the
+  compiled files under `out/test/`. Nothing runs inside an editor.
+- `npm run package` runs `vsce package`, which first runs the `vscode:prepublish` script: the
+  compile, then `scripts/bundle.js`, the extension's own build step, which copies
+  `core/tools/missions.py` and `snippets/GURITA_USAGE.md` verbatim into `bundled/` and writes
+  `bundled/fixed_lines.tsv` from the `## Fixed console lines` table of
+  `docs/skill-reference.md`, one `kind<TAB>line` row per table line. Every package therefore
+  carries the missions tool, the recipes, and the fixed lines of the checkout it was built from.
+
+The runner's own tests are pytest tests under `gurita-vscode/runner_tests/`, collected by the
+repository's ordinary pytest runs, run from the repository root:
+
+```
+uv run pytest gurita-vscode/runner_tests
+```
+
+`node_modules/`, `out/`, `bundled/`, and `dist/` are build output, ignored by git; nothing the
+build writes is committed.
+
+## Installing
+
+The package lands at one fixed path, overwritten by every build:
+
+```
+gurita-vscode/dist/gurita-vscode.vsix
+```
+
+Install it by hand, from the repository root:
+
+```
+code --install-extension gurita-vscode/dist/gurita-vscode.vsix
+```
+
+The installed extension's id is `uhappylogic.gurita-vscode`. Its version, `0.1.0` at first, is
+the extension's own, kept in `gurita-vscode/package.json` independent of the plugin's `VERSION`
+and bumped by hand whenever the extension changes. To install a rebuilt package of the same
+version over the installed one, add `--force`; to remove it, run
+`code --uninstall-extension uhappylogic.gurita-vscode`.
+
+## Using the pane
+
+Open the pane with the command **Gurita: Open Mission Pane** (`gurita.openMissionPane`) from the
+Command Palette. It is the extension's only entry point: there is no status bar item, menu
+entry, or keybinding, the pane never opens by itself, and it does not survive a restart or a
+window reload, so open it again after one. **Gurita: Refresh Mission Pane**
+(`gurita.refreshMissionPane`) and the pane's **Refresh** control re-read everything.
+
+The project root is the top level of the git work tree holding the first workspace folder;
+every other folder is ignored. The pane lists the live missions that `missions.py live` prints
+from that root:
+
+- A row of tabs across the top, one per live mission, each showing the mission's title with its
+  path as a tooltip, and at its end the two mission-starting buttons, **New mission** (runs the
+  `discuss-mission-goal` recipe) and **Define mission** (runs the `define-mission-goal` recipe).
+- Under the selected tab, the mission's page: its path, title, and `started` or `defined`, the
+  recipe buttons, the question view parsed from `open_questions.xml` (each question a collapsed
+  row with **Discuss**, **Answer**, and **Answer with recommendation** buttons, and an
+  **Answer with this alternative** button on each alternative inside an opened row), and the
+  remaining task headings of `TASKS_TODO.md`.
+
+Every value a button needs (a goal, a scope typed as a path from the project root, an answer)
+is typed into VS Code's own input box, one line per value. A click on a recipe button starts its
+run at once in a terminal; every recipe button shows its lines, placeholders included, before
+you click. While a run started for a mission is going, another click on that mission's page
+starts nothing: a notification says a chain is already running and the run's terminal is shown.
+
+The pane re-reads by itself after each of its runs, once you dismiss the run's terminal, and on
+changes to any mission's `requirements.md`, `open_questions.xml`, or `TASKS_TODO.md`; git state
+is not watched. When the live missions cannot be read, the pane shows one line saying so with
+the cause beneath it, and the two mission-starting buttons stay. When a single mission document
+is missing or does not parse, only the part of the page drawn from it is replaced by a notice
+naming the file.
+
+## Recipes
+
+A recipe is a `###` heading, its name, and the lines of the first fenced block beneath it. The
+pane lists recipes from two files.
+
+### The shipped recipe file
+
+The package ships `snippets/GURITA_USAGE.md` as `bundled/GURITA_USAGE.md`, read at run time. Only
+the `###` blocks under its `## Claude Code` and `## Antigravity` headings are recipes, each
+listed in that host's group; the blocks under `## Manual use` are for reading only. Besides the
+chains, the file carries:
+
+- The six button recipes, under `## Claude Code`, each named by the skill its one line invokes:
+  `discuss-open-question`, `discuss-mission-goal`, `answer-open-question`,
+  `answer-open-question-with-recommendation`, `answer-open-question-with-alternative`, and
+  `define-mission-goal`. The buttons run the recipe of these fixed names.
+- The looped recipe, `Execute tasks one at a time`, whose only line is the slot line
+  `<single-task line>` (see the looped task run below).
+- The single-task lines, each one headless line holding `<Task Title>`:
+  `Single task with Opus xHigh (Claude Code)`, `Single task with Opus High (Claude Code)`, and
+  `Single task with Opus High (Antigravity)`.
+
+### Your own recipe file
+
+You can keep recipes of your own in one Markdown file, by default `~/.gurita/recipes.md`, the
+`~` standing for your home directory on every operating system. The user setting
+`gurita.ownRecipesFile` changes the path; left empty, the default is read, and a leading `~` in
+it is expanded. A missing file simply holds no recipe.
+
+The file is a flat list of `###` recipes, each heading followed by a fenced block of lines;
+`##` headings in it are ignored. An own recipe carrying the name of a shipped recipe replaces
+that recipe in place, a button recipe included; every other own recipe is listed below the
+Claude Code and Antigravity groups under **Your recipes**, in the order your file lists them.
+For example:
+
+````
+### Review twice
+```
+claude -p "/gurita:review-mission-requirements --mission <path>" --dangerously-skip-permissions --model "fable" --effort xhigh;
+claude -p "/gurita:review-mission-requirements --mission <path>" --dangerously-skip-permissions --model "fable" --effort xhigh;
+```
+````
+
+Each line is one of three kinds, read from its text:
+
+- **Headless** when it holds a `gurita:` invocation (`/gurita:` or `$gurita:`) and carries no
+  `# interactive` mark: its output is checked, and the chain goes on only when its final
+  message opens with a success or no-op line of the plugin's fixed console lines.
+- **Interactive** when it ends in a `# interactive` comment: it runs in the terminal as written.
+- **A shell step** otherwise: it runs as written.
+
+The placeholders the extension knows are `<path>`, `<Task Title>`, `<Short Title>`,
+`<Alternative Id>`, `<goal>`, `<scope>`, and `<answer text>`. A mission page fills `<path>`; a
+recipe holding any other known placeholder is left off the page's list and stays reachable by
+name for the button or loop that fills it. A recipe holding a placeholder name the extension does
+not know is shown as a non-runnable entry naming that placeholder and the file it came from.
+
+Values never enter a line's text: each placeholder is written as a reference to a session
+variable set in the run's environment, named `GURITA_` followed by the placeholder upper-cased
+with spaces turned into underscores: `GURITA_PATH`, `GURITA_TASK_TITLE`, `GURITA_SHORT_TITLE`,
+`GURITA_ALTERNATIVE_ID`, `GURITA_GOAL`, `GURITA_SCOPE`, and `GURITA_ANSWER_TEXT`. A shell step
+in your own recipe may read them as `"$GURITA_TASK_TITLE"` and the like.
+
+## The looped task run and the rule file
+
+A click on a looped recipe (one whose last line is the slot line `<single-task line>`) runs
+nothing yet: it shows a preview on the mission's page listing each remaining task with the
+single-task line the rule file gives it. Every recipe holding exactly one headless line with
+`<Task Title>`, shipped or your own, counts as a named single-task line. In the preview you may
+override any task's line by picking another named line. **Start run** then starts the loop,
+which before each task re-reads the top remaining heading of `TASKS_TODO.md`, runs the recipe's
+lines with that task's line in the slot, goes on only when the task's run ends on
+`Task completed.`, and stops, without running it, at the first task left unresolved, a task added
+after the run started included.
+
+The rule file is `task_line_rules.txt`, directly in the project root, at a fixed path no setting
+moves. It is plain UTF-8 text, one rule per line:
+
+```
+<pattern> -> <single-task line name>
+```
+
+- The line is split at its last ` -> `, so a pattern may hold the arrow; the name is the
+  single-task line's `###` heading exactly.
+- Each pattern is a Python regular expression, applied with `re.search`, case-insensitively, to
+  the task's title and brief joined by a newline. The first matching rule in file order wins.
+- The one line whose pattern is a bare `*` is the default, naming the line for every task no
+  rule matches; a second `*` line is refused.
+- Blank lines and lines opening with `#` are skipped.
+
+A missing rule file holds no rule and no default: the preview says so, naming the path it looked
+for, and lists every task as unresolved. A rule file that cannot be read as rules is refused
+whole: the preview shows each unreadable line's number and reason and lists every task as
+unresolved. Either way you can override tasks by hand and start the run, which stops at the first
+task carrying no override.
+
+This repository tracks its own rule file, `task_line_rules.txt` at its root: tasks whose title or
+brief names `core/tools/`, a `.py` file, a test, a parser, or the runner go to
+`Single task with Opus xHigh (Claude Code)`, and every other task to the default,
+`Single task with Opus High (Claude Code)`.
+
+## The runner
+
+Every run is the bundled `runner.py`, started with `python3` as the run terminal's own process at
+the project root. It composes the chain into one script and runs it in one shell session, using
+the shell `$SHELL` names as an interactive shell (so it reads `~/.zshrc` or `~/.bashrc`), or
+`/bin/sh` with no startup files when `$SHELL` is unset or names a shell outside the sh, bash, zsh
+family. When the chain ends it prints the line the run ended on and the recipe line it stopped
+at, then waits for a keypress; the terminal closes, and the pane re-reads, once you dismiss it.
+
+The runner can also be run by hand outside the editor, from `gurita-vscode/` once a build has
+written `bundled/`; `python3 runner.py --help` lists its `chain`, `preview`, and `loop` commands
+and their arguments.
