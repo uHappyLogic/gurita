@@ -12,7 +12,24 @@ test('each session variable is GURITA_ and the placeholder upper-cased, spaces t
     'GURITA_GOAL',
     'GURITA_SCOPE',
     'GURITA_ANSWER_TEXT',
+    'GURITA_ISSUE_DESCRIPTION',
   ]);
+});
+
+test('the issue description is a known placeholder, filled through GURITA_ISSUE_DESCRIPTION', () => {
+  assert.ok(KNOWN_PLACEHOLDERS.includes('issue description'));
+  assert.strictEqual(sessionVariable('issue description'), 'GURITA_ISSUE_DESCRIPTION');
+  assert.strictEqual(
+    fillPlaceholders(
+      'claude "/gurita:discuss-new-task --mission <path> <issue description>" --dangerously-skip-permissions --model "fable" --effort xhigh; # interactive',
+      KNOWN_PLACEHOLDERS,
+    ),
+    'claude "/gurita:discuss-new-task --mission ${GURITA_PATH} ${GURITA_ISSUE_DESCRIPTION}" --dangerously-skip-permissions --model "fable" --effort xhigh; # interactive',
+  );
+  assert.deepStrictEqual(sessionEnvironment({ path: 'gurita-vscode/mission_x/', 'issue description': 'The pane is slow' }), {
+    GURITA_PATH: 'gurita-vscode/mission_x/',
+    GURITA_ISSUE_DESCRIPTION: 'The pane is slow',
+  });
 });
 
 test('a placeholder inside double quotes is written as a bare reference', () => {

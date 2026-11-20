@@ -11,7 +11,8 @@
 // through the same run path: on a question's card the discuss, answer, and answer-with-
 // recommendation buttons, on an alternative on that card the answer-with-alternative button,
 // and on the pane at the tab row's end, in its failure state too, the two mission-starting
-// buttons. The Short Title and the Alternative Id come from the card clicked, every typed value from
+// buttons, and on a mission's page, beside its remaining-task headings, the new-task button. The
+// Short Title and the Alternative Id come from the card clicked, every typed value from
 // VS Code's own input box, one line per value, and each value reaches its line only as its
 // `GURITA_*` session variable. When a run's terminal closes the pane is re-read and the fresh parse
 // posted to the page. A click on a looped recipe's button shows that recipe's preview on the
@@ -62,6 +63,7 @@ type PageMessage =
   | { type: 'questionButton'; button: QuestionButton; mission: string; question: string }
   | { type: 'alternativeButton'; mission: string; question: string; alternative: string }
   | { type: 'missionButton'; button: MissionButton }
+  | { type: 'taskButton'; mission: string }
   | { type: 'previewLoop'; mission: string; recipe: string }
   | { type: 'startLoop'; mission: string; recipe: string; overrides: Record<string, string> };
 
@@ -179,6 +181,8 @@ export function openMissionPane(context: vscode.ExtensionContext): void {
         runAlternativeButton(context, message.mission, message.question, message.alternative);
       } else if (message?.type === 'missionButton') {
         void runMissionButton(context, message.button);
+      } else if (message?.type === 'taskButton') {
+        void runTaskButton(context, message.mission);
       } else if (message?.type === 'previewLoop') {
         void previewLoop(context, created, message.mission, message.recipe);
       } else if (message?.type === 'startLoop') {
@@ -475,6 +479,7 @@ const PROMPTS: Record<string, { prompt: string; placeHolder?: string }> = {
     prompt: 'The scope, the directory holding the core of the work, as a path from the project root',
     placeHolder: '.',
   },
+  'issue description': { prompt: 'The issue, to be clarified into tasks for this mission' },
 };
 
 /**
@@ -578,6 +583,30 @@ function runAlternativeButton(context: vscode.ExtensionContext, mission: string,
 }
 
 /**
+ * Runs the new-task button of the live mission at `mission`, as the latest answer listed it: the
+ * issue description typed into an input box, the mission's path from the page. A mission the
+ * latest answer did not list, or a mission with a running chain, starts nothing.
+ */
+async function runTaskButton(context: vscode.ExtensionContext, mission: string): Promise<void> {
+  if (posted === undefined || !posted.missions.has(mission)) {
+    return;
+  }
+  if (refuseWhileRunning(mission)) {
+    return;
+  }
+  const recipe = readButtonRecipe(context, BUTTON_RECIPES.discussTask, ['path', 'issue description']);
+  if (recipe === undefined) {
+    return;
+  }
+  const root = posted.root;
+  const typed = await askValues(['issue description']);
+  if (typed === undefined) {
+    return;
+  }
+  startChain(context, root, mission, recipe.name, recipe.lines, { path: mission, ...typed });
+}
+
+/**
  * The directory a mission-starting run starts in: the project root the latest answer read, else
  * the top level of the git work tree holding the first workspace folder, else that folder, and
  * undefined when no folder is open.
@@ -672,6 +701,8 @@ function pageShell(webview: vscode.Webview, script: vscode.Uri): string {
   .alternative { margin: 0.4em 0 0; padding: 0; }
   .alternative-head { display: flex; align-items: center; gap: 0.6em; }
   .alternative.picked h6 { color: var(--vscode-textLink-foreground); }
+  .section-head { display: flex; align-items: center; gap: 0.8em; }
+  .section-head h3 { margin: 0.8em 0; }
   .recipes h4 { margin: 0.8em 0 0.3em; }
   .recipe-list { display: flex; flex-wrap: wrap; gap: 0.4em; }
   button.recipe { background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; padding: 0.3em 0.9em; cursor: pointer; font: inherit; }

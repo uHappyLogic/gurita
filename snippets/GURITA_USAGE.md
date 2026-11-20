@@ -83,6 +83,11 @@ claude "/gurita:discuss-open-question --mission <path> <Short Title>" --dangerou
 claude "/gurita:discuss-mission-goal <goal>" --dangerously-skip-permissions --model "fable" --effort xhigh; # interactive
 ```
 
+### discuss-new-task
+```
+claude "/gurita:discuss-new-task --mission <path> <issue description>" --dangerously-skip-permissions --model "fable" --effort xhigh; # interactive
+```
+
 ### answer-open-question
 ```
 claude -p "/gurita:answer-open-question --mission <path> <Short Title>. <answer text>" --dangerously-skip-permissions --model "fable" --effort high;

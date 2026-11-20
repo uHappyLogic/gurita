@@ -23,6 +23,7 @@ export const KNOWN_PLACEHOLDERS: readonly string[] = [
   'goal',
   'scope',
   'answer text',
+  'issue description',
 ];
 
 /** The looped recipe's slot line, standing alone as its last line. */
@@ -291,7 +292,8 @@ export function pageRecipes(recipes: Recipe[], fillable: readonly string[]): Pag
 /**
  * The fixed names of the recipes the buttons outside the chains run, each the bare name of the
  * skill its one line invokes: three on a question's card, one on each alternative on that card,
- * and the two mission-starting buttons at the tab row's end.
+ * the two mission-starting buttons at the tab row's end, and the new-task button beside a
+ * mission's remaining-task headings.
  */
 export const BUTTON_RECIPES = {
   discussQuestion: 'discuss-open-question',
@@ -300,6 +302,7 @@ export const BUTTON_RECIPES = {
   answerWithAlternative: 'answer-open-question-with-alternative',
   discussGoal: 'discuss-mission-goal',
   defineMission: 'define-mission-goal',
+  discussTask: 'discuss-new-task',
 } as const;
 
 /** The recipe a button runs, by its fixed name, or the cause it cannot be run. */

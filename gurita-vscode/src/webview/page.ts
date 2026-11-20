@@ -5,9 +5,10 @@
 // one failure state in place of the pages, the refresh control and the two mission-starting buttons
 // staying on the pane above it. The refresh control asks the extension to re-read everything, and
 // after every answer the page stays on the mission it showed unless that mission is no longer
-// live, when it falls back to the first. A page shows its mission's path,
-// title, and state, the label's facts, the question view, and the remaining task headings, all
-// drawn from the parse the extension posts, and the recipe buttons: the shipped recipes grouped
+// live, when it falls back to the first. A page shows its mission's path, title, and state, the
+// label's facts, the question view, and the remaining task headings with the new-task button
+// beside them, posting the page's mission, all drawn from the parse the extension posts, and the
+// recipe buttons: the shipped recipes grouped
 // under Claude Code and Antigravity and, below them, the own recipes that replace none under
 // "Your recipes", each button carrying its recipe's lines as written in its hover text and
 // starting that recipe's chain for the page's mission when clicked, and each recipe holding a
@@ -444,7 +445,11 @@ declare function acquireVsCodeApi(): VsCodeApi;
 
   function drawTasks(mission: Mission): HTMLElement {
     const view = element('section', undefined, 'tasks');
-    view.append(element('h3', 'Remaining tasks'));
+    const head = element('div', undefined, 'section-head');
+    const add = button('New task', 'action', () => vscode.postMessage({ type: 'taskButton', mission: mission.path }));
+    add.title = 'Type an issue and open an interactive discussion of it into tasks for this mission';
+    head.append(element('h3', 'Remaining tasks'), add);
+    view.append(head);
     const part = mission.tasks;
     if (part.state === 'failed') {
       view.append(drawNotice(part.notice));

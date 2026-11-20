@@ -219,7 +219,7 @@ test('the own recipe file defaults to ~/.gurita/recipes.md and honours the setti
   assert.strictEqual(ownRecipesFile('$HOME/recipes.md', '/home/someone'), '$HOME/recipes.md');
 });
 
-test('the button recipes carry the six fixed names, each the bare name of its skill', () => {
+test('the button recipes carry the seven fixed names, each the bare name of its skill', () => {
   assert.deepStrictEqual(Object.values(BUTTON_RECIPES), [
     'discuss-open-question',
     'answer-open-question',
@@ -227,7 +227,41 @@ test('the button recipes carry the six fixed names, each the bare name of its sk
     'answer-open-question-with-alternative',
     'discuss-mission-goal',
     'define-mission-goal',
+    'discuss-new-task',
   ]);
+});
+
+test('a discuss-new-task recipe holds the issue description as a known placeholder and runs from the new-task button only', () => {
+  const recipes = parseShippedRecipes(
+    '## Claude Code\n\n### discuss-new-task\n```\nclaude "/gurita:discuss-new-task --mission <path> <issue description>" --model "fable"; # interactive\n```\n',
+    SHIPPED,
+  );
+  const recipe = byName(recipes, BUTTON_RECIPES.discussTask);
+  assert.deepStrictEqual(recipe.knownPlaceholders, ['path', 'issue description']);
+  assert.deepStrictEqual(recipe.unknownPlaceholders, []);
+  assert.strictEqual(recipe.singleTask, false);
+  assert.deepStrictEqual(pageRecipes(recipes, ['path']), []);
+  const found = buttonRecipe(recipes, BUTTON_RECIPES.discussTask, ['path', 'issue description']);
+  assert.ok(found.state === 'found');
+  const short = buttonRecipe(recipes, BUTTON_RECIPES.discussTask, ['path']);
+  assert.ok(short.state === 'refused');
+  assert.match(short.cause, /has no value for: <issue description>\./);
+});
+
+test('the shipped snippet file carries every button recipe under Claude Code, discuss-new-task its one interactive line', () => {
+  const file = path.join(__dirname, '..', '..', '..', 'snippets', 'GURITA_USAGE.md');
+  const recipes = parseShippedRecipes(fs.readFileSync(file, 'utf8'), file);
+  for (const name of Object.values(BUTTON_RECIPES)) {
+    assert.strictEqual(byName(recipes, name).group, 'Claude Code');
+  }
+  const recipe = byName(recipes, BUTTON_RECIPES.discussTask);
+  assert.deepStrictEqual(recipe.lines, [
+    'claude "/gurita:discuss-new-task --mission <path> <issue description>" --dangerously-skip-permissions --model "fable" --effort xhigh; # interactive',
+  ]);
+  assert.strictEqual(isHeadless(recipe.lines[0]), false);
+  const found = buttonRecipe(recipes, BUTTON_RECIPES.discussTask, ['path', 'issue description']);
+  assert.ok(found.state === 'found');
+  assert.ok(!pageRecipes(recipes, ['path']).some((entry) => entry.name === BUTTON_RECIPES.discussTask));
 });
 
 test('a button finds its recipe by fixed name, shipped or replaced by an own recipe of the same name', () => {
