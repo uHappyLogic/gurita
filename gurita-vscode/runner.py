@@ -5,6 +5,7 @@ Stdlib only, Python 3.9 or later, shipped in the extension's package beside its 
 directory and runnable by hand outside the editor.
 
     runner.py chain -- LINE...
+    runner.py preview --mission PATH --rules FILE --line NAME LINE...
 
 Each LINE is one argument after `--`. A line is one of three kinds, inferred from its text:
 interactive when it ends in a `# interactive` comment, headless when it otherwise holds a
@@ -22,6 +23,24 @@ recipe line it stopped at, then waits for a keypress before exiting.
 
 The values a line references reach it through the environment the runner is started in, as
 `"$GURITA_*"` session variables; the command line carries none.
+
+`preview` runs no line. It reads the rule file FILE, which chooses each task's single-task
+line, and prints, for each remaining task of the mission's `TASKS_TODO.md` in file order, one
+line of three tab-separated fields: `resolved` when the line name the rules give the task is
+among the names given by `--line` (each `--line` a single-task line's name and its raw text),
+`missing` otherwise; then that line name (empty when the rules name none); then the task's
+`##` title. The rule file is UTF-8 text holding one rule per line: the pattern, ` -> `, and the
+single-task line's name, the line split at its last ` -> ` and both parts stripped of outer
+whitespace. Blank lines and lines opening with `#` are skipped. The one line whose pattern is
+a bare `*` is the default, and a second one is refused. Each pattern is applied with
+`re.search` and `re.IGNORECASE` to the task's title and brief joined by a newline, and the
+first rule in file order that matches wins, the default naming the line when none does. A
+missing rule file holds no rule and no default, and the preview says so on stderr in one line
+naming the path looked for. A rule file that exists but cannot be read as rules is refused
+whole: stderr carries a `Rule file refused:` line naming it and, beneath, one line per
+unreadable line with its number and reason, and every task is printed unresolved. Either way
+the task lines are printed and the exit status is 0; a task list that cannot be read prints
+one `Error:` line and exits 1.
 """
 
 import argparse
@@ -54,6 +73,20 @@ END_MARK = "end"
 
 CONTINUE = "continue"
 STOP = "stop"
+
+TASK_LIST_NAME = "TASKS_TODO.md"
+TASK_HEADING = "## "
+TASK_SEPARATOR = "---"
+
+RULE_ARROW = " -> "
+DEFAULT_PATTERN = "*"
+RULE_COMMENT = "#"
+RULES_READ = "read"
+RULES_MISSING = "missing"
+RULES_REFUSED = "refused"
+
+RESOLVED = "resolved"
+MISSING = "missing"
 
 
 class RunnerError(Exception):
@@ -272,6 +305,194 @@ def run_check(fixed_lines: str, output: str, verdicts: str, number: int) -> int:
     return 0 if goes_on else 1
 
 
+class Rule:
+    """One rule of the rule file: its compiled pattern, the line name it gives, its line number."""
+
+    def __init__(self, pattern: "re.Pattern[str]", name: str, number: int) -> None:
+        self.pattern = pattern
+        self.name = name
+        self.number = number
+
+
+class RuleFile:
+    """A rule file as read: `read`, `missing`, or `refused` with each problem found."""
+
+    def __init__(
+        self,
+        path: str,
+        state: str,
+        rules: Optional[List[Rule]] = None,
+        default: Optional[str] = None,
+        problems: Optional[List[str]] = None,
+    ) -> None:
+        self.path = path
+        self.state = state
+        self.rules = rules or []
+        self.default = default
+        self.problems = problems or []
+
+    def line_name(self, title: str, brief: str) -> Optional[str]:
+        """The single-task line name these rules give a task, or None when they give none."""
+        text = f"{title}\n{brief}"
+        for rule in self.rules:
+            if rule.pattern.search(text):
+                return rule.name
+        return self.default
+
+
+def parse_rules(text_lines: List[Optional[str]], path: str) -> RuleFile:
+    """The rules of a rule file's lines, or a refusal listing every unreadable line in order;
+    a line that did not decode as UTF-8 is given as None."""
+    rules: List[Rule] = []
+    default: Optional[str] = None
+    default_number = 0
+    problems: List[str] = []
+    for number, raw in enumerate(text_lines, start=1):
+        if raw is None:
+            problems.append(f"line {number}: not UTF-8 text")
+            continue
+        line = raw.rstrip("\r")
+        if not line.strip() or line.lstrip().startswith(RULE_COMMENT):
+            continue
+        pattern, arrow, name = line.rpartition(RULE_ARROW)
+        pattern, name = pattern.strip(), name.strip()
+        if not arrow:
+            problems.append(f"line {number}: no ' -> ' between a pattern and a line name")
+            continue
+        if not pattern:
+            problems.append(f"line {number}: the pattern before ' -> ' is empty")
+            continue
+        if not name:
+            problems.append(f"line {number}: the line name after ' -> ' is empty")
+            continue
+        if pattern == DEFAULT_PATTERN:
+            if default is not None:
+                problems.append(f"line {number}: a second default line; the first is line {default_number}")
+            else:
+                default, default_number = name, number
+            continue
+        try:
+            compiled = re.compile(pattern, re.IGNORECASE)
+        except re.error as error:
+            problems.append(f"line {number}: the pattern is not a valid regular expression: {error}")
+            continue
+        rules.append(Rule(compiled, name, number))
+    if problems:
+        return RuleFile(path, RULES_REFUSED, problems=problems)
+    return RuleFile(path, RULES_READ, rules=rules, default=default)
+
+
+def read_rules(path: str) -> RuleFile:
+    """The rule file at `path`: missing when no file stands there, refused when it cannot be
+    read as rules, and its rules and default otherwise."""
+    try:
+        with open(path, "rb") as handle:
+            data = handle.read()
+    except FileNotFoundError:
+        return RuleFile(path, RULES_MISSING)
+    except OSError as error:
+        return RuleFile(path, RULES_REFUSED, problems=[f"the file cannot be read: {error.strerror}"])
+    text_lines: List[Optional[str]] = []
+    for raw in data.split(b"\n"):
+        try:
+            text_lines.append(raw.decode("utf-8"))
+        except UnicodeDecodeError:
+            text_lines.append(None)
+    return parse_rules(text_lines, path)
+
+
+def is_task_separator(lines: List[str], index: int) -> bool:
+    """Whether lines[index] is a section's `---` separator: the next non-blank line is a heading
+    or the end of the file."""
+    if lines[index].rstrip() != TASK_SEPARATOR:
+        return False
+    following = index + 1
+    while following < len(lines) and not lines[following].strip():
+        following += 1
+    return following == len(lines) or lines[following].startswith(TASK_HEADING)
+
+
+def parse_tasks(text: str) -> List[Tuple[str, str]]:
+    """Each remaining task's `##` title and brief, in file order, read as the plugin's task-list
+    tool reads its sections: every column-0 `## ` line a heading, a section ending at its `---`
+    separator or the next heading, the brief its body with outer blank lines trimmed."""
+    lines = [line.rstrip("\r") for line in text.split("\n")]
+    tasks = []
+    index = 0
+    while index < len(lines) and not lines[index].startswith(TASK_HEADING):
+        index += 1
+    while index < len(lines):
+        title = lines[index][len(TASK_HEADING):].strip()
+        index += 1
+        body: List[str] = []
+        while index < len(lines) and not lines[index].startswith(TASK_HEADING):
+            if is_task_separator(lines, index):
+                index += 1
+                while index < len(lines) and not lines[index].startswith(TASK_HEADING):
+                    index += 1
+                break
+            body.append(lines[index])
+            index += 1
+        while body and not body[0].strip():
+            body.pop(0)
+        while body and not body[-1].strip():
+            body.pop()
+        tasks.append((title, "\n".join(body)))
+    return tasks
+
+
+def read_tasks(mission: str) -> List[Tuple[str, str]]:
+    """The remaining tasks of the mission directory's task list."""
+    path = os.path.join(mission, TASK_LIST_NAME)
+    try:
+        with open(path, encoding="utf-8") as handle:
+            text = handle.read()
+    except OSError as error:
+        raise RunnerError(f"cannot read the task list {path}: {error.strerror}")
+    except UnicodeDecodeError:
+        raise RunnerError(f"cannot read the task list {path}: not UTF-8 text")
+    return parse_tasks(text)
+
+
+def assignment(rule_file: RuleFile, names: List[str], title: str, brief: str) -> Tuple[str, str]:
+    """A task's state word and the line name its rules give it (empty when they give none)."""
+    name = rule_file.line_name(title, brief) if rule_file.state == RULES_READ else None
+    if name is not None and name in names:
+        return RESOLVED, name
+    return MISSING, name or ""
+
+
+def preview_lines(rule_file: RuleFile, names: List[str], tasks: List[Tuple[str, str]]) -> List[str]:
+    """The preview's print: one `state<TAB>name<TAB>title` line per task."""
+    printed = []
+    for title, brief in tasks:
+        state, name = assignment(rule_file, names, title, brief)
+        printed.append(f"{state}\t{name}\t{title}")
+    return printed
+
+
+def rule_notice(rule_file: RuleFile) -> List[str]:
+    """What the preview says on stderr about a rule file it could not use, or nothing."""
+    if rule_file.state == RULES_MISSING:
+        return [f"No rule file stands at {rule_file.path}; no task is assigned a line."]
+    if rule_file.state == RULES_REFUSED:
+        return [f"Rule file refused: {rule_file.path}"] + rule_file.problems
+    return []
+
+
+def run_preview(mission: str, rules: str, lines: List[Tuple[str, str]]) -> int:
+    tasks = read_tasks(mission)
+    rule_file = read_rules(rules)
+    names = [name for name, _ in lines]
+    notice = rule_notice(rule_file)
+    if notice:
+        sys.stderr.write("\n".join(notice) + "\n")
+    printed = preview_lines(rule_file, names, tasks)
+    if printed:
+        sys.stdout.write("\n".join(printed) + "\n")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="runner.py",
@@ -296,6 +517,25 @@ def build_parser() -> argparse.ArgumentParser:
     check.add_argument("--output", required=True, metavar="FILE")
     check.add_argument("--verdicts", required=True, metavar="FILE")
     check.add_argument("--line", required=True, type=int, metavar="N")
+    preview = commands.add_parser(
+        "preview",
+        help="print the single-task line the rules give each remaining task, running no line",
+        description="Print one line per remaining task of the mission's TASKS_TODO.md: "
+        "`resolved` or `missing`, the line name the rule file gives the task, and the task's "
+        "title, tab-separated. A missing or refused rule file is reported on stderr and every "
+        "task printed unresolved.",
+    )
+    preview.add_argument("--mission", required=True, metavar="PATH", help="the mission directory")
+    preview.add_argument("--rules", required=True, metavar="FILE", help="the rule file")
+    preview.add_argument(
+        "--line",
+        required=True,
+        nargs=2,
+        action="append",
+        metavar=("NAME", "LINE"),
+        dest="lines",
+        help="a named single-task line: its name and its raw text; repeatable",
+    )
     return parser
 
 
@@ -304,6 +544,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     try:
         if args.command == "chain":
             return run_chain(args.lines)
+        if args.command == "preview":
+            return run_preview(args.mission, args.rules, [tuple(pair) for pair in args.lines])
         return run_check(args.fixed_lines, args.output, args.verdicts, args.line)
     except RunnerError as error:
         sys.stderr.write(f"Error: {error}\n")

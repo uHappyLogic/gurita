@@ -2,7 +2,8 @@
 
 The runner is imported in process as the module `runner` from the extension's directory, and
 no test starts a shell session or a host command: the tests drive line-kind inference, the
-fixed-line verdict, and the check step directly, the last through `runner.main`.
+fixed-line verdict, rule matching and the default, and the check step and the preview print,
+the last two through `runner.main`.
 """
 
 import sys

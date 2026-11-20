@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Runner Rule File and Preview Subcommand
-
-Add to `runner.py` the reading of a rule file in the Format decision's form (one rule per line, the pattern, then ` -> `, then the single-task line's name, split at the last ` -> `; blank lines and lines opening with `#` skipped; the one bare `*` line the default and a second one refused; each pattern applied with `re.search` and `re.IGNORECASE` to the task's title and brief joined by a newline, the first match in file order winning) and the subcommand `runner.py preview --mission PATH --rules FILE --line NAME LINE...`, which runs no line and prints for each remaining task of the mission's `TASKS_TODO.md` three tab-separated fields: `resolved` or `missing`, the line name the rules give the task, and the task's `##` title last. A missing rule file is read as holding no rule and no default, and an unreadable one is refused whole with each unreadable line's number and reason, every remaining task then reported as unresolved, because the page shows this print before a looped run starts. Verified by pytest tests of the preview print, rule matching, and the default, passing in both pytest runs.
-
----
-
 ## Runner Loop Subcommand for Task Runs
 
 Add to `runner.py` the subcommand `runner.py loop --mission PATH --rules FILE --line NAME LINE... [--override TITLE NAME]... -- LINE...`, the looped task run: before each task it re-reads the top remaining `##` heading of the mission's `TASKS_TODO.md`, takes that task's override or else the rules' result, shows the assignment it used, and runs a fresh shell session with `GURITA_PATH` and `GURITA_TASK_TITLE` in its environment, filled from `--mission` and the re-read heading, the recipe's own lines at its head and the chosen single-task line in the place of the slot line `<single-task line>`. It goes on only on `Task completed.`, stops before running anything at the first task whose assignment is unresolved, ends when no heading remains, and closes as a chain does, on its report and a keypress. Verified by pytest tests of the per-task choice between override, rule, and unresolved and of the looped verdict, starting no shell session and passing in both pytest runs.
