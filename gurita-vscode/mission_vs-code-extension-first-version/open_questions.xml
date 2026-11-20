@@ -647,6 +647,31 @@
   </open-question>
   <open-question id="Snippet file first line">
     <question>The first line of `snippets/GURITA_USAGE.md` is a bare `&lt;mission_path&gt;` placeholder standing above the file&apos;s `#` title. When the file becomes the shipped recipe source of the VS Code extension (`gurita-vscode`) and its placeholder is renamed `&lt;path&gt;`, does that line stay, change, or go?</question>
+    <alternative id="Keep bare line">
+      The first line stays a bare placeholder line above the `#` title, renamed with the rest of the file so that it reads `&lt;path&gt;`; nothing else about its position or form changes.
+      <advantage>The smallest edit: the file keeps the shape it has had since it was added on 2026-11-18, and a person using it by hand still gets, after one replace-all of `&lt;path&gt;`, a line at the very top showing which mission their copy is set to.</advantage>
+      <drawback>The rename changes how the line renders: `&lt;mission_path&gt;` is no valid HTML tag name because of its underscore and renders as text, but `&lt;path&gt;` is one, so under CommonMark the line opens a raw HTML block that runs to the first blank line and takes the `# Gurita CLI usage snippets` title with it, leaving the shipped file with no visible title in a Markdown preview, while the extension, which fills `&lt;path&gt;` itself and reads only the `###` blocks under the host headings, has no use for the line.</drawback>
+    </alternative>
+    <alternative id="Code span above title">
+      The first line stays above the `#` title as the replace-all marker, but is written as a code span, `` `&lt;path&gt;` ``, on a line of its own, so that it renders as literal text.
+      <advantage>Keeps the hand user&apos;s at-a-glance marker of the mission the copy is set to, in the same top position, while the title still renders as a heading and the placeholder shows as written.</advantage>
+      <drawback>A shipped document still opens with a bare unlabelled line above its title, which a reader who is not doing a replace-all has no way to interpret, and it is the one line of the file that is neither a recipe, a reference block, nor prose.</drawback>
+    </alternative>
+    <alternative id="Hidden comment marker">
+      The first line stays above the `#` title as the replace-all marker, but inside an HTML comment (`&lt;!-- &lt;path&gt; --&gt;`), so it stands in the source only and renders as nothing.
+      <advantage>The marker survives for a person editing the raw file by hand, while every rendered view of the shipped document opens on its title with no stray line.</advantage>
+      <drawback>A marker invisible in a preview helps only someone reading the source, and a comment holding a placeholder is easy to mistake for leftover editing scaffolding, adding one more construct to a file whose other non-recipe content is plain prose and fenced blocks.</drawback>
+    </alternative>
+    <alternative id="Labelled line under title">
+      The line leaves its place above the title and becomes a labelled line beneath it, beside the sentence that already explains the placeholder, for example `Mission: `&lt;path&gt;``, so that the title is the file&apos;s first line.
+      <advantage>The file opens on its title as a shipped document should, and the hand user keeps a marker that now says what it is, standing with the explanation of the same placeholder.</advantage>
+      <drawback>It is new prose to write and keep in step with the placeholder&apos;s definition for a use, a replace-all over a local copy, that every recipe line already shows the result of, and it puts a fill-in slot inside the explanatory text the extension and its reader never use.</drawback>
+    </alternative>
+    <alternative id="Remove the line">
+      The bare first line is deleted, so the file opens on its `#` title, followed by the existing sentence defining the placeholder, renamed to `&lt;path&gt;`; no marker line replaces it anywhere.
+      <advantage>The shipped file keeps no line serving one person&apos;s copy-and-replace habit, in step with the draft&apos;s removal of the two personal blocks, its title renders, and the sentence below the title already defines `&lt;path&gt;` for every reader.</advantage>
+      <drawback>A person still driving a mission by hand from a replaced copy loses the single top line that showed which mission the copy was set to, and has to read it off any recipe line instead.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Single-task line recognition">
     <question>A looped task run in the VS Code extension (`gurita-vscode`) gives each task one of the recipe file&apos;s named single-task lines, each a one-line `###` recipe holding a `complete-task` invocation with `&lt;path&gt;` and `&lt;Task Title&gt;`. By what does the extension tell such a recipe from every other recipe, so that the rules and the preview&apos;s override list can name it?</question>
