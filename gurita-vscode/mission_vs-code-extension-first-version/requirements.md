@@ -74,5 +74,9 @@ No other mission is live, so nothing holds or shares the scope. The record holds
 
 - **Extension documentation.** The extension is documented in one new file, `gurita-vscode/README.md`, holding everything a person who builds, installs, and uses it needs: the Node 22 build and packaging commands in the nvm form the goal states, where the VSIX lands and how to install it by hand, the shipped recipe file and a person's own recipe file, the tracked rule file, and the user setting. `README.md`, `CONTRIBUTING.md`, and `docs/` are left untouched and do not mention the extension.
 
+### Task list
+
+- **Maintainer install step.** The install-and-try step is carried on no task list at any time: `derive-tasks` authors no task for it, so `TASKS_TODO.md` holds only agent work and an unattended `complete-all-tasks` run ends on `All tasks completed.`. The maintainer then packages or takes the VSIX, installs it into their editor, and tries it by hand, with no workflow step and no commit recording the trial, and submits any follow-up tasks with `submit-task` while the mission is still live.
+
 ## Out of Scope
 
