@@ -90,5 +90,7 @@ No other mission is live, so nothing holds or shares the scope. The record holds
 
 - **Slot line.** The looped recipe's slot line reads `<single-task line>`, alone on its line, lower case, with no trailing `;`.
 
+- **Looped recipe.** The shipped file holds one looped recipe, under `## Claude Code` only, with the other execution recipes, headed `### Execute tasks one at a time`. There is no Antigravity copy, and the reading rule stays as it is: only `###` blocks under the two host headings are recipes.
+
 ## Out of Scope
 
