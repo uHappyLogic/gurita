@@ -452,6 +452,41 @@
   </open-question>
   <open-question id="Button recipe host lines">
     <question>Each of the six one-line recipes the buttons of the VS Code extension (`gurita-vscode`) run by fixed name (discuss a question, discuss a mission goal, answer in the person&apos;s own words, record the recommendation, record an alternative, define a mission) stands under one host heading of `snippets/GURITA_USAGE.md` and is written out with its host binary, model, and effort. Which host, model, and effort does each of the six lines carry?</question>
+    <alternative id="Claude Code, tiered by precedent">
+      All six lines stand under `## Claude Code` and carry `--dangerously-skip-permissions`, each taking the model and effort the repository already gives that skill or its kind of work: the two interactive lines, `claude &quot;/gurita:discuss-open-question --mission &lt;path&gt; &lt;Short Title&gt;&quot;` and `claude &quot;/gurita:discuss-mission-goal &lt;goal&gt;&quot;`, on `fable` at `xhigh`, as the snippet file&apos;s interactive recommendation line; the three answer lines (`answer-open-question`, `answer-open-question-with-alternative`, `answer-open-question-with-recommendation`) as `claude -p` on `fable` at `high`, as `docs/ways-of-using.md` writes the first two and the snippet file writes the sweep; and the `define-mission-goal --at &lt;scope&gt; &lt;goal&gt;` line as `claude -p` on `sonnet` at `medium`, as `docs/ways-of-using.md` writes it.
+      <advantage>Every value is one the maintainer&apos;s own documents already chose for that skill or for its kind of work, so the buttons run exactly what a pasted line from the existing docs would run, the deliberating sessions at the highest effort and the one-line definition at the cheapest.</advantage>
+      <drawback>It brings `sonnet` into a snippet file that so far names only `fable` and `opus`, and a person working only in Antigravity has no shipped button line and must write all six into their own recipe file.</drawback>
+    </alternative>
+    <alternative id="Claude Code, one uniform setting">
+      All six lines stand under `## Claude Code` with `--dangerously-skip-permissions`, the two discuss lines in the interactive `claude &quot;…&quot;` form and the other four as `claude -p`, and every one carries the same model and effort, `fable` at `xhigh`, the file&apos;s strongest setting for a non-execution line.
+      <advantage>One setting across every button is the simplest to read, check, and override, and no button runs a decision or a definition at less than the strongest effort the file uses for requirements work.</advantage>
+      <drawback>The mechanical recorders, above all `answer-open-question-with-recommendation`, which lifts and folds an already-formed pick, and the one-line definition pay the highest-effort cost for work the repository&apos;s own lines run at `high` or on `sonnet` at `medium`; Antigravity-only use again needs six own recipes.</drawback>
+    </alternative>
+    <alternative id="Claude Code, cost-lean recorders">
+      All six lines stand under `## Claude Code` with `--dangerously-skip-permissions`: the two interactive discuss lines on `fable` at `xhigh`, and the four headless lines, the three answer lines and the definition line, on `sonnet` at `medium`.
+      <advantage>Only the conversations, where the person deliberates with the model, run on the strongest setting, while each headless button, a single short recording or definition run clicked many times per sitting, costs the least quota.</advantage>
+      <drawback>The two hand-answer lines run `hand-answer-procedure.md`&apos;s judgment of which standing picks the answer undermines on a weaker model than the `fable` at `high` the ways-of-using page gives them, so a missed undermined pick can reach the sweep, and `sonnet` again enters a file that names only `fable` and `opus`.</drawback>
+    </alternative>
+    <alternative id="Antigravity throughout">
+      All six lines stand under `## Antigravity` with `--dangerously-skip-permissions`, the two discuss lines in the interactive `agy -i &quot;…&quot;` form and the other four as `agy -p`, every one on `gemini-4-argon` at `medium`, the file&apos;s own mapping of `fable` and the effort its other `gemini-4-argon` lines carry.
+      <advantage>The buttons, clicked many times per sitting, spend no Claude Code quota, and they follow the mapping and effort the file&apos;s Antigravity section already states.</advantage>
+      <drawback>The maintainer&apos;s Claude Code lines are the file&apos;s primary ones and Antigravity tops out at `high`, so the deliberating sessions run on a weaker setting than every requirements line on Claude Code, and a person without `agy` installed and signed in gets no working button.</drawback>
+    </alternative>
+    <alternative id="Split by line kind">
+      The two interactive discuss lines stand under `## Claude Code` as `claude &quot;…&quot;` on `fable` at `xhigh`, and the four headless lines, the three answer lines and the definition line, stand under `## Antigravity` as `agy -p` on `gemini-4-argon` at `medium`, all six with `--dangerously-skip-permissions`.
+      <advantage>Conversations get the strongest model and effort available while the short, frequent recording runs move off Claude Code&apos;s quota, each line placed on the host whose cost profile suits it.</advantage>
+      <drawback>The buttons need both CLIs installed and signed in, half of them failing when either host is absent, and the page&apos;s per-host grouping scatters one view&apos;s buttons across two host headings.</drawback>
+    </alternative>
+    <alternative id="Both hosts, Claude Code bound">
+      The premise that each of the six stands under one host heading only is set aside: the six fixed-name lines the buttons run stand under `## Claude Code` with the settings of the tiered option (`fable` at `xhigh` for the two discuss lines, `fable` at `high` for the three answer lines, `sonnet` at `medium` for the definition line), and six counterparts under `## Antigravity`, in the `agy -i` and `agy -p` forms on `gemini-4-argon` at `medium`, are shipped beside them under names of their own that no button runs.
+      <advantage>A person on either host finds a complete, ready line for every button in the shipped file, so switching the buttons to Antigravity is copying six lines into their own recipe file under the fixed names rather than composing them.</advantage>
+      <drawback>The file gains twelve recipes instead of six, six of them never run by any button and listed on the page among Antigravity&apos;s recipes with `&lt;Short Title&gt;` or `&lt;goal&gt;` placeholders, so its viability depends on the axes the button-name and unfillable-placeholder questions own.</drawback>
+    </alternative>
+    <alternative id="Host defaults, no model or effort">
+      The premise that each line is written out with its model and effort is set aside: all six lines stand under `## Claude Code` with `--dangerously-skip-permissions`, the two discuss lines as `claude &quot;…&quot;` and the other four as `claude -p`, and none carries `--model` or `--effort`, so each runs at the host&apos;s configured default, as the ways-of-using page allows for moving a line between hosts.
+      <advantage>No model name or effort level in the six lines can go stale, and each person&apos;s buttons follow their own host configuration without an own recipe file.</advantage>
+      <drawback>It breaks the draft&apos;s decision and the snippet file&apos;s convention that every line is written out with its model and effort, and the same button runs a different model on each machine, so a run&apos;s quality and cost are no longer read from the recipe.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Slot line text">
     <question>The looped task recipe that `snippets/GURITA_USAGE.md` gains for the VS Code extension (`gurita-vscode`) ends on a reserved slot line, which stands for the single-task line chosen for each task and marks the recipe as the looped one. What exact text does that slot line read?</question>
