@@ -118,5 +118,9 @@ No other mission is live, so nothing holds or shares the scope. The record holds
 
 - **Missing file.** A missing rule file is read as a file holding no rule and no default, so every remaining task's assignment is unresolved. The preview lists every task as unresolved, saying that the project holds no rule file and naming the path the runner looked for, and the person overrides each task there by hand, one at a time, as for any other unresolved task. The loop starts either way: a task with an override runs under it, and the first task without one, a task that entered the list after the loop started included, stops the loop before anything runs for that task.
 
+### Runner
+
+- **Command line.** The runner file is `runner.py`, and its three uses are argparse subcommands: `runner.py chain -- LINE...`, `runner.py loop --mission PATH --rules FILE --line NAME LINE... [--override TITLE NAME]... -- LINE...`, and `runner.py preview --mission PATH --rules FILE --line NAME LINE...`. Each chain or recipe line is one argument after `--`, so a line opening with `-` is never read as an option, and the looped recipe's lines are passed as written with the slot line last. Every named single-task line is one `--line` with two values, its name and its raw text, and every override one `--override` with two values, the task title and the line name. The values a chain's lines reference reach the runner in the environment the extension gives its terminal, so the command line carries none, and in a loop the runner itself fills `<path>` and `<Task Title>` from `--mission` and the re-read heading.
+
 ## Out of Scope
 
