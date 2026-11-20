@@ -52,5 +52,7 @@ No other mission is live, so nothing holds or shares the scope. The record holds
 
 - **Bundled files.** A build step of the extension's own, run from its `vscode:prepublish` script so that every `vsce package` runs it, copies `core/tools/missions.py` and `snippets/GURITA_USAGE.md` verbatim into a git-ignored directory under `gurita-vscode/`, and the package ships them from there. Nothing copied is committed and no test compares the copies with their sources. The extension's recipe reader parses the shipped snippet file at run time, as it parses a person's own recipe file.
 
+- **Toolchain.** The extension host code is TypeScript compiled by `tsc` to CommonJS files in an output directory, one emitted file per source file, which the VSIX ships as they are, with no bundler. The webview page is plain HTML with a script of its own, written in TypeScript and compiled by `tsc` through a second project configuration using the DOM library, loaded from the output directory through `asWebviewUri` under a content security policy, with no UI framework.
+
 ## Out of Scope
 
