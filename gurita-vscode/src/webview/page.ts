@@ -6,12 +6,15 @@
 // staying on the pane above it. The refresh control asks the extension to re-read everything, and
 // after every answer the page stays on the mission it showed unless that mission is no longer
 // live, when it falls back to the first. A page opens on the workflow diagram, drawn by this script
-// with no Mermaid: eight neutral blocks, define, review, provide alternatives, recommend, and answer
-// in the frame "Decide upfront" and derive, complete, and finish in the frame "Hand execution to
-// agents", with the arrows between them, the loop from answer back to review until no open
-// question remains, and the handoff from answer to derive. The block of the step to run next,
-// which the extension chooses and posts, is filled purple, and no block is filled when the
-// extension chose none; the diagram is display only, its blocks no buttons, gating nothing. Below
+// with no Mermaid: the choices a person makes as one line of seven neutral blocks joined by arrows,
+// define, first review round, additional review round, derive tasks, execute tasks, follow up
+// tasks, and finish, with no frame, loop arrow, or handoff label, the two optional blocks,
+// additional review round and follow up tasks, drawn with a dashed border and the five required
+// ones solid. The additional review round reads plain while git holds at most one review commit for
+// the mission and then carries the count of those beyond the first, as the extension posts it,
+// such as "additional review round 2". The block of the step to run next, which the extension
+// chooses and posts, is filled purple, and no block is filled when the extension chose none; the
+// diagram is display only, its blocks no buttons, gating nothing. Below
 // it stand the recipe buttons, the question view, and the remaining task headings with the
 // new-task button beside them, posting the page's mission, all drawn from the parse the extension
 // posts. The recipe buttons: the shipped recipes grouped
@@ -81,7 +84,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
   type QuestionPart = { state: 'read'; questions: Question[] } | { state: 'failed'; notice: Notice };
   type TaskPart = { state: 'read'; headings: string[] } | { state: 'failed'; notice: Notice };
 
-  type WorkflowStep = 'define' | 'review' | 'alternatives' | 'recommend' | 'answer' | 'derive' | 'complete' | 'finish';
+  type WorkflowStep = 'define' | 'first-review' | 'additional-review' | 'derive' | 'execute' | 'follow-up' | 'finish';
 
   interface Mission {
     path: string;
@@ -91,6 +94,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
     tasks: TaskPart;
     /** The step to run next, which the diagram fills; absent when none could be chosen. */
     step?: WorkflowStep;
+    /** The review commits beyond the first, which the additional review round carries; absent while git holds at most one. */
+    additionalRounds?: number;
   }
 
   type RecipeGroup = 'Claude Code' | 'Antigravity' | 'own';
@@ -148,33 +153,16 @@ declare function acquireVsCodeApi(): VsCodeApi;
     ['answerQuestion', 'Answer', 'Record an answer you type as the decision'],
     ['answerWithRecommendation', 'Answer with recommendation', "Record this question's recommendation as the decision"],
   ];
-  /** The workflow diagram's two frames, each with its heading and its blocks' steps and names in flow order. */
-  const WORKFLOW_FRAMES: [string, string, [WorkflowStep, string][]][] = [
-    [
-      'decide',
-      'Decide upfront',
-      [
-        ['define', 'define'],
-        ['review', 'review'],
-        ['alternatives', 'provide alternatives'],
-        ['recommend', 'recommend'],
-        ['answer', 'answer'],
-      ],
-    ],
-    [
-      'execute',
-      'Hand execution to agents',
-      [
-        ['derive', 'derive'],
-        ['complete', 'complete'],
-        ['finish', 'finish'],
-      ],
-    ],
+  /** The workflow diagram's seven blocks in flow order, each with its step, its name, and whether it is optional. */
+  const WORKFLOW_BLOCKS: [WorkflowStep, string, boolean][] = [
+    ['define', 'define', false],
+    ['first-review', 'first review round', false],
+    ['additional-review', 'additional review round', true],
+    ['derive', 'derive tasks', false],
+    ['execute', 'execute tasks', false],
+    ['follow-up', 'follow up tasks', true],
+    ['finish', 'finish', false],
   ];
-  /** The label of the dashed arrow from answer back to review. */
-  const LOOP_LABEL = 'until no open questions remain';
-  /** The label of the arrow from answer to derive. */
-  const HANDOFF_LABEL = 'handoff';
   /** The page's recipe groups in the order drawn, each with its heading. */
   const RECIPE_GROUPS: [RecipeGroup, string][] = [
     ['Claude Code', 'Claude Code'],
@@ -332,53 +320,39 @@ declare function acquireVsCodeApi(): VsCodeApi;
   }
 
   /**
-   * The workflow diagram: the two frames side by side joined by the handoff arrow, each frame's
-   * blocks in a row joined by arrows, and under the first frame's row the dashed loop from answer
-   * back to review. The block of `step` is filled, and pulses while `busy`, a chain started for
-   * the mission running; every block is display only.
+   * The workflow diagram: its seven blocks in one line joined by arrows, the optional ones dashed,
+   * the additional review round carrying `rounds` when given. The block of `step` is filled, and
+   * pulses while `busy`, a chain started for the mission running; every block is display only.
    */
-  function drawWorkflow(step: WorkflowStep | undefined, busy: boolean): HTMLElement {
+  function drawWorkflow(step: WorkflowStep | undefined, rounds: number | undefined, busy: boolean): HTMLElement {
     const diagram = element('section', undefined, 'workflow');
     diagram.setAttribute('aria-label', 'Workflow');
-    WORKFLOW_FRAMES.forEach(([kind, heading, blocks], frameIndex) => {
-      if (frameIndex > 0) {
-        const handoff = element('div', undefined, 'handoff');
-        handoff.setAttribute('aria-hidden', 'true');
-        handoff.append(element('span', HANDOFF_LABEL, 'arrow-label'), element('span', '\u2192', 'arrow'));
-        diagram.append(handoff);
+    const flow = element('div', undefined, 'flow');
+    flow.setAttribute('role', 'list');
+    WORKFLOW_BLOCKS.forEach(([each, name, optional], index) => {
+      if (index > 0) {
+        const arrow = element('span', '\u2192', 'arrow');
+        arrow.setAttribute('aria-hidden', 'true');
+        flow.append(arrow);
       }
-      const frame = element('div', undefined, `frame ${kind}`);
-      frame.append(element('div', heading, 'frame-heading'));
-      const flow = element('div', undefined, 'flow');
-      flow.setAttribute('role', 'list');
-      blocks.forEach(([each, name], index) => {
-        if (index > 0) {
-          const arrow = element('span', '\u2192', 'arrow');
-          arrow.setAttribute('aria-hidden', 'true');
-          arrow.style.gridColumn = String(index * 2);
-          flow.append(arrow);
-        }
-        const block = element('div', name, each !== step ? 'block' : busy ? 'block next running' : 'block next');
-        block.setAttribute('role', 'listitem');
-        block.style.gridColumn = String(index * 2 + 1);
-        if (each === step) {
-          block.setAttribute('aria-current', 'step');
-          block.title = busy ? 'The step to run next; a chain is running for this mission' : 'The step to run next';
-        }
-        flow.append(block);
-      });
-      const review = blocks.findIndex(([each]) => each === 'review');
-      const answer = blocks.findIndex(([each]) => each === 'answer');
-      if (review !== -1 && answer !== -1) {
-        const loop = element('div', undefined, 'loop');
-        loop.setAttribute('aria-label', `answer back to review ${LOOP_LABEL}`);
-        loop.style.gridColumn = `${review * 2 + 1} / ${answer * 2 + 2}`;
-        loop.append(element('span', LOOP_LABEL, 'arrow-label'));
-        flow.append(loop);
+      const label = each === 'additional-review' && rounds !== undefined ? `${name} ${rounds}` : name;
+      const kinds = ['block', ...(optional ? ['optional'] : []), ...(each === step ? (busy ? ['next', 'running'] : ['next']) : [])];
+      const block = element('div', label, kinds.join(' '));
+      block.setAttribute('role', 'listitem');
+      const hints: string[] = [];
+      if (each === step) {
+        block.setAttribute('aria-current', 'step');
+        hints.push(busy ? 'The step to run next; a chain is running for this mission' : 'The step to run next');
       }
-      frame.append(flow);
-      diagram.append(frame);
+      if (optional) {
+        hints.push('An optional step');
+      }
+      if (hints.length > 0) {
+        block.title = hints.join('. ');
+      }
+      flow.append(block);
     });
+    diagram.append(flow);
     return diagram;
   }
 
@@ -686,7 +660,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
     const page = element('section', undefined, 'page');
     page.setAttribute('role', 'tabpanel');
     const busy = running.has(mission.path);
-    page.append(drawWorkflow(mission.step, busy), drawRecipes(mission, busy));
+    page.append(drawWorkflow(mission.step, mission.additionalRounds, busy), drawRecipes(mission, busy));
     const preview = previews.get(mission.path);
     if (preview !== undefined) {
       page.append(drawPreview(mission, preview, busy));

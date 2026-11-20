@@ -2,15 +2,15 @@
 // `webview.html` is set once, to a page shell whose script, loaded from the output directory
 // through `asWebviewUri` under a content security policy, posts a ready message on every load
 // and draws what the extension answers. The extension answers every ready message with the live
-// missions, read afresh, each carrying its documents as the in-process readers parse them and the
-// step its workflow diagram fills, the step to run next chosen from its state and its documents'
-// facts, with git read for a `Requirements-review:` commit only for a defined mission with no open
-// question and no task, and the recipe list every mission page shows, read afresh from the
-// shipped snippet file and the person's own recipe file; or with the one failure state the live
-// read gives. The page redraws
-// its question card in place from every such message. A click on a recipe button starts that recipe's
-// chain for the page's mission at once. The buttons outside the chains each run the recipe of
-// its fixed name, shipped or replaced by an own recipe of the same name, read afresh at the click,
+// missions, read afresh, each carrying its documents as the in-process readers parse them and what
+// its seven-block workflow diagram draws: the block filled, the step to run next, chosen from the
+// mission's state, its documents' facts, and the number of `Requirements-review:` commits git
+// holds for it, and the count of those beyond the first, which the additional review round
+// carries once git holds two or more; and with the recipe list every mission page shows, read
+// afresh from the shipped snippet file and the person's own recipe file; or with the one failure
+// state the live read gives. The page redraws its question card in place from every such message.
+// A click on a recipe button starts that recipe's chain for the page's mission at once. The
+// buttons outside the chains each run the recipe of its fixed name, shipped or replaced by an own recipe of the same name, read afresh at the click,
 // through the same run path: on a question's card the discuss, answer, and answer-with-
 // recommendation buttons, on an alternative on that card the answer-with-alternative button,
 // and on the pane at the tab row's end, in its failure state too, the two mission-starting
@@ -40,10 +40,11 @@
 // mission documents under the project root, created with the first live read that succeeds and
 // disposed with the panel, debounced so that a burst of writes causes one re-read. A change to a
 // mission's question document or task list re-reads that mission's documents in process against
-// the live list last read, choosing its next step afresh, and creating or deleting a
-// `requirements.md`, or changing a `TASKS_TODO.md`, also re-runs `missions.py live`. While the panel is hidden an event only marks
-// the page stale, and a stale page is re-read when the panel is shown. The refresh control on the
-// page and the refresh command each re-read everything, as a fallback. Git state is not watched.
+// the live list last read, choosing its next step and counting its review commits afresh, and
+// creating or deleting a `requirements.md`, or changing a `TASKS_TODO.md`, also re-runs
+// `missions.py live`. While the panel is hidden an event only marks the page stale, and a stale
+// page is re-read when the panel is shown. The refresh control on the page and the refresh command
+// each re-read everything, as a fallback. Git state is not watched.
 // The page stays on the mission it shows unless that mission is no longer live, when it falls back
 // to the first.
 
@@ -56,7 +57,7 @@ import { BUTTON_RECIPES, PageRecipe, Recipe, buttonRecipe, ownRecipesFile, pageR
 import { FileEventKind, RefreshBatch, RefreshQueue, WATCHED_PATTERN, eventEffect } from './refresh';
 import { OPTIONAL_PLACEHOLDERS } from './placeholders';
 import { refuseWhileRunning, runnerFile, runningMissions, startChain, startLoop } from './runs';
-import { WorkflowStep, missionStep, reviewCommitted } from './workflow';
+import { MissionWorkflow, missionWorkflow, reviewCount } from './workflow';
 
 const VIEW_TYPE = 'gurita.missionPane';
 const PANEL_TITLE = 'Gurita Missions';
@@ -89,8 +90,11 @@ type RecipePart = { state: 'read'; recipes: PageRecipe[] } | { state: 'failed'; 
 type PaneMessage =
   | {
       type: 'live';
-      /** Each live mission with its documents and the step its diagram fills, left out when none is chosen. */
-      missions: ({ path: string; state: string; title: string; step?: WorkflowStep } & MissionDocuments)[];
+      /**
+       * Each live mission with its documents, the step its diagram fills, left out when none is
+       * chosen, and the count its additional review round carries, left out while there is none.
+       */
+      missions: ({ path: string; state: string; title: string } & MissionDocuments & MissionWorkflow)[];
       recipes: RecipePart;
       /** The paths of the missions with a running runner, whose pages are drawn as running. */
       running: string[];
@@ -134,14 +138,14 @@ interface Posted {
 
 /**
  * What the latest successful live read gave and the pane last drew: the project root, the live
- * missions in the order printed, each one's documents as last read and the step its diagram
- * fills, and the recipes.
+ * missions in the order printed, each one's documents as last read and what its diagram draws, and
+ * the recipes.
  */
 interface Current {
   root: string;
   live: LiveMission[];
   documents: Map<string, MissionDocuments>;
-  steps: Map<string, WorkflowStep | undefined>;
+  workflows: Map<string, MissionWorkflow>;
   recipes: RecipePart;
 }
 
@@ -289,15 +293,18 @@ function unwatch(): void {
   watcher = undefined;
 }
 
-/** The step the diagram of the live mission `mission` fills, from its documents `documents` as read. */
-function chooseStep(root: string, mission: LiveMission, documents: MissionDocuments): Promise<WorkflowStep | undefined> {
-  return missionStep(mission.state, documents.facts, () => reviewCommitted(root, mission.path));
+/**
+ * What the diagram of the live mission `mission` draws, from its documents `documents` as read and
+ * the review commits git holds for it.
+ */
+function readWorkflow(root: string, mission: LiveMission, documents: MissionDocuments): Promise<MissionWorkflow> {
+  return missionWorkflow(mission.state, documents.facts, () => reviewCount(root, mission.path));
 }
 
 /**
  * Acts on one debounced burst of the watcher's events: a hidden panel is only marked stale; a
  * burst that moves the live list re-reads everything; any other re-reads in process the documents
- * of each live mission it touched, chooses its next step afresh, and posts the fresh parse.
+ * of each live mission it touched, chooses what its diagram draws afresh, and posts the fresh parse.
  */
 async function flushEvents(context: vscode.ExtensionContext, target: vscode.WebviewPanel, batch: RefreshBatch): Promise<void> {
   if (panel !== target) {
@@ -318,13 +325,13 @@ async function flushEvents(context: vscode.ExtensionContext, target: vscode.Webv
     return;
   }
   const read = touched.map((mission) => ({ mission, documents: readMissionDocuments(shown.root, mission.path) }));
-  const steps = await Promise.all(read.map(({ mission, documents }) => chooseStep(shown.root, mission, documents)));
+  const workflows = await Promise.all(read.map(({ mission, documents }) => readWorkflow(shown.root, mission, documents)));
   if (sequence !== reads || current !== shown || panel !== target) {
     return;
   }
   read.forEach(({ mission, documents }, index) => {
     shown.documents.set(mission.path, documents);
-    shown.steps.set(mission.path, steps[index]);
+    shown.workflows.set(mission.path, workflows[index]);
   });
   await post(target, publish(shown));
 }
@@ -360,8 +367,8 @@ async function answer(context: vscode.ExtensionContext, target: vscode.WebviewPa
   let message: PaneMessage;
   if (read.state === 'read') {
     const documents = new Map(read.missions.map((mission) => [mission.path, readMissionDocuments(read.root, mission.path)]));
-    const steps = await Promise.all(
-      read.missions.map((mission) => chooseStep(read.root, mission, documents.get(mission.path) as MissionDocuments)),
+    const workflows = await Promise.all(
+      read.missions.map((mission) => readWorkflow(read.root, mission, documents.get(mission.path) as MissionDocuments)),
     );
     if (sequence !== reads || panel !== target) {
       return;
@@ -371,7 +378,7 @@ async function answer(context: vscode.ExtensionContext, target: vscode.WebviewPa
       root: read.root,
       live: read.missions,
       documents,
-      steps: new Map(read.missions.map((mission, index) => [mission.path, steps[index]])),
+      workflows: new Map(read.missions.map((mission, index) => [mission.path, workflows[index]])),
       recipes: readPageRecipes(context),
     };
     message = publish(current);
@@ -388,7 +395,7 @@ function publish(shown: Current): PaneMessage {
   const missions = shown.live.map((mission) => ({
     ...mission,
     ...(shown.documents.get(mission.path) as MissionDocuments),
-    step: shown.steps.get(mission.path),
+    ...shown.workflows.get(mission.path),
   }));
   const questions = new Map<string, Map<string, Set<string>>>();
   for (const mission of missions) {
@@ -741,21 +748,15 @@ function pageShell(webview: vscode.Webview, script: vscode.Uri): string {
   .tab-list button { background: none; color: var(--vscode-foreground); border: 1px solid transparent; padding: 0.3em 0.8em; cursor: pointer; font: inherit; }
   .tab-list button[aria-selected="true"] { border-color: var(--vscode-focusBorder); background: var(--vscode-list-activeSelectionBackground); color: var(--vscode-list-activeSelectionForeground); }
   .failure pre, .notice pre { white-space: pre-wrap; font-family: var(--vscode-editor-font-family); }
-  .workflow { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6em; margin: 1em 0; overflow-x: auto; }
-  .workflow .frame { border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 0.4em 0.8em 0.6em; }
-  .workflow .frame-heading { opacity: 0.8; margin-bottom: 0.4em; }
-  .workflow .flow { display: grid; grid-auto-columns: max-content; align-items: center; column-gap: 0.4em; }
-  .workflow .block, .workflow .flow > .arrow { grid-row: 1; }
-  .workflow .block { border: 1px solid var(--vscode-panel-border); border-radius: 4px; padding: 0.3em 0.8em; white-space: nowrap; }
+  .workflow { margin: 1em 0; overflow-x: auto; }
+  .workflow .flow { display: flex; flex-wrap: nowrap; align-items: center; gap: 0.4em; }
+  .workflow .block { border: 1px solid var(--vscode-descriptionForeground); border-radius: 4px; padding: 0.3em 0.8em; white-space: nowrap; }
+  .workflow .block.optional { border-style: dashed; }
   .workflow .block.next { background: #9333ea; border-color: #9333ea; color: #ffffff; }
+  .workflow .block.next.optional { border-color: #ffffff; }
   .workflow .block.next.running { animation: running-pulse 1.6s ease-in-out infinite; }
   @keyframes running-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
   .workflow .arrow { opacity: 0.7; }
-  .workflow .arrow-label { opacity: 0.7; font-size: 0.85em; white-space: nowrap; }
-  .workflow .handoff { display: flex; flex-direction: column; align-items: center; }
-  .workflow .loop { grid-row: 2; position: relative; box-sizing: border-box; height: 1.2em; margin: 0.2em 1.5em 0.8em; border: 1px dashed var(--vscode-foreground); border-top: none; opacity: 0.7; }
-  .workflow .loop::before { content: ''; position: absolute; left: -6px; top: -6px; border: 5px solid transparent; border-top: none; border-bottom: 6px solid var(--vscode-foreground); }
-  .workflow .loop .arrow-label { position: absolute; left: 50%; bottom: -0.65em; transform: translateX(-50%); opacity: 1; background: var(--vscode-editor-background); padding: 0 0.3em; line-height: 1.2; }
   .notice { border-left: 3px solid var(--vscode-inputValidation-warningBorder); padding: 0.2em 0.8em; }
   .controls { display: flex; gap: 0.5em; margin-bottom: 0.5em; }
   button.control { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: none; padding: 0.25em 0.8em; cursor: pointer; font: inherit; }

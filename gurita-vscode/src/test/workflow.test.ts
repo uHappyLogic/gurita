@@ -5,7 +5,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { DocumentFacts } from '../documents';
-import { WORKFLOW_STEPS, holdsReviewSubject, missionStep, needsReviewRead, nextStep, reviewCommitted } from '../workflow';
+import { OPTIONAL_STEPS, WORKFLOW_STEPS, additionalRounds, countReviewSubjects, missionWorkflow, nextStep, reviewCount } from '../workflow';
 
 const MISSION = 'lib/mission_alpha/';
 
@@ -38,106 +38,175 @@ test('the module imports nothing from vscode', () => {
   assert.doesNotMatch(source, /from\s+['"]vscode['"]|require\(\s*['"]vscode['"]\s*\)/);
 });
 
-test('the diagram holds the eight blocks in flow order, finish after complete', () => {
-  assert.deepStrictEqual([...WORKFLOW_STEPS], ['define', 'review', 'alternatives', 'recommend', 'answer', 'derive', 'complete', 'finish']);
+test('the diagram holds the seven blocks in flow order, the additional review round and follow up tasks optional', () => {
+  assert.deepStrictEqual(
+    [...WORKFLOW_STEPS],
+    ['define', 'first-review', 'additional-review', 'derive', 'execute', 'follow-up', 'finish'],
+  );
+  assert.deepStrictEqual([...OPTIONAL_STEPS], ['additional-review', 'follow-up']);
 });
 
-test('a question lacking alternatives makes provide alternatives the step', () => {
-  assert.strictEqual(nextStep('started', open(true, true, false)), 'alternatives');
-  assert.strictEqual(nextStep('defined', open(true, false, false)), 'alternatives');
+test('a question lacking alternatives or a pick makes the first review round the step while at most one review commit stands', () => {
+  for (const reviews of [0, 1]) {
+    for (const state of ['started', 'defined']) {
+      assert.strictEqual(nextStep(state, open(true, true, false), reviews), 'first-review');
+      assert.strictEqual(nextStep(state, open(false, true, false), reviews), 'first-review');
+      assert.strictEqual(nextStep(state, open(true, false, false), reviews), 'first-review');
+    }
+  }
 });
 
-test('every question with alternatives and one lacking a pick makes recommend the step', () => {
-  assert.strictEqual(nextStep('defined', open(false, true, false)), 'recommend');
+test('a question lacking alternatives or a pick makes the additional review round the step once two or more review commits stand', () => {
+  for (const reviews of [2, 3, 7]) {
+    for (const state of ['started', 'defined']) {
+      assert.strictEqual(nextStep(state, open(true, true, false), reviews), 'additional-review');
+      assert.strictEqual(nextStep(state, open(false, true, false), reviews), 'additional-review');
+      assert.strictEqual(nextStep(state, open(true, false, false), reviews), 'additional-review');
+    }
+  }
 });
 
-test('every question carrying a pick makes answer the step', () => {
-  assert.strictEqual(nextStep('defined', open(false, false, false)), 'answer');
+test('every open question carrying a pick makes derive tasks the step, whatever the review count', () => {
+  for (const reviews of [undefined, 0, 1, 2, 5]) {
+    assert.strictEqual(nextStep('defined', open(false, false, false), reviews), 'derive');
+    assert.strictEqual(nextStep('started', open(false, false, false), reviews), 'derive');
+  }
 });
 
 test('an open question outranks a remaining task', () => {
-  assert.strictEqual(nextStep('started', open(true, true, true)), 'alternatives');
-  assert.strictEqual(nextStep('started', open(false, true, true)), 'recommend');
-  assert.strictEqual(nextStep('started', open(false, false, true)), 'answer');
+  assert.strictEqual(nextStep('started', open(true, true, true), 0), 'first-review');
+  assert.strictEqual(nextStep('started', open(false, true, true), 1), 'first-review');
+  assert.strictEqual(nextStep('started', open(false, true, true), 2), 'additional-review');
+  assert.strictEqual(nextStep('started', open(false, false, true), 2), 'derive');
 });
 
-test('no open question and tasks remaining make complete the step', () => {
-  assert.strictEqual(nextStep('started', empty(true)), 'complete');
+test('no open question and tasks remaining make execute tasks the step, whatever the review count', () => {
+  for (const reviews of [undefined, 0, 1, 3]) {
+    assert.strictEqual(nextStep('started', empty(true), reviews), 'execute');
+    assert.strictEqual(nextStep('defined', empty(true), reviews), 'execute');
+  }
 });
 
-test('a started mission with no open question and no task makes finish the step', () => {
-  assert.strictEqual(nextStep('started', empty(false)), 'finish');
-  assert.strictEqual(nextStep('started', empty(false), false), 'finish');
+test('a started mission with no open question and no task makes finish the step, whatever the review count', () => {
+  for (const reviews of [undefined, 0, 1, 2]) {
+    assert.strictEqual(nextStep('started', empty(false), reviews), 'finish');
+  }
 });
 
-test('a defined mission with neither makes derive the step once a review commit stands, review otherwise', () => {
-  assert.strictEqual(nextStep('defined', empty(false), true), 'derive');
-  assert.strictEqual(nextStep('defined', empty(false), false), 'review');
+test('a defined mission with neither makes derive tasks the step once a review commit stands, the first review round while none does', () => {
+  assert.strictEqual(nextStep('defined', empty(false), 0), 'first-review');
+  for (const reviews of [1, 2, 4]) {
+    assert.strictEqual(nextStep('defined', empty(false), reviews), 'derive');
+  }
+});
+
+test('define and follow up tasks are never the step', () => {
+  const states = ['started', 'defined', 'other'];
+  const facts: DocumentFacts[] = [
+    {},
+    { tasksRemain: true },
+    empty(),
+    empty(true),
+    empty(false),
+    open(true, true),
+    open(true, true, true),
+    open(false, true, false),
+    open(true, false, true),
+    open(false, false),
+    open(false, false, true),
+  ];
+  for (const state of states) {
+    for (const each of facts) {
+      for (const reviews of [undefined, 0, 1, 2, 3]) {
+        assert.ok(!['define', 'follow-up'].includes(nextStep(state, each, reviews) as string));
+      }
+    }
+  }
 });
 
 test('no step is chosen when a document the choice needs did not read', () => {
-  assert.strictEqual(nextStep('started', {}), undefined);
-  assert.strictEqual(nextStep('started', { tasksRemain: true }), undefined);
-  assert.strictEqual(nextStep('started', empty()), undefined);
-  assert.strictEqual(nextStep('defined', empty(), true), undefined);
+  assert.strictEqual(nextStep('started', {}, 1), undefined);
+  assert.strictEqual(nextStep('started', { tasksRemain: true }, 1), undefined);
+  assert.strictEqual(nextStep('started', empty(), 1), undefined);
+  assert.strictEqual(nextStep('defined', empty(), 1), undefined);
 });
 
 test('a task list that did not read leaves an open question its step', () => {
-  assert.strictEqual(nextStep('started', open(true, true)), 'alternatives');
-  assert.strictEqual(nextStep('started', open(false, false)), 'answer');
+  assert.strictEqual(nextStep('started', open(true, true), 0), 'first-review');
+  assert.strictEqual(nextStep('started', open(true, true), 2), 'additional-review');
+  assert.strictEqual(nextStep('started', open(false, false)), 'derive');
 });
 
-test('no step is chosen for a defined mission with neither when the git read failed', () => {
+test('no step is chosen when the git read the choice needs failed', () => {
   assert.strictEqual(nextStep('defined', empty(false)), undefined);
+  assert.strictEqual(nextStep('defined', open(true, true, false)), undefined);
+  assert.strictEqual(nextStep('started', open(false, true, true)), undefined);
 });
 
-test('only a defined mission with no open question and no task needs the review read', () => {
-  assert.strictEqual(needsReviewRead('defined', empty(false)), true);
-  assert.strictEqual(needsReviewRead('started', empty(false)), false);
-  assert.strictEqual(needsReviewRead('defined', empty(true)), false);
-  assert.strictEqual(needsReviewRead('defined', open(false, false, false)), false);
-  assert.strictEqual(needsReviewRead('defined', empty()), false);
-  assert.strictEqual(needsReviewRead('defined', {}), false);
+test('the additional review round carries the review commits beyond the first once two or more stand', () => {
+  assert.strictEqual(additionalRounds(undefined), undefined);
+  assert.strictEqual(additionalRounds(0), undefined);
+  assert.strictEqual(additionalRounds(1), undefined);
+  assert.strictEqual(additionalRounds(2), 1);
+  assert.strictEqual(additionalRounds(3), 2);
+  assert.strictEqual(additionalRounds(10), 9);
 });
 
-test('the step choice reads git only when it needs the review commit', async () => {
+test('the diagram is read from git for every mission, leaving out what there is none of', async () => {
   let reads = 0;
-  const reviewed = (value: boolean | undefined) => async () => {
+  const reviews = (value: number | undefined) => async () => {
     reads += 1;
     return value;
   };
-  assert.strictEqual(await missionStep('started', empty(true), reviewed(true)), 'complete');
-  assert.strictEqual(await missionStep('started', empty(false), reviewed(true)), 'finish');
-  assert.strictEqual(await missionStep('defined', open(true, true, false), reviewed(true)), 'alternatives');
-  assert.strictEqual(reads, 0);
-  assert.strictEqual(await missionStep('defined', empty(false), reviewed(true)), 'derive');
-  assert.strictEqual(await missionStep('defined', empty(false), reviewed(false)), 'review');
-  assert.strictEqual(await missionStep('defined', empty(false), reviewed(undefined)), undefined);
-  assert.strictEqual(reads, 3);
+  assert.deepStrictEqual(await missionWorkflow('started', empty(true), reviews(0)), { step: 'execute' });
+  assert.deepStrictEqual(await missionWorkflow('started', empty(true), reviews(3)), { step: 'execute', additionalRounds: 2 });
+  assert.deepStrictEqual(await missionWorkflow('started', empty(false), reviews(2)), { step: 'finish', additionalRounds: 1 });
+  assert.deepStrictEqual(await missionWorkflow('defined', open(true, true, false), reviews(1)), { step: 'first-review' });
+  assert.deepStrictEqual(await missionWorkflow('defined', open(false, true, false), reviews(2)), {
+    step: 'additional-review',
+    additionalRounds: 1,
+  });
+  assert.deepStrictEqual(await missionWorkflow('defined', open(false, false, false), reviews(4)), { step: 'derive', additionalRounds: 3 });
+  assert.deepStrictEqual(await missionWorkflow('defined', empty(false), reviews(0)), { step: 'first-review' });
+  assert.deepStrictEqual(await missionWorkflow('defined', empty(false), reviews(1)), { step: 'derive' });
+  assert.deepStrictEqual(await missionWorkflow('defined', empty(false), reviews(undefined)), {});
+  assert.deepStrictEqual(await missionWorkflow('started', empty(true), reviews(undefined)), { step: 'execute' });
+  assert.deepStrictEqual(await missionWorkflow('started', {}, reviews(5)), { additionalRounds: 4 });
+  assert.strictEqual(reads, 11);
 });
 
-test('a review subject matches only the mission path exactly', () => {
-  assert.strictEqual(holdsReviewSubject(`Requirements-review: ${MISSION}\n`, MISSION), true);
-  assert.strictEqual(holdsReviewSubject('Requirements-review: lib/mission_alpha_two/\n', MISSION), false);
-  assert.strictEqual(holdsReviewSubject(`Starting-state: ${MISSION}\n`, MISSION), false);
-  assert.strictEqual(holdsReviewSubject('', MISSION), false);
+test('a review subject counts only for the mission path exactly', () => {
+  assert.strictEqual(countReviewSubjects(`Requirements-review: ${MISSION}\n`, MISSION), 1);
+  assert.strictEqual(countReviewSubjects(`Requirements-review: ${MISSION}\nRequirements-review: ${MISSION}\r\n`, MISSION), 2);
+  assert.strictEqual(countReviewSubjects('Requirements-review: lib/mission_alpha_two/\n', MISSION), 0);
+  assert.strictEqual(countReviewSubjects(`Starting-state: ${MISSION}\n`, MISSION), 0);
+  assert.strictEqual(countReviewSubjects('', MISSION), 0);
 });
 
-test('git holding a review commit for the mission reads as reviewed', async () => {
-  const root = repository(`Mission-definition: ${MISSION}`, `Requirements-review: ${MISSION}`);
-  assert.strictEqual(await reviewCommitted(root, MISSION), true);
+test('git holding review commits for the mission reads as their count', async () => {
+  assert.strictEqual(await reviewCount(repository(`Mission-definition: ${MISSION}`), MISSION), 0);
+  assert.strictEqual(await reviewCount(repository(`Mission-definition: ${MISSION}`, `Requirements-review: ${MISSION}`), MISSION), 1);
+  const reviewed = repository(
+    `Mission-definition: ${MISSION}`,
+    `Requirements-review: ${MISSION}`,
+    `Recommendation-answer: Pane Layout`,
+    `Requirements-review: ${MISSION}`,
+    `Requirements-review: ${MISSION}`,
+  );
+  assert.strictEqual(await reviewCount(reviewed, MISSION), 3);
 });
 
-test("git holding no review commit, or only another mission's or a body mention, reads as not reviewed", async () => {
+test("another mission's review commits and a body mention are not counted", async () => {
   const root = repository(
     `Mission-definition: ${MISSION}`,
     'Requirements-review: lib/mission_alpha_two/',
     `Starting-state: ${MISSION}\n\nRequirements-review: ${MISSION}`,
+    `Requirements-review: ${MISSION}`,
   );
-  assert.strictEqual(await reviewCommitted(root, MISSION), false);
+  assert.strictEqual(await reviewCount(root, MISSION), 1);
 });
 
 test('a git read that fails reads as unknown', async () => {
   const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-workflow-')));
-  assert.strictEqual(await reviewCommitted(root, MISSION), undefined);
+  assert.strictEqual(await reviewCount(root, MISSION), undefined);
 });

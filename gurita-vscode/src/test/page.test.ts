@@ -129,12 +129,12 @@ function loadPage(): Page {
 const ALPHA = 'lib/mission_alpha/';
 const BETA = 'mission_beta/';
 
-function mission(missionPath: string, title: string): unknown {
+function mission(missionPath: string, title: string, workflow: Record<string, unknown> = { step: 'derive' }): unknown {
   return {
     path: missionPath,
     state: 'started',
     title,
-    step: 'answer',
+    ...workflow,
     questions: {
       state: 'read',
       questions: ['Pane Layout', 'Tab Order'].map((id) => ({
@@ -270,4 +270,86 @@ test('a running message leaves the failure state as drawn', () => {
   assert.ok(texts.includes('The live missions could not be read.'));
   assert.strictEqual(named(page, 'New mission').disabled, false);
   assert.strictEqual(named(page, 'Define mission').disabled, false);
+});
+
+/** The workflow diagram's blocks, in the order drawn. */
+function blocks(page: Page): FakeElement[] {
+  return page.root.all().filter((each) => each.has('block'));
+}
+
+/** A page drawn for one mission whose diagram draws `workflow`. */
+function diagramPage(workflow: Record<string, unknown>, running: string[] = []): Page {
+  const page = loadPage();
+  page.send({ type: 'live', missions: [mission(ALPHA, 'Alpha', workflow)], recipes: RECIPES, running });
+  return page;
+}
+
+const SEVEN = ['define', 'first review round', 'additional review round', 'derive tasks', 'execute tasks', 'follow up tasks', 'finish'];
+
+test('the diagram is one line of seven blocks joined by arrows, with no frame, loop arrow, or handoff label', () => {
+  const page = diagramPage({ step: 'derive' });
+  const diagrams = page.root.all().filter((each) => each.has('workflow'));
+  assert.strictEqual(diagrams.length, 1);
+  const flows = diagrams[0].all().filter((each) => each.has('flow'));
+  assert.strictEqual(flows.length, 1);
+  const line = flows[0].children as FakeElement[];
+  assert.deepStrictEqual(
+    line.map((each) => (each.has('block') ? each.textContent : each.has('arrow') ? '→' : each.className)),
+    SEVEN.flatMap((name, index) => (index === 0 ? [name] : ['→', name])),
+  );
+  for (const kind of ['frame', 'frame-heading', 'loop', 'handoff', 'arrow-label']) {
+    assert.strictEqual(page.root.all().filter((each) => each.has(kind)).length, 0, `no ${kind}`);
+  }
+  const texts = page.root.all().map((each) => each.textContent);
+  for (const gone of ['Decide upfront', 'Hand execution to agents', 'until no open questions remain', 'handoff']) {
+    assert.ok(!texts.includes(gone), `no ${gone}`);
+  }
+});
+
+test('the two optional blocks are dashed and the five required ones solid', () => {
+  const page = diagramPage({ step: 'derive' });
+  assert.deepStrictEqual(
+    blocks(page).filter((each) => each.has('optional')).map((each) => each.textContent),
+    ['additional review round', 'follow up tasks'],
+  );
+  assert.deepStrictEqual(
+    blocks(page).filter((each) => !each.has('optional')).map((each) => each.textContent),
+    ['define', 'first review round', 'derive tasks', 'execute tasks', 'finish'],
+  );
+});
+
+test('each posted step fills exactly its own block, and no step fills none', () => {
+  const steps: [string, string][] = [
+    ['first-review', 'first review round'],
+    ['additional-review', 'additional review round'],
+    ['derive', 'derive tasks'],
+    ['execute', 'execute tasks'],
+    ['finish', 'finish'],
+  ];
+  for (const [step, name] of steps) {
+    const page = diagramPage({ step });
+    const filled = filledBlock(page);
+    assert.strictEqual(filled.textContent, name);
+    assert.strictEqual(filled.getAttribute('aria-current'), 'step');
+    assert.strictEqual(filled.has('running'), false);
+  }
+  const none = diagramPage({});
+  assert.strictEqual(blocks(none).length, 7);
+  assert.strictEqual(blocks(none).filter((each) => each.has('next')).length, 0);
+});
+
+test('the filled block keeps its pulse while a run is held, an optional one keeping its dashed border', () => {
+  const page = diagramPage({ step: 'additional-review', additionalRounds: 2 }, [ALPHA]);
+  const filled = filledBlock(page);
+  assert.strictEqual(filled.textContent, 'additional review round 2');
+  assert.strictEqual(filled.has('running'), true);
+  assert.strictEqual(filled.has('optional'), true);
+});
+
+test('the additional review round reads plain without a count and carries the posted count otherwise', () => {
+  assert.strictEqual(blocks(diagramPage({ step: 'execute' }))[2].textContent, 'additional review round');
+  for (const rounds of [1, 2, 3, 12]) {
+    const drawn = blocks(diagramPage({ step: 'execute', additionalRounds: rounds })).map((each) => each.textContent);
+    assert.deepStrictEqual(drawn, [...SEVEN.slice(0, 2), `additional review round ${rounds}`, ...SEVEN.slice(3)]);
+  }
 });
