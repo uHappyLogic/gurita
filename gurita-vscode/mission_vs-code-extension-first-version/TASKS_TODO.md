@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Recipe Reader Module With Unit Tests
-
-Write the recipe reader as a TypeScript module importing nothing from `vscode`: it reads the shipped snippet file, taking only the `###` blocks under `## Claude Code` and `## Antigravity` as recipes with their host group, and a person's own recipe file as a flat list of `###` recipes in which one carrying a shipped heading replaces that recipe, and it tells for each recipe whether it is a single-task line (exactly one headless line holding `<Task Title>`), whether it is the looped recipe (its slot line `<single-task line>`), and which known and unknown placeholders it holds. The pane's recipe list, its buttons, and the looped run are built from it. Verified by `node:test` unit tests over small fixtures of its own, run by the npm test script.
-
----
-
 ## Question Document Parser With Unit Tests
 
 Write the extension's in-process parser of `open_questions.xml` as a TypeScript module importing nothing from `vscode`, against the format the module docstring of `core/tools/open_questions.py` states: it returns every block whole (its Short Title, question, applied principles, dependencies with their question and option, recommendation with its option, and each alternative's id, what-it-is, advantage, and drawback, entities reversed), so that which blocks lack alternatives or a recommendation and whether the document is empty follow from it, and it reports a document that does not parse, conflict markers included, with a message of its own. The question view and the page's label are drawn from it. Verified by `node:test` unit tests over the committed question documents under `tests/fixtures/` and small fixtures of its own, run by the npm test script.
