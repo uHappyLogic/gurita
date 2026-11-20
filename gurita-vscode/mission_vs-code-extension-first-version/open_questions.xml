@@ -550,6 +550,31 @@
   </open-question>
   <open-question id="Slot line text">
     <question>The looped task recipe that `snippets/GURITA_USAGE.md` gains for the VS Code extension (`gurita-vscode`) ends on a reserved slot line, which stands for the single-task line chosen for each task and marks the recipe as the looped one. What exact text does that slot line read?</question>
+    <alternative id="Draft example as written">
+      The slot line reads exactly `&lt;task line&gt;`, the example `ideas/vscode_extension.md` gives: one angle-bracket placeholder alone on the line, lower case like `&lt;path&gt;`, `&lt;goal&gt;`, `&lt;scope&gt;`, and `&lt;answer text&gt;`, with no trailing `;`, the recipe reader and the runner recognizing it as a line whose whole trimmed text equals that token.
+      <advantage>It is the text the design draft already shows in both its Recipes part and its Decided list, so the shipped file, the draft, and the extension&apos;s code agree with no rewording, and the token is short and plainly not a value placeholder of the ways-of-using page&apos;s six.</advantage>
+      <drawback>&quot;task line&quot; is looser than the draft&apos;s own term for what fills it, the &quot;named single-task lines&quot;, so a reader of the file by hand must learn that the slot stands for one of those recipes; and like every angle-bracket form, pasting the recipe by hand fails on a shell syntax error at that line, and the extension&apos;s placeholder filling must exempt the token from the variable-reference substitution every other placeholder gets.</drawback>
+    </alternative>
+    <alternative id="Draft example with semicolon">
+      The slot line reads `&lt;task line&gt;;`: the draft&apos;s token, lower case, followed by the `;` that ends every chain line of `snippets/GURITA_USAGE.md`, the reader recognizing the line by its whole trimmed text including the `;`.
+      <advantage>The looped recipe looks like every other block of the file, each of whose lines ends in `;`, so the slot reads as one more line of the chain in the place the chosen single-task line, itself ending in `;`, will take.</advantage>
+      <drawback>The `;` carries nothing, since the slot is replaced whole and never run as written, and it makes the token one character the reader must match exactly, so a slot typed without it in a person&apos;s own recipe file is not recognized and that recipe is not taken as the looped one.</drawback>
+    </alternative>
+    <alternative id="Single-task line token">
+      The slot line reads `&lt;single-task line&gt;`, alone on the line, lower case, with no trailing `;`: the token names the draft&apos;s own term for the recipes that fill it.
+      <advantage>The slot names exactly what the runner puts in its place, one of the recipe file&apos;s named single-task lines, so a person reading the looped recipe by hand sees which recipes feed it, and the token cannot be read as a stand-in for a task&apos;s title or brief.</advantage>
+      <drawback>It departs from the draft&apos;s example, so the draft&apos;s text and the shipped file differ unless the draft is revised, and the hyphenated, longer token is one more spelling the TypeScript reader, the Python runner, and any person&apos;s own looped recipe must reproduce exactly.</drawback>
+    </alternative>
+    <alternative id="Title Case task line">
+      The slot line reads `&lt;Task Line&gt;`, alone on the line, with no trailing `;`, in the Title Case the snippet file&apos;s `&lt;Task Title&gt;` and the page&apos;s `&lt;Short Title&gt;` and `&lt;Alternative Id&gt;` use.
+      <advantage>It matches the casing of the placeholder that sits on every single-task line, `&lt;Task Title&gt;`, so the two task-related tokens of a looped run read as one family.</advantage>
+      <drawback>`&lt;Task Line&gt;` and `&lt;Task Title&gt;` differ by one word, so the two are easily confused in reading and typing, the more so since the slot is the one token never filled as a value; and in the existing files Title Case marks a name the plugin defines (a Short Title, an alternative id, a task heading), which a whole line is not.</drawback>
+    </alternative>
+    <alternative id="Left to the recipe task">
+      No text is fixed now: the task that writes the looped recipe into `snippets/GURITA_USAGE.md` chooses the slot line&apos;s text, an angle-bracket placeholder alone on the line, and the extension&apos;s reader and runner take it from that task&apos;s result.
+      <advantage>The question costs no decision before derivation, and the text is chosen by whoever writes the recipe and the reader, against the file as it then stands.</advantage>
+      <drawback>The token is a contract between the shipped file, the TypeScript recipe reader, the Python runner, and every person&apos;s own looped recipe, likely written by separate tasks, so leaving it open lets those tasks guess differently, with no recorded decision for a later task or the follow-up documents to read it back from.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Looped recipe heading">
     <question>The snippet file `snippets/GURITA_USAGE.md` gains a looped task recipe for the VS Code extension (`gurita-vscode`), holding only the reserved slot line and no host command line of its own, while every recipe stands under `## Claude Code` or `## Antigravity`. What is the looped recipe called, and under which host heading or headings does it stand?</question>
