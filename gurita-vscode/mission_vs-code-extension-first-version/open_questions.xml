@@ -7,6 +7,31 @@
   </open-question>
   <open-question id="Minimum VS Code version">
     <question>Which minimum VS Code version does the manifest of the VS Code extension this mission builds (`gurita-vscode`) declare in `engines.vscode`, and with it which `@types/vscode` version does it build against, given that the installed editor is 1.143.0 and the latest `@types/vscode` (1.146.0) is ahead of it?</question>
+    <alternative id="Installed floor, 1.140 types">
+      The manifest declares `engines.vscode` as `^1.143.0`, the installed editor&apos;s version, and the extension builds against `@types/vscode` pinned exactly (no caret or tilde) to `1.140.0`, the newest published typings not ahead of that floor, since the registry holds no `1.141.0`, `1.142.0`, or `1.143.0` and goes from `1.140.0` straight to `1.144.0`.
+      <advantage>The declared floor is the very release every API fact in `ideas/vscode_extension.md` was confirmed against (1.143.0&apos;s `out/vscode-dts/vscode.d.ts`), so the manifest claims nothing the draft did not check, the VSIX installs into the maintainer&apos;s editor, and `@vscode/vsce` accepts the pair because the typings are not newer than the engine.</advantage>
+      <drawback>The typings lag the declared floor by three minors, so an API added in 1.141 to 1.143 that the extension uses has no type and must be declared or cast by hand, and the compiler no longer proves that every call exists in the floor version, leaving the declared and the compiled-against versions two different numbers to keep in step.</drawback>
+    </alternative>
+    <alternative id="Matched 1.140 pair">
+      The manifest declares `engines.vscode` as `^1.140.0` and the extension builds against `@types/vscode` pinned exactly to `1.140.0`, the newest published typings at or below the installed editor, so the floor and the typings are one version, three minors below the installed 1.143.0.
+      <advantage>What the extension declares is exactly what it compiles against, so the compiler proves every API call exists in the floor version, `@vscode/vsce`&apos;s typings-versus-engine check passes by construction, and the VSIX still installs into the maintainer&apos;s 1.143.0 editor and any editor back to 1.140.</advantage>
+      <drawback>The API facts the draft confirmed were read from 1.143.0&apos;s definitions, not 1.140.0&apos;s, so any of them that arrived after 1.140 surfaces only as a compile error during the work, and the floor is set by which typings happen to be published rather than by anything the extension or its user needs.</drawback>
+    </alternative>
+    <alternative id="Oldest API-carrying floor">
+      The manifest declares `engines.vscode` as the oldest release whose stable API carries every call the extension makes (around `^1.93.0` if it rests on terminal shell integration, stabilized there, and lower if it does not), and the extension builds against `@types/vscode` pinned exactly to that same version, found during the work by compiling against the candidate typings.
+      <advantage>The extension installs into the widest range of editors, so a collaborator or a second machine on an older VS Code can try it without updating, and the matched pair keeps the compiler proving every call exists at the declared floor.</advantage>
+      <drawback>The floor cannot be named until the extension&apos;s API surface is fixed, so it depends on the siblings that choose the session mechanism, the run terminal&apos;s lifetime, and whether the pane is restored by a serializer; it compiles against typings more than fifty releases older than the editor the draft checked and the one it will be tried in, and breadth buys nothing for a first version installed by hand into one maintainer&apos;s editor.</drawback>
+    </alternative>
+    <alternative id="Vendored 1.143 definitions">
+      The manifest declares `engines.vscode` as `^1.143.0`, and instead of depending on `@types/vscode` the extension commits a copy of the installed editor&apos;s own `out/vscode-dts/vscode.d.ts` (1.143.0) under `gurita-vscode/` and compiles against it, so no published typings package is used at all.
+      <advantage>The floor, the typings, and the API definitions the draft&apos;s facts were confirmed against are one and the same file, an exact 1.143.0 match the registry cannot supply, and the build reads no typings version that could drift ahead of the engine.</advantage>
+      <drawback>The repository carries a large hand-copied file from inside the application, refreshed by hand whenever the floor moves and differing from the usual extension setup that `@vscode/vsce` and generators assume, and its provenance rests on the maintainer&apos;s local install rather than a pinned registry version.</drawback>
+    </alternative>
+    <alternative id="Update editor to 1.146">
+      The premise that the installed editor stays at 1.143.0 is rejected: the manifest declares `engines.vscode` as `^1.146.0` and the extension builds against the latest `@types/vscode`, pinned exactly to `1.146.0`, with the maintainer&apos;s editor updated to 1.146 or later before the VSIX is installed.
+      <advantage>The extension tracks the current API with a matched pair from the latest published typings, so nothing lags, nothing is vendored, and no API newer than the draft&apos;s check is out of reach.</advantage>
+      <drawback>The VSIX refuses to install into the editor as it stands today, so the maintainer&apos;s install task gains an editor update the goal never names, the draft&apos;s API facts were confirmed against 1.143.0 rather than the declared floor, and any editor older than 1.146 is refused.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Extension version number">
     <question>What version does the VS Code extension this mission builds (`gurita-vscode`) carry in its manifest, and does it follow the plugin&apos;s `VERSION` (2.0.0 today), which `scripts/set_version.py` writes together with its mirrors?</question>
