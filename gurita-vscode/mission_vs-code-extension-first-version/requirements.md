@@ -68,6 +68,8 @@ No other mission is live, so nothing holds or shares the scope. The record holds
 
 - **Codex print check.** This mission makes no check of what a Codex line's plain print opens with. The open item the draft names under "Questions for the work" is carried into the follow-up document under `ideas/` as potential follow-up work, stated there as unchecked, and the runner reads every headless line, a Codex one in a person's own recipe file included, by the one rule it has for all hosts.
 
+- **TypeScript tests.** The recipe reader, the `open_questions.xml` parser, and the `TASKS_TODO.md` heading read are each a module importing nothing from `vscode`, and each gets unit tests written with Node 22's built-in `node:test` and `node:assert`, run over the TypeScript compiler's output by an npm test script, against the repository's committed fixtures and small fixtures of their own. Nothing runs inside an editor.
+
 ### Documents
 
 - **Follow-up document.** Everything the first version leaves out is written into one new document, `ideas/vscode_extension_follow_up.md`, flat in `ideas/` beside the draft. Each left-out item has a section of its own, grouped by kind under a few `##` headings: guards of a long-lived extension (the drift-gate Node steps, the fixed-line, parse, and heading cross-checks, any tests left out), checks left unmade, and deferred product work such as publication.
