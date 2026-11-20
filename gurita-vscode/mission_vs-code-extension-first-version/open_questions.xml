@@ -1,1 +1,143 @@
-<open-questions/>
+<open-questions>
+  <open-question id="Bundled file sourcing">
+    <question>The VS Code extension this mission builds (`gurita-vscode`) ships a byte-identical copy of `core/tools/missions.py` and the recipes of `snippets/GURITA_USAGE.md` inside its package. How do those two files reach the package when it is built from this repository?</question>
+  </open-question>
+  <open-question id="Node toolchain shape">
+    <question>The VS Code extension this mission builds (`gurita-vscode`) is the repository&apos;s first Node project, written in TypeScript and packaged as a VSIX with `@vscode/vsce`. Is its code shipped as plain compiler output or through a bundler, and is the webview page written as plain HTML with a script of its own or with a UI framework, which would need a bundler?</question>
+  </open-question>
+  <open-question id="Minimum VS Code version">
+    <question>Which minimum VS Code version does the manifest of the VS Code extension this mission builds (`gurita-vscode`) declare in `engines.vscode`, and with it which `@types/vscode` version does it build against, given that the installed editor is 1.143.0 and the latest `@types/vscode` (1.146.0) is ahead of it?</question>
+  </open-question>
+  <open-question id="Extension version number">
+    <question>What version does the VS Code extension this mission builds (`gurita-vscode`) carry in its manifest, and does it follow the plugin&apos;s `VERSION` (2.0.0 today), which `scripts/set_version.py` writes together with its mirrors?</question>
+  </open-question>
+  <open-question id="Manifest publisher value">
+    <question>Packaging a VSIX needs a `publisher` in the extension&apos;s manifest, and that value becomes part of the installed extension&apos;s id, while the VS Code extension this mission builds (`gurita-vscode`) is published nowhere and reserves no publisher id. What publisher value does its manifest carry?</question>
+  </open-question>
+  <open-question id="VSIX artifact handling">
+    <question>Is the packaged VSIX of the VS Code extension this mission builds (`gurita-vscode`) committed to the repository or left as ignored build output, and where does the build leave it for the maintainer to install by hand?</question>
+  </open-question>
+  <open-question id="Drift-gate guards carried">
+    <question>The design draft `ideas/vscode_extension.md` assigns four things to the drift-gate workflow for the VS Code extension (`gurita-vscode`): its build and tests as Node steps, a check of the fixed console lines it carries against the `## Fixed console lines` table of `docs/skill-reference.md`, a check of its `open_questions.xml` parse against `open_questions.py list --without-alternatives` and `--without-recommendation`, and a check that no `###` heading of `snippets/GURITA_USAGE.md` repeats. The mission&apos;s goal allows such guards to be left out and written up as follow-up work. Which of the four does this mission carry out, and which does it leave out?</question>
+  </open-question>
+  <open-question id="Runner test home">
+    <question>Does the stdlib-only Python runner bundled in the VS Code extension this mission builds (`gurita-vscode`) get automated tests in this mission, and if so do they stand in the repository&apos;s `tests/` suite, which both CI pytest runs collect, or beside the extension, outside what CI runs?</question>
+  </open-question>
+  <open-question id="TypeScript test coverage">
+    <question>Does the TypeScript side of the VS Code extension this mission builds (`gurita-vscode`), its recipe reader, its `open_questions.xml` parser, and its read of the `TASKS_TODO.md` headings, get automated tests in this mission, and if so under which test runner?</question>
+  </open-question>
+  <open-question id="Follow-up document layout">
+    <question>The mission&apos;s goal has everything the first version of the VS Code extension (`gurita-vscode`) leaves out written into one or more new documents under `ideas/` as potential follow-up work. Is that one document or several, and what is each called?</question>
+  </open-question>
+  <open-question id="Draft after delivery">
+    <question>Once the VS Code extension (`gurita-vscode`) exists, the design draft `ideas/vscode_extension.md` still says that nothing of it is carried out and still lists as open the names, paths, and formats this mission settles. Does the mission revise the draft, and if so how far?</question>
+  </open-question>
+  <open-question id="Extension documentation home">
+    <question>Where is the VS Code extension this mission builds (`gurita-vscode`) documented for a person who builds, installs, and uses it (its build commands, its recipe and rule files, its setting): in a README of its own under `gurita-vscode/`, in the repository&apos;s existing documents (`README.md`, `CONTRIBUTING.md`, `docs/`), or both?</question>
+  </open-question>
+  <open-question id="Maintainer install task">
+    <question>The mission&apos;s last task, installing the packaged VSIX of the VS Code extension (`gurita-vscode`) into the maintainer&apos;s editor and trying it, is the maintainer&apos;s own to carry out. How is that task carried, on the task list or outside it, so that an unattended `complete-all-tasks` run neither performs it nor records it as completed?</question>
+  </open-question>
+  <open-question id="Codex print check">
+    <question>The runner of the VS Code extension this mission builds (`gurita-vscode`) reads the first line of a headless run&apos;s plain print, and whether a Codex line&apos;s plain print opens with the skill&apos;s fixed first line was never checked, while no shipped recipe line is Codex&apos;s. Does this mission make that check, or leave it to the follow-up documents under `ideas/`?</question>
+  </open-question>
+  <open-question id="Reference heading name">
+    <question>The five blocks of `snippets/GURITA_USAGE.md` that are not chains of host command lines (the two lists of bare slash commands, the Antigravity install block, the `agy models` line, and the `git log` one-liner) move under one heading of their own, which the VS Code extension&apos;s recipe reader never reads. What is that heading called?</question>
+  </open-question>
+  <open-question id="Host-named heading form">
+    <question>Six `###` headings of `snippets/GURITA_USAGE.md` repeat under both `## Claude Code` and `## Antigravity` (First run, Requirements iteration, the three Execute tasks headings, and Finish mission), and each repeated heading is to name its host so that every recipe heading in the file is unique. In what form does a repeated heading name its host?</question>
+  </open-question>
+  <open-question id="Button recipe names">
+    <question>The snippet file `snippets/GURITA_USAGE.md` gains six one-line recipes that the buttons of the VS Code extension (`gurita-vscode`) run by fixed name, one each for `discuss-open-question`, `discuss-mission-goal`, `answer-open-question`, `answer-open-question-with-recommendation`, `answer-open-question-with-alternative`, and `define-mission-goal`. What is the `###` heading of each of the six?</question>
+  </open-question>
+  <open-question id="Button recipe host lines">
+    <question>Each of the six one-line recipes the buttons of the VS Code extension (`gurita-vscode`) run by fixed name (discuss a question, discuss a mission goal, answer in the person&apos;s own words, record the recommendation, record an alternative, define a mission) stands under one host heading of `snippets/GURITA_USAGE.md` and is written out with its host binary, model, and effort. Which host, model, and effort does each of the six lines carry?</question>
+  </open-question>
+  <open-question id="Slot line text">
+    <question>The looped task recipe that `snippets/GURITA_USAGE.md` gains for the VS Code extension (`gurita-vscode`) ends on a reserved slot line, which stands for the single-task line chosen for each task and marks the recipe as the looped one. What exact text does that slot line read?</question>
+  </open-question>
+  <open-question id="Looped recipe heading">
+    <question>The snippet file `snippets/GURITA_USAGE.md` gains a looped task recipe for the VS Code extension (`gurita-vscode`), holding only the reserved slot line and no host command line of its own, while every recipe stands under `## Claude Code` or `## Antigravity`. What is the looped recipe called, and under which host heading or headings does it stand?</question>
+  </open-question>
+  <open-question id="Task preparation recipe">
+    <question>A looped task run in the VS Code extension (`gurita-vscode`) is preceded by a click on a flat recipe that runs the answer sweep and `derive-tasks` without the `complete-all-tasks` line, and `snippets/GURITA_USAGE.md` holds no such recipe today. Does the shipped file gain one, under which host headings, and under what name?</question>
+  </open-question>
+  <open-question id="Shipped single-task lines">
+    <question>A looped task run in the VS Code extension (`gurita-vscode`) gives each task one of the recipe file&apos;s named single-task lines, and `snippets/GURITA_USAGE.md` holds two today: `complete-task` under Opus at `xhigh` on Claude Code and under Opus at `high` on Antigravity. Does the shipped file keep just those two, or gain further host, model, and effort combinations, and which?</question>
+  </open-question>
+  <open-question id="Snippet file first line">
+    <question>The first line of `snippets/GURITA_USAGE.md` is a bare `&lt;mission_path&gt;` placeholder standing above the file&apos;s `#` title. When the file becomes the shipped recipe source of the VS Code extension (`gurita-vscode`) and its placeholder is renamed `&lt;path&gt;`, does that line stay, change, or go?</question>
+  </open-question>
+  <open-question id="Single-task line recognition">
+    <question>A looped task run in the VS Code extension (`gurita-vscode`) gives each task one of the recipe file&apos;s named single-task lines, each a one-line `###` recipe holding a `complete-task` invocation with `&lt;path&gt;` and `&lt;Task Title&gt;`. By what does the extension tell such a recipe from every other recipe, so that the rules and the preview&apos;s override list can name it?</question>
+  </open-question>
+  <open-question id="Unfillable placeholder handling">
+    <question>The page of the VS Code extension (`gurita-vscode`) fills a recipe&apos;s placeholders from where its button stands: `&lt;path&gt;` from the mission&apos;s page, `&lt;Short Title&gt;` and `&lt;Alternative Id&gt;` from the question view. When a recipe listed on a mission&apos;s page holds a placeholder the page has no value for there, such as `&lt;Task Title&gt;` on a single-task line or `&lt;Short Title&gt;` on a per-question recipe listed among its host&apos;s recipes, or a placeholder name the extension does not know, what does the extension do with that recipe?</question>
+  </open-question>
+  <open-question id="Own recipe placement">
+    <question>A person&apos;s own recipe file for the VS Code extension (`gurita-vscode`) is a flat list of `###` recipes with no host headings, while a mission&apos;s page groups the shipped recipes under Claude Code and Antigravity. Where on the page does an own recipe that replaces no shipped recipe appear?</question>
+  </open-question>
+  <open-question id="Own recipe file path">
+    <question>A person&apos;s own recipes for the VS Code extension (`gurita-vscode`) are one per-user file outside every project, at a default path a VS Code user setting changes. What is that default path?</question>
+  </open-question>
+  <open-question id="Own recipe setting name">
+    <question>What is the VS Code user setting called that changes the path of a person&apos;s own recipe file for the VS Code extension (`gurita-vscode`)?</question>
+  </open-question>
+  <open-question id="Rule file location">
+    <question>The rules that choose each task&apos;s single-task line in a looped task run of the VS Code extension (`gurita-vscode`) are one tracked file of the project the extension works in, outside every mission directory. What is that file called, and where in the project does it stand?</question>
+  </open-question>
+  <open-question id="Rule file format">
+    <question>The tracked rule file of the VS Code extension&apos;s looped task run is read only by the extension&apos;s stdlib-only Python 3.9 runner, its patterns in Python&apos;s `re` dialect. In what format is the file written, that is, how are a pattern over a task&apos;s title and brief, the single-task line name it maps to, and the default line written, and which rule wins when several match one task?</question>
+  </open-question>
+  <open-question id="Missing rule file">
+    <question>A looped task run of the VS Code extension (`gurita-vscode`) takes each task&apos;s single-task line from a tracked rule file in the project. What do the preview and the run do in a project that holds no such file?</question>
+  </open-question>
+  <open-question id="Runner command line">
+    <question>The VS Code extension (`gurita-vscode`) bundles one Python runner file, started as a terminal&apos;s process and startable by hand, in three uses: running a chain&apos;s lines, running the task loop (given the rule file, the named single-task lines, and the person&apos;s overrides), and a preview mode that runs nothing. What is the file called, and how are its modes and arguments written on its command line?</question>
+  </open-question>
+  <open-question id="Preview print form">
+    <question>The preview mode of the runner bundled in the VS Code extension (`gurita-vscode`) prints one line per remaining task with the named single-task line the rules give it, or the missing name when a rule names a line no recipe carries, and the extension parses that print. In what form is each line printed?</question>
+  </open-question>
+  <open-question id="Session variable names">
+    <question>Every value the VS Code extension (`gurita-vscode`) substitutes into a recipe line (`&lt;path&gt;`, `&lt;Short Title&gt;`, `&lt;Alternative Id&gt;`, `&lt;goal&gt;`, `&lt;scope&gt;`, `&lt;answer text&gt;`, `&lt;Task Title&gt;`) reaches the line as a reference to a variable in the shell session&apos;s environment. What are those variables called?</question>
+  </open-question>
+  <open-question id="Session shell and platforms">
+    <question>The runner of the VS Code extension (`gurita-vscode`) runs a recipe&apos;s lines in a shell session, where a step of the person&apos;s own may call a function their shell setup defines, such as `claude-wait`. Which shell does the runner start for a session and in which mode (the person&apos;s own shell or a fixed one, reading their startup files or not), and which operating systems does the first version support as a result?</question>
+  </open-question>
+  <open-question id="One-session mechanism">
+    <question>The runner of the VS Code extension (`gurita-vscode`) runs a chain&apos;s lines in one shell session, so that an earlier shell step takes effect for the lines after it, yet it must read each headless line&apos;s output on its own, decide after it whether to go on, and hand the terminal to an interactive line. By what mechanism does one session span a chain&apos;s lines?</question>
+  </open-question>
+  <open-question id="Fixed-line carriage">
+    <question>The runner of the VS Code extension (`gurita-vscode`) looks up the first line of each headless run&apos;s final message among the plugin&apos;s fixed console lines, listed with their kinds in the `## Fixed console lines` table of `docs/skill-reference.md`, a file the installed extension does not have. In what form does the extension carry those lines and kinds, and does it carry every line of the table or only the ones a chain&apos;s decision needs?</question>
+  </open-question>
+  <open-question id="Run terminal lifetime">
+    <question>Is a chain&apos;s runner in the VS Code extension (`gurita-vscode`) started as a terminal created with `shellPath` and `shellArgs` or as a task&apos;s `ProcessExecution`, and what keeps the run&apos;s output and the line it ended on readable after the runner&apos;s process exits?</question>
+  </open-question>
+  <open-question id="Page redraw method">
+    <question>After a run, the pane of the VS Code extension (`gurita-vscode`) re-reads the question document and redraws its page. Is the page redrawn by setting `webview.html` anew or by a message to the visible page, and how are the question rows the person opened kept across a redraw and across the pane being hidden?</question>
+  </open-question>
+  <open-question id="Refresh triggers">
+    <question>Beyond the end of a run the extension itself started, when does the pane of the VS Code extension (`gurita-vscode`) re-read the project&apos;s live missions, open questions, and remaining tasks?</question>
+  </open-question>
+  <open-question id="Pane opening">
+    <question>How does a person open the mission pane of the VS Code extension (`gurita-vscode`), that is, which command or other entry point does the extension contribute for it?</question>
+  </open-question>
+  <open-question id="Input method">
+    <question>Some buttons of the VS Code extension (`gurita-vscode`) ask the person for a goal, a scope, or an answer text before running a line. Are those typed into VS Code&apos;s own input box, which holds one line, or into a field on the pane&apos;s page?</question>
+  </open-question>
+  <open-question id="Second chain click">
+    <question>Within one mission the VS Code extension (`gurita-vscode`) runs one chain at a time. What happens when a button on a mission&apos;s page is clicked while a chain started for that mission is still running?</question>
+  </open-question>
+  <open-question id="Live query failure">
+    <question>The pane of the VS Code extension (`gurita-vscode`) lists the live missions by running its bundled `missions.py live` with `python3` in the project. What does the pane show when that query cannot run or fails, as with no folder open, a folder that is no git work tree, or no `python3`?</question>
+  </open-question>
+  <open-question id="Project root choice">
+    <question>Which directory does the VS Code extension (`gurita-vscode`) take as the project root, from which it runs `missions.py live` and every recipe line, when the editor&apos;s workspace holds several folders or a folder that is not the project&apos;s root?</question>
+  </open-question>
+  <open-question id="Pane restore after restart">
+    <question>Does the mission pane of the VS Code extension (`gurita-vscode`) come back by itself after the editor restarts, which needs a `WebviewPanelSerializer`, or does the person open it again?</question>
+  </open-question>
+  <open-question id="Recipe click confirmation">
+    <question>Does a click on a recipe button in the VS Code extension (`gurita-vscode`), other than the looped task recipe with its preview, start the run at once, or does the page first show the lines it is about to run and wait for a confirmation?</question>
+  </open-question>
+</open-questions>
