@@ -72,5 +72,7 @@ No other mission is live, so nothing holds or shares the scope. The record holds
 
 - **Design draft.** One task revises `ideas/vscode_extension.md` the way `ideas/gurita.md` was revised after the rename: its status sentences record the first version as built by this mission, each item under "Questions for the work" is marked as answered and carries the decision that settled it (the name, path, or format chosen), the two checks the draft left unmade are marked with their result or as moved to the follow-up document, and the publication question stays open. Every other section (the rationale, what was measured, Decided, Considered and dropped, and the body's descriptions and examples) stays as written.
 
+- **Extension documentation.** The extension is documented in one new file, `gurita-vscode/README.md`, holding everything a person who builds, installs, and uses it needs: the Node 22 build and packaging commands in the nvm form the goal states, where the VSIX lands and how to install it by hand, the shipped recipe file and a person's own recipe file, the tracked rule file, and the user setting. `README.md`, `CONTRIBUTING.md`, and `docs/` are left untouched and do not mention the extension.
+
 ## Out of Scope
 
