@@ -108,5 +108,7 @@ No other mission is live, so nothing holds or shares the scope. The record holds
 
 - **Own recipe file path.** The default path of a person's own recipe file is `~/.gurita/recipes.md`, a fixed path in a dot directory named for the plugin under the person's home directory, spelled the same on every operating system, read by expanding the home directory and honouring no environment variable.
 
+- **Own recipe setting.** The VS Code user setting that changes the path of a person's own recipe file is `gurita.ownRecipesFile`, sitting flat directly under the `gurita` section, the plugin's name and not the extension's slug.
+
 ## Out of Scope
 
