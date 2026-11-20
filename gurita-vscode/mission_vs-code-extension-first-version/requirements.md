@@ -114,5 +114,7 @@ No other mission is live, so nothing holds or shares the scope. The record holds
 
 - **Location.** The rule file stands at one fixed path directly in the project root, named `task_line_rules` in the snake_case form of the root-level principle store `answer_decision_principles.md`, its file extension the one the rule file's format takes, with no `gurita` prefix, no directory of its own, and no setting that moves it.
 
+- **Format.** The rule file is plain UTF-8 text in a format of the runner's own, one rule per line: the pattern, then ` -> `, then the single-task line's name exactly as its recipe's `###` heading reads, the line split at its last ` -> ` so a pattern may hold the arrow. Blank lines and lines opening with `#` are skipped. The default is the one line whose pattern is a bare `*`, which is never a valid `re` pattern, so it cannot collide with a rule, and more than one `*` line is refused. Each pattern is applied with `re.search` and `re.IGNORECASE` to the task's title and brief joined by a newline, and when several rules match, the first in file order wins.
+
 ## Out of Scope
 
