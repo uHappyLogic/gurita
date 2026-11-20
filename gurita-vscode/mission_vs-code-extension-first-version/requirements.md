@@ -70,5 +70,7 @@ No other mission is live, so nothing holds or shares the scope. The record holds
 
 - **Follow-up document.** Everything the first version leaves out is written into one new document, `ideas/vscode_extension_follow_up.md`, flat in `ideas/` beside the draft. Each left-out item has a section of its own, grouped by kind under a few `##` headings: guards of a long-lived extension (the drift-gate Node steps, the fixed-line, parse, and heading cross-checks, any tests left out), checks left unmade, and deferred product work such as publication.
 
+- **Design draft.** One task revises `ideas/vscode_extension.md` the way `ideas/gurita.md` was revised after the rename: its status sentences record the first version as built by this mission, each item under "Questions for the work" is marked as answered and carries the decision that settled it (the name, path, or format chosen), the two checks the draft left unmade are marked with their result or as moved to the follow-up document, and the publication question stays open. Every other section (the rationale, what was measured, Decided, Considered and dropped, and the body's descriptions and examples) stays as written.
+
 ## Out of Scope
 
