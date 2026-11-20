@@ -48,5 +48,9 @@ No other mission is live, so nothing holds or shares the scope. The record holds
 
 ## Decisions
 
+### Build and packaging
+
+- **Bundled files.** A build step of the extension's own, run from its `vscode:prepublish` script so that every `vsce package` runs it, copies `core/tools/missions.py` and `snippets/GURITA_USAGE.md` verbatim into a git-ignored directory under `gurita-vscode/`, and the package ships them from there. Nothing copied is committed and no test compares the copies with their sources. The extension's recipe reader parses the shipped snippet file at run time, as it parses a person's own recipe file.
+
 ## Out of Scope
 
