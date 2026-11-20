@@ -732,6 +732,46 @@
   </open-question>
   <open-question id="Preview print form">
     <question>The preview mode of the runner bundled in the VS Code extension (`gurita-vscode`) prints one line per remaining task with the named single-task line the rules give it, or the missing name when a rule names a line no recipe carries, and the extension parses that print. In what form is each line printed?</question>
+    <alternative id="Tab fields with state">
+      Each line is three tab-separated fields in the layout of `missions.py live`: a state word (`resolved` when the named line is among the single-task lines the runner was given, `missing` when it is not), then the line name the rules give the task (the missing name in a `missing` line), then the task&apos;s `##` title last. The runner alone decides resolved or missing, and the print carries nothing else.
+      <advantage>It follows the listing convention every plugin tool already uses (tab-separated fields, a state word, the title last, as `live` prints path, `started` or `defined`, and title), so the extension parses it as it parses `live`, a person running the preview by hand reads it at a glance, and the runner, which evaluates the rules and runs the loop, is the one place that decides whether an assignment resolves.</advantage>
+      <drawback>Fields are found by position, so a tab inside a task title or a `###` recipe heading would shift them, which nothing in the task format or the recipe file forbids today; and adding a field later changes every parser&apos;s positions.</drawback>
+    </alternative>
+    <alternative id="Tab fields with state and rule">
+      Each line is four tab-separated fields: the state word (`resolved` or `missing`), the line name (or the missing name), the rule that chose it, written as that rule&apos;s identity in the rule file or `default` when no rule matched, and the task&apos;s `##` title last.
+      <advantage>Besides the convention and the runner deciding resolution, the print says why each task got its line, so a person reading the preview can tell a task the default caught from one a rule meant, and fix a rule rather than override task by task.</advantage>
+      <drawback>It adds a field the draft&apos;s page does not show, so either the page draws more than the draft decided or the field serves only a preview run by hand; how a rule is identified depends on the form the rule file is written in, which the rule-file format question settles; and the tab-in-a-title risk of positional fields stands.</drawback>
+    </alternative>
+    <alternative id="Tab fields without state">
+      Each line is two tab-separated fields, the line name the rules give the task and the task&apos;s `##` title last, whether or not that name is among the single-task lines; the runner flags nothing, and the extension tells an unresolved assignment by checking the name against the named single-task lines it passed to the runner itself.
+      <advantage>The leanest print, one rule evaluation per task with no resolution logic in the preview mode, and the extension already holds the exact list of named lines it hands the runner, which it needs anyway to offer overrides.</advantage>
+      <drawback>Whether a name resolves is decided twice, by the extension for the preview and by the runner for the loop, so any difference in how the two match a name to a recipe heading (case, whitespace, an own recipe replacing a shipped one) lets the preview show a task resolved that the loop then stops on, the disagreement the runner-only design exists to rule out; and a preview run by hand no longer shows which assignments are missing.</drawback>
+    </alternative>
+    <alternative id="Tab fields without state, with rule">
+      Each line is three tab-separated fields: the line name the rules give the task, the rule that chose it (its identity in the rule file, or `default`), and the task&apos;s `##` title last; the runner flags no missing name, and the extension tells an unresolved assignment by checking the name against the named single-task lines it passed.
+      <advantage>It keeps resolution logic out of the preview mode while still telling the person which rule, or the default, put each task on its line.</advantage>
+      <drawback>It carries both costs at once: resolution decided twice, in the extension and the runner, with the drift that brings, and a field the draft&apos;s page does not show, whose form depends on how the rule-file format question identifies a rule; positional fields still break on a tab inside a title or heading.</drawback>
+    </alternative>
+    <alternative id="JSON Lines with state">
+      Each line is one JSON object, `{&quot;task&quot;: title, &quot;line&quot;: name}` for a resolved assignment and `{&quot;task&quot;: title, &quot;missing&quot;: name}` for a line no given recipe carries, the key telling the two apart; the runner writes it with the standard library&apos;s `json` module and the extension reads it with `JSON.parse`, and the runner alone decides resolution.
+      <advantage>Fields are found by key with every character escaped, so no title or heading can break the parse, a later field can be added without touching any existing reader, and both sides use their language&apos;s built-in parser instead of a split of their own.</advantage>
+      <drawback>It departs from the tab-separated listing every plugin tool prints, so the runner&apos;s two modes and the bundled `missions.py` the extension also parses speak two formats, and a preview run by hand prints escaped, quoted JSON that is harder to scan than plain fields.</drawback>
+    </alternative>
+    <alternative id="JSON Lines with state and rule">
+      Each line is one JSON object carrying the task title, the line name under `line` or `missing`, and a `rule` key holding the identity of the rule that chose it in the rule file, or `default`; the runner alone decides resolution.
+      <advantage>The most robust and informative print: nothing in a title can break it, it says why each task got its line, and a later field costs no reader a change.</advantage>
+      <drawback>It adds the departure from the tools&apos; tab convention and the harder hand-read print to a field the draft&apos;s page does not show, whose form depends on how the rule-file format question identifies a rule.</drawback>
+    </alternative>
+    <alternative id="JSON Lines without state">
+      Each line is one JSON object, `{&quot;task&quot;: title, &quot;line&quot;: name}`, whether or not the name is among the given single-task lines; the extension tells an unresolved assignment by checking the name against the named lines it passed to the runner.
+      <advantage>A print no title can break and that any later field extends freely, with no resolution logic in the preview mode at all.</advantage>
+      <drawback>Resolution is decided twice, so the preview and the loop can disagree on whether a name resolves, and a preview run by hand shows no missing name; and it departs from the tools&apos; tab-separated convention for a print of only two fields.</drawback>
+    </alternative>
+    <alternative id="JSON Lines without state, with rule">
+      Each line is one JSON object carrying the task title, the line name, and a `rule` key naming the rule that chose it or `default`; the runner flags no missing name, and the extension checks each name against the named lines it passed.
+      <advantage>It tells the person why each task got its line while keeping the preview mode free of resolution logic, in a print no character in a title can break.</advantage>
+      <drawback>Resolution decided twice, with the drift between preview and loop that brings, plus a field the draft&apos;s page does not show whose form depends on the rule-file format question, plus the departure from the tools&apos; tab convention.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Session variable names">
     <question>Every value the VS Code extension (`gurita-vscode`) substitutes into a recipe line (`&lt;path&gt;`, `&lt;Short Title&gt;`, `&lt;Alternative Id&gt;`, `&lt;goal&gt;`, `&lt;scope&gt;`, `&lt;answer text&gt;`, `&lt;Task Title&gt;`) reaches the line as a reference to a variable in the shell session&apos;s environment. What are those variables called?</question>
