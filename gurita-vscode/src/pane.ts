@@ -21,13 +21,25 @@
 // any task's line by picking another named single-task line, and starting the run launches the
 // runner's `loop` in the run terminal with every named line and every override, whether or not a
 // task is still unresolved.
+//
+// Beyond its own runs and its opening, the pane is kept current by a file system watcher over the
+// mission documents under the project root, created with the first live read that succeeds and
+// disposed with the panel, debounced so that a burst of writes causes one re-read. A change to a
+// mission's question document or task list re-reads that mission's documents in process against
+// the live list last read, and creating or deleting a `requirements.md`, or changing a
+// `TASKS_TODO.md`, also re-runs `missions.py live`. While the panel is hidden an event only marks
+// the page stale, and a stale page is re-read when the panel is shown. The refresh control on the
+// page and the refresh command each re-read everything, as a fallback. Git state is not watched.
+// The page stays on the mission it shows unless that mission is no longer live, when it falls back
+// to the first.
 
 import * as os from 'node:os';
 import * as vscode from 'vscode';
 import { MissionDocuments, readMissionDocuments } from './documents';
-import { LiveRead, projectRoot, readLive } from './live';
+import { LiveMission, LiveRead, projectRoot, readLive } from './live';
 import { PreviewRead, SingleTaskLine, loopArguments, ruleFile, runOverrides, runPreview, singleTaskLines } from './loop';
 import { BUTTON_RECIPES, PageRecipe, Recipe, buttonRecipe, ownRecipesFile, pageRecipes, readRecipes } from './recipes';
+import { FileEventKind, RefreshBatch, RefreshQueue, WATCHED_PATTERN, eventEffect } from './refresh';
 import { refuseWhileRunning, runnerFile, startChain, startLoop } from './runs';
 
 const VIEW_TYPE = 'gurita.missionPane';
@@ -45,6 +57,7 @@ type MissionButton = 'discussGoal' | 'defineMission';
 /** A message the page posts to the extension. */
 type PageMessage =
   | { type: 'ready' }
+  | { type: 'refresh' }
   | { type: 'runRecipe'; mission: string; recipe: string }
   | { type: 'questionButton'; button: QuestionButton; mission: string; question: string }
   | { type: 'alternativeButton'; mission: string; question: string; alternative: string }
@@ -94,17 +107,50 @@ interface Posted {
   questions: Map<string, Map<string, Set<string>>>;
 }
 
+/**
+ * What the latest successful live read gave and the pane last drew: the project root, the live
+ * missions in the order printed, each one's documents as last read, and the recipes.
+ */
+interface Current {
+  root: string;
+  live: LiveMission[];
+  documents: Map<string, MissionDocuments>;
+  recipes: RecipePart;
+}
+
 let panel: vscode.WebviewPanel | undefined;
 let posted: Posted | undefined;
+let current: Current | undefined;
+
+/** The watcher over the mission documents, and the project root it was created over. */
+let watcher: { root: string; disposables: vscode.Disposable[] } | undefined;
+
+/** The debounce gathering the watcher's events into one re-read, while the extension holds a panel. */
+let queue: RefreshQueue | undefined;
+
+/** Whether an event or a refresh came while the panel was hidden, so it is re-read when shown. */
+let stale = false;
+
+/** The number of full re-reads started, so only the latest one started posts its answer. */
+let reads = 0;
 
 /** Each mission's latest preview, by the mission's path. */
 const previews = new Map<string, HeldPreview>();
 
-/** Re-reads the pane, when the extension holds one, and posts the fresh parse to its page. */
+/**
+ * Re-reads the pane, when the extension holds one, and posts the fresh parse to its page: the live
+ * missions, every mission's documents, and the recipes. A hidden panel is only marked stale, and
+ * is re-read when shown.
+ */
 export function refreshMissionPane(context: vscode.ExtensionContext): void {
-  if (panel !== undefined) {
-    void answer(context, panel);
+  if (panel === undefined) {
+    return;
   }
+  if (!panel.visible) {
+    stale = true;
+    return;
+  }
+  void answer(context, panel);
 }
 
 /** Creates the one mission pane, or reveals the one the extension already holds. */
@@ -119,10 +165,11 @@ export function openMissionPane(context: vscode.ExtensionContext): void {
     localResourceRoots: [scripts],
   });
   panel = created;
+  queue = new RefreshQueue((batch) => flushEvents(context, created, batch));
   created.webview.html = pageShell(created.webview, vscode.Uri.joinPath(scripts, 'page.js'));
   created.webview.onDidReceiveMessage(
     (message: PageMessage) => {
-      if (message?.type === 'ready') {
+      if (message?.type === 'ready' || message?.type === 'refresh') {
         void answer(context, created);
       } else if (message?.type === 'runRecipe') {
         runRecipe(context, message.mission, message.recipe);
@@ -141,16 +188,95 @@ export function openMissionPane(context: vscode.ExtensionContext): void {
     undefined,
     context.subscriptions,
   );
-  created.onDidDispose(
-    () => {
-      if (panel === created) {
-        panel = undefined;
-        previews.clear();
+  created.onDidChangeViewState(
+    (event) => {
+      if (panel === created && event.webviewPanel.visible && stale) {
+        void answer(context, created);
       }
     },
     undefined,
     context.subscriptions,
   );
+  created.onDidDispose(
+    () => {
+      if (panel === created) {
+        panel = undefined;
+        posted = undefined;
+        current = undefined;
+        stale = false;
+        previews.clear();
+        queue?.dispose();
+        queue = undefined;
+        unwatch();
+      }
+    },
+    undefined,
+    context.subscriptions,
+  );
+}
+
+/**
+ * Watches the mission documents under the project root `root`, replacing a watcher created over
+ * another root. Each event is handed to the debounce as the effect it asks for.
+ */
+function watch(root: string): void {
+  if (watcher?.root === root) {
+    return;
+  }
+  unwatch();
+  const created = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(vscode.Uri.file(root), WATCHED_PATTERN));
+  const event = (kind: FileEventKind) => (uri: vscode.Uri) => {
+    const effect = eventEffect(root, uri.fsPath, kind);
+    if (effect !== undefined) {
+      queue?.add(effect);
+    }
+  };
+  watcher = {
+    root,
+    disposables: [
+      created.onDidCreate(event('created')),
+      created.onDidChange(event('changed')),
+      created.onDidDelete(event('deleted')),
+      created,
+    ],
+  };
+}
+
+function unwatch(): void {
+  for (const disposable of watcher?.disposables ?? []) {
+    disposable.dispose();
+  }
+  watcher = undefined;
+}
+
+/**
+ * Acts on one debounced burst of the watcher's events: a hidden panel is only marked stale; a
+ * burst that moves the live list re-reads everything; any other re-reads in process the documents
+ * of each live mission it touched and posts the fresh parse.
+ */
+function flushEvents(context: vscode.ExtensionContext, target: vscode.WebviewPanel, batch: RefreshBatch): void {
+  if (panel !== target) {
+    return;
+  }
+  if (!target.visible) {
+    stale = true;
+    return;
+  }
+  if (batch.live || current === undefined) {
+    void answer(context, target);
+    return;
+  }
+  const shown = current;
+  let changed = false;
+  for (const mission of batch.missions) {
+    if (shown.documents.has(mission)) {
+      shown.documents.set(mission, readMissionDocuments(shown.root, mission));
+      changed = true;
+    }
+  }
+  if (changed) {
+    void post(target, publish(shown));
+  }
 }
 
 /** Reads the shipped snippet file and the person's own recipe file into the merged recipe list. */
@@ -168,43 +294,61 @@ function readPageRecipes(context: vscode.ExtensionContext): RecipePart {
   }
 }
 
+/**
+ * Re-reads everything the pane draws, the live missions, every mission's documents, and the
+ * recipes, and posts the fresh parse to the page, or the failure state the live read gives. Only
+ * the latest re-read started posts its answer.
+ */
 async function answer(context: vscode.ExtensionContext, target: vscode.WebviewPanel): Promise<void> {
+  const sequence = ++reads;
+  stale = false;
   const folder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
   const read: LiveRead = await readLive(folder, context.asAbsolutePath('bundled/missions.py'));
+  if (sequence !== reads || panel !== target) {
+    return;
+  }
   let message: PaneMessage;
   if (read.state === 'read') {
-    const recipes = readPageRecipes(context);
-    const missions = read.missions.map((mission) => ({ ...mission, ...readMissionDocuments(read.root, mission.path) }));
-    const questions = new Map<string, Map<string, Set<string>>>();
-    for (const mission of missions) {
-      if (mission.questions.state === 'read') {
-        questions.set(
-          mission.path,
-          new Map(
-            mission.questions.questions.map((question) => [
-              question.id,
-              new Set(question.alternatives.map((alternative) => alternative.id)),
-            ]),
-          ),
-        );
-      }
-    }
-    posted = {
+    watch(read.root);
+    current = {
       root: read.root,
-      missions: new Set(read.missions.map((mission) => mission.path)),
-      recipes: recipes.state === 'read' ? recipes.recipes : [],
-      questions,
+      live: read.missions,
+      documents: new Map(read.missions.map((mission) => [mission.path, readMissionDocuments(read.root, mission.path)])),
+      recipes: readPageRecipes(context),
     };
-    message = { type: 'live', missions, recipes };
+    message = publish(current);
   } else {
     posted = undefined;
+    current = undefined;
     message = { type: 'liveFailure', cause: read.cause };
   }
-  try {
-    await target.webview.postMessage(message);
-  } catch {
-    // The panel was closed while the read ran; there is no page left to answer.
+  await post(target, message);
+}
+
+/** The page's message for what `shown` holds, noting what it lists as what the latest answer posted. */
+function publish(shown: Current): PaneMessage {
+  const missions = shown.live.map((mission) => ({ ...mission, ...(shown.documents.get(mission.path) as MissionDocuments) }));
+  const questions = new Map<string, Map<string, Set<string>>>();
+  for (const mission of missions) {
+    if (mission.questions.state === 'read') {
+      questions.set(
+        mission.path,
+        new Map(
+          mission.questions.questions.map((question) => [
+            question.id,
+            new Set(question.alternatives.map((alternative) => alternative.id)),
+          ]),
+        ),
+      );
+    }
   }
+  posted = {
+    root: shown.root,
+    missions: new Set(shown.live.map((mission) => mission.path)),
+    recipes: shown.recipes.state === 'read' ? shown.recipes.recipes : [],
+    questions,
+  };
+  return { type: 'live', missions, recipes: shown.recipes };
 }
 
 /**
@@ -497,7 +641,8 @@ function pageShell(webview: vscode.Webview, script: vscode.Uri): string {
   body { font-family: var(--vscode-font-family); color: var(--vscode-foreground); padding: 0 1em; }
   .tabs { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25em; border-bottom: 1px solid var(--vscode-panel-border); padding: 0.5em 0; }
   .tab-list { display: flex; flex-wrap: wrap; gap: 0.25em; }
-  .tabs .starting { margin-left: auto; display: flex; gap: 0.4em; }
+  .tabs .ends { margin-left: auto; display: flex; align-items: center; gap: 0.8em; }
+  .tabs .starting { display: flex; gap: 0.4em; }
   .tab-list button { background: none; color: var(--vscode-foreground); border: 1px solid transparent; padding: 0.3em 0.8em; cursor: pointer; font: inherit; }
   .tab-list button[aria-selected="true"] { border-color: var(--vscode-focusBorder); background: var(--vscode-list-activeSelectionBackground); color: var(--vscode-list-activeSelectionForeground); }
   .facts { display: grid; grid-template-columns: max-content auto; gap: 0.25em 1em; margin: 1em 0; }

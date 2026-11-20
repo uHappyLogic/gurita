@@ -25,6 +25,10 @@
       {
         "command": "gurita.openMissionPane",
         "title": "Gurita: Open Mission Pane"
+      },
+      {
+        "command": "gurita.refreshMissionPane",
+        "title": "Gurita: Refresh Mission Pane"
       }
     ],
     "configuration": {

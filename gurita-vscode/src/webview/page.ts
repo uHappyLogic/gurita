@@ -1,8 +1,11 @@
 // The mission pane's page script. On every load it posts a ready message and draws what the
 // extension answers: a row of tabs, one per live mission in the order `missions.py live` prints
 // them, each showing the mission's title with its path as a tooltip, with the two mission-starting
-// buttons at the row's end and the selected mission's page beneath; or the one failure state in
-// place of the pages, the two mission-starting buttons staying on the pane above it. A page shows its mission's path,
+// buttons and the refresh control at the row's end and the selected mission's page beneath; or the
+// one failure state in place of the pages, the refresh control and the two mission-starting buttons
+// staying on the pane above it. The refresh control asks the extension to re-read everything, and
+// after every answer the page stays on the mission it showed unless that mission is no longer
+// live, when it falls back to the first. A page shows its mission's path,
 // title, and state, the label's facts, the question view, and the remaining task headings, all
 // drawn from the parse the extension posts, and the recipe buttons: the shipped recipes grouped
 // under Claude Code and Antigravity and, below them, the own recipes that replace none under
@@ -218,15 +221,19 @@ declare function acquireVsCodeApi(): VsCodeApi;
     rows.get(title)?.scrollIntoView({ block: 'start' });
   }
 
-  /** The two mission-starting buttons, belonging to no mission, at the tab row's end. */
+  /** The refresh control and the two mission-starting buttons, belonging to no mission, at the tab row's end. */
   function drawStarting(): HTMLElement {
+    const ends = element('div', undefined, 'ends');
+    const refresh = button('Refresh', 'control', () => vscode.postMessage({ type: 'refresh' }));
+    refresh.title = 'Re-read the live missions and their documents';
     const starting = element('div', undefined, 'starting');
     const discuss = button('New mission', 'recipe', () => vscode.postMessage({ type: 'missionButton', button: 'discussGoal' }));
     discuss.title = 'Type a goal and open an interactive discussion of it';
     const define = button('Define mission', 'recipe', () => vscode.postMessage({ type: 'missionButton', button: 'defineMission' }));
     define.title = 'Type a goal and its scope and define the mission';
     starting.append(discuss, define);
-    return starting;
+    ends.append(refresh, starting);
+    return ends;
   }
 
   function drawTabs(): HTMLElement {

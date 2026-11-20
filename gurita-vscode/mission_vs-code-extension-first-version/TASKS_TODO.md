@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Pane Refresh From File Events
-
-Keep the pane current beyond its own runs and its opening: a `workspace.createFileSystemWatcher` over the mission documents (`**/mission_*/requirements.md`, `open_questions.xml`, and `TASKS_TODO.md`), debounced so that a burst of writes causes one re-read, re-reads a mission's documents in process on a change to its question document or task list and also re-runs `missions.py live` when a `requirements.md` is created or deleted or a `TASKS_TODO.md` changes, while a hidden panel is only marked stale and re-read when shown. A refresh control on the page and a contributed command that does the same remain as the manual fallback, the page stays on the mission shown unless that mission is no longer live, when it falls back to the first, and git state is not watched. Verified by the compile, the unit tests, and the package build passing and by reading the code against the Refresh and Navigation decisions.
-
----
-
 ## Write the Extension README
 
 Write `gurita-vscode/README.md`, the extension's one document, holding everything a person who builds, installs, and uses it needs: the Node 22 build and packaging commands in the nvm form the goal states, where the VSIX lands and how to install it by hand with `code --install-extension`, the shipped recipe file and a person's own recipe file, the tracked rule file, and the user setting `gurita.ownRecipesFile`, while `README.md`, `CONTRIBUTING.md`, and `docs/` stay untouched. It is what the maintainer follows to package and install the first version. Verified by running each build and packaging command the file gives as written and by checking every path, name, and setting it states against the built extension.
