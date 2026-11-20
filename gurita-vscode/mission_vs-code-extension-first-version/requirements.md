@@ -86,5 +86,7 @@ No other mission is live, so nothing holds or shares the scope. The record holds
 
 - **Repeated headings.** Only the six Antigravity copies of the repeated headings change, each gaining the host's full name in parentheses at its end: "First run (Antigravity)", "Requirements iteration (Antigravity)", "Execute tasks of normal difficulty (Antigravity)", "Execute tasks (critical tasks) (Antigravity)", "Execute tasks with extra requirement surface stretch (Antigravity)", and "Finish mission (Antigravity)". The six Claude Code headings keep their names unchanged.
 
+- **Button recipe lines.** All six button recipes stand under `## Claude Code` and carry `--dangerously-skip-permissions`. The two interactive lines, `claude "/gurita:discuss-open-question --mission <path> <Short Title>"` and `claude "/gurita:discuss-mission-goal <goal>"`, run on `fable` at `xhigh`; the three answer lines (`answer-open-question`, `answer-open-question-with-alternative`, `answer-open-question-with-recommendation`) are `claude -p` on `fable` at `high`; and the `define-mission-goal --at <scope> <goal>` line is `claude -p` on `sonnet` at `medium`.
+
 ## Out of Scope
 
