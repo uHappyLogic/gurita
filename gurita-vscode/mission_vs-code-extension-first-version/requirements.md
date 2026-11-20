@@ -62,5 +62,9 @@ No other mission is live, so nothing holds or shares the scope. The record holds
 
 - **VSIX artifact.** The VSIX is not committed. The build runs `vsce package --out` into a dedicated output directory under the extension, listed as ignored, under a fixed file name each build overwrites, for example `gurita-vscode/dist/gurita-vscode.vsix`, and the maintainer installs it with `code --install-extension` on that one fixed path.
 
+### Tests and guards
+
+- **Runner tests.** The runner gets pytest tests standing beside the extension under `gurita-vscode/`, with a conftest of their own, and `pyproject.toml`'s `testpaths` gains that directory so both CI pytest runs collect them, the 3.9 floor run included. They cover the runner's decisions only (the preview print, rule matching and the default, line-kind inference, and the fixed-line verdict) and start no shell session and no stub host command.
+
 ## Out of Scope
 
