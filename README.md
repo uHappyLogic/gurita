@@ -33,30 +33,22 @@ Gurita (Indonesian for octopus) brings all the important questions up to be deci
 Gurita was published as Cairn up to 1.9.0; the old names no longer work, and the upgrade steps for an existing install are under [Installation](#installation).
 
 ```mermaid
-%%{init: {'theme':'base','themeVariables':{'fontFamily':'ui-sans-serif, system-ui','lineColor':'#94a3b8','primaryBorderColor':'#475569','edgeLabelBackground':'#ffffff'},'flowchart':{'wrappingWidth':9999,'curve':'basis'}}}%%
+%%{init: {'theme':'base','themeVariables':{'fontFamily':'ui-sans-serif, system-ui','lineColor':'#94a3b8','primaryBorderColor':'#475569'},'flowchart':{'wrappingWidth':9999,'curve':'basis'}}}%%
 flowchart LR
-    subgraph upfront["Decide upfront"]
-        define["define"]
-        review["review"]
-        alternatives["provide alternatives"]
-        recommend["recommend"]
-        answer["answer"]
-    end
-    subgraph agents["Hand execution to agents"]
-        derive["derive"]
-        complete["complete"]
-        finish["finish"]
-    end
+    define["define"]
+    firstReview["first review round"]
+    additionalReview["additional review round"]
+    derive["derive tasks"]
+    execute["execute tasks"]
+    followUp["follow up tasks"]
+    finish["finish"]
 
-    define --> review --> alternatives --> recommend --> answer
-    answer -.->|until no open questions remain| review
-    answer -->|handoff| derive
-    derive --> complete --> finish
+    define --> firstReview --> additionalReview --> derive --> execute --> followUp --> finish
 
     classDef step fill:#ffffff,stroke:#475569,color:#0f172a;
-    class define,review,alternatives,recommend,answer,derive,complete,finish step;
-    style upfront fill:#ffffff,stroke:#94a3b8,color:#334155;
-    style agents fill:#ffffff,stroke:#94a3b8,color:#334155;
+    classDef optional fill:#ffffff,stroke:#475569,color:#0f172a,stroke-dasharray:5 3;
+    class define,firstReview,derive,execute,finish step;
+    class additionalReview,followUp optional;
 ```
 
 ## Installation
