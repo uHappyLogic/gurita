@@ -20,9 +20,18 @@
 // such as "additional review round 2". The block of the step to run next, which the extension
 // chooses and posts, is filled purple, and no block is filled when the extension chose none; the
 // diagram is display only, its blocks no buttons, gating nothing. Below
-// it stand the recipe buttons, the question view, and the remaining task headings with the
-// new-task button beside them, posting the page's mission, all drawn from the parse the extension
-// posts. The recipe buttons: the shipped recipes grouped
+// it stand the recipe buttons and then two panes behind one row of two headers, Open questions and
+// Remaining tasks, of equal width and together filling the pane's whole width, with only the
+// selected pane's content beneath them: the question view in Open questions, and in Remaining
+// tasks the remaining task headings with the new-task button, posting the page's mission, all
+// drawn from the parse the extension posts. A page opens on the pane the extension posts as the
+// mission's default, Remaining tasks when git holds at least one review commit for it and no
+// question is open and Open questions otherwise, Open questions too when none is posted. A pane
+// header the person clicks stays selected through every redraw while its mission stays shown; it
+// is held in this script's memory only, never saved with `setState`, so every switch of the shown
+// mission (a tab click, a preview of another mission, a fall back to the first, the failure
+// state) and every load of the page, a reopening or a hidden pane shown again, opens on the
+// default afresh. The recipe buttons: the shipped recipes grouped
 // under Claude Code and Antigravity and, below them, the own recipes that replace none under
 // "Your recipes", each button carrying its recipe's lines as written in its hover text and
 // starting that recipe's chain for the page's mission when clicked, and each recipe holding a
@@ -52,8 +61,9 @@
 // its question card's buttons, its preview's start button, and its New task button, and its
 // workflow diagram's filled block pulses; the tabs, the refresh control, the question view's
 // previous and next buttons and dependency links, the preview's close button, the other missions'
-// pages, and the two mission-starting buttons stay enabled. Every value is drawn as text, never as
-// markup, since it comes from the workspace.
+// pages, the two pane headers, and the two mission-starting buttons stay enabled, and the left and
+// right arrow keys move the question view only while its pane is shown. Every value is drawn as
+// text, never as markup, since it comes from the workspace.
 
 interface VsCodeApi {
   postMessage(message: unknown): void;
@@ -91,6 +101,9 @@ declare function acquireVsCodeApi(): VsCodeApi;
 
   type WorkflowStep = 'define' | 'first-review' | 'additional-review' | 'derive' | 'execute' | 'follow-up' | 'finish';
 
+  /** One of the two panes beneath a mission page's pane headers. */
+  type MissionPane = 'questions' | 'tasks';
+
   interface Mission {
     path: string;
     state: string;
@@ -101,6 +114,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
     step?: WorkflowStep;
     /** The review commits beyond the first, which the additional review round carries; absent while git holds at most one. */
     additionalRounds?: number;
+    /** The pane the page opens on; Open questions when absent. */
+    defaultPane?: MissionPane;
   }
 
   type RecipeGroup = 'Claude Code' | 'Antigravity' | 'own';
@@ -168,6 +183,11 @@ declare function acquireVsCodeApi(): VsCodeApi;
     ['follow-up', 'follow up tasks', true],
     ['finish', 'finish', false],
   ];
+  /** The two panes beneath a mission page's pane headers, in the order drawn, each with its header. */
+  const PANES: [MissionPane, string][] = [
+    ['questions', 'Open questions'],
+    ['tasks', 'Remaining tasks'],
+  ];
   /** The page's recipe groups in the order drawn, each with its heading. */
   const RECIPE_GROUPS: [RecipeGroup, string][] = [
     ['Claude Code', 'Claude Code'],
@@ -192,6 +212,11 @@ declare function acquireVsCodeApi(): VsCodeApi;
   let card: HTMLElement | undefined;
   /** The workflow diagram drawn on the page and its line of blocks, so it can be laid out again whenever the pane's width changes. */
   let diagram: { section: HTMLElement; flow: HTMLElement } | undefined;
+  /**
+   * The pane header the person clicked and the mission it was clicked on, held while that mission
+   * stays shown and never saved, so a switch of mission or a fresh page opens on the default.
+   */
+  let picked: { mission: string; pane: MissionPane } | undefined;
 
   function element<K extends keyof HTMLElementTagNameMap>(tag: K, text?: string, className?: string): HTMLElementTagNameMap[K] {
     const node = document.createElement(tag);
@@ -256,10 +281,29 @@ declare function acquireVsCodeApi(): VsCodeApi;
     draw();
   }
 
-  /** The questions of the page shown, when its question view reads and holds any. */
+  /** The pane shown beneath the mission's pane headers: the one clicked while it holds, else the mission's default. */
+  function shownPane(mission: Mission): MissionPane {
+    if (picked !== undefined && picked.mission === mission.path) {
+      return picked.pane;
+    }
+    return mission.defaultPane === 'tasks' ? 'tasks' : 'questions';
+  }
+
+  /** Shows the pane clicked on the mission's page, held until the shown mission switches. */
+  function pick(mission: string, pane: MissionPane): void {
+    picked = { mission, pane };
+    draw();
+  }
+
+  /** The questions of the page shown, when its Open questions pane is shown and its question view reads and holds any. */
   function shownQuestions(): { mission: string; questions: Question[] } | undefined {
     const mission = missions.find((each) => each.path === selected);
-    if (mission === undefined || mission.questions.state !== 'read' || mission.questions.questions.length === 0) {
+    if (
+      mission === undefined ||
+      shownPane(mission) !== 'questions' ||
+      mission.questions.state !== 'read' ||
+      mission.questions.questions.length === 0
+    ) {
       return undefined;
     }
     return { mission: mission.path, questions: mission.questions.questions };
@@ -483,10 +527,11 @@ declare function acquireVsCodeApi(): VsCodeApi;
     return body;
   }
 
-  /** The question view: the position counter and its previous and next buttons above the one card shown. */
+  /** The Open questions pane: the position counter and its previous and next buttons above the one card shown. */
   function drawQuestions(mission: Mission, busy: boolean): HTMLElement {
-    const view = element('section', undefined, 'questions');
-    view.append(element('h3', 'Open questions'));
+    const view = element('section', undefined, 'pane questions');
+    view.setAttribute('role', 'tabpanel');
+    view.setAttribute('aria-label', 'Open questions');
     const part = mission.questions;
     if (part.state === 'failed') {
       view.append(drawNotice(part.notice));
@@ -520,12 +565,15 @@ declare function acquireVsCodeApi(): VsCodeApi;
     return view;
   }
 
+  /** The Remaining tasks pane: the New task button above the remaining task headings. */
   function drawTasks(mission: Mission, busy: boolean): HTMLElement {
-    const view = element('section', undefined, 'tasks');
-    const head = element('div', undefined, 'section-head');
+    const view = element('section', undefined, 'pane tasks');
+    view.setAttribute('role', 'tabpanel');
+    view.setAttribute('aria-label', 'Remaining tasks');
+    const head = element('div', undefined, 'controls');
     const add = action('New task', 'action', busy, () => vscode.postMessage({ type: 'taskButton', mission: mission.path }));
     add.title = 'Type an issue and open an interactive discussion of it into tasks for this mission';
-    head.append(element('h3', 'Remaining tasks'), add);
+    head.append(add);
     view.append(head);
     const part = mission.tasks;
     if (part.state === 'failed') {
@@ -683,6 +731,27 @@ declare function acquireVsCodeApi(): VsCodeApi;
     return view;
   }
 
+  /**
+   * The two panes: one row of two headers of equal width, Open questions and Remaining tasks, and
+   * beneath it the selected pane's content alone. The headers stay enabled while a chain runs.
+   */
+  function drawPanes(mission: Mission, busy: boolean): HTMLElement {
+    const panes = element('section', undefined, 'panes');
+    const shown = shownPane(mission);
+    const headers = element('div', undefined, 'pane-tabs');
+    headers.setAttribute('role', 'tablist');
+    headers.setAttribute('aria-label', 'Mission documents');
+    for (const [pane, header] of PANES) {
+      const tab = button(header, 'pane-tab', () => pick(mission.path, pane));
+      tab.setAttribute('role', 'tab');
+      tab.setAttribute('aria-selected', String(pane === shown));
+      tab.dataset.focus = `pane-${pane}`;
+      headers.append(tab);
+    }
+    panes.append(headers, shown === 'tasks' ? drawTasks(mission, busy) : drawQuestions(mission, busy));
+    return panes;
+  }
+
   function drawPage(mission: Mission): HTMLElement {
     const page = element('section', undefined, 'page');
     page.setAttribute('role', 'tabpanel');
@@ -692,20 +761,24 @@ declare function acquireVsCodeApi(): VsCodeApi;
     if (preview !== undefined) {
       page.append(drawPreview(mission, preview, busy));
     }
-    page.append(drawQuestions(mission, busy), drawTasks(mission, busy));
+    page.append(drawPanes(mission, busy));
     return page;
   }
 
   /**
    * Redraws the whole pane in place from the latest parse, laying the workflow diagram out to the
-   * pane's width and keeping the scroll position and the focus on the previous or next button when
-   * it held it.
+   * pane's width and keeping the scroll position and the focus on the previous or next button or
+   * a pane header when it held it. The pane header clicked gives way to the default once the
+   * mission shown is no longer the one it was clicked on.
    */
   function draw(): void {
     const scrolled = window.scrollY;
     const focused = document.activeElement instanceof HTMLElement ? document.activeElement.dataset.focus : undefined;
     if (!missions.some((mission) => mission.path === selected)) {
       selected = missions[0]?.path;
+    }
+    if (picked !== undefined && picked.mission !== selected) {
+      picked = undefined;
     }
     card = undefined;
     diagram = undefined;
@@ -746,6 +819,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
       draw();
     } else if (message.type === 'liveFailure') {
       drawn = 'failure';
+      picked = undefined;
       drawFailure(message.cause);
     } else if (message.type === 'running') {
       running = new Set(message.missions);
@@ -771,7 +845,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
     }
   });
 
-  /** The left and right arrow keys move the shown page's question view, except while typing or choosing. */
+  /** The left and right arrow keys move the shown page's question view while its pane is shown, except while typing or choosing. */
   document.addEventListener('keydown', (event: KeyboardEvent) => {
     if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
       return;

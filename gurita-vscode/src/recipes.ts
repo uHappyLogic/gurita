@@ -293,8 +293,8 @@ export function pageRecipes(recipes: Recipe[], fillable: readonly string[]): Pag
 /**
  * The fixed names of the recipes the buttons outside the chains run, each the bare name of the
  * skill its one line invokes: three on a question's card, one on each alternative on that card,
- * the two mission-starting buttons at the tab row's end, and the new-task button beside a
- * mission's remaining-task headings.
+ * the two mission-starting buttons at the tab row's end, and the new-task button inside a
+ * mission's Remaining tasks pane.
  */
 export const BUTTON_RECIPES = {
   discussQuestion: 'discuss-open-question',

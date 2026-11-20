@@ -12,7 +12,10 @@
 // review pass that changed nothing leaves no commit and so is not counted. No step is chosen when a
 // document the choice needs did not read, or when the git read the choice needs failed. The
 // additional review round's block carries the count of the review commits beyond the first once
-// git holds two or more, read for every mission whatever its step. This module imports nothing
+// git holds two or more, read for every mission whatever its step. The same count chooses the pane
+// a mission's page opens on beneath its two pane headers: Remaining tasks when git holds at least
+// one review commit for the mission and no question is open, and Open questions otherwise, a
+// failed git read or a question document that did not read included. This module imports nothing
 // from `vscode`.
 
 import { execFile } from 'node:child_process';
@@ -103,13 +106,31 @@ export function reviewCount(root: string, missionPath: string, git = 'git'): Pro
   });
 }
 
-/** What a mission's diagram draws: the block filled, and the count its additional review round carries, each left out when there is none. */
+/** One of the two panes beneath a mission page's pane headers: Open questions or Remaining tasks. */
+export type MissionPane = 'questions' | 'tasks';
+
+/**
+ * The pane a mission's page opens on, for the document facts `facts` and `reviews` the number of
+ * review commits git holds for the mission, undefined when the read failed: `tasks` (Remaining
+ * tasks) when git holds at least one and the question document read with no question open, and
+ * `questions` (Open questions) otherwise.
+ */
+export function defaultPane(facts: DocumentFacts, reviews: number | undefined): MissionPane {
+  return reviews !== undefined && reviews >= 1 && facts.questionsEmpty === true ? 'tasks' : 'questions';
+}
+
+/**
+ * What a mission's page draws from its state, its documents' facts, and git's review commits: the
+ * diagram's filled block and the count its additional review round carries, each left out when
+ * there is none, and the pane the page opens on.
+ */
 export interface MissionWorkflow {
   step?: WorkflowStep;
   additionalRounds?: number;
+  defaultPane: MissionPane;
 }
 
-/** What the diagram of a mission draws, reading git's review commits through `readReviews`. */
+/** What the page of a mission draws from git's review commits, read once through `readReviews`. */
 export async function missionWorkflow(
   state: string,
   facts: DocumentFacts,
@@ -118,5 +139,9 @@ export async function missionWorkflow(
   const reviews = await readReviews();
   const step = nextStep(state, facts, reviews);
   const rounds = additionalRounds(reviews);
-  return { ...(step === undefined ? {} : { step }), ...(rounds === undefined ? {} : { additionalRounds: rounds }) };
+  return {
+    ...(step === undefined ? {} : { step }),
+    ...(rounds === undefined ? {} : { additionalRounds: rounds }),
+    defaultPane: defaultPane(facts, reviews),
+  };
 }

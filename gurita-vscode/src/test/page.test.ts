@@ -102,9 +102,13 @@ class FakeElement {
 interface Page {
   root: FakeElement;
   posted: unknown[];
+  /** Every state the page saved with `setState`, in order. */
+  saved: unknown[];
   send(message: unknown): void;
   /** Fires the window's resize event, as a change of the pane's width does. */
   resize(): void;
+  /** Fires the document's keydown event for `key`, pressed with no modifier outside any input. */
+  key(key: string): void;
 }
 
 /**
@@ -114,22 +118,28 @@ interface Page {
 function loadPage(measure?: (element: FakeElement) => number): Page {
   const root = new FakeElement('div', measure);
   const posted: unknown[] = [];
+  const saved: unknown[] = [];
   const windowListeners: ((event: { data: unknown }) => void)[] = [];
   const resizeListeners: (() => void)[] = [];
+  const keyListeners: ((event: unknown) => void)[] = [];
   const context = {
     HTMLElement: FakeElement,
     acquireVsCodeApi: () => ({
       // Cloned, as a posted message is, out of the script's own realm.
       postMessage: (message: unknown) => posted.push(JSON.parse(JSON.stringify(message))),
       getState: () => undefined,
-      setState: () => undefined,
+      setState: (state: unknown) => saved.push(JSON.parse(JSON.stringify(state))),
     }),
     document: {
       activeElement: null,
       getElementById: (id: string) => (id === 'root' ? root : null),
       createElement: (tag: string) => new FakeElement(tag, measure),
       createTextNode: (text: string) => new FakeText(text),
-      addEventListener: () => undefined,
+      addEventListener: (type: string, listener: (event: unknown) => void) => {
+        if (type === 'keydown') {
+          keyListeners.push(listener);
+        }
+      },
     },
     window: {
       scrollY: 0,
@@ -148,6 +158,7 @@ function loadPage(measure?: (element: FakeElement) => number): Page {
   return {
     root,
     posted,
+    saved,
     send: (message) => {
       for (const listener of windowListeners) {
         listener({ data: message });
@@ -156,6 +167,11 @@ function loadPage(measure?: (element: FakeElement) => number): Page {
     resize: () => {
       for (const listener of resizeListeners) {
         listener();
+      }
+    },
+    key: (key) => {
+      for (const listener of keyListeners) {
+        listener({ key, target: null, altKey: false, ctrlKey: false, metaKey: false, shiftKey: false, preventDefault: () => undefined });
       }
     },
   };
@@ -207,11 +223,27 @@ function named(page: Page, text: string): FakeElement {
   return found;
 }
 
-/** The page's action buttons: its recipe buttons, its question card's buttons, its preview's start button, and New task. */
-const ACTIONS = ['review', 'complete', 'Discuss', 'Answer', 'Answer with recommendation', 'Answer with this alternative', 'New task'];
+type PaneName = 'questions' | 'tasks';
 
-/** The buttons that stay enabled whatever runs. */
-const STAYING = ['Alpha', 'Beta', 'Refresh', 'New mission', 'Define mission', 'Next'];
+/** The page's action buttons with each pane shown: its recipe buttons, its question card's buttons, and New task. */
+const ACTIONS: Record<PaneName, string[]> = {
+  questions: ['review', 'complete', 'Discuss', 'Answer', 'Answer with recommendation', 'Answer with this alternative'],
+  tasks: ['review', 'complete', 'New task'],
+};
+
+/** The buttons that stay enabled whatever runs, with each pane shown. */
+const STAYING: Record<PaneName, string[]> = {
+  questions: ['Alpha', 'Beta', 'Refresh', 'New mission', 'Define mission', 'Open questions', 'Remaining tasks', 'Next'],
+  tasks: ['Alpha', 'Beta', 'Refresh', 'New mission', 'Define mission', 'Open questions', 'Remaining tasks'],
+};
+
+/** Shows the Remaining tasks pane, then the Open questions pane, running `check` with each shown. */
+function eachPane(page: Page, check: (pane: PaneName) => void): void {
+  named(page, 'Remaining tasks').click();
+  check('tasks');
+  named(page, 'Open questions').click();
+  check('questions');
+}
 
 function filledBlock(page: Page): FakeElement {
   const found = page.root.all().filter((each) => each.has('block') && each.has('next'));
@@ -220,20 +252,24 @@ function filledBlock(page: Page): FakeElement {
 }
 
 function assertRunning(page: Page): void {
-  for (const text of ACTIONS) {
-    assert.strictEqual(named(page, text).disabled, true, `${text} is disabled`);
-  }
-  for (const text of STAYING) {
-    assert.strictEqual(named(page, text).disabled, false, `${text} stays enabled`);
-  }
-  assert.strictEqual(filledBlock(page).has('running'), true);
+  eachPane(page, (pane) => {
+    for (const text of ACTIONS[pane]) {
+      assert.strictEqual(named(page, text).disabled, true, `${text} is disabled`);
+    }
+    for (const text of STAYING[pane]) {
+      assert.strictEqual(named(page, text).disabled, false, `${text} stays enabled`);
+    }
+    assert.strictEqual(filledBlock(page).has('running'), true);
+  });
 }
 
 function assertIdle(page: Page): void {
-  for (const text of [...ACTIONS, ...STAYING]) {
-    assert.strictEqual(named(page, text).disabled, false, `${text} is enabled`);
-  }
-  assert.strictEqual(filledBlock(page).has('running'), false);
+  eachPane(page, (pane) => {
+    for (const text of [...ACTIONS[pane], ...STAYING[pane]]) {
+      assert.strictEqual(named(page, text).disabled, false, `${text} is enabled`);
+    }
+    assert.strictEqual(filledBlock(page).has('running'), false);
+  });
 }
 
 test('the page posts a ready message on load', () => {
@@ -457,4 +493,183 @@ test('a redraw lays the diagram out afresh, and the stack keeps the filled block
   page.send({ type: 'liveFailure', cause: 'Error: no git' });
   page.resize();
   assert.strictEqual(page.root.all().filter((each) => each.has('workflow')).length, 0);
+});
+
+/** The pane header row drawn on the page. */
+function paneHeaders(page: Page): FakeElement[] {
+  const rows = page.root.all().filter((each) => each.has('pane-tabs'));
+  assert.strictEqual(rows.length, 1);
+  assert.strictEqual(rows[0].getAttribute('role'), 'tablist');
+  return rows[0].children as FakeElement[];
+}
+
+/** The pane shown beneath the headers, read from the header marked selected and the one pane drawn. */
+function shownPane(page: Page): PaneName {
+  const selected = paneHeaders(page).filter((each) => each.getAttribute('aria-selected') === 'true');
+  assert.strictEqual(selected.length, 1);
+  const drawn = page.root.all().filter((each) => each.has('pane'));
+  assert.strictEqual(drawn.length, 1, 'one pane drawn at a time');
+  const pane: PaneName = drawn[0].has('tasks') ? 'tasks' : 'questions';
+  assert.strictEqual(selected[0].textContent, pane === 'tasks' ? 'Remaining tasks' : 'Open questions');
+  return pane;
+}
+
+/** Every text drawn on the page. */
+function texts(page: Page): string[] {
+  return page.root.all().map((each) => each.textContent);
+}
+
+/** A live message for Alpha and Beta, each with the default pane given, `undefined` posting none. */
+function liveWith(alpha: PaneName | undefined, beta: PaneName | undefined, live: string[] = [ALPHA, BETA]): unknown {
+  const each = (missionPath: string, title: string, pane: PaneName | undefined) =>
+    mission(missionPath, title, { step: 'derive', ...(pane === undefined ? {} : { defaultPane: pane }) });
+  const all = [each(ALPHA, 'Alpha', alpha), each(BETA, 'Beta', beta)];
+  return { type: 'live', missions: all.filter((_, index) => live.includes([ALPHA, BETA][index])), recipes: RECIPES, running: [] };
+}
+
+test('a mission page draws one row of two pane headers with only the selected pane beneath it', () => {
+  const page = loadPage();
+  page.send(liveWith('questions', 'questions'));
+  assert.deepStrictEqual(
+    paneHeaders(page).map((each) => [each.tagName, each.textContent, each.getAttribute('role')]),
+    [
+      ['button', 'Open questions', 'tab'],
+      ['button', 'Remaining tasks', 'tab'],
+    ],
+  );
+  assert.strictEqual(shownPane(page), 'questions');
+  assert.ok(texts(page).includes('1 / 2'));
+  assert.ok(texts(page).includes('Discuss'));
+  assert.ok(!texts(page).includes('First Task'));
+  assert.ok(!texts(page).includes('New task'));
+  named(page, 'Remaining tasks').click();
+  assert.strictEqual(shownPane(page), 'tasks');
+  assert.ok(texts(page).includes('First Task'));
+  assert.ok(texts(page).includes('New task'));
+  assert.ok(!texts(page).includes('1 / 2'));
+  assert.ok(!texts(page).includes('Discuss'));
+  const tasksPane = page.root.all().filter((each) => each.has('pane'))[0];
+  assert.ok(tasksPane.all().some((each) => each.textContent === 'New task'), 'New task stands inside Remaining tasks');
+  assert.strictEqual(page.root.all().filter((each) => each.tagName === 'h3' && ['Open questions', 'Remaining tasks'].includes(each.textContent)).length, 0);
+});
+
+test('a page opens on the default pane the extension posts, Open questions when none is posted', () => {
+  const tasks = loadPage();
+  tasks.send(liveWith('tasks', 'questions'));
+  assert.strictEqual(shownPane(tasks), 'tasks');
+  const questions = loadPage();
+  questions.send(liveWith('questions', 'tasks'));
+  assert.strictEqual(shownPane(questions), 'questions');
+  const none = loadPage();
+  none.send(liveWith(undefined, 'tasks'));
+  assert.strictEqual(shownPane(none), 'questions');
+});
+
+test('with no pane clicked the page follows the default the extension posts with every redraw', () => {
+  const page = loadPage();
+  page.send(liveWith('questions', 'questions'));
+  assert.strictEqual(shownPane(page), 'questions');
+  page.send(liveWith('tasks', 'questions'));
+  assert.strictEqual(shownPane(page), 'tasks');
+});
+
+test('a clicked pane stays selected through redraws and file-event refreshes while its mission stays shown', () => {
+  const page = loadPage();
+  page.send(liveWith('questions', 'questions'));
+  named(page, 'Remaining tasks').click();
+  assert.strictEqual(shownPane(page), 'tasks');
+  page.send(liveWith('questions', 'questions'));
+  assert.strictEqual(shownPane(page), 'tasks');
+  page.send({ type: 'running', missions: [ALPHA] });
+  assert.strictEqual(shownPane(page), 'tasks');
+  page.send({ type: 'running', missions: [] });
+  page.send({
+    type: 'preview',
+    mission: ALPHA,
+    recipe: 'complete',
+    lines: ['claude "/gurita:complete-task --mission <path> <Task Title>"'],
+    names: ['complete-task'],
+    result: { state: 'read', tasks: [] },
+  });
+  assert.strictEqual(shownPane(page), 'tasks');
+  page.send({ type: 'loopStarted', mission: ALPHA });
+  assert.strictEqual(shownPane(page), 'tasks');
+  named(page, 'Alpha').click();
+  assert.strictEqual(shownPane(page), 'tasks', 'clicking the tab already shown switches nothing');
+  named(page, 'Open questions').click();
+  page.send(liveWith('tasks', 'tasks'));
+  assert.strictEqual(shownPane(page), 'questions', 'a clicked pane outlasts a changed default');
+});
+
+test('every switch of the shown mission gives way to its default', () => {
+  const page = loadPage();
+  page.send(liveWith('questions', 'tasks'));
+  named(page, 'Remaining tasks').click();
+  assert.strictEqual(shownPane(page), 'tasks');
+  named(page, 'Beta').click();
+  assert.strictEqual(shownPane(page), 'tasks');
+  named(page, 'Open questions').click();
+  assert.strictEqual(shownPane(page), 'questions');
+  named(page, 'Alpha').click();
+  assert.strictEqual(shownPane(page), 'questions');
+  named(page, 'Remaining tasks').click();
+  named(page, 'Beta').click();
+  named(page, 'Alpha').click();
+  assert.strictEqual(shownPane(page), 'questions', 'the click on Alpha was not kept across the visit to Beta');
+
+  named(page, 'Remaining tasks').click();
+  page.send({
+    type: 'preview',
+    mission: BETA,
+    recipe: 'complete',
+    lines: ['claude "/gurita:complete-task --mission <path> <Task Title>"'],
+    names: ['complete-task'],
+    result: { state: 'read', tasks: [] },
+  });
+  named(page, 'Alpha').click();
+  assert.strictEqual(shownPane(page), 'questions', 'a preview of another mission switches the mission shown');
+
+  named(page, 'Remaining tasks').click();
+  page.send(liveWith('questions', 'tasks', [BETA]));
+  assert.strictEqual(shownPane(page), 'tasks', 'the mission fallen back to opens on its own default');
+  page.send(liveWith('questions', 'tasks'));
+  const shownTab = page.root.all().filter((each) => each.getAttribute('role') === 'tab' && !each.has('pane-tab') && each.getAttribute('aria-selected') === 'true');
+  assert.deepStrictEqual(shownTab.map((each) => each.textContent), ['Beta']);
+  named(page, 'Open questions').click();
+  named(page, 'Alpha').click();
+  assert.strictEqual(shownPane(page), 'questions', 'a fall back to the first mission switches the mission shown');
+});
+
+test('the failure state and a fresh page give way to the default, and the pane is never saved', () => {
+  const page = loadPage();
+  page.send(liveWith('questions', 'questions'));
+  named(page, 'Remaining tasks').click();
+  page.send({ type: 'liveFailure', cause: 'Error: no git' });
+  page.send(liveWith('questions', 'questions'));
+  assert.strictEqual(shownPane(page), 'questions');
+  named(page, 'Remaining tasks').click();
+  named(page, 'Beta').click();
+  named(page, 'Remaining tasks').click();
+  assert.ok(page.saved.length > 0);
+  for (const state of page.saved) {
+    assert.deepStrictEqual(Object.keys(state as object).sort(), ['positions', 'selected']);
+    assert.doesNotMatch(JSON.stringify(state), /tasks|questions/);
+  }
+  const reopened = loadPage();
+  reopened.send(liveWith('questions', 'questions'));
+  assert.strictEqual(shownPane(reopened), 'questions');
+});
+
+test('the arrow keys move the question view only while the Open questions pane is shown', () => {
+  const page = loadPage();
+  page.send(liveWith('questions', 'questions'));
+  page.key('ArrowRight');
+  assert.ok(texts(page).includes('2 / 2'));
+  page.key('ArrowLeft');
+  assert.ok(texts(page).includes('1 / 2'));
+  named(page, 'Remaining tasks').click();
+  page.key('ArrowRight');
+  assert.strictEqual(shownPane(page), 'tasks');
+  named(page, 'Open questions').click();
+  assert.ok(texts(page).includes('1 / 2'));
 });

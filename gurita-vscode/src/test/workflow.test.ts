@@ -5,7 +5,16 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { DocumentFacts } from '../documents';
-import { OPTIONAL_STEPS, WORKFLOW_STEPS, additionalRounds, countReviewSubjects, missionWorkflow, nextStep, reviewCount } from '../workflow';
+import {
+  OPTIONAL_STEPS,
+  WORKFLOW_STEPS,
+  additionalRounds,
+  countReviewSubjects,
+  defaultPane,
+  missionWorkflow,
+  nextStep,
+  reviewCount,
+} from '../workflow';
 
 const MISSION = 'lib/mission_alpha/';
 
@@ -152,27 +161,76 @@ test('the additional review round carries the review commits beyond the first on
   assert.strictEqual(additionalRounds(10), 9);
 });
 
-test('the diagram is read from git for every mission, leaving out what there is none of', async () => {
+test('with no question open, Remaining tasks is the default pane once a review commit stands and Open questions while none does', () => {
+  for (const tasksRemain of [undefined, true, false]) {
+    assert.strictEqual(defaultPane(empty(tasksRemain), 0), 'questions');
+    for (const reviews of [1, 2, 3, 7]) {
+      assert.strictEqual(defaultPane(empty(tasksRemain), reviews), 'tasks', `${reviews} review commits`);
+    }
+  }
+});
+
+test('an open question makes Open questions the default pane whatever the review count', () => {
+  const facts = [open(true, true), open(false, true, true), open(true, false, false), open(false, false, true), open(false, false)];
+  for (const each of facts) {
+    for (const reviews of [undefined, 0, 1, 2, 3, 7]) {
+      assert.strictEqual(defaultPane(each, reviews), 'questions', `${reviews} review commits`);
+    }
+  }
+});
+
+test('a failed git read makes Open questions the default pane', () => {
+  for (const tasksRemain of [undefined, true, false]) {
+    assert.strictEqual(defaultPane(empty(tasksRemain), undefined), 'questions');
+  }
+});
+
+test('a question document that did not read makes Open questions the default pane whatever the review count', () => {
+  for (const reviews of [undefined, 0, 1, 2, 5]) {
+    assert.strictEqual(defaultPane({}, reviews), 'questions');
+    assert.strictEqual(defaultPane({ tasksRemain: true }, reviews), 'questions');
+    assert.strictEqual(defaultPane({ tasksRemain: false }, reviews), 'questions');
+  }
+});
+
+test('the page is read from git once for every mission, leaving out what there is none of and always carrying the default pane', async () => {
   let reads = 0;
   const reviews = (value: number | undefined) => async () => {
     reads += 1;
     return value;
   };
-  assert.deepStrictEqual(await missionWorkflow('started', empty(true), reviews(0)), { step: 'execute' });
-  assert.deepStrictEqual(await missionWorkflow('started', empty(true), reviews(3)), { step: 'execute', additionalRounds: 2 });
-  assert.deepStrictEqual(await missionWorkflow('started', empty(false), reviews(2)), { step: 'finish', additionalRounds: 1 });
-  assert.deepStrictEqual(await missionWorkflow('defined', open(true, true, false), reviews(1)), { step: 'first-review' });
+  assert.deepStrictEqual(await missionWorkflow('started', empty(true), reviews(0)), { step: 'execute', defaultPane: 'questions' });
+  assert.deepStrictEqual(await missionWorkflow('started', empty(true), reviews(1)), { step: 'execute', defaultPane: 'tasks' });
+  assert.deepStrictEqual(await missionWorkflow('started', empty(true), reviews(3)), {
+    step: 'execute',
+    additionalRounds: 2,
+    defaultPane: 'tasks',
+  });
+  assert.deepStrictEqual(await missionWorkflow('started', empty(false), reviews(2)), {
+    step: 'finish',
+    additionalRounds: 1,
+    defaultPane: 'tasks',
+  });
+  assert.deepStrictEqual(await missionWorkflow('defined', open(true, true, false), reviews(1)), {
+    step: 'first-review',
+    defaultPane: 'questions',
+  });
   assert.deepStrictEqual(await missionWorkflow('defined', open(false, true, false), reviews(2)), {
     step: 'additional-review',
     additionalRounds: 1,
+    defaultPane: 'questions',
   });
-  assert.deepStrictEqual(await missionWorkflow('defined', open(false, false, false), reviews(4)), { step: 'derive', additionalRounds: 3 });
-  assert.deepStrictEqual(await missionWorkflow('defined', empty(false), reviews(0)), { step: 'first-review' });
-  assert.deepStrictEqual(await missionWorkflow('defined', empty(false), reviews(1)), { step: 'derive' });
-  assert.deepStrictEqual(await missionWorkflow('defined', empty(false), reviews(undefined)), {});
-  assert.deepStrictEqual(await missionWorkflow('started', empty(true), reviews(undefined)), { step: 'execute' });
-  assert.deepStrictEqual(await missionWorkflow('started', {}, reviews(5)), { additionalRounds: 4 });
-  assert.strictEqual(reads, 11);
+  assert.deepStrictEqual(await missionWorkflow('defined', open(false, false, false), reviews(4)), {
+    step: 'derive',
+    additionalRounds: 3,
+    defaultPane: 'questions',
+  });
+  assert.deepStrictEqual(await missionWorkflow('defined', empty(false), reviews(0)), { step: 'first-review', defaultPane: 'questions' });
+  assert.deepStrictEqual(await missionWorkflow('defined', empty(false), reviews(1)), { step: 'derive', defaultPane: 'tasks' });
+  assert.deepStrictEqual(await missionWorkflow('defined', empty(false), reviews(undefined)), { defaultPane: 'questions' });
+  assert.deepStrictEqual(await missionWorkflow('started', empty(true), reviews(undefined)), { step: 'execute', defaultPane: 'questions' });
+  assert.deepStrictEqual(await missionWorkflow('started', {}, reviews(5)), { additionalRounds: 4, defaultPane: 'questions' });
+  assert.strictEqual(reads, 12);
 });
 
 test('a review subject counts only for the mission path exactly', () => {

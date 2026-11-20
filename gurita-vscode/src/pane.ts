@@ -6,15 +6,19 @@
 // its seven-block workflow diagram draws: the block filled, the step to run next, chosen from the
 // mission's state, its documents' facts, and the number of `Requirements-review:` commits git
 // holds for it, and the count of those beyond the first, which the additional review round
-// carries once git holds two or more; and with the recipe list every mission page shows, read
+// carries once git holds two or more; the pane its page opens on beneath its two pane headers,
+// Open questions and Remaining tasks, chosen from the same count: Remaining tasks when git holds
+// at least one review commit for the mission and no question is open, and Open questions
+// otherwise, a failed git read included; and with the recipe list every mission page shows, read
 // afresh from the shipped snippet file and the person's own recipe file; or with the one failure
-// state the live read gives. The page redraws its question card in place from every such message.
+// state the live read gives. The page redraws its question card in place from every such message,
+// keeping the pane the person clicked while the mission stays shown.
 // A click on a recipe button starts that recipe's chain for the page's mission at once. The
 // buttons outside the chains each run the recipe of its fixed name, shipped or replaced by an own recipe of the same name, read afresh at the click,
 // through the same run path: on a question's card the discuss, answer, and answer-with-
 // recommendation buttons, on an alternative on that card the answer-with-alternative button,
 // and on the pane at the tab row's end, in its failure state too, the two mission-starting
-// buttons, and on a mission's page, beside its remaining-task headings, the new-task button. The
+// buttons, and on a mission's page, inside its Remaining tasks pane, the new-task button. The
 // Short Title and the Alternative Id come from the card clicked, every typed value from
 // VS Code's own input box, one line per value, and each value reaches its line only as its
 // `GURITA_*` session variable. The discuss button always asks for an optional discussion note,
@@ -23,9 +27,9 @@
 // nothing. While a chain started for a mission is running, from its start until its terminal
 // closes, that mission's page draws every action button on it disabled, its recipe buttons, its
 // question card's buttons, its preview's start button, and its New task button, and pulses its
-// workflow diagram's filled block, while the tabs, the refresh control, the other missions' pages,
-// and the two mission-starting buttons stay enabled. The extension posts the paths of the
-// missions with a running runner to the page when a run starts and when its terminal closes, and
+// workflow diagram's filled block, while the tabs, the two pane headers, the refresh control, the
+// other missions' pages, and the two mission-starting buttons stay enabled. The extension posts the
+// paths of the missions with a running runner to the page when a run starts and when its terminal closes, and
 // with every redraw, so a hidden pane shown again draws them too; a click that still reaches the
 // extension for such a mission is refused as before. When a run's terminal closes the pane is
 // re-read and the fresh parse posted to the page. A click on a looped recipe's button shows that recipe's preview on the
@@ -40,8 +44,8 @@
 // mission documents under the project root, created with the first live read that succeeds and
 // disposed with the panel, debounced so that a burst of writes causes one re-read. A change to a
 // mission's question document or task list re-reads that mission's documents in process against
-// the live list last read, choosing its next step and counting its review commits afresh, and
-// creating or deleting a `requirements.md`, or changing a `TASKS_TODO.md`, also re-runs
+// the live list last read, choosing its next step and its default pane and counting its review
+// commits afresh, and creating or deleting a `requirements.md`, or changing a `TASKS_TODO.md`, also re-runs
 // `missions.py live`. While the panel is hidden an event only marks the page stale, and a stale
 // page is re-read when the panel is shown. The refresh control on the page and the refresh command
 // each re-read everything, as a fallback. Git state is not watched.
@@ -92,7 +96,8 @@ type PaneMessage =
       type: 'live';
       /**
        * Each live mission with its documents, the step its diagram fills, left out when none is
-       * chosen, and the count its additional review round carries, left out while there is none.
+       * chosen, the count its additional review round carries, left out while there is none, and
+       * the pane its page opens on.
        */
       missions: ({ path: string; state: string; title: string } & MissionDocuments & MissionWorkflow)[];
       recipes: RecipePart;
@@ -294,8 +299,8 @@ function unwatch(): void {
 }
 
 /**
- * What the diagram of the live mission `mission` draws, from its documents `documents` as read and
- * the review commits git holds for it.
+ * What the page of the live mission `mission` draws from its documents `documents` as read and the
+ * review commits git holds for it: its diagram's step and count and the pane it opens on.
  */
 function readWorkflow(root: string, mission: LiveMission, documents: MissionDocuments): Promise<MissionWorkflow> {
   return missionWorkflow(mission.state, documents.facts, () => reviewCount(root, mission.path));
@@ -304,7 +309,8 @@ function readWorkflow(root: string, mission: LiveMission, documents: MissionDocu
 /**
  * Acts on one debounced burst of the watcher's events: a hidden panel is only marked stale; a
  * burst that moves the live list re-reads everything; any other re-reads in process the documents
- * of each live mission it touched, chooses what its diagram draws afresh, and posts the fresh parse.
+ * of each live mission it touched, chooses what its diagram draws and its default pane afresh, and
+ * posts the fresh parse.
  */
 async function flushEvents(context: vscode.ExtensionContext, target: vscode.WebviewPanel, batch: RefreshBatch): Promise<void> {
   if (panel !== target) {
@@ -395,7 +401,7 @@ function publish(shown: Current): PaneMessage {
   const missions = shown.live.map((mission) => ({
     ...mission,
     ...(shown.documents.get(mission.path) as MissionDocuments),
-    ...shown.workflows.get(mission.path),
+    ...(shown.workflows.get(mission.path) as MissionWorkflow),
   }));
   const questions = new Map<string, Map<string, Set<string>>>();
   for (const mission of missions) {
@@ -732,7 +738,9 @@ function nonce(): string {
  * script sets when that row would overflow the pane, it stacks the same blocks in a centered
  * column of equal width joined by the arrows turned downward, a block's name breaking onto a second
  * line only when the pane is narrower than the block itself; the dashed, solid, filled, and pulsing
- * block rules hold in both layouts.
+ * block rules hold in both layouts. It lays a mission page's two pane headers, Open questions and
+ * Remaining tasks, out as two columns of equal width that together fill the page's whole width,
+ * the selected one underlined, with only the selected pane's content beneath them.
  */
 function pageShell(webview: vscode.Webview, script: vscode.Uri): string {
   const token = nonce();
@@ -791,8 +799,12 @@ function pageShell(webview: vscode.Webview, script: vscode.Uri): string {
   .alternative { margin: 0.4em 0 0; padding: 0; }
   .alternative-head { display: flex; align-items: center; gap: 0.6em; }
   .alternative.picked h6 { color: var(--vscode-textLink-foreground); }
-  .section-head { display: flex; align-items: center; gap: 0.8em; }
-  .section-head h3 { margin: 0.8em 0; }
+  .panes { margin-top: 1em; }
+  .pane-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; border-bottom: 1px solid var(--vscode-panel-border); }
+  .pane-tabs button { min-width: 0; background: none; color: var(--vscode-foreground); border: none; border-bottom: 2px solid transparent; margin-bottom: -1px; padding: 0.4em 0.8em; cursor: pointer; font: inherit; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pane-tabs button:hover { background: var(--vscode-list-hoverBackground); }
+  .pane-tabs button[aria-selected="true"] { border-bottom-color: var(--vscode-focusBorder); font-weight: 600; }
+  .pane { padding-top: 0.6em; }
   .recipes h4 { margin: 0.8em 0 0.3em; }
   .recipe-list { display: flex; flex-wrap: wrap; gap: 0.4em; }
   button.recipe { background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; padding: 0.3em 0.9em; cursor: pointer; font: inherit; }

@@ -95,9 +95,17 @@ from that root:
 - A row of tabs across the top, one per live mission, each showing the mission's title with its
   path as a tooltip, and at its end the two mission-starting buttons, **New mission** (runs the
   `discuss-mission-goal` recipe) and **Define mission** (runs the `define-mission-goal` recipe).
-- Under the selected tab, the mission's page: the workflow diagram, the recipe buttons, the
-  question view parsed from `open_questions.xml`, and the remaining task headings of
-  `TASKS_TODO.md` with a **New task** button beside them. The diagram shows the choices you
+- Under the selected tab, the mission's page: the workflow diagram, the recipe buttons, and two
+  panes behind one row of two headers, **Open questions**, holding the question view parsed from
+  `open_questions.xml`, and **Remaining tasks**, holding the remaining task headings of
+  `TASKS_TODO.md` and the **New task** button. The two headers are of equal width and together
+  fill the pane's whole width, and only the selected pane's content is shown beneath them. A
+  page opens on **Remaining tasks** when git holds at least one `Requirements-review:` commit
+  for the mission (the count the workflow diagram reads) and no question is open, and on **Open
+  questions** otherwise, a failed git read included. A header you click stays selected through
+  every redraw and every refresh from file events while the mission stays shown; it is not
+  saved, so switching to another mission's tab, opening the pane again, or showing it again
+  after it was hidden opens the page on its default afresh. The diagram shows the choices you
   make, not the plugin's inner steps, as one line of seven blocks joined by arrows: **define**,
   **first review round**, **additional review round**, **derive tasks**, **execute tasks**,
   **follow up tasks**, and **finish**. The two optional blocks, **additional review round** and
@@ -118,7 +126,7 @@ from that root:
   no task. **define** and **follow up tasks** are never filled, and an open question outranks a
   remaining task. A review pass that changed nothing leaves no commit, so the diagram does not
   count it. No block is filled when a document or the git read the choice needs does not read;
-  a document's notice stays in its own section. The diagram is display only: its blocks are not
+  a document's notice stays in its own pane. The diagram is display only: its blocks are not
   buttons and gate nothing. **New task** runs the
   `discuss-new-task` recipe for the page's mission: you type the issue, and an interactive
   conversation clarifies it into tasks and adds them to the mission's task list through
@@ -142,12 +150,12 @@ run at once in a terminal; every recipe button shows its lines, placeholders inc
 you click. While a run started for a mission is going, until you dismiss its terminal, that
 mission's page shows it: every action button on the page (the recipe buttons, the buttons on
 the question card and its alternatives, a preview's **Start run**, and **New task**) is
-disabled, and the workflow diagram's filled block pulses. The tabs, **Refresh**, the question
-view's **Previous** and **Next**, the other missions' pages, and **New mission** and **Define
-mission** stay enabled, and the page is drawn this way again whenever it is redrawn, after the
-pane was hidden and shown included. Should a click still reach the extension for that mission,
-it starts nothing: a notification says a chain is already running and the run's terminal is
-shown.
+disabled, and the workflow diagram's filled block pulses. The tabs, the **Open questions** and
+**Remaining tasks** headers, **Refresh**, the question view's **Previous** and **Next**, the
+other missions' pages, and **New mission** and **Define mission** stay enabled, and the page is
+drawn this way again whenever it is redrawn, after the pane was hidden and shown included.
+Should a click still reach the extension for that mission, it starts nothing: a notification
+says a chain is already running and the run's terminal is shown.
 
 The pane re-reads by itself after each of its runs, once you dismiss the run's terminal, and on
 changes to any mission's `requirements.md`, `open_questions.xml`, or `TASKS_TODO.md`; git state
