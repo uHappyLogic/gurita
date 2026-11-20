@@ -122,5 +122,7 @@ No other mission is live, so nothing holds or shares the scope. The record holds
 
 - **Command line.** The runner file is `runner.py`, and its three uses are argparse subcommands: `runner.py chain -- LINE...`, `runner.py loop --mission PATH --rules FILE --line NAME LINE... [--override TITLE NAME]... -- LINE...`, and `runner.py preview --mission PATH --rules FILE --line NAME LINE...`. Each chain or recipe line is one argument after `--`, so a line opening with `-` is never read as an option, and the looped recipe's lines are passed as written with the slot line last. Every named single-task line is one `--line` with two values, its name and its raw text, and every override one `--override` with two values, the task title and the line name. The values a chain's lines reference reach the runner in the environment the extension gives its terminal, so the command line carries none, and in a loop the runner itself fills `<path>` and `<Task Title>` from `--mission` and the re-read heading.
 
+- **Preview print.** Each preview line is three tab-separated fields in the layout of `missions.py live`: a state word (`resolved` when the named line is among the single-task lines the runner was given, `missing` when it is not), then the line name the rules give the task (the missing name in a `missing` line), then the task's `##` title last. The runner alone decides resolved or missing, and the print carries nothing else.
+
 ## Out of Scope
 
