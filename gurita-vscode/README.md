@@ -219,8 +219,11 @@ Every run is the bundled `runner.py`, started with `python3` as the run terminal
 the project root. It composes the chain into one script and runs it in one shell session, using
 the shell `$SHELL` names as an interactive shell (so it reads `~/.zshrc` or `~/.bashrc`), or
 `/bin/sh` with no startup files when `$SHELL` is unset or names a shell outside the sh, bash, zsh
-family. When the chain ends it prints the line the run ended on and the recipe line it stopped
-at, then waits for a keypress; the terminal closes, and the pane re-reads, once you dismiss it.
+family. Before each line it prints a marker naming the line's number, the total, and its text,
+such as `Line 3 of 4: claude -p ...`, in a chain and in each task's run of a looped run alike;
+the marker is never part of the output a headless line's check reads. When the chain ends it
+prints the line the run ended on and the recipe line it stopped at, then waits for a keypress;
+the terminal closes, and the pane re-reads, once you dismiss it.
 
 The runner can also be run by hand outside the editor, from `gurita-vscode/` once a build has
 written `bundled/`; `python3 runner.py --help` lists its `chain`, `preview`, and `loop` commands

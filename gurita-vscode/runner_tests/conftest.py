@@ -2,9 +2,10 @@
 
 The runner is imported in process as the module `runner` from the extension's directory, and
 no test starts a shell session or a host command: the tests drive line-kind inference, the
-fixed-line verdict, rule matching and the default, the check step and the preview print
-through `runner.main`, and the looped run's per-task choice and verdict, its driver run through
-`runner.main` with the function that would start each task's session replaced by a stub.
+step marker the composed script prints before each line, the fixed-line verdict, rule matching
+and the default, the check step and the preview print through `runner.main`, and the looped
+run's per-task choice and verdict, its driver run through `runner.main` with the function that
+would start each task's session replaced by a stub.
 """
 
 import sys

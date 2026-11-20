@@ -13,14 +13,17 @@ interactive when it ends in a `# interactive` comment, headless when it otherwis
 `gurita:` skill invocation (`/gurita:` or `$gurita:`), and a shell step otherwise. The whole
 chain is composed into one script, run by the shell `$SHELL` names as an interactive shell
 (`-i`, so it reads the person's startup files), or by `/bin/sh` with no startup files when
-`$SHELL` is unset or names a shell outside the sh, bash, zsh family. Shell steps and
-interactive lines stand in the script as written. Each headless line's output goes through
-`tee` to the terminal and to a run-local file, and is followed by a check step, this runner
-started as `runner.py check`, which reads the first line of that final message and makes the
-shell exit unless the line is a success or no-op line of the bundled fixed-line file
-`bundled/fixed_lines.tsv` (one `kind<TAB>line` row per line of the plugin's fixed console
-line table). Once the shell has exited the runner prints the line the run ended on and the
-recipe line it stopped at, then waits for a keypress before exiting.
+`$SHELL` is unset or names a shell outside the sh, bash, zsh family. Before every line the
+script prints one marker line to the terminal, `Line N of TOTAL: ` and the line's text as the
+session holds it, quoted so nothing in it is expanded, and outside the `tee` below, so it never
+reaches the file a check step reads. Shell steps and interactive lines stand in the script as
+written. Each headless line's output goes through `tee` to the terminal and to a run-local
+file, and is followed by a check step, this runner started as `runner.py check`, which reads
+the first line of that final message and makes the shell exit unless the line is a success or
+no-op line of the bundled fixed-line file `bundled/fixed_lines.tsv` (one `kind<TAB>line` row
+per line of the plugin's fixed console line table). Once the shell has exited the runner
+prints the line the run ended on and the recipe line it stopped at, then waits for a keypress
+before exiting.
 
 The values a line references reach it through the environment the runner is started in, as
 `"$GURITA_*"` session variables; the command line carries none.
@@ -173,16 +176,24 @@ def session_shell(environ: Dict[str, str]) -> List[str]:
     return [FALLBACK_SHELL]
 
 
+def step_marker(number: int, total: int, line: str) -> str:
+    """The marker line printed to the terminal before a chain's line runs."""
+    return f"Line {number} of {total}: {line}"
+
+
 def compose_script(lines: List[str], run_dir: str, fixed_lines: str) -> str:
-    """The one shell script a chain runs as, every run-local path written out quoted."""
+    """The one shell script a chain runs as, every run-local path written out quoted; before
+    each line it prints that line's marker, outside a headless line's `tee` group."""
     progress = shlex.quote(os.path.join(run_dir, PROGRESS_FILE))
     verdicts = shlex.quote(os.path.join(run_dir, VERDICTS_FILE))
     check = " ".join(
         shlex.quote(part) for part in (sys.executable, os.path.abspath(__file__), "check")
     )
+    total = len(lines)
     parts = []
     for number, line in enumerate(lines, start=1):
         parts.append(f"printf '%s\\n' {number} >| {progress}")
+        parts.append(f"printf '%s\\n' {shlex.quote(step_marker(number, total, line))}")
         if line_kind(line) == HEADLESS:
             output = shlex.quote(os.path.join(run_dir, f"out-{number}.txt"))
             parts.append("{")
