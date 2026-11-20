@@ -118,11 +118,15 @@ from that root:
   stacks the question text in an area of fixed height, so the pick starts at the same height on
   every card, then the pick and its rationale, the alternatives, the dependencies, and the
   principles, and carries **Discuss**, **Answer**, and **Answer with recommendation** buttons
-  and an **Answer with this alternative** button on each alternative. After a run removes a
-  question the view keeps its place in the list.
+  and an **Answer with this alternative** button on each alternative. **Discuss** always asks
+  for an optional note first: a note you type is carried to the discussion directly after the
+  Short Title, as `--mission <path> <Short Title>. <note>`; an empty note starts the discussion
+  of the question alone, and Escape starts nothing. After a run removes a question the view
+  keeps its place in the list.
 
 Every value a button needs (a goal, a scope typed as a path from the project root, an answer,
-an issue description) is typed into VS Code's own input box, one line per value. A click on a recipe button starts its
+an issue description, a discussion note) is typed into VS Code's own input box, one line per
+value. Only the discussion note may be left empty. A click on a recipe button starts its
 run at once in a terminal; every recipe button shows its lines, placeholders included, before
 you click. While a run started for a mission is going, another click on that mission's page
 starts nothing: a notification says a chain is already running and the run's terminal is shown.
@@ -151,7 +155,9 @@ chains, the file carries:
   `answer-open-question-with-recommendation`, `answer-open-question-with-alternative`, and
   `define-mission-goal`. The buttons run the recipe of these fixed names; `discuss-new-task`'s
   one line is
-  `claude "/gurita:discuss-new-task --mission <path> <issue description>" --dangerously-skip-permissions --model "fable" --effort xhigh; # interactive`.
+  `claude "/gurita:discuss-new-task --mission <path> <issue description>" --dangerously-skip-permissions --model "fable" --effort xhigh; # interactive`,
+  and `discuss-open-question`'s is
+  `claude "/gurita:discuss-open-question --mission <path> <Short Title>. <note>" --dangerously-skip-permissions --model "fable" --effort xhigh; # interactive`.
 - The looped recipe, `Execute tasks one at a time`, whose only line is the slot line
   `<single-task line>` (see the looped task run below).
 - The single-task lines, each one headless line holding `<Task Title>`:
@@ -192,7 +198,10 @@ Each line is one of three kinds, read from its text:
 - **A shell step** otherwise: it runs as written.
 
 The placeholders the extension knows are `<path>`, `<Task Title>`, `<Short Title>`,
-`<Alternative Id>`, `<goal>`, `<scope>`, `<answer text>`, and `<issue description>`. A mission page fills `<path>`; a
+`<Alternative Id>`, `<goal>`, `<scope>`, `<answer text>`, `<issue description>`, and `<note>`.
+`<note>`, the discussion note, is the one optional placeholder: when it is empty the line is
+built with it dropped, together with the `. ` written directly before it, so the line reads as if
+it held no note. A mission page fills `<path>`; a
 recipe holding any other known placeholder is left off the page's list and stays reachable by
 name for the button or loop that fills it. A recipe holding a placeholder name the extension does
 not know is shown as a non-runnable entry naming that placeholder and the file it came from.
@@ -200,8 +209,8 @@ not know is shown as a non-runnable entry naming that placeholder and the file i
 Values never enter a line's text: each placeholder is written as a reference to a session
 variable set in the run's environment, named `GURITA_` followed by the placeholder upper-cased
 with spaces turned into underscores: `GURITA_PATH`, `GURITA_TASK_TITLE`, `GURITA_SHORT_TITLE`,
-`GURITA_ALTERNATIVE_ID`, `GURITA_GOAL`, `GURITA_SCOPE`, `GURITA_ANSWER_TEXT`, and
-`GURITA_ISSUE_DESCRIPTION`. A shell step
+`GURITA_ALTERNATIVE_ID`, `GURITA_GOAL`, `GURITA_SCOPE`, `GURITA_ANSWER_TEXT`,
+`GURITA_ISSUE_DESCRIPTION`, and `GURITA_NOTE`. A shell step
 in your own recipe may read them as `"$GURITA_TASK_TITLE"` and the like.
 
 ## The looped task run and the rule file

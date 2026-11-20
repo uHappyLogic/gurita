@@ -2,6 +2,8 @@
 
 `<path>` is the mission's repo-relative path exactly as `/gurita:define-mission-goal --at <scope> <goal>` printed it, trailing slash included (e.g. `mission_user-guide/`, or `packages/api/mission_rate-limits/`).
 
+`<note>` is optional: with no note, leave it out together with the `. ` written before it.
+
 ## Claude Code
 
 ### First run
@@ -75,7 +77,7 @@ claude -p "/gurita:finish-mission --mission <path>" --dangerously-skip-permissio
 
 ### discuss-open-question
 ```
-claude "/gurita:discuss-open-question --mission <path> <Short Title>" --dangerously-skip-permissions --model "fable" --effort xhigh; # interactive
+claude "/gurita:discuss-open-question --mission <path> <Short Title>. <note>" --dangerously-skip-permissions --model "fable" --effort xhigh; # interactive
 ```
 
 ### discuss-mission-goal

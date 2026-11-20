@@ -32,7 +32,8 @@
 // starts at the same height on every card, then the pick and its rationale, then the
 // alternatives, each with its answer-with-alternative button, the dependencies, and the
 // principles. Each button posts the Short Title and the Alternative Id of the card clicked; the
-// extension asks for any typed value in VS Code's own input box. Every message the extension
+// extension asks for any typed value in VS Code's own input box, the discuss button's optional
+// discussion note included. Every message the extension
 // posts redraws the card in place and the view keeps its position: the page keeps each mission's
 // position, the Short Title shown and its place in the list, saved with `setState` on every move
 // and read back with `getState` when the page is re-created, and when a run removes the question
@@ -136,7 +137,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
   const PREVIEW_FAILURE_LINE = 'The preview could not be run.';
   /** The buttons on a question's card, each with its label and hover text. */
   const QUESTION_BUTTONS: [string, string, string][] = [
-    ['discussQuestion', 'Discuss', 'Open an interactive discussion of this question'],
+    ['discussQuestion', 'Discuss', 'Type an optional note and open an interactive discussion of this question'],
     ['answerQuestion', 'Answer', 'Record an answer you type as the decision'],
     ['answerWithRecommendation', 'Answer with recommendation', "Record this question's recommendation as the decision"],
   ];

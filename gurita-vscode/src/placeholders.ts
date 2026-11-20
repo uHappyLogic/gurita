@@ -2,8 +2,15 @@
 // written into its line as a reference to its `GURITA_*` variable, in the form the line's quoting
 // at that point needs, and the value itself is set only in the run terminal's environment, so no
 // value ever enters a line's text. The variable is named by one fixed rule: the prefix `GURITA_`,
-// then the placeholder's text upper-cased with every space turned into an underscore. This module
-// imports nothing from `vscode`.
+// then the placeholder's text upper-cased with every space turned into an underscore. An optional
+// placeholder, the discussion note, may be given an empty value: a line is then built with it
+// dropped, together with the `. ` written directly before it, so the line reads exactly as it
+// would had the placeholder never been written. This module imports nothing from `vscode`.
+
+import { KNOWN_PLACEHOLDERS } from './recipes';
+
+/** The known placeholders whose value may be empty, each dropped from a line when it is. */
+export const OPTIONAL_PLACEHOLDERS: readonly string[] = ['note'];
 
 /** The session variable a placeholder, given by name without its angle brackets, is filled through. */
 export function sessionVariable(placeholder: string): string {
@@ -57,4 +64,26 @@ export function sessionEnvironment(values: Readonly<Record<string, string>>): Re
     environment[sessionVariable(name)] = value;
   }
   return environment;
+}
+
+/**
+ * The line with every optional placeholder whose value in `values` is empty, blank, or not given
+ * dropped: each `. <name>` removed whole, then any `<name>` left.
+ */
+export function dropEmptyOptional(line: string, values: Readonly<Record<string, string>>): string {
+  let dropped = line;
+  for (const name of OPTIONAL_PLACEHOLDERS) {
+    if ((values[name] ?? '').trim() === '') {
+      dropped = dropped.split(`. <${name}>`).join('').split(`<${name}>`).join('');
+    }
+  }
+  return dropped;
+}
+
+/**
+ * The line a run carries for a recipe's line: every empty optional placeholder dropped, then every
+ * known placeholder written as a reference to its session variable.
+ */
+export function buildLine(line: string, values: Readonly<Record<string, string>>): string {
+  return fillPlaceholders(dropEmptyOptional(line, values), KNOWN_PLACEHOLDERS);
 }

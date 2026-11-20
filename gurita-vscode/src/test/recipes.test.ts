@@ -264,6 +264,19 @@ test('the shipped snippet file carries every button recipe under Claude Code, di
   assert.ok(!pageRecipes(recipes, ['path']).some((entry) => entry.name === BUTTON_RECIPES.discussTask));
 });
 
+test('the shipped discuss-open-question recipe carries the optional note directly after the Short Title', () => {
+  const file = path.join(__dirname, '..', '..', '..', 'snippets', 'GURITA_USAGE.md');
+  const recipes = parseShippedRecipes(fs.readFileSync(file, 'utf8'), file);
+  const recipe = byName(recipes, BUTTON_RECIPES.discussQuestion);
+  assert.deepStrictEqual(recipe.lines, [
+    'claude "/gurita:discuss-open-question --mission <path> <Short Title>. <note>" --dangerously-skip-permissions --model "fable" --effort xhigh; # interactive',
+  ]);
+  assert.deepStrictEqual(recipe.knownPlaceholders, ['path', 'Short Title', 'note']);
+  assert.deepStrictEqual(recipe.unknownPlaceholders, []);
+  assert.ok(buttonRecipe(recipes, BUTTON_RECIPES.discussQuestion, ['path', 'Short Title', 'note']).state === 'found');
+  assert.ok(!pageRecipes(recipes, ['path']).some((entry) => entry.name === BUTTON_RECIPES.discussQuestion));
+});
+
 test('a button finds its recipe by fixed name, shipped or replaced by an own recipe of the same name', () => {
   const found = buttonRecipe(shipped(), 'answer-open-question', ['path', 'Short Title', 'answer text']);
   assert.ok(found.state === 'found');

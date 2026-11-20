@@ -17,7 +17,10 @@
 // buttons, and on a mission's page, beside its remaining-task headings, the new-task button. The
 // Short Title and the Alternative Id come from the card clicked, every typed value from
 // VS Code's own input box, one line per value, and each value reaches its line only as its
-// `GURITA_*` session variable. When a run's terminal closes the pane is re-read and the fresh parse
+// `GURITA_*` session variable. The discuss button always asks for an optional discussion note,
+// the one value a box accepts empty: a note typed is carried after the Short Title as
+// `<Short Title>. <note>`, an empty one leaves the line as if it held no note, and Escape starts
+// nothing. When a run's terminal closes the pane is re-read and the fresh parse
 // posted to the page. A click on a looped recipe's button shows that recipe's preview on the
 // page before anything runs: the extension gathers the named single-task lines from the recipes,
 // read afresh, runs the runner's `preview` with them, the mission, and the rule file at the
@@ -44,6 +47,7 @@ import { LiveMission, LiveRead, projectRoot, readLive } from './live';
 import { PreviewRead, SingleTaskLine, loopArguments, ruleFile, runOverrides, runPreview, singleTaskLines } from './loop';
 import { BUTTON_RECIPES, PageRecipe, Recipe, buttonRecipe, ownRecipesFile, pageRecipes, readRecipes } from './recipes';
 import { FileEventKind, RefreshBatch, RefreshQueue, WATCHED_PATTERN, eventEffect } from './refresh';
+import { OPTIONAL_PLACEHOLDERS } from './placeholders';
 import { refuseWhileRunning, runnerFile, startChain, startLoop } from './runs';
 import { WorkflowStep, missionStep, reviewCommitted } from './workflow';
 
@@ -489,7 +493,7 @@ function runLoop(
 
 /** The placeholder values each question-card button fills, beyond the mission's path and the Short Title. */
 const QUESTION_BUTTONS: Record<QuestionButton, { recipe: string; typed: string[] }> = {
-  discussQuestion: { recipe: BUTTON_RECIPES.discussQuestion, typed: [] },
+  discussQuestion: { recipe: BUTTON_RECIPES.discussQuestion, typed: ['note'] },
   answerQuestion: { recipe: BUTTON_RECIPES.answerQuestion, typed: ['answer text'] },
   answerWithRecommendation: { recipe: BUTTON_RECIPES.answerWithRecommendation, typed: [] },
 };
@@ -509,6 +513,10 @@ const PROMPTS: Record<string, { prompt: string; placeHolder?: string }> = {
     placeHolder: '.',
   },
   'issue description': { prompt: 'The issue, to be clarified into tasks for this mission' },
+  note: {
+    prompt: 'An optional note for the discussion, carried after the Short Title; leave it empty for none',
+    placeHolder: 'Optional',
+  },
 };
 
 /**
@@ -534,20 +542,23 @@ function readButtonRecipe(context: vscode.ExtensionContext, name: string, fillab
 
 /**
  * Asks for each of `names` in VS Code's own input box, one box per value in the order given, and
- * returns the values by placeholder name, or undefined when the person dismisses a box.
+ * returns the values by placeholder name, or undefined when the person dismisses a box. A box
+ * for an optional placeholder accepts an empty value; every other box asks for one.
  */
 async function askValues(names: readonly string[]): Promise<Record<string, string> | undefined> {
   const values: Record<string, string> = {};
   for (const name of names) {
+    const optional = OPTIONAL_PLACEHOLDERS.includes(name);
     const typed = await vscode.window.showInputBox({
       ...PROMPTS[name],
       ignoreFocusOut: true,
-      validateInput: (value) => (value.trim() === '' ? 'Type a value, or press Escape to start nothing.' : undefined),
+      validateInput: (value) =>
+        !optional && value.trim() === '' ? 'Type a value, or press Escape to start nothing.' : undefined,
     });
     if (typed === undefined) {
       return undefined;
     }
-    values[name] = typed;
+    values[name] = optional ? typed.trim() : typed;
   }
   return values;
 }
@@ -561,8 +572,9 @@ function shown(mission: string, question: string, alternative?: string): boolean
 /**
  * Runs a question card's button for the question `question` of the live mission at `mission`, as
  * the latest answer listed them: the Short Title from the card, the answer text, for the answer
- * button, typed into an input box. A question or mission the latest answer did not show, or a
- * mission with a running chain, starts nothing.
+ * button, and the optional discussion note, for the discuss button, typed into an input box. A
+ * question or mission the latest answer did not show, a mission with a running chain, or a box
+ * dismissed with Escape starts nothing.
  */
 async function runQuestionButton(
   context: vscode.ExtensionContext,

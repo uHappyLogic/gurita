@@ -24,6 +24,7 @@ export const KNOWN_PLACEHOLDERS: readonly string[] = [
   'scope',
   'answer text',
   'issue description',
+  'note',
 ];
 
 /** The looped recipe's slot line, standing alone as its last line. */

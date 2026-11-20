@@ -10,8 +10,7 @@
 // closes, which the runner delays until the person dismisses it, and then re-reads the pane.
 
 import * as vscode from 'vscode';
-import { fillPlaceholders, sessionEnvironment } from './placeholders';
-import { KNOWN_PLACEHOLDERS } from './recipes';
+import { buildLine, sessionEnvironment } from './placeholders';
 
 /** The notification a click shows while a chain started for its mission is running. */
 export const ALREADY_RUNNING = 'A chain is already running for this mission.';
@@ -66,8 +65,9 @@ export function refuseWhileRunning(mission: string): boolean {
 /**
  * Starts the runner's `chain` over a recipe's lines for the mission at `mission`, unless a run for
  * that mission is running, or, `mission` undefined, for no mission, as a mission-starting button
- * does. Every known placeholder in the lines is written as a reference to its session variable,
- * and `values`, keyed by placeholder name, are set only in the terminal's environment. The run
+ * does. Every optional placeholder with an empty value is dropped from the lines, every known
+ * placeholder is written as a reference to its session variable, and `values`, keyed by
+ * placeholder name, are set only in the terminal's environment. The run
  * starts at `root`, the project root, or where the terminal starts by default when undefined.
  */
 export function startChain(
@@ -81,7 +81,7 @@ export function startChain(
   if (mission !== undefined && refuseWhileRunning(mission)) {
     return;
   }
-  const filled = lines.map((line) => fillPlaceholders(line, KNOWN_PLACEHOLDERS));
+  const filled = lines.map((line) => buildLine(line, values));
   launch(root, mission, recipe, [runnerFile(context), 'chain', '--', ...filled], sessionEnvironment(values));
 }
 
