@@ -134,5 +134,7 @@ No other mission is live, so nothing holds or shares the scope. The record holds
 
 - **Opening.** The extension contributes exactly one command, for example `gurita.openMissionPane` titled "Gurita: Open Mission Pane", offered in the Command Palette in every workspace whether or not a mission is live, and activates on that command alone. Running it creates the one webview panel in the editor area or calls `reveal` on the panel it already holds. There is no status bar item, no menu entry, no default keybinding, and no automatic opening.
 
+- **Input.** Every value is typed into VS Code's own input box (`window.showInputBox`), one line per value: the new-mission button opens one for the goal, the define button opens one for the goal and then one for the scope, and a question row's answer button opens one for the answer text. Nothing is typed on the pane's page, and the scope is typed as a path.
+
 ## Out of Scope
 
