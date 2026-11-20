@@ -4,9 +4,19 @@
 // list of `###` recipes, one carrying a shipped recipe's name replacing that recipe in place and
 // every other listed after the host groups, in the file's order. Each recipe is classified by
 // its content alone: whether it is a single-task line, whether it is the looped recipe, and which
-// known and unknown placeholders it holds. This module imports nothing from `vscode`.
+// known and unknown placeholders it holds. A recipe may also declare the one step of the workflow
+// diagram it belongs to, by one `Stage: <step name>` line standing outside any fence between its
+// `###` heading and its first fence, in the shipped file and in a person's own file alike, the
+// step named as the diagram labels its block (first review round, additional review round, derive
+// tasks, execute tasks, follow up tasks, or finish), so that a mission page can list the recipes of
+// the step its diagram fills. A recipe with no such line, with more than one, or with a name the
+// reader does not know, `define` included, counts as undeclared. In the shipped file every chain
+// declares its one step and spans no other, each execution chain holding its `complete-all-tasks`
+// line alone, while the button recipes and the single-task lines declare nothing. This module
+// imports nothing from `vscode`.
 
 import * as fs from 'node:fs';
+import type { WorkflowStep } from './workflow';
 
 /** The two host headings of the shipped snippet file whose `###` blocks are recipes. */
 export const HOST_GROUPS = ['Claude Code', 'Antigravity'] as const;
@@ -30,6 +40,22 @@ export const KNOWN_PLACEHOLDERS: readonly string[] = [
 /** The looped recipe's slot line, standing alone as its last line. */
 export const SLOT_LINE = '<single-task line>';
 
+/** The marker opening a recipe's stage line, written at column 0 before the step's name. */
+export const STAGE_MARKER = 'Stage:';
+
+/**
+ * The step names a stage line may give, each exactly as the workflow diagram labels its block,
+ * with the diagram step it declares. `define` is no stage a recipe declares.
+ */
+export const STAGE_NAMES: ReadonlyMap<string, WorkflowStep> = new Map<string, WorkflowStep>([
+  ['first review round', 'first-review'],
+  ['additional review round', 'additional-review'],
+  ['derive tasks', 'derive'],
+  ['execute tasks', 'execute'],
+  ['follow up tasks', 'follow-up'],
+  ['finish', 'finish'],
+]);
+
 export interface Recipe {
   /** The `###` heading's text, the recipe's name. */
   name: string;
@@ -47,6 +73,8 @@ export interface Recipe {
   knownPlaceholders: string[];
   /** The placeholder names its lines hold that the extension does not know, likewise. */
   unknownPlaceholders: string[];
+  /** The workflow step its one stage line declares, left out when the recipe is undeclared. */
+  stage?: WorkflowStep;
 }
 
 interface Block {
@@ -54,6 +82,8 @@ interface Block {
   /** The `##` heading the block stands under, or undefined above the first one. */
   section: string | undefined;
   lines: string[];
+  /** The names its stage lines give, read outside any fence before its first fence. */
+  stages: string[];
 }
 
 const FENCE = /^\s*```/;
@@ -61,7 +91,10 @@ const PLACEHOLDER = /<([A-Za-z][A-Za-z0-9 _-]*)>/g;
 const INVOCATION = /[/$]gurita:/;
 const INTERACTIVE_MARK = /(?:^|\s)#\s*interactive\s*$/;
 
-/** Splits a Markdown text into its `###` blocks, reading headings outside fences only. */
+/**
+ * Splits a Markdown text into its `###` blocks, reading headings outside fences only, and the
+ * stage lines standing outside any fence between a block's heading and its first fence.
+ */
 function blocks(text: string): Block[] {
   const found: Block[] = [];
   let section: string | undefined;
@@ -86,15 +119,25 @@ function blocks(text: string): Block[] {
       continue;
     }
     if (line.startsWith('### ')) {
-      current = { name: line.slice(4).trim(), section, lines: [] };
+      current = { name: line.slice(4).trim(), section, lines: [], stages: [] };
       found.push(current);
       fenceRead = false;
     } else if (line.startsWith('## ')) {
       section = line.slice(3).trim();
       current = undefined;
+    } else if (current && !fenceRead && line.startsWith(STAGE_MARKER)) {
+      current.stages.push(line.slice(STAGE_MARKER.length).trim());
     }
   }
   return found;
+}
+
+/**
+ * The workflow step a recipe's stage lines declare: the step its one stage line names, undefined
+ * when it has none, more than one, or one naming a step the reader does not know.
+ */
+export function declaredStage(stages: readonly string[]): WorkflowStep | undefined {
+  return stages.length === 1 ? STAGE_NAMES.get(stages[0]) : undefined;
 }
 
 /** Whether a line is headless: it holds a `gurita:` invocation and carries no `# interactive` mark. */
@@ -117,6 +160,7 @@ function classify(block: Block, group: RecipeGroup, file: string): Recipe {
     }
   }
   const singleTask = lines.length === 1 && isHeadless(lines[0]) && known.includes('Task Title');
+  const stage = declaredStage(block.stages);
   return {
     name: block.name,
     group,
@@ -126,6 +170,7 @@ function classify(block: Block, group: RecipeGroup, file: string): Recipe {
     looped,
     knownPlaceholders: known,
     unknownPlaceholders: unknown,
+    ...(stage === undefined ? {} : { stage }),
   };
 }
 

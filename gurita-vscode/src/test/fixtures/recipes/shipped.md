@@ -10,12 +10,14 @@ claude -p "/gurita:finish-mission --mission <path>";
 ## Claude Code
 
 ### Chain
+Stage: additional review round
 ```
 claude -p "/gurita:review-mission-requirements --mission <path>" --model "fable";
 claude "/gurita:recommend-all-open-questions --mission <path>" --model "fable"; # interactive
 ```
 
 ### Loop
+Stage: execute tasks
 ```
 source .env_fixture
 <single-task line>
@@ -51,6 +53,7 @@ Prose between the host heading and its first block.
 ### Single task (Antigravity)
 
 Prose between a heading and its fence.
+Stage: Execute Tasks
 ```
 agy -p "/gurita:complete-task --mission <path> <Task Title>" --model "claude-opus-5-5";
 ```
@@ -59,6 +62,7 @@ agy -p "/gurita:complete-task --mission <path> <Task Title>" --model "claude-opu
 ```
 agy -p "/gurita:derive-tasks --mission <path>";
 ```
+Stage: derive tasks
 ```
 echo second fence
 ```

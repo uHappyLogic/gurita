@@ -6,6 +6,7 @@ import * as path from 'node:path';
 import {
   BUTTON_RECIPES,
   buttonRecipe,
+  declaredStage,
   isHeadless,
   mergeRecipes,
   ownRecipesFile,
@@ -14,11 +15,15 @@ import {
   parseShippedRecipes,
   readRecipes,
   Recipe,
+  SLOT_LINE,
+  STAGE_NAMES,
 } from '../recipes';
+import { WORKFLOW_STEPS } from '../workflow';
 
 const FIXTURES = path.join(__dirname, '..', '..', 'src', 'test', 'fixtures', 'recipes');
 const SHIPPED = path.join(FIXTURES, 'shipped.md');
 const OWN = path.join(FIXTURES, 'own.md');
+const SNIPPETS = path.join(__dirname, '..', '..', '..', 'snippets', 'GURITA_USAGE.md');
 
 function shipped(): Recipe[] {
   return parseShippedRecipes(fs.readFileSync(SHIPPED, 'utf8'), SHIPPED);
@@ -159,6 +164,164 @@ test('readRecipes reads both files and treats a missing own file as holding no r
 test('CRLF line ends are read like LF ones', () => {
   const text = fs.readFileSync(SHIPPED, 'utf8').replace(/\n/g, '\r\n');
   assert.deepStrictEqual(parseShippedRecipes(text, SHIPPED), shipped());
+});
+
+/** The stage the one recipe of an own-file text declares, or undefined when it is undeclared. */
+function stageOf(text: string): string | undefined {
+  const recipes = parseOwnRecipes(text, OWN);
+  assert.strictEqual(recipes.length, 1);
+  return recipes[0].stage;
+}
+
+test('the stage names are the diagram labels of every step but define, each declaring its step', () => {
+  assert.deepStrictEqual([...STAGE_NAMES], [
+    ['first review round', 'first-review'],
+    ['additional review round', 'additional-review'],
+    ['derive tasks', 'derive'],
+    ['execute tasks', 'execute'],
+    ['follow up tasks', 'follow-up'],
+    ['finish', 'finish'],
+  ]);
+  assert.deepStrictEqual([...STAGE_NAMES.values()], WORKFLOW_STEPS.filter((step) => step !== 'define'));
+  for (const [name, step] of STAGE_NAMES) {
+    assert.strictEqual(stageOf(`### Recipe\nStage: ${name}\n\`\`\`\necho <path>\n\`\`\`\n`), step);
+  }
+});
+
+test('a recipe declares its step by one Stage line between its heading and its first fence', () => {
+  const recipes = shipped();
+  assert.strictEqual(byName(recipes, 'Chain').stage, 'additional-review');
+  assert.strictEqual(byName(recipes, 'Loop').stage, 'execute');
+  assert.deepStrictEqual(byName(recipes, 'Loop').lines, ['source .env_fixture', '<single-task line>']);
+  assert.strictEqual(stageOf('### Recipe\n\nProse first.\nStage:   finish  \n\n```\necho <path>\n```\n'), 'finish');
+  assert.strictEqual(stageOf('### Recipe\nStage:derive tasks\n```\necho <path>\n```\n'), 'derive');
+});
+
+test('a recipe with no stage line before its first fence is undeclared', () => {
+  const recipes = shipped();
+  const single = byName(recipes, 'Single task (Claude Code)');
+  assert.strictEqual(single.stage, undefined);
+  assert.ok(!('stage' in single));
+  assert.strictEqual(byName(recipes, 'Two fences').stage, undefined, 'a stage line after the first fence is not read');
+  const inFence = parseOwnRecipes('### Recipe\n```\nStage: finish\necho <path>\n```\n', OWN)[0];
+  assert.strictEqual(inFence.stage, undefined);
+  assert.deepStrictEqual(inFence.lines, ['Stage: finish', 'echo <path>']);
+  assert.strictEqual(stageOf('### Recipe\n  Stage: finish\n```\necho <path>\n```\n'), undefined);
+  assert.strictEqual(stageOf('Stage: finish\n### Recipe\n```\necho <path>\n```\n'), undefined);
+  assert.strictEqual(stageOf('### Recipe\n```\necho <path>\n```\n## Next\nStage: finish\n'), undefined);
+});
+
+test('a stage line naming a step the reader does not know, or more than one stage line, counts as undeclared', () => {
+  assert.strictEqual(byName(shipped(), 'Single task (Antigravity)').stage, undefined);
+  assert.strictEqual(byName(own(), 'My second own recipe').stage, undefined);
+  for (const name of ['define', 'Execute Tasks', 'execute', 'execute  tasks', 'deploy', '']) {
+    assert.strictEqual(stageOf(`### Recipe\nStage: ${name}\n\`\`\`\necho <path>\n\`\`\`\n`), undefined, name);
+  }
+  assert.strictEqual(stageOf('### Recipe\nStage: finish\nStage: finish\n```\necho <path>\n```\n'), undefined);
+  assert.strictEqual(stageOf('### Recipe\nStage: finish\nStage: derive tasks\n```\necho <path>\n```\n'), undefined);
+  assert.strictEqual(declaredStage(['execute tasks']), 'execute');
+  assert.strictEqual(declaredStage([]), undefined);
+  assert.strictEqual(declaredStage(['constructor']), undefined);
+});
+
+test('an own recipe declares its stage the same way, and a replacement carries its own declaration', () => {
+  assert.strictEqual(byName(own(), 'My first own recipe').stage, 'execute');
+  assert.strictEqual(byName(own(), 'Chain').stage, undefined);
+  const merged = mergeRecipes(shipped(), own());
+  assert.strictEqual(byName(merged, 'Chain').stage, undefined);
+  assert.strictEqual(byName(merged, 'Loop').stage, 'execute');
+  assert.strictEqual(byName(merged, 'My first own recipe').stage, 'execute');
+  assert.strictEqual(byName(readRecipes(SHIPPED, OWN), 'My first own recipe').stage, 'execute');
+});
+
+/** Every `###` block of a Markdown text that stands under a host heading, with its stage lines' count. */
+function stageLineCounts(text: string): Map<string, number> {
+  const counts = new Map<string, number>();
+  let section: string | undefined;
+  let name: string | undefined;
+  let inFence = false;
+  let fenceRead = false;
+  for (const line of text.split('\n')) {
+    if (line.startsWith('```')) {
+      inFence = !inFence;
+      fenceRead = fenceRead || !inFence;
+    } else if (inFence) {
+      continue;
+    } else if (line.startsWith('### ')) {
+      name = section === 'Claude Code' || section === 'Antigravity' ? line.slice(4).trim() : undefined;
+      fenceRead = false;
+      if (name !== undefined) {
+        counts.set(name, 0);
+      }
+    } else if (line.startsWith('## ')) {
+      section = line.slice(3).trim();
+      name = undefined;
+    } else if (name !== undefined && /^\s*Stage\s*:/i.test(line)) {
+      assert.ok(!fenceRead, `${name} holds a stage line after its fence`);
+      counts.set(name, (counts.get(name) ?? 0) + 1);
+    }
+  }
+  return counts;
+}
+
+test('every shipped chain declares exactly one step, and no shipped recipe declares follow up tasks', () => {
+  const recipes = parseShippedRecipes(fs.readFileSync(SNIPPETS, 'utf8'), SNIPPETS);
+  const buttons: readonly string[] = Object.values(BUTTON_RECIPES);
+  const chains = recipes.filter((recipe) => !buttons.includes(recipe.name) && !recipe.singleTask);
+  assert.deepStrictEqual(
+    chains.map((recipe) => [recipe.group, recipe.name, recipe.stage]),
+    [
+      ['Claude Code', 'First run', 'first-review'],
+      ['Claude Code', 'Requirements iteration', 'additional-review'],
+      ['Claude Code', 'Prepare tasks', 'derive'],
+      ['Claude Code', 'Execute tasks of normal difficulty', 'execute'],
+      ['Claude Code', 'Execute tasks (critical tasks)', 'execute'],
+      ['Claude Code', 'Execute tasks one at a time', 'execute'],
+      ['Claude Code', 'Finish mission', 'finish'],
+      ['Antigravity', 'First run (Antigravity)', 'first-review'],
+      ['Antigravity', 'Requirements iteration (Antigravity)', 'additional-review'],
+      ['Antigravity', 'Prepare tasks (Antigravity)', 'derive'],
+      ['Antigravity', 'Execute tasks of normal difficulty (Antigravity)', 'execute'],
+      ['Antigravity', 'Execute tasks (critical tasks) (Antigravity)', 'execute'],
+      ['Antigravity', 'Mixed-agent requirements review (Gemini reviews, Claude annotates)', 'additional-review'],
+      ['Antigravity', 'Finish mission (Antigravity)', 'finish'],
+    ],
+  );
+  const counts = stageLineCounts(fs.readFileSync(SNIPPETS, 'utf8'));
+  assert.deepStrictEqual([...counts.keys()], recipes.map((recipe) => recipe.name));
+  for (const recipe of recipes) {
+    const declares = chains.includes(recipe);
+    assert.strictEqual(counts.get(recipe.name), declares ? 1 : 0, recipe.name);
+    if (!declares) {
+      assert.strictEqual(recipe.stage, undefined, recipe.name);
+    }
+  }
+  assert.ok(!recipes.some((recipe) => recipe.stage === 'follow-up'));
+  assert.ok(!recipes.some((recipe) => /extra requirement surface stretch/i.test(recipe.name)));
+});
+
+test('no shipped execute recipe holds a derive-tasks line, each holding its complete-all-tasks line alone or the slot line', () => {
+  const recipes = parseShippedRecipes(fs.readFileSync(SNIPPETS, 'utf8'), SNIPPETS);
+  const execute = recipes.filter((recipe) => recipe.stage === 'execute');
+  assert.strictEqual(execute.length, 5);
+  for (const recipe of execute) {
+    assert.ok(!recipe.lines.some((line) => line.includes('gurita:derive-tasks')), recipe.name);
+    assert.strictEqual(recipe.lines.length, 1, recipe.name);
+    assert.ok(recipe.lines[0] === SLOT_LINE || recipe.lines[0].includes('/gurita:complete-all-tasks --mission <path>"'), recipe.name);
+  }
+  assert.deepStrictEqual(byName(recipes, 'Execute tasks of normal difficulty').lines, [
+    'claude "/gurita:complete-all-tasks --mission <path>" --dangerously-skip-permissions --model "opus" --effort high; # interactive',
+  ]);
+  assert.deepStrictEqual(byName(recipes, 'Execute tasks (critical tasks)').lines, [
+    'claude "/gurita:complete-all-tasks --mission <path>" --dangerously-skip-permissions --model "opus" --effort xhigh; # interactive',
+  ]);
+  assert.deepStrictEqual(byName(recipes, 'Execute tasks of normal difficulty (Antigravity)').lines, [
+    'agy -i "/gurita:complete-all-tasks --mission <path>" --dangerously-skip-permissions --model "claude-opus-5-5" --effort high; # interactive',
+  ]);
+  assert.deepStrictEqual(byName(recipes, 'Execute tasks (critical tasks) (Antigravity)').lines, [
+    'claude "/gurita:complete-all-tasks --mission <path>" --dangerously-skip-permissions --model "opus" --effort xhigh; # interactive',
+  ]);
+  assert.deepStrictEqual(byName(recipes, 'Execute tasks one at a time').lines, [SLOT_LINE]);
 });
 
 test('a page lists the recipes it can fill, in the merged order, and names each unknown placeholder and its file', () => {

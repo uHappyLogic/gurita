@@ -9,6 +9,7 @@ claude -p "/gurita:review-mission-requirements --mission <path>" --model "opus";
 ```
 
 ### My first own recipe
+Stage: execute tasks
 ```
 echo "$GURITA_TASK_TITLE" >> run.log
 $gurita:complete-task --mission <path> <Task Title>
@@ -20,6 +21,7 @@ codex exec '$gurita:complete-task --mission <path> <Task Title>';
 ```
 
 ### My second own recipe
+Stage: deploy
 ```
 echo <unknown one> <unknown one> <scope>
 ```

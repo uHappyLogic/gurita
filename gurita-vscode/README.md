@@ -173,12 +173,54 @@ naming the file.
 A recipe is a `###` heading, its name, and the lines of the first fenced block beneath it. The
 pane lists recipes from two files.
 
+### The stage line
+
+A recipe may declare the one step of the workflow diagram it belongs to, by one `Stage:` line
+standing between its `###` heading and its fence, outside the fence:
+
+````
+### Prepare tasks
+Stage: derive tasks
+```
+claude -p "/gurita:answer-all-open-questions-with-recommendation --mission <path>" --dangerously-skip-permissions --model "fable" --effort high;
+claude -p "/gurita:derive-tasks --mission <path>" --dangerously-skip-permissions --model "fable" --effort xhigh;
+```
+````
+
+The step is named exactly as the diagram labels its block: `first review round`,
+`additional review round`, `derive tasks`, `execute tasks`, `follow up tasks`, or `finish`. The
+line opens with `Stage:` at its first column, and the name after it is read with its outer spaces
+trimmed. A recipe with no `Stage:` line before its fence, with more than one, or with a name the
+reader does not know (`define`, or a step's name spelled otherwise, capitals included) is
+undeclared; a `Stage:` line inside the fence is an ordinary line of the recipe, and one after the
+fence is not read. The same rule reads the shipped file and your own file, and an own recipe
+that replaces a shipped one carries its own declaration, not the shipped one's. The reader
+records the declared step with each recipe; the mission page's recipe list described below does
+not depend on it.
+
 ### The shipped recipe file
 
 The package ships `snippets/GURITA_USAGE.md` as `bundled/GURITA_USAGE.md`, read at run time. Only
 the `###` blocks under its `## Claude Code` and `## Antigravity` headings are recipes, each
-listed in that host's group; the blocks under `## Manual use` are for reading only. Besides the
-chains, the file carries:
+listed in that host's group; the blocks under `## Manual use` are for reading only.
+
+Every chain in the file declares the one step it runs and spans no other:
+
+- **first review round**: `First run` and `First run (Antigravity)`.
+- **additional review round**: `Requirements iteration`, `Requirements iteration (Antigravity)`,
+  and `Mixed-agent requirements review (Gemini reviews, Claude annotates)`.
+- **derive tasks**: `Prepare tasks` and `Prepare tasks (Antigravity)`, the answer sweep and
+  `derive-tasks`.
+- **execute tasks**: under each host, `Execute tasks of normal difficulty` and
+  `Execute tasks (critical tasks)` (with `(Antigravity)` at the end of the Antigravity copies),
+  each holding its `complete-all-tasks` line alone, and under Claude Code the looped recipe,
+  `Execute tasks one at a time`, whose only line is the slot line `<single-task line>` (see the
+  looped task run below). No execution chain holds an answer sweep or a `derive-tasks` line: a
+  mission's tasks are derived by `Prepare tasks` before an execution chain completes them.
+- **finish**: `Finish mission` and `Finish mission (Antigravity)`.
+
+No shipped recipe declares **follow up tasks**. Besides the chains, the file carries the
+following, none of which declares a step:
 
 - The seven button recipes, under `## Claude Code`, each named by the skill its one line invokes:
   `discuss-open-question`, `discuss-mission-goal`, `discuss-new-task`, `answer-open-question`,
@@ -188,8 +230,6 @@ chains, the file carries:
   `claude "/gurita:discuss-new-task --mission <path> <issue description>" --dangerously-skip-permissions --model "fable" --effort xhigh; # interactive`,
   and `discuss-open-question`'s is
   `claude "/gurita:discuss-open-question --mission <path> <Short Title>. <note>" --dangerously-skip-permissions --model "fable" --effort xhigh; # interactive`.
-- The looped recipe, `Execute tasks one at a time`, whose only line is the slot line
-  `<single-task line>` (see the looped task run below).
 - The single-task lines, each one headless line holding `<Task Title>`:
   `Single task with Opus xHigh (Claude Code)`, `Single task with Opus High (Claude Code)`, and
   `Single task with Opus High (Antigravity)`.
@@ -205,10 +245,12 @@ The file is a flat list of `###` recipes, each heading followed by a fenced bloc
 `##` headings in it are ignored. An own recipe carrying the name of a shipped recipe replaces
 that recipe in place, a button recipe included; every other own recipe is listed below the
 Claude Code and Antigravity groups under **Your recipes**, in the order your file lists them.
-For example:
+An own recipe may declare its step by a `Stage:` line, as a shipped one does (see the stage line
+above). For example:
 
 ````
 ### Review twice
+Stage: additional review round
 ```
 claude -p "/gurita:review-mission-requirements --mission <path>" --dangerously-skip-permissions --model "fable" --effort xhigh;
 claude -p "/gurita:review-mission-requirements --mission <path>" --dangerously-skip-permissions --model "fable" --effort xhigh;
