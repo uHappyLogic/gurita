@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Reshape Existing Snippet File Blocks
-
-Revise `snippets/GURITA_USAGE.md` into the document the extension ships, changing only what stands in it today: delete the bare first line and rename `<mission_path>` to `<path>` throughout, remove the "API KEY usage" and "Wait for next quota reset" blocks, move the five blocks that are not chains of host command lines under one `## Manual use` heading, end each of the six repeated Antigravity headings with "(Antigravity)", rename the two single-task headings to `Single task with Opus xHigh (Claude Code)` and `Single task with Opus High (Antigravity)`, and end every interactive line (`claude "…"` without `-p`, `agy -i "…"`) with a trailing `# interactive` comment. The recipe reader takes every `###` block under `## Claude Code` and `## Antigravity` as a recipe named by its heading alone, so only runnable chains under unique headings may stand there. Verified by reading the file: no `<mission_path>` remains, no `###` heading under the two host headings repeats, and every chain line is unchanged beyond its placeholder and its mark.
-
----
-
 ## Add Button Loop and Preparation Recipes
 
 Add to `snippets/GURITA_USAGE.md` the recipes the extension's buttons and looped run need, each as its Snippet file decision states it: under `## Claude Code` the six one-line button recipes headed `### discuss-open-question`, `### discuss-mission-goal`, `### answer-open-question`, `### answer-open-question-with-recommendation`, `### answer-open-question-with-alternative`, and `### define-mission-goal`, the looped recipe `### Execute tasks one at a time` holding only the slot line `<single-task line>`, and a third single-task line, `complete-task` under `opus` at `high`, headed `Single task with Opus High (Claude Code)`; and under each host a two-line preparation recipe, `Prepare tasks` and `Prepare tasks (Antigravity)`, holding the first two lines of that host's "Execute tasks of normal difficulty" block. Verified by reading each new block against its decision, the two interactive button lines carrying `# interactive`, every `--mission` naming `<path>`, and no `###` heading under the two host headings repeating.
