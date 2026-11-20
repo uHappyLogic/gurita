@@ -1140,6 +1140,36 @@
   </open-question>
   <open-question id="Live query failure">
     <question>The pane of the VS Code extension (`gurita-vscode`) lists the live missions by running its bundled `missions.py live` with `python3` in the project. What does the pane show when that query cannot run or fails, as with no folder open, a folder that is no git work tree, or no `python3`?</question>
+    <alternative id="Treat as no missions">
+      A failed or unrunnable `live` query is treated as an empty print: the pane shows no mission page, only the two mission-starting buttons it shows when no mission is live, and the cause (no folder open, the tool&apos;s `Error:` line on stderr with its exit 1, or `python3` failing to spawn) is shown on no surface the person sees, at most written to an output channel of the extension&apos;s own.
+      <advantage>Nothing is built beyond the one path the pane already needs for a project with no live mission, and the start buttons stay offered so the skills&apos; own stop lines (the definition skill&apos;s git and `python3` probes) remain the only gate, as the draft has the label gate no button.</advantage>
+      <drawback>A project whose missions do exist reads as holding none, so a person in a non-git folder or without `python3` is told something false and may define a mission they did not need, with nothing on the pane pointing at the actual cause.</drawback>
+    </alternative>
+    <alternative id="Pane failure with raw cause">
+      The pane shows one failure state in place of the mission pages: one fixed line saying the live missions could not be read, with the cause beneath it verbatim — the missions tool&apos;s `Error:` line from stderr when it ran and failed, the spawn error when `python3` could not be started, or that no folder is open when the extension never ran the query. The extension classifies nothing, and the two mission-starting buttons stay on the pane.
+      <advantage>It mirrors the plugin&apos;s own convention of one fixed first line with the tool&apos;s `Error:` line beneath it, so every failure, the three named and any other, is reported truthfully by one code path with no per-cause detection to write or keep in step with the tool.</advantage>
+      <drawback>The raw text is a developer&apos;s message (for a non-git folder, `git ls-files exited 128: fatal: not a git repository…`), giving the person no remedy in their own terms, and the start buttons stay offered where a click is sure to stop on the definition skill&apos;s probe line or, with no folder open, has no directory to run in.</drawback>
+    </alternative>
+    <alternative id="Pane failure classified">
+      The pane shows a failure state in place of the mission pages whose message the extension chooses by cause: it tells apart no folder open (before running anything), `python3` not startable (the spawn failing), and the query refusing, the last showing the tool&apos;s `Error:` line verbatim, optionally after a check of its own for a git work tree so a non-git folder gets its own message; each known cause carries a remedy line (open a folder, install `python3`, `git init` or open the repository), and the two mission-starting buttons stay on the pane.
+      <advantage>The person is told what is wrong and what to do in plain terms for exactly the three cases the question names, while any other refusal still shows the tool&apos;s own words, so nothing is hidden.</advantage>
+      <drawback>The extension gains detection code of its own for each cause, and recognizing a non-git folder either reads the tool&apos;s error wording, which the plugin&apos;s convention says no runner should classify, or adds a git check of its own beside the tool&apos;s; how much of this lands depends on the sibling Project root choice, which decides what &quot;no folder&quot; and &quot;the project&quot; mean in a multi-folder workspace.</drawback>
+    </alternative>
+    <alternative id="Pane failure without buttons">
+      The pane shows the same failure state as with the raw cause (one fixed line, the tool&apos;s `Error:` line, the spawn error, or no folder open beneath it, nothing classified), and the two mission-starting buttons are withdrawn while the failure stands, so the pane offers nothing to click until a later read succeeds.
+      <advantage>No click is offered that cannot succeed: without a folder there is no directory for a line to run in, and without git or `python3` the definition line stops on its own probe, so the person is steered to fixing the environment first.</advantage>
+      <drawback>It makes the extension gate buttons on a condition of its own, against the draft&apos;s rule that the skills&apos; stop lines are the only gate, and withdraws the interactive `discuss-mission-goal` button too, which needs no git and could have run; how soon the buttons return depends on the sibling Refresh triggers question.</drawback>
+    </alternative>
+    <alternative id="Notification with raw cause">
+      The failure is reported through the editor&apos;s own error notification (`window.showErrorMessage`) carrying the cause verbatim (the tool&apos;s `Error:` line, the spawn error, or that no folder is open), while the pane itself shows no mission page and keeps the two mission-starting buttons, as when no mission is live.
+      <advantage>It uses the editor&apos;s standard surface for an extension error, which the person sees even while the pane is in a background tab, and keeps the page itself simple with no failure state to draw.</advantage>
+      <drawback>Once the notification is dismissed the pane reads exactly as a project with no live mission, the false picture of treating it as empty, and a notification raised on every re-read can repeat noisily, how often depending on the sibling Refresh triggers question.</drawback>
+    </alternative>
+    <alternative id="Pane failure and notification">
+      The pane shows the failure state with the raw cause in place of the mission pages, the two mission-starting buttons kept, and the editor&apos;s error notification is raised beside it with the same cause when the read fails.
+      <advantage>The failure stays visible on the pane for as long as it stands and also reaches a person who is not looking at the pane, so it is neither missed nor forgotten after a dismissal.</advantage>
+      <drawback>Every failure is reported twice and the extension needs a rule for when to raise the notification again (each failed read or only a changed cause), whose noise depends on the sibling Refresh triggers question, for little a person looking at the pane does not already see.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Project root choice">
     <question>Which directory does the VS Code extension (`gurita-vscode`) take as the project root, from which it runs `missions.py live` and every recipe line, when the editor&apos;s workspace holds several folders or a folder that is not the project&apos;s root?</question>
