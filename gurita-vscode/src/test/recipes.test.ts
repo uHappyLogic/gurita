@@ -4,6 +4,8 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import {
+  BUTTON_RECIPES,
+  buttonRecipe,
   isHeadless,
   mergeRecipes,
   ownRecipesFile,
@@ -200,4 +202,53 @@ test('the own recipe file defaults to ~/.gurita/recipes.md and honours the setti
   assert.strictEqual(ownRecipesFile('~/notes/recipes.md', '/home/someone/'), '/home/someone/notes/recipes.md');
   assert.strictEqual(ownRecipesFile('/srv/recipes.md', '/home/someone'), '/srv/recipes.md');
   assert.strictEqual(ownRecipesFile('$HOME/recipes.md', '/home/someone'), '$HOME/recipes.md');
+});
+
+test('the button recipes carry the six fixed names, each the bare name of its skill', () => {
+  assert.deepStrictEqual(Object.values(BUTTON_RECIPES), [
+    'discuss-open-question',
+    'answer-open-question',
+    'answer-open-question-with-recommendation',
+    'answer-open-question-with-alternative',
+    'discuss-mission-goal',
+    'define-mission-goal',
+  ]);
+});
+
+test('a button finds its recipe by fixed name, shipped or replaced by an own recipe of the same name', () => {
+  const found = buttonRecipe(shipped(), 'answer-open-question', ['path', 'Short Title', 'answer text']);
+  assert.ok(found.state === 'found');
+  assert.strictEqual(found.recipe.file, SHIPPED);
+  assert.deepStrictEqual(found.recipe.lines, [
+    'claude -p "/gurita:answer-open-question --mission <path> <Short Title>. <answer text>";',
+  ]);
+  const replacement = parseOwnRecipes(
+    '### answer-open-question\n```\nclaude -p "/gurita:answer-open-question --mission <path> <Short Title>. <answer text>" --model "opus";\n```\n',
+    OWN,
+  );
+  const replaced = buttonRecipe(mergeRecipes(shipped(), replacement), 'answer-open-question', [
+    'path',
+    'Short Title',
+    'answer text',
+  ]);
+  assert.ok(replaced.state === 'found');
+  assert.strictEqual(replaced.recipe.file, OWN);
+  assert.strictEqual(replaced.recipe.group, 'Claude Code');
+});
+
+test('a button refuses a recipe it cannot run, naming the recipe and the cause', () => {
+  const recipes = mergeRecipes(shipped(), own());
+  assert.deepStrictEqual(buttonRecipe(recipes, 'discuss-mission-goal', ['goal']), {
+    state: 'refused',
+    cause: 'No recipe is named discuss-mission-goal.',
+  });
+  const short = buttonRecipe(recipes, 'answer-open-question', ['path', 'Short Title']);
+  assert.ok(short.state === 'refused');
+  assert.match(short.cause, /answer-open-question in .*shipped\.md holds a placeholder this button has no value for: <answer text>\./);
+  const unknown = buttonRecipe(recipes, 'Fenced heading', ['path']);
+  assert.ok(unknown.state === 'refused');
+  assert.match(unknown.cause, /<mystery thing>/);
+  const loop = buttonRecipe(recipes, 'Loop', ['path']);
+  assert.ok(loop.state === 'refused');
+  assert.match(loop.cause, /is a looped recipe\./);
 });

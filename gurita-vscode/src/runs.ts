@@ -4,8 +4,9 @@
 // the terminal's environment as their `GURITA_*` session variables. The only state held is an
 // in-memory note of which mission has a running runner: a click on a mission's page while one is
 // running starts nothing and queues nothing, shows a notification, and reveals that run's
-// terminal. The extension learns that a run ended when its terminal closes, which the runner
-// delays until the person dismisses it, and then re-reads the pane.
+// terminal. A run a mission-starting button starts belongs to no mission and is refused for none.
+// The extension learns that a run ended when its terminal closes, which the runner delays until
+// the person dismisses it, and then re-reads the pane.
 
 import * as vscode from 'vscode';
 import { fillPlaceholders, sessionEnvironment } from './placeholders';
@@ -20,6 +21,9 @@ const PYTHON = 'python3';
 /** The terminal of each mission's running runner, keyed by the mission's path. */
 const running = new Map<string, vscode.Terminal>();
 
+/** The terminals of the running runners a mission-starting button started. */
+const starting = new Set<vscode.Terminal>();
+
 let ended: (() => void) | undefined;
 
 /**
@@ -30,7 +34,7 @@ export function registerRuns(context: vscode.ExtensionContext, onEnded: () => vo
   ended = onEnded;
   context.subscriptions.push(
     vscode.window.onDidCloseTerminal((terminal) => {
-      let cleared = false;
+      let cleared = starting.delete(terminal);
       for (const [mission, held] of running) {
         if (held === terminal) {
           running.delete(mission);
@@ -60,30 +64,35 @@ export function refuseWhileRunning(mission: string): boolean {
 
 /**
  * Starts the runner's `chain` over a recipe's lines for the mission at `mission`, unless a run for
- * that mission is running. Every known placeholder in the lines is written as a reference to its
- * session variable, and `values`, keyed by placeholder name, are set only in the terminal's
- * environment.
+ * that mission is running, or, `mission` undefined, for no mission, as a mission-starting button
+ * does. Every known placeholder in the lines is written as a reference to its session variable,
+ * and `values`, keyed by placeholder name, are set only in the terminal's environment. The run
+ * starts at `root`, the project root, or where the terminal starts by default when undefined.
  */
 export function startChain(
   context: vscode.ExtensionContext,
-  root: string,
-  mission: string,
+  root: string | undefined,
+  mission: string | undefined,
   recipe: string,
   lines: readonly string[],
   values: Readonly<Record<string, string>>,
 ): void {
-  if (refuseWhileRunning(mission)) {
+  if (mission !== undefined && refuseWhileRunning(mission)) {
     return;
   }
   const filled = lines.map((line) => fillPlaceholders(line, KNOWN_PLACEHOLDERS));
   const terminal = vscode.window.createTerminal({
-    name: `Gurita: ${recipe} (${mission})`,
+    name: mission === undefined ? `Gurita: ${recipe}` : `Gurita: ${recipe} (${mission})`,
     shellPath: PYTHON,
     shellArgs: [context.asAbsolutePath(RUNNER_FILE), 'chain', '--', ...filled],
     cwd: root,
     env: sessionEnvironment(values),
     isTransient: true,
   });
-  running.set(mission, terminal);
+  if (mission === undefined) {
+    starting.add(terminal);
+  } else {
+    running.set(mission, terminal);
+  }
   terminal.show();
 }

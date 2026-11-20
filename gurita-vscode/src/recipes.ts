@@ -270,3 +270,49 @@ export function pageRecipes(recipes: Recipe[], fillable: readonly string[]): Pag
   }
   return listed;
 }
+
+/**
+ * The fixed names of the recipes the buttons outside the chains run, each the bare name of the
+ * skill its one line invokes: three on a question's row, one on an alternative inside an opened
+ * row, and the two mission-starting buttons at the tab row's end.
+ */
+export const BUTTON_RECIPES = {
+  discussQuestion: 'discuss-open-question',
+  answerQuestion: 'answer-open-question',
+  answerWithRecommendation: 'answer-open-question-with-recommendation',
+  answerWithAlternative: 'answer-open-question-with-alternative',
+  discussGoal: 'discuss-mission-goal',
+  defineMission: 'define-mission-goal',
+} as const;
+
+/** The recipe a button runs, by its fixed name, or the cause it cannot be run. */
+export type ButtonRecipe = { state: 'found'; recipe: Recipe } | { state: 'refused'; cause: string };
+
+/**
+ * The recipe of the fixed name `name` in the merged list, shipped or replaced by an own recipe of
+ * the same name, when the button can run it: it holds a line, it is not the looped recipe, and
+ * every placeholder it holds is one the button holds a value for, `fillable` naming them.
+ * Otherwise the cause it cannot be run, naming the recipe and what is wrong with it.
+ */
+export function buttonRecipe(recipes: Recipe[], name: string, fillable: readonly string[]): ButtonRecipe {
+  const recipe = recipes.find((entry) => entry.name === name);
+  if (recipe === undefined) {
+    return { state: 'refused', cause: `No recipe is named ${name}.` };
+  }
+  const where = `The recipe ${name} in ${recipe.file}`;
+  if (recipe.lines.length === 0) {
+    return { state: 'refused', cause: `${where} holds no line.` };
+  }
+  if (recipe.looped) {
+    return { state: 'refused', cause: `${where} is a looped recipe.` };
+  }
+  const unfilled = [
+    ...recipe.unknownPlaceholders,
+    ...recipe.knownPlaceholders.filter((placeholder) => !fillable.includes(placeholder)),
+  ];
+  if (unfilled.length > 0) {
+    const named = unfilled.map((placeholder) => `<${placeholder}>`).join(', ');
+    return { state: 'refused', cause: `${where} holds ${unfilled.length === 1 ? 'a placeholder' : 'placeholders'} this button has no value for: ${named}.` };
+  }
+  return { state: 'found', recipe };
+}

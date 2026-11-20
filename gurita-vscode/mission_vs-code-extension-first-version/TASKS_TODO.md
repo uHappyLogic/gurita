@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Question and Mission-Starting Buttons
-
-Add the buttons outside the chains, each running the recipe of its fixed name, shipped or replaced by an own recipe of the same name, through the run path a recipe button uses: on a question's row `discuss-open-question`, `answer-open-question`, and `answer-open-question-with-recommendation`, on an alternative inside an opened row `answer-open-question-with-alternative`, and on the pane at the tab row's end, in its failure state too, `discuss-mission-goal` and `define-mission-goal`. Every typed value comes from `window.showInputBox`, one line per value (the answer text; the goal; the goal and then the scope), the Short Title and the Alternative Id come from the row clicked, and each value reaches its line only as its `GURITA_*` session variable. Verified by the compile, the unit tests, and the package build passing and by reading the code against the Input, Button recipe names, and Session variables decisions.
-
----
-
 ## Looped Recipe Preview and Overrides
 
 Make a click on the looped recipe show its preview before anything runs: the extension gathers the named single-task lines by the Single-task line recognition test, runs `runner.py preview` as a short-lived child process with them, the mission, and the rule file `task_line_rules.txt` at the project root, and the page lists every remaining task with the line the rules give it or as unresolved, showing the missing line's name, the notice that the project holds no rule file with the path looked for, or the unreadable file's error with each line's number and reason. The person overrides any task by picking another named single-task line, and starting the run launches `runner.py loop` in the run terminal with every `--line` and `--override`, whether or not a task is still unresolved. Verified by the compile, the unit tests, and the package build passing and by reading the code against the Missing file, Unreadable file, Preview print, and Command line decisions.

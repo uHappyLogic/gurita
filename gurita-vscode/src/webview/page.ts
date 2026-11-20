@@ -1,7 +1,8 @@
 // The mission pane's page script. On every load it posts a ready message and draws what the
 // extension answers: a row of tabs, one per live mission in the order `missions.py live` prints
-// them, each showing the mission's title with its path as a tooltip, and the selected mission's
-// page beneath; or the one failure state in place of the pages. A page shows its mission's path,
+// them, each showing the mission's title with its path as a tooltip, with the two mission-starting
+// buttons at the row's end and the selected mission's page beneath; or the one failure state in
+// place of the pages, the two mission-starting buttons staying on the pane above it. A page shows its mission's path,
 // title, and state, the label's facts, the question view, and the remaining task headings, all
 // drawn from the parse the extension posts, and the recipe buttons: the shipped recipes grouped
 // under Claude Code and Antigravity and, below them, the own recipes that replace none under
@@ -10,7 +11,10 @@
 // placeholder the extension does not know shown as a non-runnable entry naming it and its file.
 // The question view shows one collapsed row per
 // question, its Short Title and the id of its picked alternative, each row opening to everything
-// its block holds, with expand-all and collapse-all controls. Every message the extension posts
+// its block holds, with expand-all and collapse-all controls. Each row carries the discuss,
+// answer, and answer-with-recommendation buttons, and each alternative inside an opened row the
+// answer-with-alternative button, each posting the Short Title and the Alternative Id of the row
+// clicked; the extension asks for any typed value in VS Code's own input box. Every message the extension posts
 // redraws the rows in place, and the rows open before it stay open: the page keeps its set of
 // open Short Titles per mission, saved with `setState` on every toggle and read back with
 // `getState` when the page is re-created. A part drawn from a file that did not read is replaced
@@ -88,6 +92,12 @@ declare function acquireVsCodeApi(): VsCodeApi;
   const FAILURE_LINE = 'The live missions could not be read.';
   const NO_MISSION_LINE = 'No mission is live.';
   const RECIPE_FAILURE_LINE = 'The recipes could not be read.';
+  /** The buttons on a question's row, each with its label and hover text. */
+  const QUESTION_BUTTONS: [string, string, string][] = [
+    ['discussQuestion', 'Discuss', 'Open an interactive discussion of this question'],
+    ['answerQuestion', 'Answer', 'Record an answer you type as the decision'],
+    ['answerWithRecommendation', 'Answer with recommendation', "Record this question's recommendation as the decision"],
+  ];
   /** The page's recipe groups in the order drawn, each with its heading. */
   const RECIPE_GROUPS: [RecipeGroup, string][] = [
     ['Claude Code', 'Claude Code'],
@@ -180,9 +190,22 @@ declare function acquireVsCodeApi(): VsCodeApi;
     rows.get(title)?.scrollIntoView({ block: 'start' });
   }
 
+  /** The two mission-starting buttons, belonging to no mission, at the tab row's end. */
+  function drawStarting(): HTMLElement {
+    const starting = element('div', undefined, 'starting');
+    const discuss = button('New mission', 'recipe', () => vscode.postMessage({ type: 'missionButton', button: 'discussGoal' }));
+    discuss.title = 'Type a goal and open an interactive discussion of it';
+    const define = button('Define mission', 'recipe', () => vscode.postMessage({ type: 'missionButton', button: 'defineMission' }));
+    define.title = 'Type a goal and its scope and define the mission';
+    starting.append(discuss, define);
+    return starting;
+  }
+
   function drawTabs(): HTMLElement {
     const tabs = element('div', undefined, 'tabs');
-    tabs.setAttribute('role', 'tablist');
+    const list = element('div', undefined, 'tab-list');
+    list.setAttribute('role', 'tablist');
+    tabs.append(list);
     for (const mission of missions) {
       const tab = element('button', mission.title);
       tab.type = 'button';
@@ -190,8 +213,9 @@ declare function acquireVsCodeApi(): VsCodeApi;
       tab.setAttribute('role', 'tab');
       tab.setAttribute('aria-selected', String(mission.path === selected));
       tab.addEventListener('click', () => select(mission.path));
-      tabs.append(tab);
+      list.append(tab);
     }
+    tabs.append(drawStarting());
     return tabs;
   }
 
@@ -262,6 +286,11 @@ declare function acquireVsCodeApi(): VsCodeApi;
         const picked = pick !== undefined && alternative.id === pick.option;
         const box = element('div', undefined, picked ? 'alternative picked' : 'alternative');
         box.append(element('h5', picked ? `${alternative.id} (picked)` : alternative.id));
+        const answer = button('Answer with this alternative', 'action', () =>
+          vscode.postMessage({ type: 'alternativeButton', mission: mission.path, question: question.id, alternative: alternative.id }),
+        );
+        answer.title = `Record ${alternative.id} as the decision`;
+        box.append(answer);
         if (alternative.text !== '') {
           box.append(element('p', alternative.text));
         }
@@ -336,7 +365,17 @@ declare function acquireVsCodeApi(): VsCodeApi;
         head.append(element('span', question.recommendation.option, 'pick-id'));
       }
       head.addEventListener('click', () => toggle(mission.path, question.id));
-      row.append(head);
+      const line = element('div', undefined, 'row-line');
+      const actions = element('div', undefined, 'row-actions');
+      for (const [kind, label, hover] of QUESTION_BUTTONS) {
+        const action = button(label, 'action', () =>
+          vscode.postMessage({ type: 'questionButton', button: kind, mission: mission.path, question: question.id }),
+        );
+        action.title = hover;
+        actions.append(action);
+      }
+      line.append(head, actions);
+      row.append(line);
       if (opened) {
         row.append(drawBody(mission, question, siblings));
       }
@@ -431,7 +470,9 @@ declare function acquireVsCodeApi(): VsCodeApi;
   function drawFailure(cause: string): void {
     const failure = element('section', undefined, 'failure');
     failure.append(element('p', FAILURE_LINE), element('pre', cause));
-    root.replaceChildren(failure);
+    const tabs = element('div', undefined, 'tabs');
+    tabs.append(drawStarting());
+    root.replaceChildren(tabs, failure);
   }
 
   window.addEventListener('message', (event: MessageEvent<PaneMessage>) => {
