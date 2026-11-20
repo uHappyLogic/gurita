@@ -100,6 +100,8 @@ No other mission is live, so nothing holds or shares the scope. The record holds
 
 - **First line.** The bare placeholder line above the `#` title is deleted, so the file opens on its title, followed by the existing sentence defining the placeholder, renamed to `<path>`. No marker line replaces it anywhere.
 
+- **Button recipe names.** Each of the six button recipes is headed by the bare name of the skill its one line invokes, in the skill's own lowercase hyphenated form and with no marker or prefix: `### discuss-open-question`, `### discuss-mission-goal`, `### answer-open-question`, `### answer-open-question-with-recommendation`, `### answer-open-question-with-alternative`, and `### define-mission-goal`. The names carry no model, effort, or host, and the extension holds these six strings as its fixed names.
+
 ### Recipes
 
 - **Single-task line recognition.** A recipe counts as a single-task line by content alone, with nothing declared: it holds exactly one line, that line is headless (it holds a `gurita:` invocation and carries no `# interactive` mark), and it holds the `<Task Title>` placeholder. The heading is free and carries no kind. The same test applies to the shipped file and to a person's own recipe file, and the extension applies it when it gathers the named lines it lists in the preview's override list and hands to the runner.
