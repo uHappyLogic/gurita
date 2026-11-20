@@ -136,5 +136,7 @@ No other mission is live, so nothing holds or shares the scope. The record holds
 
 - **Input.** Every value is typed into VS Code's own input box (`window.showInputBox`), one line per value: the new-mission button opens one for the goal, the define button opens one for the goal and then one for the scope, and a question row's answer button opens one for the answer text. Nothing is typed on the pane's page, and the scope is typed as a path.
 
+- **Second click.** Every button stays enabled. A click on a mission's page while a chain started for that mission is running starts nothing and queues nothing: the extension shows a VS Code notification saying a chain is already running for this mission and reveals that run's terminal, and the person clicks again once it has ended. The only state held is the extension's in-memory note of which mission has a running runner, read at click time and never drawn on the page.
+
 ## Out of Scope
 
