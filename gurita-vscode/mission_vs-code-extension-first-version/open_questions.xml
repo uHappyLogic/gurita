@@ -1621,5 +1621,35 @@
   </open-question>
   <open-question id="Single-task line headings">
     <question>A rule in a project&apos;s tracked rule file, and an override in the looped run&apos;s preview, names a single-task line of the VS Code extension (`gurita-vscode`) by its recipe&apos;s `###` heading. `snippets/GURITA_USAGE.md` heads its two single-task lines `Single tasks with Opus xHigh` (under Claude Code) and `Single tasks with Opus High` (under Antigravity), names that give the model and effort but not the host. In what form is a shipped single-task line&apos;s `###` heading written, for the two lines the file holds and any it gains?</question>
+    <alternative id="Keep model and effort">
+      The two headings stay exactly as they stand, `Single tasks with Opus xHigh` under `## Claude Code` and `Single tasks with Opus High` under `## Antigravity`, and every single-task line the file gains is headed in the same pattern, `Single tasks with &lt;Model&gt; &lt;Effort&gt;` in human spelling, naming no host; a gained line whose model and effort match a line under the other host takes the host-naming form the file uses for repeated headings.
+      <advantage>Nothing in the snippet file changes for these two lines, they are already unique, and the names the maintainer already reads from the file are the names a rule writes.</advantage>
+      <drawback>A rule or override never says which host it sends a task to, and the human `Opus` hides that the Antigravity line runs `claude-opus-5-5` while the Claude Code one runs `opus`; a later line repeating a combination under the other host forces a rename that can break rules already written against the bare name, and a person&apos;s own recipe replacing one of these headings with another model leaves the name describing a line that no longer runs.</drawback>
+    </alternative>
+    <alternative id="Host model and effort">
+      Every shipped single-task heading names all three of its line&apos;s host, model, and effort in human spelling, with the host written in the same form the file&apos;s repeated headings use to name theirs, for example `Single task with Opus xHigh (Claude Code)` and `Single task with Opus High (Antigravity)`, and every gained line follows the same pattern.
+      <advantage>Each name tells the reader of a rule file or a preview exactly what a task will run under, and the pattern stays unique however many lines the file gains, so no addition ever renames an existing line.</advantage>
+      <drawback>The names are long to type into a rule file and must be copied exactly; a person&apos;s own recipe that replaces one of these headings with a different host, model, or effort keeps a name that now misdescribes it, while a project&apos;s tracked rules naming it stay as written. Its host part depends on the form the repeated-heading question settles.</drawback>
+    </alternative>
+    <alternative id="Literal line values">
+      Every shipped single-task heading is built from its line&apos;s own literal values, the host binary, the `--model` value, and the `--effort` value, behind a fixed stem, for example `complete-task claude opus xhigh` and `complete-task agy claude-opus-5-5 high`, and every gained line is headed the same way.
+      <advantage>The name is mechanical: it is read straight off the line it heads, needs no human naming of models or efforts, and distinguishes the two different model ids the two hosts take, so no two combinations can ever share a name.</advantage>
+      <drawback>It reads unlike every other heading in the file, the pane, and the preview, and it repeats the line beside it, so an edit to the line that forgets the heading leaves a name that states the wrong values; as with any combination name, a person&apos;s own replacement under the same heading makes it misdescribe the line it runs.</drawback>
+    </alternative>
+    <alternative id="Host only">
+      Every shipped single-task heading names only its line&apos;s host, for example `Single task (Claude Code)` and `Single task (Antigravity)`, with the model and effort left to the line itself, the host written in the form the file&apos;s repeated headings use.
+      <advantage>Short, stable names that a rule file writes easily, and a person&apos;s own recipe may swap the model or effort under the same heading without the name becoming untrue.</advantage>
+      <drawback>It holds only one shipped line per host: any second combination on one host needs a different naming scheme, renaming the first line and the rules that name it, and a rule no longer shows which model or effort a task gets. Its viability depends on how many lines the shipped-lines question gives each host.</drawback>
+    </alternative>
+    <alternative id="Role names">
+      Every shipped single-task heading names the kind of task the line is meant for rather than its combination, for example `Single task (standard)` for the Claude Code Opus `xhigh` line and `Single task (critical)` or another role word for the Antigravity Opus `high` line, the role words chosen once and every gained line taking a role name of its own; no heading names a host, model, or effort.
+      <advantage>A project&apos;s tracked rules name intent, which stays true across people and over time: a person&apos;s own recipe file replaces a role&apos;s heading with their own host, model, and effort, and a newer model is adopted by editing one line, both without editing any project&apos;s rule file and without a name that misdescribes its line.</advantage>
+      <drawback>The heading no longer says what a task will run under, so the preview and the pane must show the line itself for a person to see it, and the role words are a new vocabulary to choose and agree on; which roles exist hinges on which combinations the shipped-lines question ships.</drawback>
+    </alternative>
+    <alternative id="Role and combination">
+      Every shipped single-task heading names both the kind of task it is meant for and its line&apos;s host, model, and effort, for example `Single task, standard (Opus xHigh, Claude Code)` and `Single task, critical (Opus High, Antigravity)`, and every gained line follows the same pattern.
+      <advantage>A rule names intent while the heading still tells a reader exactly what the line runs, so both the rule file and the pane read on their own.</advantage>
+      <drawback>The longest names to type into a rule file, and the decoupling a role gives is lost: a person&apos;s own replacement or a model update under the same heading leaves its combination part untrue, while changing the heading breaks every rule naming it; it carries both a role vocabulary to choose and the host form the repeated-heading question settles.</drawback>
+    </alternative>
   </open-question>
 </open-questions>
