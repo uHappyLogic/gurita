@@ -102,6 +102,10 @@ from that root:
   **first review round**, **additional review round**, **derive tasks**, **execute tasks**,
   **follow up tasks**, and **finish**. The two optional blocks, **additional review round** and
   **follow up tasks**, have a dashed border and the five required ones a solid border. The
+  diagram is centered in the pane and lies in one horizontal row while that row fits the pane's
+  width; in a pane too narrow for the row, the same blocks stack vertically, joined by downward
+  arrows and likewise centered, each block keeping its border and its fill, and the diagram goes
+  back to the row once the pane is wide enough again, never wrapping or scrolling sideways. The
   additional review round reads plain while git holds at most one `Requirements-review:` commit
   for the mission and then carries the count of those beyond the first: **additional review
   round 1** at two, **2** at three, and so on. The block of the step to run next is filled

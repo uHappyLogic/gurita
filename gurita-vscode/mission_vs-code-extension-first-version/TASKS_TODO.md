@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Centered Workflow Diagram With Vertical Fallback
-
-Each mission page's seven-block workflow diagram, drawn by `gurita-vscode/src/webview/page.ts` and styled in the stylesheet of `src/pane.ts`, is centered horizontally in the mission pane and lies in one horizontal row while that row fits the pane's width; when the row would overflow, it switches to a vertical stack of the same blocks joined by downward arrows, likewise centered and keeping the dashed borders of the two optional blocks, the solid borders of the five required ones, and the filled block with its pulse, and it switches back once the pane is wide enough again, never wrapping or scrolling sideways. Verified by rendering the page in a WKWebView with the pane's own stylesheet at a wide and a narrow width (the diagram centered in both, horizontal when wide, vertical when narrow, and switching on resize), by `gurita-vscode/README.md` and the source comments describing the centering and the vertical fallback, and by `npm test` and `npm run package` passing under Node 22 through nvm.
-
----
-
 ## Seven-Step Workflow Diagram in the Root README
 
 The Mermaid block at the top of the root `README.md`, which mirrors the pane's workflow diagram, is redrawn as the pane's seven blocks in one line under the names `gurita-vscode/src/webview/page.ts` gives them (define, first review round, additional review round, derive tasks, execute tasks, follow up tasks, finish), joined by arrows, with no subgraphs, loop edge, or handoff label, the two optional blocks (additional review round, follow up tasks) dash-bordered and the five required ones solid, nothing highlighted, and no count on the additional-round block, since the README's diagram is static. Verified by extracting the block and rendering it with `@mermaid-js/mermaid-cli` under Node 22 through nvm with no syntax error and all seven block names present, and by `git diff` naming only `README.md`, changed only inside the Mermaid block, with `README.md` still not mentioning the extension.

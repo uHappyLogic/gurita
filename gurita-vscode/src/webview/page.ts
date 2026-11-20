@@ -10,7 +10,12 @@
 // define, first review round, additional review round, derive tasks, execute tasks, follow up
 // tasks, and finish, with no frame, loop arrow, or handoff label, the two optional blocks,
 // additional review round and follow up tasks, drawn with a dashed border and the five required
-// ones solid. The additional review round reads plain while git holds at most one review commit for
+// ones solid. The diagram is centered horizontally in the pane and lies in one horizontal row while
+// that row fits the pane's width; when the row would overflow, the same blocks stack vertically,
+// joined by downward arrows and likewise centered, their borders, fill, and pulse unchanged. The
+// row is measured afresh on every redraw and every change of the pane's width, so the diagram
+// switches back to the row once the pane is wide enough again, and it never wraps or scrolls
+// sideways. The additional review round reads plain while git holds at most one review commit for
 // the mission and then carries the count of those beyond the first, as the extension posts it,
 // such as "additional review round 2". The block of the step to run next, which the extension
 // chooses and posts, is filled purple, and no block is filled when the extension chose none; the
@@ -185,6 +190,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
   const previews = new Map<string, Preview>();
   /** The card drawn on the page, so a dependency link can scroll to the card it jumped to. */
   let card: HTMLElement | undefined;
+  /** The workflow diagram drawn on the page and its line of blocks, so it can be laid out again whenever the pane's width changes. */
+  let diagram: { section: HTMLElement; flow: HTMLElement } | undefined;
 
   function element<K extends keyof HTMLElementTagNameMap>(tag: K, text?: string, className?: string): HTMLElementTagNameMap[K] {
     const node = document.createElement(tag);
@@ -323,10 +330,12 @@ declare function acquireVsCodeApi(): VsCodeApi;
    * The workflow diagram: its seven blocks in one line joined by arrows, the optional ones dashed,
    * the additional review round carrying `rounds` when given. The block of `step` is filled, and
    * pulses while `busy`, a chain started for the mission running; every block is display only.
+   * The line is drawn as a horizontal row, and `fitWorkflow` turns it into a vertical stack once
+   * the page is laid out, when the row would overflow the pane.
    */
   function drawWorkflow(step: WorkflowStep | undefined, rounds: number | undefined, busy: boolean): HTMLElement {
-    const diagram = element('section', undefined, 'workflow');
-    diagram.setAttribute('aria-label', 'Workflow');
+    const section = element('section', undefined, 'workflow');
+    section.setAttribute('aria-label', 'Workflow');
     const flow = element('div', undefined, 'flow');
     flow.setAttribute('role', 'list');
     WORKFLOW_BLOCKS.forEach(([each, name, optional], index) => {
@@ -352,8 +361,26 @@ declare function acquireVsCodeApi(): VsCodeApi;
       }
       flow.append(block);
     });
-    diagram.append(flow);
-    return diagram;
+    section.append(flow);
+    diagram = { section, flow };
+    return section;
+  }
+
+  /**
+   * Lays the drawn workflow diagram out to the pane's width: one horizontal row, centered, while
+   * that row fits the diagram's width, and otherwise the `vertical` class, under which the pane's
+   * stylesheet stacks the same blocks in a centered column joined by downward arrows. The row is
+   * measured with the class taken off every time, so the diagram switches back to the row once the
+   * pane is wide enough again; the measurement and the switch both land before the page is painted.
+   */
+  function fitWorkflow(): void {
+    if (diagram === undefined) {
+      return;
+    }
+    const { section, flow } = diagram;
+    section.classList.remove('vertical');
+    const overflows = flow.getBoundingClientRect().width > section.getBoundingClientRect().width;
+    section.classList.toggle('vertical', overflows);
   }
 
   /**
@@ -670,8 +697,9 @@ declare function acquireVsCodeApi(): VsCodeApi;
   }
 
   /**
-   * Redraws the whole pane in place from the latest parse, keeping the scroll position and the
-   * focus on the previous or next button when it held it.
+   * Redraws the whole pane in place from the latest parse, laying the workflow diagram out to the
+   * pane's width and keeping the scroll position and the focus on the previous or next button when
+   * it held it.
    */
   function draw(): void {
     const scrolled = window.scrollY;
@@ -680,9 +708,11 @@ declare function acquireVsCodeApi(): VsCodeApi;
       selected = missions[0]?.path;
     }
     card = undefined;
+    diagram = undefined;
     const shown = missions.find((mission) => mission.path === selected);
     root.replaceChildren(drawTabs());
     root.append(shown === undefined ? element('p', NO_MISSION_LINE) : drawPage(shown));
+    fitWorkflow();
     window.scrollTo(0, scrolled);
     if (focused !== undefined) {
       const again = root.querySelector<HTMLButtonElement>(`[data-focus="${focused}"]`);
@@ -693,6 +723,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
   }
 
   function drawFailure(cause: string): void {
+    diagram = undefined;
     const failure = element('section', undefined, 'failure');
     failure.append(element('p', FAILURE_LINE), element('pre', cause));
     const tabs = element('div', undefined, 'tabs');
@@ -758,6 +789,9 @@ declare function acquireVsCodeApi(): VsCodeApi;
     event.preventDefault();
     step(event.key === 'ArrowLeft' ? -1 : 1);
   });
+
+  /** Every change of the pane's width lays the workflow diagram out again, as a row or as a stack. */
+  window.addEventListener('resize', fitWorkflow);
 
   vscode.postMessage({ type: 'ready' });
 })();

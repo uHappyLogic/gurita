@@ -725,6 +725,15 @@ function nonce(): string {
   return value;
 }
 
+/**
+ * The page shell `webview.html` is set to once: the pane's stylesheet and the page script. The
+ * stylesheet centers the workflow diagram's row of blocks horizontally in the pane, as wide as the
+ * row itself and never wrapping or scrolling sideways, and under the `vertical` class the page
+ * script sets when that row would overflow the pane, it stacks the same blocks in a centered
+ * column of equal width joined by the arrows turned downward, a block's name breaking onto a second
+ * line only when the pane is narrower than the block itself; the dashed, solid, filled, and pulsing
+ * block rules hold in both layouts.
+ */
 function pageShell(webview: vscode.Webview, script: vscode.Uri): string {
   const token = nonce();
   const policy = [
@@ -748,8 +757,8 @@ function pageShell(webview: vscode.Webview, script: vscode.Uri): string {
   .tab-list button { background: none; color: var(--vscode-foreground); border: 1px solid transparent; padding: 0.3em 0.8em; cursor: pointer; font: inherit; }
   .tab-list button[aria-selected="true"] { border-color: var(--vscode-focusBorder); background: var(--vscode-list-activeSelectionBackground); color: var(--vscode-list-activeSelectionForeground); }
   .failure pre, .notice pre { white-space: pre-wrap; font-family: var(--vscode-editor-font-family); }
-  .workflow { margin: 1em 0; overflow-x: auto; }
-  .workflow .flow { display: flex; flex-wrap: nowrap; align-items: center; gap: 0.4em; }
+  .workflow { margin: 1em 0; }
+  .workflow .flow { display: flex; flex-wrap: nowrap; align-items: center; gap: 0.4em; width: max-content; margin: 0 auto; }
   .workflow .block { border: 1px solid var(--vscode-descriptionForeground); border-radius: 4px; padding: 0.3em 0.8em; white-space: nowrap; }
   .workflow .block.optional { border-style: dashed; }
   .workflow .block.next { background: #9333ea; border-color: #9333ea; color: #ffffff; }
@@ -757,6 +766,9 @@ function pageShell(webview: vscode.Webview, script: vscode.Uri): string {
   .workflow .block.next.running { animation: running-pulse 1.6s ease-in-out infinite; }
   @keyframes running-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
   .workflow .arrow { opacity: 0.7; }
+  .workflow.vertical .flow { flex-direction: column; align-items: stretch; gap: 0.2em; max-width: 100%; }
+  .workflow.vertical .block { white-space: normal; text-align: center; }
+  .workflow.vertical .arrow { align-self: center; transform: rotate(90deg); }
   .notice { border-left: 3px solid var(--vscode-inputValidation-warningBorder); padding: 0.2em 0.8em; }
   .controls { display: flex; gap: 0.5em; margin-bottom: 0.5em; }
   button.control { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: none; padding: 0.25em 0.8em; cursor: pointer; font: inherit; }

@@ -25,7 +25,29 @@ class FakeElement {
   children: (FakeElement | FakeText)[] = [];
   private readonly listeners = new Map<string, ((event: unknown) => void)[]>();
 
-  constructor(readonly tagName: string) {}
+  /** `measure` gives the element's laid-out width, as the test's stand-in for the browser's layout. */
+  constructor(
+    readonly tagName: string,
+    private readonly measure: (element: FakeElement) => number = () => 0,
+  ) {}
+
+  /** The class list, kept in `className` as the page script's `element` sets it. */
+  get classList(): { remove(name: string): void; toggle(name: string, force: boolean): void } {
+    const names = () => this.className.split(' ').filter((name) => name !== '');
+    return {
+      remove: (name) => {
+        this.className = names().filter((each) => each !== name).join(' ');
+      },
+      toggle: (name, force) => {
+        const kept = names().filter((each) => each !== name);
+        this.className = (force ? [...kept, name] : kept).join(' ');
+      },
+    };
+  }
+
+  getBoundingClientRect(): { width: number } {
+    return { width: this.measure(this) };
+  }
 
   setAttribute(name: string, value: string): void {
     this.attributes.set(name, value);
@@ -81,13 +103,19 @@ interface Page {
   root: FakeElement;
   posted: unknown[];
   send(message: unknown): void;
+  /** Fires the window's resize event, as a change of the pane's width does. */
+  resize(): void;
 }
 
-/** Loads the compiled page script into a fresh page, as the pane does each time it is shown. */
-function loadPage(): Page {
-  const root = new FakeElement('div');
+/**
+ * Loads the compiled page script into a fresh page, as the pane does each time it is shown, its
+ * elements laid out to the widths `measure` gives.
+ */
+function loadPage(measure?: (element: FakeElement) => number): Page {
+  const root = new FakeElement('div', measure);
   const posted: unknown[] = [];
   const windowListeners: ((event: { data: unknown }) => void)[] = [];
+  const resizeListeners: (() => void)[] = [];
   const context = {
     HTMLElement: FakeElement,
     acquireVsCodeApi: () => ({
@@ -99,7 +127,7 @@ function loadPage(): Page {
     document: {
       activeElement: null,
       getElementById: (id: string) => (id === 'root' ? root : null),
-      createElement: (tag: string) => new FakeElement(tag),
+      createElement: (tag: string) => new FakeElement(tag, measure),
       createTextNode: (text: string) => new FakeText(text),
       addEventListener: () => undefined,
     },
@@ -109,6 +137,8 @@ function loadPage(): Page {
       addEventListener: (type: string, listener: (event: { data: unknown }) => void) => {
         if (type === 'message') {
           windowListeners.push(listener);
+        } else if (type === 'resize') {
+          resizeListeners.push(listener as () => void);
         }
       },
     },
@@ -121,6 +151,11 @@ function loadPage(): Page {
     send: (message) => {
       for (const listener of windowListeners) {
         listener({ data: message });
+      }
+    },
+    resize: () => {
+      for (const listener of resizeListeners) {
+        listener();
       }
     },
   };
@@ -352,4 +387,74 @@ test('the additional review round reads plain without a count and carries the po
     const drawn = blocks(diagramPage({ step: 'execute', additionalRounds: rounds })).map((each) => each.textContent);
     assert.deepStrictEqual(drawn, [...SEVEN.slice(0, 2), `additional review round ${rounds}`, ...SEVEN.slice(3)]);
   }
+});
+
+/** The width the diagram's row takes in the stand-in layout, whatever the pane's width. */
+const ROW_WIDTH = 800;
+
+/**
+ * A page for one mission whose diagram draws `workflow`, laid out in a pane `pane.width` wide: the
+ * diagram's section takes the pane's width and its row of blocks `ROW_WIDTH`.
+ */
+function laidOutPage(pane: { width: number }, workflow: Record<string, unknown>, running: string[] = []): Page {
+  const page = loadPage((element) => (element.has('workflow') ? pane.width : element.has('flow') ? ROW_WIDTH : 0));
+  page.send({ type: 'live', missions: [mission(ALPHA, 'Alpha', workflow)], recipes: RECIPES, running });
+  return page;
+}
+
+function workflowSection(page: Page): FakeElement {
+  const found = page.root.all().filter((each) => each.has('workflow'));
+  assert.strictEqual(found.length, 1);
+  return found[0];
+}
+
+/** The diagram's line as drawn: each block's name, and an arrow between each two. */
+function diagramLine(page: Page): string[] {
+  const flows = workflowSection(page).all().filter((each) => each.has('flow'));
+  assert.strictEqual(flows.length, 1);
+  return (flows[0].children as FakeElement[]).map((each) => (each.has('block') ? each.textContent : each.has('arrow') ? '→' : each.className));
+}
+
+test('the diagram lies in one row while the row fits the pane and stacks vertically once it would overflow', () => {
+  const pane = { width: 1200 };
+  const page = laidOutPage(pane, { step: 'derive' });
+  const line = SEVEN.flatMap((name, index) => (index === 0 ? [name] : ['→', name]));
+  assert.strictEqual(workflowSection(page).has('vertical'), false);
+  assert.deepStrictEqual(diagramLine(page), line);
+  for (const [width, vertical] of [
+    [ROW_WIDTH, false],
+    [ROW_WIDTH - 1, true],
+    [400, true],
+    [ROW_WIDTH, false],
+    [1200, false],
+    [300, true],
+  ] as [number, boolean][]) {
+    pane.width = width;
+    page.resize();
+    assert.strictEqual(workflowSection(page).has('vertical'), vertical, `vertical at ${width}`);
+    assert.deepStrictEqual(diagramLine(page), line, `the same blocks and arrows at ${width}`);
+    assert.strictEqual(filledBlock(page).textContent, 'derive tasks');
+    assert.deepStrictEqual(
+      blocks(page).filter((each) => each.has('optional')).map((each) => each.textContent),
+      ['additional review round', 'follow up tasks'],
+    );
+  }
+});
+
+test('a redraw lays the diagram out afresh, and the stack keeps the filled block and its pulse', () => {
+  const pane = { width: 500 };
+  const page = laidOutPage(pane, { step: 'follow-up' }, [ALPHA]);
+  assert.strictEqual(workflowSection(page).has('vertical'), true);
+  const filled = filledBlock(page);
+  assert.strictEqual(filled.textContent, 'follow up tasks');
+  assert.strictEqual(filled.has('optional'), true);
+  assert.strictEqual(filled.has('running'), true);
+  pane.width = 1000;
+  page.send({ type: 'running', missions: [] });
+  assert.strictEqual(workflowSection(page).has('vertical'), false);
+  assert.strictEqual(filledBlock(page).has('running'), false);
+  pane.width = 500;
+  page.send({ type: 'liveFailure', cause: 'Error: no git' });
+  page.resize();
+  assert.strictEqual(page.root.all().filter((each) => each.has('workflow')).length, 0);
 });
