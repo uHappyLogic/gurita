@@ -80,5 +80,9 @@ No other mission is live, so nothing holds or shares the scope. The record holds
 
 - **Maintainer install step.** The install-and-try step is carried on no task list at any time: `derive-tasks` authors no task for it, so `TASKS_TODO.md` holds only agent work and an unattended `complete-all-tasks` run ends on `All tasks completed.`. The maintainer then packages or takes the VSIX, installs it into their editor, and tries it by hand, with no workflow step and no commit recording the trial, and submits any follow-up tasks with `submit-task` while the mission is still live.
 
+### Snippet file
+
+- **Reference heading.** The five blocks of `snippets/GURITA_USAGE.md` that are not chains of host command lines move under one heading naming their mode of use, `## Manual use`, standing at the `##` level beside the two host headings, which the recipe reader never reads.
+
 ## Out of Scope
 
