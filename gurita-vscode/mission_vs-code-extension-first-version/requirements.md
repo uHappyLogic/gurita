@@ -136,6 +136,8 @@ No other mission is live, so nothing holds or shares the scope. The record holds
 
 - **Fixed lines.** A build step of the extension parses the `## Fixed console lines` table of `docs/skill-reference.md` once and writes a data file of its own format into the package (for example tab-separated kind and line, or JSON), holding every line of the table with its kind, stop and verdict lines included. The runner reads that file by a plain split and continues on a success or no-op line, stopping otherwise.
 
+- **Run terminal.** The runner is started as a terminal created with `TerminalOptions.shellPath` (`python3`) and `shellArgs` (the runner file's path and the chain's lines), with `isTransient` set. Because VS Code 1.143.0 disposes such a terminal the moment its process exits, the runner keeps its own process alive: after the chain's last line it prints the line the run ended on and which recipe line it stopped at, then waits for a keypress on the terminal before exiting. The extension learns that the run ended from `window.onDidCloseTerminal`, that is, when the person dismisses the terminal.
+
 ### Pane
 
 - **Redraw.** The extension sets `webview.html` once, to a page shell whose script draws the question view. After a run it posts the fresh parse to the visible page, which redraws the rows in place and keeps open those already open. The page saves its set of open Short Titles with `setState` on every toggle and reads it back with `getState` when it is re-created. `retainContextWhenHidden` stays off: a hidden pane loses its page, and on every load the page's script posts a ready message and the extension answers with the current parse, so a run that ended while the pane was hidden reaches the page when it is shown again.
