@@ -5,10 +5,16 @@
 // one failure state in place of the pages, the refresh control and the two mission-starting buttons
 // staying on the pane above it. The refresh control asks the extension to re-read everything, and
 // after every answer the page stays on the mission it showed unless that mission is no longer
-// live, when it falls back to the first. A page shows its mission's path, title, and state, the
-// label's facts, the question view, and the remaining task headings with the new-task button
-// beside them, posting the page's mission, all drawn from the parse the extension posts, and the
-// recipe buttons: the shipped recipes grouped
+// live, when it falls back to the first. A page opens on the workflow diagram, drawn by this script
+// with no Mermaid: eight neutral blocks, define, review, provide alternatives, recommend, and answer
+// in the frame "Decide upfront" and derive, complete, and finish in the frame "Hand execution to
+// agents", with the arrows between them, the loop from answer back to review until no open
+// question remains, and the handoff from answer to derive. The block of the step to run next,
+// which the extension chooses and posts, is filled purple, and no block is filled when the
+// extension chose none; the diagram is display only, its blocks no buttons, gating nothing. Below
+// it stand the recipe buttons, the question view, and the remaining task headings with the
+// new-task button beside them, posting the page's mission, all drawn from the parse the extension
+// posts. The recipe buttons: the shipped recipes grouped
 // under Claude Code and Antigravity and, below them, the own recipes that replace none under
 // "Your recipes", each button carrying its recipe's lines as written in its hover text and
 // starting that recipe's chain for the page's mission when clicked, and each recipe holding a
@@ -68,12 +74,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
   type QuestionPart = { state: 'read'; questions: Question[] } | { state: 'failed'; notice: Notice };
   type TaskPart = { state: 'read'; headings: string[] } | { state: 'failed'; notice: Notice };
 
-  interface LabelFacts {
-    lacksAlternatives?: boolean;
-    lacksPick?: boolean;
-    questionsEmpty?: boolean;
-    tasksRemain?: boolean;
-  }
+  type WorkflowStep = 'define' | 'review' | 'alternatives' | 'recommend' | 'answer' | 'derive' | 'complete' | 'finish';
 
   interface Mission {
     path: string;
@@ -81,7 +82,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
     title: string;
     questions: QuestionPart;
     tasks: TaskPart;
-    facts: LabelFacts;
+    /** The step to run next, which the diagram fills; absent when none could be chosen. */
+    step?: WorkflowStep;
   }
 
   type RecipeGroup = 'Claude Code' | 'Antigravity' | 'own';
@@ -138,6 +140,33 @@ declare function acquireVsCodeApi(): VsCodeApi;
     ['answerQuestion', 'Answer', 'Record an answer you type as the decision'],
     ['answerWithRecommendation', 'Answer with recommendation', "Record this question's recommendation as the decision"],
   ];
+  /** The workflow diagram's two frames, each with its heading and its blocks' steps and names in flow order. */
+  const WORKFLOW_FRAMES: [string, string, [WorkflowStep, string][]][] = [
+    [
+      'decide',
+      'Decide upfront',
+      [
+        ['define', 'define'],
+        ['review', 'review'],
+        ['alternatives', 'provide alternatives'],
+        ['recommend', 'recommend'],
+        ['answer', 'answer'],
+      ],
+    ],
+    [
+      'execute',
+      'Hand execution to agents',
+      [
+        ['derive', 'derive'],
+        ['complete', 'complete'],
+        ['finish', 'finish'],
+      ],
+    ],
+  ];
+  /** The label of the dashed arrow from answer back to review. */
+  const LOOP_LABEL = 'until no open questions remain';
+  /** The label of the arrow from answer to derive. */
+  const HANDOFF_LABEL = 'handoff';
   /** The page's recipe groups in the order drawn, each with its heading. */
   const RECIPE_GROUPS: [RecipeGroup, string][] = [
     ['Claude Code', 'Claude Code'],
@@ -283,27 +312,54 @@ declare function acquireVsCodeApi(): VsCodeApi;
     return box;
   }
 
-  function drawLabel(mission: Mission): HTMLElement {
-    const label = element('ul', undefined, 'label');
-    const facts = mission.facts;
-    const items: string[] = [mission.state];
-    if (mission.questions.state === 'read') {
-      const count = mission.questions.questions.length;
-      if (facts.questionsEmpty) {
-        items.push('no open question');
-      } else {
-        items.push(count === 1 ? '1 open question' : `${count} open questions`);
-        items.push(facts.lacksAlternatives ? 'a question lacks alternatives' : 'every question has alternatives');
-        items.push(facts.lacksPick ? 'a question lacks a pick' : 'every question has a pick');
+  /**
+   * The workflow diagram: the two frames side by side joined by the handoff arrow, each frame's
+   * blocks in a row joined by arrows, and under the first frame's row the dashed loop from answer
+   * back to review. The block of `step` is filled; every block is display only.
+   */
+  function drawWorkflow(step: WorkflowStep | undefined): HTMLElement {
+    const diagram = element('section', undefined, 'workflow');
+    diagram.setAttribute('aria-label', 'Workflow');
+    WORKFLOW_FRAMES.forEach(([kind, heading, blocks], frameIndex) => {
+      if (frameIndex > 0) {
+        const handoff = element('div', undefined, 'handoff');
+        handoff.setAttribute('aria-hidden', 'true');
+        handoff.append(element('span', HANDOFF_LABEL, 'arrow-label'), element('span', '\u2192', 'arrow'));
+        diagram.append(handoff);
       }
-    }
-    if (mission.tasks.state === 'read') {
-      items.push(facts.tasksRemain ? 'tasks remain' : 'no task remains');
-    }
-    for (const item of items) {
-      label.append(element('li', item));
-    }
-    return label;
+      const frame = element('div', undefined, `frame ${kind}`);
+      frame.append(element('div', heading, 'frame-heading'));
+      const flow = element('div', undefined, 'flow');
+      flow.setAttribute('role', 'list');
+      blocks.forEach(([each, name], index) => {
+        if (index > 0) {
+          const arrow = element('span', '\u2192', 'arrow');
+          arrow.setAttribute('aria-hidden', 'true');
+          arrow.style.gridColumn = String(index * 2);
+          flow.append(arrow);
+        }
+        const block = element('div', name, each === step ? 'block next' : 'block');
+        block.setAttribute('role', 'listitem');
+        block.style.gridColumn = String(index * 2 + 1);
+        if (each === step) {
+          block.setAttribute('aria-current', 'step');
+          block.title = 'The step to run next';
+        }
+        flow.append(block);
+      });
+      const review = blocks.findIndex(([each]) => each === 'review');
+      const answer = blocks.findIndex(([each]) => each === 'answer');
+      if (review !== -1 && answer !== -1) {
+        const loop = element('div', undefined, 'loop');
+        loop.setAttribute('aria-label', `answer back to review ${LOOP_LABEL}`);
+        loop.style.gridColumn = `${review * 2 + 1} / ${answer * 2 + 2}`;
+        loop.append(element('span', LOOP_LABEL, 'arrow-label'));
+        flow.append(loop);
+      }
+      frame.append(flow);
+      diagram.append(frame);
+    });
+    return diagram;
   }
 
   /**
@@ -609,15 +665,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
   function drawPage(mission: Mission): HTMLElement {
     const page = element('section', undefined, 'page');
     page.setAttribute('role', 'tabpanel');
-    const facts = element('dl', undefined, 'facts');
-    for (const [label, value] of [
-      ['Path', mission.path],
-      ['Title', mission.title],
-      ['State', mission.state],
-    ]) {
-      facts.append(element('dt', label), element('dd', value));
-    }
-    page.append(facts, drawLabel(mission), drawRecipes(mission));
+    page.append(drawWorkflow(mission.step), drawRecipes(mission));
     const preview = previews.get(mission.path);
     if (preview !== undefined) {
       page.append(drawPreview(mission, preview));

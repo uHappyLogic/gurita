@@ -3,7 +3,7 @@ import * as assert from 'node:assert';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { labelFacts, readMissionDocuments } from '../documents';
+import { documentFacts, readMissionDocuments } from '../documents';
 
 const REPOSITORY_FIXTURES = path.join(__dirname, '..', '..', '..', 'tests', 'fixtures');
 const OWN_FIXTURES = path.join(__dirname, '..', '..', 'src', 'test', 'fixtures');
@@ -38,7 +38,7 @@ test('the module imports nothing from vscode', () => {
   assert.doesNotMatch(source, /from\s+['"]vscode['"]|require\(\s*['"]vscode['"]\s*\)/);
 });
 
-test('both documents read: every block whole, the headings, and every label fact', () => {
+test('both documents read: every block whole, the headings, and every document fact', () => {
   const read = readMissionDocuments(project(repositoryText('annotated', 'open_questions.xml'), TASKS), MISSION);
   assert.strictEqual(read.questions.state, 'read');
   assert.ok(read.questions.state === 'read' && read.questions.questions.length > 0);
@@ -49,7 +49,7 @@ test('both documents read: every block whole, the headings, and every label fact
   assert.strictEqual(typeof read.facts.lacksPick, 'boolean');
 });
 
-test('the label facts follow the blocks lacking alternatives or a pick', () => {
+test('the document facts follow the blocks lacking alternatives or a pick', () => {
   const bare = readMissionDocuments(project(repositoryText('bare', 'open_questions.xml'), '# TASKS TODO\n'), MISSION);
   assert.deepStrictEqual(bare.facts, { lacksAlternatives: true, lacksPick: true, questionsEmpty: false, tasksRemain: false });
 
@@ -113,8 +113,8 @@ test('a task list with conflict markers yields its notice with the reader messag
   assert.strictEqual(read.facts.tasksRemain, undefined);
 });
 
-test('both documents failing leave no label fact from either', () => {
+test('both documents failing leave no document fact from either', () => {
   const read = readMissionDocuments(project(undefined, undefined), MISSION);
   assert.deepStrictEqual(read.facts, {});
-  assert.deepStrictEqual(labelFacts(read.questions, read.tasks), {});
+  assert.deepStrictEqual(documentFacts(read.questions, read.tasks), {});
 });

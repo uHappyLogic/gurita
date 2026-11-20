@@ -93,9 +93,22 @@ from that root:
 - A row of tabs across the top, one per live mission, each showing the mission's title with its
   path as a tooltip, and at its end the two mission-starting buttons, **New mission** (runs the
   `discuss-mission-goal` recipe) and **Define mission** (runs the `define-mission-goal` recipe).
-- Under the selected tab, the mission's page: its path, title, and `started` or `defined`, the
-  recipe buttons, the question view parsed from `open_questions.xml`, and the remaining task
-  headings of `TASKS_TODO.md` with a **New task** button beside them. **New task** runs the
+- Under the selected tab, the mission's page: the workflow diagram, the recipe buttons, the
+  question view parsed from `open_questions.xml`, and the remaining task headings of
+  `TASKS_TODO.md` with a **New task** button beside them. The diagram draws the flow in eight
+  blocks, **define**, **review**, **provide alternatives**, **recommend**, and **answer** in the
+  frame "Decide upfront" and **derive**, **complete**, and **finish** in the frame "Hand
+  execution to agents", with the loop from answer back to review until no open questions remain
+  and the handoff from answer to derive. The block of the step to run next is filled purple:
+  **provide alternatives** while a question lacks alternatives, **recommend** while every
+  question has alternatives and one lacks a pick, **answer** when every question has a pick,
+  **complete** when no question is open and tasks remain, **finish** for a started mission with
+  no open question and no task, and for a defined mission with neither **derive** when git holds
+  a `Requirements-review:` commit for the mission and **review** when it holds none. An open
+  question outranks a remaining task. A review pass that changed nothing leaves no commit, so
+  the diagram does not see it. No block is filled when a document the choice needs does not
+  read; that file's notice stays in its own section. The diagram is display only: its blocks
+  are not buttons and gate nothing. **New task** runs the
   `discuss-new-task` recipe for the page's mission: you type the issue, and an interactive
   conversation clarifies it into tasks and adds them to the mission's task list through
   `submit-task` inside that same conversation, so there is no separate submit button. The

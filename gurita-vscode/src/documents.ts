@@ -1,10 +1,10 @@
 // The read of one live mission's documents for its page: its `open_questions.xml` through the
 // question parser and its `TASKS_TODO.md` through the heading read, both in process, and the
-// label's facts that follow from them. A failure is confined to the part drawn from the file that
-// failed: a question document that is missing or does not parse yields a notice in place of the
-// question view and the label's question facts, and a task list that is missing or holds a
-// conflict marker a notice in place of the task headings and the label's tasks-remain fact, each
-// notice naming the file's path, whether it is missing or unparsable, and the parser's own
+// facts that follow from them, from which the workflow diagram's next step is chosen. A failure
+// is confined to the part drawn from the file that failed: a question document that is missing or
+// does not parse yields a notice in place of the question view and leaves out the question facts,
+// and a task list that is missing or holds a conflict marker a notice in place of the task
+// headings and leaves out the tasks-remain fact, each notice naming the file's path, whether it is missing or unparsable, and the parser's own
 // message. Everything this module returns is plain data the extension posts to the page as it
 // stands. This module imports nothing from `vscode`.
 
@@ -28,8 +28,8 @@ export type QuestionPart = { state: 'read'; questions: Question[] } | { state: '
 /** The task part of a page: the remaining headings in file order, or the notice replacing it. */
 export type TaskPart = { state: 'read'; headings: string[] } | { state: 'failed'; notice: DocumentNotice };
 
-/** The label's facts, each left out when the file it is read from did not read. */
-export interface LabelFacts {
+/** The documents' facts the next step is chosen from, each left out when the file it is read from did not read. */
+export interface DocumentFacts {
   /** Whether any question carries no alternative. */
   lacksAlternatives?: boolean;
   /** Whether any question carries no pick. */
@@ -44,12 +44,12 @@ export interface LabelFacts {
 export interface MissionDocuments {
   questions: QuestionPart;
   tasks: TaskPart;
-  facts: LabelFacts;
+  facts: DocumentFacts;
 }
 
-/** The label's facts of the parts that read. */
-export function labelFacts(questions: QuestionPart, tasks: TaskPart): LabelFacts {
-  const facts: LabelFacts = {};
+/** The documents' facts of the parts that read. */
+export function documentFacts(questions: QuestionPart, tasks: TaskPart): DocumentFacts {
+  const facts: DocumentFacts = {};
   if (questions.state === 'read') {
     const document = { questions: questions.questions };
     facts.lacksAlternatives = withoutAlternatives(document).length > 0;
@@ -89,5 +89,5 @@ export function readMissionDocuments(root: string, missionPath: string): Mission
     tasks = { state: 'failed', notice: { file: shown(TASK_LIST_NAME), reason: 'unparsable', message: taskRead.message } };
   }
 
-  return { questions, tasks, facts: labelFacts(questions, tasks) };
+  return { questions, tasks, facts: documentFacts(questions, tasks) };
 }
