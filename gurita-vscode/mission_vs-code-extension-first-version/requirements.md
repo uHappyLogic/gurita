@@ -148,5 +148,7 @@ No other mission is live, so nothing holds or shares the scope. The record holds
 
 - **Navigation.** A row of tabs stands across the top of the pane, one per live mission in the order `missions.py live` prints them, each tab showing the mission's title with its path as a tooltip, with the selected tab's page beneath and the two mission-starting buttons at the row's end. Clicking a tab switches the page in place. When opened, the pane shows the page of the first mission in that order, holding no memory of an earlier choice, and after a refresh it stays on the page shown unless that mission is no longer live, when it falls back to the first.
 
+- **Mission document read failure.** A failure is confined to the part of the page drawn from the file that failed. If `open_questions.xml` is missing or does not parse, conflict markers included, the question view, its row and alternative buttons, and the question facts of the label are replaced by one notice that names the file's path, says whether it is missing or unparsable, and quotes the parser's own message. If `TASKS_TODO.md` is missing or holds a conflict-marker line (`<<<<<<<`, `=======`, or `>>>>>>>` at column 0), the remaining-task headings and the label's tasks-remain fact get the same kind of notice. Everything else is drawn as usual: the path, the title, and `started` or `defined` from `missions.py live`, the label facts and section that come from the file that did read, and every recipe button. The notice goes away on the next re-read once the file reads again.
+
 ## Out of Scope
 
