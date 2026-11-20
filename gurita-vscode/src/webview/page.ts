@@ -17,17 +17,21 @@
 // missing line, and above them what the runner said about a missing or unreadable rule file,
 // verbatim. Each task's line may be overridden by picking another named single-task line, and the
 // start button starts the run with every override picked, whether or not a task is unresolved.
-// The question view shows one collapsed row per
-// question, its Short Title and the id of its picked alternative, each row opening to everything
-// its block holds, with expand-all and collapse-all controls. Each row carries the discuss,
-// answer, and answer-with-recommendation buttons, and each alternative inside an opened row the
-// answer-with-alternative button, each posting the Short Title and the Alternative Id of the row
-// clicked; the extension asks for any typed value in VS Code's own input box. Every message the extension posts
-// redraws the rows in place, and the rows open before it stay open: the page keeps its set of
-// open Short Titles per mission, saved with `setState` on every toggle and read back with
-// `getState` when the page is re-created. A part drawn from a file that did not read is replaced
-// by that file's notice alone. Every value is drawn as text, never as markup, since it comes from
-// the workspace.
+// The question view shows one fully opened card per question, one card at a time, under a
+// position counter such as "3 / 12", moved between by the previous and next buttons and by the
+// left and right arrow keys, and a dependency link on a card jumps to the named question's card.
+// Each card stacks flat, non-indented slots: its Short Title with the discuss, answer, and
+// answer-with-recommendation buttons, the question text in an area of fixed height, so the pick
+// starts at the same height on every card, then the pick and its rationale, then the
+// alternatives, each with its answer-with-alternative button, the dependencies, and the
+// principles. Each button posts the Short Title and the Alternative Id of the card clicked; the
+// extension asks for any typed value in VS Code's own input box. Every message the extension
+// posts redraws the card in place and the view keeps its position: the page keeps each mission's
+// position, the Short Title shown and its place in the list, saved with `setState` on every move
+// and read back with `getState` when the page is re-created, and when a run removes the question
+// shown the view stays at the same place in the list, clamped to its last card. A part drawn from
+// a file that did not read is replaced by that file's notice alone. Every value is drawn as text,
+// never as markup, since it comes from the workspace.
 
 interface VsCodeApi {
   postMessage(message: unknown): void;
@@ -111,17 +115,23 @@ declare function acquireVsCodeApi(): VsCodeApi;
     | { type: 'preview'; mission: string; recipe: string; lines: string[]; names: string[]; result: PreviewRead }
     | { type: 'loopStarted'; mission: string };
 
+  /** Where a mission's question view stands: the Short Title shown and its place in the list. */
+  interface Position {
+    title: string;
+    index: number;
+  }
+
   interface PageState {
     selected?: string;
-    /** The open Short Titles of each mission's question view, keyed by mission path. */
-    open?: Record<string, string[]>;
+    /** The position of each mission's question view, keyed by mission path. */
+    positions?: Record<string, Position>;
   }
 
   const FAILURE_LINE = 'The live missions could not be read.';
   const NO_MISSION_LINE = 'No mission is live.';
   const RECIPE_FAILURE_LINE = 'The recipes could not be read.';
   const PREVIEW_FAILURE_LINE = 'The preview could not be run.';
-  /** The buttons on a question's row, each with its label and hover text. */
+  /** The buttons on a question's card, each with its label and hover text. */
   const QUESTION_BUTTONS: [string, string, string][] = [
     ['discussQuestion', 'Discuss', 'Open an interactive discussion of this question'],
     ['answerQuestion', 'Answer', 'Record an answer you type as the decision'],
@@ -138,15 +148,13 @@ declare function acquireVsCodeApi(): VsCodeApi;
   const root = document.getElementById('root') as HTMLElement;
   const saved = (vscode.getState() ?? {}) as PageState;
   let selected: string | undefined = saved.selected;
-  const open = new Map<string, Set<string>>(
-    Object.entries(saved.open ?? {}).map(([mission, titles]) => [mission, new Set(titles)]),
-  );
+  const positions = new Map<string, Position>(Object.entries(saved.positions ?? {}));
   let missions: Mission[] = [];
   let recipes: RecipePart = { state: 'read', recipes: [] };
   /** Each mission's preview, by its path, while it stands on the page. */
   const previews = new Map<string, Preview>();
-  /** The rows of the drawn page by Short Title, so a dependency link can scroll to its sibling. */
-  let rows = new Map<string, HTMLElement>();
+  /** The card drawn on the page, so a dependency link can scroll to the card it jumped to. */
+  let card: HTMLElement | undefined;
 
   function element<K extends keyof HTMLElementTagNameMap>(tag: K, text?: string, className?: string): HTMLElementTagNameMap[K] {
     const node = document.createElement(tag);
@@ -167,20 +175,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
   }
 
   function save(): void {
-    const state: PageState = {
-      selected,
-      open: Object.fromEntries([...open].map(([mission, titles]) => [mission, [...titles]])),
-    };
+    const state: PageState = { selected, positions: Object.fromEntries(positions) };
     vscode.setState(state);
-  }
-
-  function openTitles(mission: string): Set<string> {
-    let titles = open.get(mission);
-    if (titles === undefined) {
-      titles = new Set();
-      open.set(mission, titles);
-    }
-    return titles;
   }
 
   function select(path: string): void {
@@ -189,36 +185,58 @@ declare function acquireVsCodeApi(): VsCodeApi;
     draw();
   }
 
-  /** Opens or closes one row, saving the open set on every toggle. */
-  function toggle(mission: string, title: string): void {
-    const titles = openTitles(mission);
-    if (titles.has(title)) {
-      titles.delete(title);
-    } else {
-      titles.add(title);
+  /**
+   * The place in `questions` of the card a mission's view shows: the card of the Short Title it
+   * showed when that question still stands, otherwise the same place in the list, clamped to the
+   * last card, so a run that removes the question shown leaves the view where it was.
+   */
+  function shownIndex(mission: string, questions: Question[]): number {
+    const position = positions.get(mission);
+    if (position === undefined) {
+      return 0;
     }
+    const found = questions.findIndex((question) => question.id === position.title);
+    if (found !== -1) {
+      return found;
+    }
+    return Math.max(0, Math.min(position.index, questions.length - 1));
+  }
+
+  /** Shows the card at `index` of the mission's questions, saving the position on every move. */
+  function moveTo(mission: string, questions: Question[], index: number): void {
+    if (index < 0 || index >= questions.length) {
+      return;
+    }
+    positions.set(mission, { title: questions[index].id, index });
     save();
     draw();
   }
 
-  function setAll(mission: Mission, opened: boolean): void {
-    const titles = openTitles(mission.path);
-    titles.clear();
-    if (opened && mission.questions.state === 'read') {
-      for (const question of mission.questions.questions) {
-        titles.add(question.id);
-      }
+  /** The questions of the page shown, when its question view reads and holds any. */
+  function shownQuestions(): { mission: string; questions: Question[] } | undefined {
+    const mission = missions.find((each) => each.path === selected);
+    if (mission === undefined || mission.questions.state !== 'read' || mission.questions.questions.length === 0) {
+      return undefined;
     }
-    save();
-    draw();
+    return { mission: mission.path, questions: mission.questions.questions };
   }
 
-  /** Opens the named sibling's row and scrolls it into view. */
-  function follow(mission: string, title: string): void {
-    openTitles(mission).add(title);
-    save();
-    draw();
-    rows.get(title)?.scrollIntoView({ block: 'start' });
+  /** Moves the shown page's question view one card back or forward. */
+  function step(offset: number): void {
+    const shown = shownQuestions();
+    if (shown !== undefined) {
+      moveTo(shown.mission, shown.questions, shownIndex(shown.mission, shown.questions) + offset);
+    }
+  }
+
+  /** Jumps to the named sibling's card and scrolls it into view. */
+  function follow(mission: string, questions: Question[], title: string): void {
+    moveTo(
+      mission,
+      questions,
+      questions.findIndex((question) => question.id === title),
+    );
+    card?.scrollIntoView({ block: 'start' });
   }
 
   /** The refresh control and the two mission-starting buttons, belonging to no mission, at the tab row's end. */
@@ -287,47 +305,58 @@ declare function acquireVsCodeApi(): VsCodeApi;
     return label;
   }
 
-  function drawList(heading: string, items: string[]): HTMLElement | undefined {
-    if (items.length === 0) {
-      return undefined;
-    }
-    const part = element('div', undefined, 'part');
-    part.append(element('h4', heading));
-    const list = element('ul');
-    for (const item of items) {
-      list.append(element('li', item));
-    }
-    part.append(list);
-    return part;
-  }
+  /**
+   * One question's card, fully opened: flat, non-indented slots stacked as the Short Title with
+   * the card's buttons, the question text in its area of fixed height, the pick and its rationale,
+   * the alternatives, the dependencies, and the principles.
+   */
+  function drawCard(mission: Mission, question: Question, questions: Question[]): HTMLElement {
+    const body = element('article', undefined, 'card');
+    body.setAttribute('aria-label', question.id);
 
-  function drawBody(mission: Mission, question: Question, siblings: Set<string>): HTMLElement {
-    const body = element('div', undefined, 'body');
-    body.append(element('p', question.question, 'question-text'));
+    const head = element('div', undefined, 'card-head');
+    const title = element('h4', question.id, 'short-title');
+    title.title = question.id;
+    const actions = element('div', undefined, 'card-actions');
+    for (const [kind, label, hover] of QUESTION_BUTTONS) {
+      const action = button(label, 'action', () =>
+        vscode.postMessage({ type: 'questionButton', button: kind, mission: mission.path, question: question.id }),
+      );
+      action.title = hover;
+      actions.append(action);
+    }
+    head.append(title, actions);
+    body.append(head);
+
+    body.append(element('p', question.question, 'slot question-text'));
 
     const pick = question.recommendation;
+    const box = element('div', undefined, 'slot pick');
     if (pick !== undefined) {
       const named = question.alternatives.some((alternative) => alternative.id === pick.option);
-      const box = element('div', undefined, 'pick');
-      box.append(element('h4', named ? `Pick: ${pick.option}` : `Pick: ${pick.option} (names no alternative of this question)`));
+      box.append(element('h5', named ? `Pick: ${pick.option}` : `Pick: ${pick.option} (names no alternative of this question)`));
       box.append(element('p', pick.rationale));
-      body.append(box);
+    } else {
+      box.append(element('h5', 'No pick yet'));
     }
+    body.append(box);
 
     if (question.alternatives.length > 0) {
-      const part = element('div', undefined, 'part');
-      part.append(element('h4', 'Alternatives'));
+      const part = element('div', undefined, 'slot');
+      part.append(element('h5', 'Alternatives'));
       for (const alternative of question.alternatives) {
         const picked = pick !== undefined && alternative.id === pick.option;
-        const box = element('div', undefined, picked ? 'alternative picked' : 'alternative');
-        box.append(element('h5', picked ? `${alternative.id} (picked)` : alternative.id));
+        const entry = element('div', undefined, picked ? 'alternative picked' : 'alternative');
+        const line = element('div', undefined, 'alternative-head');
+        line.append(element('h6', picked ? `${alternative.id} (picked)` : alternative.id));
         const answer = button('Answer with this alternative', 'action', () =>
           vscode.postMessage({ type: 'alternativeButton', mission: mission.path, question: question.id, alternative: alternative.id }),
         );
         answer.title = `Record ${alternative.id} as the decision`;
-        box.append(answer);
+        line.append(answer);
+        entry.append(line);
         if (alternative.text !== '') {
-          box.append(element('p', alternative.text));
+          entry.append(element('p', alternative.text));
         }
         const points = element('ul');
         for (const advantage of alternative.advantages) {
@@ -337,21 +366,22 @@ declare function acquireVsCodeApi(): VsCodeApi;
           points.append(element('li', `Drawback: ${drawback}`, 'drawback'));
         }
         if (points.childElementCount > 0) {
-          box.append(points);
+          entry.append(points);
         }
-        part.append(box);
+        part.append(entry);
       }
       body.append(part);
     }
 
     if (question.dependsOn.length > 0) {
-      const part = element('div', undefined, 'part');
-      part.append(element('h4', 'Depends on'));
+      const siblings = new Set(questions.map((each) => each.id));
+      const part = element('div', undefined, 'slot');
+      part.append(element('h5', 'Depends on'));
       const list = element('ul');
       for (const dependency of question.dependsOn) {
         const item = element('li');
         if (siblings.has(dependency.question)) {
-          item.append(button(dependency.question, 'link', () => follow(mission.path, dependency.question)));
+          item.append(button(dependency.question, 'link', () => follow(mission.path, questions, dependency.question)));
         } else {
           item.append(element('span', dependency.question));
         }
@@ -362,13 +392,20 @@ declare function acquireVsCodeApi(): VsCodeApi;
       body.append(part);
     }
 
-    const principles = drawList('Principles applied', question.principles);
-    if (principles !== undefined) {
-      body.append(principles);
+    if (question.principles.length > 0) {
+      const part = element('div', undefined, 'slot');
+      part.append(element('h5', 'Principles applied'));
+      const list = element('ul');
+      for (const principle of question.principles) {
+        list.append(element('li', principle));
+      }
+      part.append(list);
+      body.append(part);
     }
     return body;
   }
 
+  /** The question view: the position counter and its previous and next buttons above the one card shown. */
   function drawQuestions(mission: Mission): HTMLElement {
     const view = element('section', undefined, 'questions');
     view.append(element('h3', 'Open questions'));
@@ -377,46 +414,31 @@ declare function acquireVsCodeApi(): VsCodeApi;
       view.append(drawNotice(part.notice));
       return view;
     }
-    if (part.questions.length === 0) {
+    const questions = part.questions;
+    if (questions.length === 0) {
       view.append(element('p', 'No open question.'));
       return view;
     }
-    const controls = element('div', undefined, 'controls');
-    controls.append(
-      button('Expand all', 'control', () => setAll(mission, true)),
-      button('Collapse all', 'control', () => setAll(mission, false)),
-    );
-    view.append(controls);
-    const titles = openTitles(mission.path);
-    const siblings = new Set(part.questions.map((question) => question.id));
-    for (const question of part.questions) {
-      const opened = titles.has(question.id);
-      const row = element('div', undefined, opened ? 'row open' : 'row');
-      const head = element('button', undefined, 'row-head');
-      head.type = 'button';
-      head.setAttribute('aria-expanded', String(opened));
-      head.append(element('span', opened ? '▾' : '▸', 'caret'), element('span', question.id, 'short-title'));
-      if (question.recommendation !== undefined) {
-        head.append(element('span', question.recommendation.option, 'pick-id'));
-      }
-      head.addEventListener('click', () => toggle(mission.path, question.id));
-      const line = element('div', undefined, 'row-line');
-      const actions = element('div', undefined, 'row-actions');
-      for (const [kind, label, hover] of QUESTION_BUTTONS) {
-        const action = button(label, 'action', () =>
-          vscode.postMessage({ type: 'questionButton', button: kind, mission: mission.path, question: question.id }),
-        );
-        action.title = hover;
-        actions.append(action);
-      }
-      line.append(head, actions);
-      row.append(line);
-      if (opened) {
-        row.append(drawBody(mission, question, siblings));
-      }
-      rows.set(question.id, row);
-      view.append(row);
+    const index = shownIndex(mission.path, questions);
+    const position = positions.get(mission.path);
+    if (position === undefined || position.title !== questions[index].id || position.index !== index) {
+      positions.set(mission.path, { title: questions[index].id, index });
+      save();
     }
+    const pager = element('div', undefined, 'pager');
+    const previous = button('Previous', 'control', () => moveTo(mission.path, questions, index - 1));
+    previous.title = 'Show the previous question (Left Arrow)';
+    previous.disabled = index === 0;
+    previous.dataset.focus = 'previous';
+    const next = button('Next', 'control', () => moveTo(mission.path, questions, index + 1));
+    next.title = 'Show the next question (Right Arrow)';
+    next.disabled = index === questions.length - 1;
+    next.dataset.focus = 'next';
+    const counter = element('span', `${index + 1} / ${questions.length}`, 'counter');
+    counter.setAttribute('aria-live', 'polite');
+    pager.append(previous, counter, next);
+    card = drawCard(mission, questions[index], questions);
+    view.append(pager, card);
     return view;
   }
 
@@ -599,17 +621,27 @@ declare function acquireVsCodeApi(): VsCodeApi;
     return page;
   }
 
-  /** Redraws the whole pane in place from the latest parse, keeping the scroll position. */
+  /**
+   * Redraws the whole pane in place from the latest parse, keeping the scroll position and the
+   * focus on the previous or next button when it held it.
+   */
   function draw(): void {
     const scrolled = window.scrollY;
+    const focused = document.activeElement instanceof HTMLElement ? document.activeElement.dataset.focus : undefined;
     if (!missions.some((mission) => mission.path === selected)) {
       selected = missions[0]?.path;
     }
-    rows = new Map();
+    card = undefined;
     const shown = missions.find((mission) => mission.path === selected);
     root.replaceChildren(drawTabs());
     root.append(shown === undefined ? element('p', NO_MISSION_LINE) : drawPage(shown));
     window.scrollTo(0, scrolled);
+    if (focused !== undefined) {
+      const again = root.querySelector<HTMLButtonElement>(`[data-focus="${focused}"]`);
+      if (again !== null && !again.disabled) {
+        again.focus();
+      }
+    }
   }
 
   function drawFailure(cause: string): void {
@@ -650,6 +682,25 @@ declare function acquireVsCodeApi(): VsCodeApi;
       previews.delete(message.mission);
       draw();
     }
+  });
+
+  /** The left and right arrow keys move the shown page's question view, except while typing or choosing. */
+  document.addEventListener('keydown', (event: KeyboardEvent) => {
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
+      return;
+    }
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') {
+      return;
+    }
+    const target = event.target;
+    if (target instanceof HTMLElement && (target.isContentEditable || ['INPUT', 'SELECT', 'TEXTAREA'].includes(target.tagName))) {
+      return;
+    }
+    if (shownQuestions() === undefined) {
+      return;
+    }
+    event.preventDefault();
+    step(event.key === 'ArrowLeft' ? -1 : 1);
   });
 
   vscode.postMessage({ type: 'ready' });

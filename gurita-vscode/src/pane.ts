@@ -5,13 +5,13 @@
 // missions, read afresh, each carrying its documents as the in-process readers parse them, and
 // the recipe list every mission page shows, read afresh from the shipped snippet file and the
 // person's own recipe file; or with the one failure state the live read gives. The page redraws
-// its rows in place from every such message. A click on a recipe button starts that recipe's
+// its question card in place from every such message. A click on a recipe button starts that recipe's
 // chain for the page's mission at once. The buttons outside the chains each run the recipe of
 // its fixed name, shipped or replaced by an own recipe of the same name, read afresh at the click,
-// through the same run path: on a question's row the discuss, answer, and answer-with-
-// recommendation buttons, on an alternative inside an opened row the answer-with-alternative
-// button, and on the pane at the tab row's end, in its failure state too, the two mission-starting
-// buttons. The Short Title and the Alternative Id come from the row clicked, every typed value from
+// through the same run path: on a question's card the discuss, answer, and answer-with-
+// recommendation buttons, on an alternative on that card the answer-with-alternative button,
+// and on the pane at the tab row's end, in its failure state too, the two mission-starting
+// buttons. The Short Title and the Alternative Id come from the card clicked, every typed value from
 // VS Code's own input box, one line per value, and each value reaches its line only as its
 // `GURITA_*` session variable. When a run's terminal closes the pane is re-read and the fresh parse
 // posted to the page. A click on a looped recipe's button shows that recipe's preview on the
@@ -48,7 +48,7 @@ const PANEL_TITLE = 'Gurita Missions';
 /** The placeholders a mission page holds a value for: the mission's own path. */
 const PAGE_PLACEHOLDERS = ['path'];
 
-/** A button on a question's row. */
+/** A button on a question's card. */
 type QuestionButton = 'discussQuestion' | 'answerQuestion' | 'answerWithRecommendation';
 
 /** A mission-starting button at the tab row's end. */
@@ -454,7 +454,7 @@ function runLoop(
   }
 }
 
-/** The placeholder values each question-row button fills, beyond the mission's path and the Short Title. */
+/** The placeholder values each question-card button fills, beyond the mission's path and the Short Title. */
 const QUESTION_BUTTONS: Record<QuestionButton, { recipe: string; typed: string[] }> = {
   discussQuestion: { recipe: BUTTON_RECIPES.discussQuestion, typed: [] },
   answerQuestion: { recipe: BUTTON_RECIPES.answerQuestion, typed: ['answer text'] },
@@ -525,8 +525,8 @@ function shown(mission: string, question: string, alternative?: string): boolean
 }
 
 /**
- * Runs a question row's button for the question `question` of the live mission at `mission`, as
- * the latest answer listed them: the Short Title from the row, the answer text, for the answer
+ * Runs a question card's button for the question `question` of the live mission at `mission`, as
+ * the latest answer listed them: the Short Title from the card, the answer text, for the answer
  * button, typed into an input box. A question or mission the latest answer did not show, or a
  * mission with a running chain, starts nothing.
  */
@@ -556,8 +556,8 @@ async function runQuestionButton(
 }
 
 /**
- * Runs the answer-with-alternative button of the alternative `alternative` inside the opened row
- * of the question `question`, the Short Title and the Alternative Id both from the row clicked.
+ * Runs the answer-with-alternative button of the alternative `alternative` on the card of the
+ * question `question`, the Short Title and the Alternative Id both from the card clicked.
  */
 function runAlternativeButton(context: vscode.ExtensionContext, mission: string, question: string, alternative: string): void {
   if (posted === undefined || !posted.missions.has(mission) || !shown(mission, question, alternative)) {
@@ -654,17 +654,24 @@ function pageShell(webview: vscode.Webview, script: vscode.Uri): string {
   .notice { border-left: 3px solid var(--vscode-inputValidation-warningBorder); padding: 0.2em 0.8em; }
   .controls { display: flex; gap: 0.5em; margin-bottom: 0.5em; }
   button.control { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: none; padding: 0.25em 0.8em; cursor: pointer; font: inherit; }
-  .row { border-bottom: 1px solid var(--vscode-panel-border); }
-  .row-line { display: flex; align-items: center; gap: 0.6em; }
-  .row-actions { display: flex; gap: 0.3em; flex-shrink: 0; }
-  button.action { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: none; padding: 0.15em 0.6em; cursor: pointer; font: inherit; }
+  button.control:disabled { opacity: 0.5; cursor: default; }
+  button.action { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: none; padding: 0.15em 0.6em; cursor: pointer; font: inherit; white-space: nowrap; }
   button.action:hover { background: var(--vscode-button-secondaryHoverBackground); }
-  button.row-head { display: flex; gap: 0.6em; flex: 1; min-width: 0; text-align: left; background: none; color: var(--vscode-foreground); border: none; padding: 0.4em 0; cursor: pointer; font: inherit; }
-  .row-head .pick-id { margin-left: auto; opacity: 0.75; }
-  .row .body { padding: 0 0 0.8em 1.4em; }
-  .alternative { margin: 0.4em 0; padding-left: 0.6em; border-left: 2px solid var(--vscode-panel-border); }
-  .alternative.picked { border-left-color: var(--vscode-focusBorder); }
-  .body h4, .body h5 { margin: 0.6em 0 0.2em; }
+  .pager { display: flex; align-items: center; gap: 0.8em; margin-bottom: 0.5em; }
+  .pager .counter { font-variant-numeric: tabular-nums; min-width: 4em; text-align: center; }
+  .card { border: 1px solid var(--vscode-panel-border); padding: 0.6em 0.8em; }
+  .card h4, .card h5, .card h6, .card p, .card ul { margin: 0; padding: 0; }
+  .card ul { list-style: none; }
+  .card h4, .card h5, .card h6 { font-size: 1em; }
+  .card-head { display: flex; align-items: center; gap: 0.6em; flex-wrap: nowrap; height: 2em; }
+  .card-head .short-title { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card-actions { display: flex; gap: 0.3em; flex-shrink: 0; }
+  .card .slot { margin: 0; padding: 0.5em 0 0; border-top: 1px solid var(--vscode-panel-border); margin-top: 0.5em; }
+  .card .slot h5 { margin-bottom: 0.2em; }
+  .card .question-text { box-sizing: border-box; height: 9em; overflow-y: auto; border-top: none; margin-top: 0; }
+  .alternative { margin: 0.4em 0 0; padding: 0; }
+  .alternative-head { display: flex; align-items: center; gap: 0.6em; }
+  .alternative.picked h6 { color: var(--vscode-textLink-foreground); }
   .recipes h4 { margin: 0.8em 0 0.3em; }
   .recipe-list { display: flex; flex-wrap: wrap; gap: 0.4em; }
   button.recipe { background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; padding: 0.3em 0.9em; cursor: pointer; font: inherit; }

@@ -94,10 +94,15 @@ from that root:
   path as a tooltip, and at its end the two mission-starting buttons, **New mission** (runs the
   `discuss-mission-goal` recipe) and **Define mission** (runs the `define-mission-goal` recipe).
 - Under the selected tab, the mission's page: its path, title, and `started` or `defined`, the
-  recipe buttons, the question view parsed from `open_questions.xml` (each question a collapsed
-  row with **Discuss**, **Answer**, and **Answer with recommendation** buttons, and an
-  **Answer with this alternative** button on each alternative inside an opened row), and the
-  remaining task headings of `TASKS_TODO.md`.
+  recipe buttons, the question view parsed from `open_questions.xml`, and the remaining task
+  headings of `TASKS_TODO.md`. The question view shows one fully opened card per question, one
+  at a time under a position counter such as `3 / 12`: **Previous** and **Next**, or the left
+  and right arrow keys, move between the cards, and a dependency on a card links to the named
+  question's card. Each card stacks the question text in an area of fixed height, so the pick
+  starts at the same height on every card, then the pick and its rationale, the alternatives,
+  the dependencies, and the principles, and carries **Discuss**, **Answer**, and **Answer with
+  recommendation** buttons and an **Answer with this alternative** button on each alternative.
+  After a run removes a question the view keeps its place in the list.
 
 Every value a button needs (a goal, a scope typed as a path from the project root, an answer)
 is typed into VS Code's own input box, one line per value. A click on a recipe button starts its
