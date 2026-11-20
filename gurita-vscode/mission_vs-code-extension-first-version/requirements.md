@@ -96,5 +96,7 @@ No other mission is live, so nothing holds or shares the scope. The record holds
 
 - **Single-task lines shipped.** The shipped file keeps its two single-task lines and gains one: `complete-task` on Claude Code under `opus` at `high`, the combination the Claude Code "Execute tasks of normal difficulty" and "extra requirement surface stretch" blocks already run `complete-all-tasks` with, so the shipped single-task lines are exactly the combinations the file's execution blocks complete tasks under.
 
+- **First line.** The bare placeholder line above the `#` title is deleted, so the file opens on its title, followed by the existing sentence defining the placeholder, renamed to `<path>`. No marker line replaces it anywhere.
+
 ## Out of Scope
 
