@@ -94,5 +94,7 @@ No other mission is live, so nothing holds or shares the scope. The record holds
 
 - **Preparation recipe.** The shipped file gains one two-line preparation recipe under each of `## Claude Code` and `## Antigravity`, beside that host's execution blocks, named `Prepare tasks`, the Antigravity copy's heading naming its host in the form the repeated headings take. Each holds exactly the first two lines of that host's "Execute tasks of normal difficulty" block, the answer sweep and `derive-tasks` with that host's model and effort (`fable` at `high` and `xhigh` on `claude`, `gemini-4-argon` at `medium` on `agy`), with `<path>` as the placeholder and no `complete-all-tasks` line.
 
+- **Single-task lines shipped.** The shipped file keeps its two single-task lines and gains one: `complete-task` on Claude Code under `opus` at `high`, the combination the Claude Code "Execute tasks of normal difficulty" and "extra requirement surface stretch" blocks already run `complete-all-tasks` with, so the shipped single-task lines are exactly the combinations the file's execution blocks complete tasks under.
+
 ## Out of Scope
 
