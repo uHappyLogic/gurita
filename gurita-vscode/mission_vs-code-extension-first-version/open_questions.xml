@@ -631,6 +631,31 @@
   </open-question>
   <open-question id="Own recipe placement">
     <question>A person&apos;s own recipe file for the VS Code extension (`gurita-vscode`) is a flat list of `###` recipes with no host headings, while a mission&apos;s page groups the shipped recipes under Claude Code and Antigravity. Where on the page does an own recipe that replaces no shipped recipe appear?</question>
+    <alternative id="Own group after hosts">
+      Every own recipe that replaces no shipped recipe is listed on each mission&apos;s page in one group of its own, under a fixed heading of the extension&apos;s (such as &quot;Your recipes&quot;), standing below the Claude Code and Antigravity groups; within it the recipes keep the order the person&apos;s file lists them in, and the extension reads nothing of a recipe&apos;s lines to place it.
+      <advantage>The rule is one line with no inference: a mixed-host chain, a Codex line, or a recipe opening with a shell step such as `source .env_anthropic` lands in the same place as any other, the flat file format the draft decided stays exactly as it is, and a person can always tell their own additions from what ships.</advantage>
+      <drawback>A person&apos;s added recipes stand apart from the host&apos;s recipes they vary, so an &quot;Execute tasks of normal difficulty (API key)&quot; variant sits at the bottom of the page rather than beside the Claude Code chain it copies, and the most personal buttons are the furthest down.</drawback>
+    </alternative>
+    <alternative id="Own group before hosts">
+      Every own recipe that replaces no shipped recipe is listed in one group of its own under a fixed heading of the extension&apos;s, standing above the Claude Code and Antigravity groups, at the top of each mission&apos;s page; within it the recipes keep the file&apos;s order, and the extension reads nothing of a recipe&apos;s lines to place it.
+      <advantage>The recipes a person wrote for themselves, the ones they presumably run most, are the first buttons on every page, with the same inference-free rule and unchanged flat file format as a trailing group.</advantage>
+      <drawback>The shipped chains a first-time user needs (first run, requirements iteration) are pushed down by whatever the person added, and the added recipes still stand apart from the host chains they are variants of.</drawback>
+    </alternative>
+    <alternative id="Inferred from host binary">
+      Each own recipe that replaces no shipped recipe is placed under the host heading its command lines name, read from the binary at the head of its host lines (`claude` places it under Claude Code, `agy` under Antigravity, shell steps such as `source` or `claude-wait` skipped), and appended after that host&apos;s shipped recipes in the file&apos;s order; a recipe whose host lines name no shipped host (a Codex line) or more than one host goes into one fallback group of the extension&apos;s own below the host groups.
+      <advantage>A variant lands beside the chains it copies, so the page reads as the two host lists the person already knows, extended, with nothing added to the flat file format.</advantage>
+      <drawback>The extension gains a reading of its lines that it otherwise never makes (the draft has it compose and inspect no host flag), a fallback group is needed anyway for mixed-host and Codex recipes, and a person&apos;s helper wrapping the binary (a shell function named otherwise) is misplaced silently.</drawback>
+    </alternative>
+    <alternative id="Inferred from heading name">
+      Each own recipe that replaces no shipped recipe is placed under a host group when its `###` heading names that host in the same form the shipped file uses for repeated headings (for example ending in &quot;(Antigravity)&quot;), appended after that host&apos;s shipped recipes in the file&apos;s order; a heading naming no shipped host goes under Claude Code, as the host whose repeated headings carry no host name, or, where both hosts&apos; repeated headings name their host, into one fallback group of the extension&apos;s own below the host groups.
+      <advantage>The person decides the placement by how they name the recipe, a choice already visible in the heading, and the extension reads only headings, never a recipe&apos;s lines.</advantage>
+      <drawback>Placement depends on a naming convention the person must know and follow, a mis-named heading lands in the wrong group silently, and its viability depends on the sibling axis of how a repeated heading names its host (Host-named heading form).</drawback>
+    </alternative>
+    <alternative id="Optional host headings">
+      The own recipe file may carry the shipped file&apos;s `## Claude Code` and `## Antigravity` headings: an own recipe that replaces no shipped recipe and stands under one of them is appended after that host&apos;s shipped recipes in the file&apos;s order, and one standing under no host heading (or under any other `##` heading) is listed in one group of the extension&apos;s own below the host groups; headings stay one flat namespace across both files, so replacement still matches by `###` heading alone.
+      <advantage>The person states the placement explicitly in the form the shipped file already uses, so nothing is inferred and a variant can stand beside the chain it copies, while a file written flat still works.</advantage>
+      <drawback>It departs from the draft&apos;s settled description of the own file as a flat list with no host headings, adding a second reading rule the recipe reader and its documentation must carry, and a host heading that is only display grouping in the shipped file becomes something a person must place correctly in their own.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Own recipe file path">
     <question>A person&apos;s own recipes for the VS Code extension (`gurita-vscode`) are one per-user file outside every project, at a default path a VS Code user setting changes. What is that default path?</question>
