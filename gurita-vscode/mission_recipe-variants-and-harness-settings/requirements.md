@@ -66,6 +66,8 @@ No other live mission's scope overlaps `gurita-vscode/`, so nothing holds or sha
 
 - **Placement.** The settings view is opened by a control at the end of the tab row, beside Refresh, New mission, and Define mission, the group that belongs to no mission and stays drawn in the failure state. A click swaps the page beneath the row for the settings view, and a control on that view, or a click on any mission tab, swaps back to the mission page shown before. The mission tabs keep holding missions only, and the extension contributes no command for the settings view.
 
+- **Own recipe file items.** The settings view lists the recipes, variants, and single-task lines that come from the hand-written own recipe file and gives them exactly the edits shipped items get: duplicate, rename, delete, model and effort change, and default pick. Every change to an own item writes a stored copy or a hiding record to the per-user store and never touches the own recipe file. A reset removes them so the hand-written item shows again.
+
 ### Recipes and variants
 
 - **Mixed-agent chain.** `Mixed-agent requirements review (Gemini reviews, Claude annotates)` stays a recipe of its own, separate from `Requirements iteration`. It still declares the additional review round, its one shipped block is its only variant, and its lines stay as written. The additional review round's page therefore shows two buttons, `Requirements iteration` and the mixed-agent recipe.
