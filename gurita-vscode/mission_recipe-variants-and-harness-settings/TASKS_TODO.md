@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Enable and Disable Harnesses
-
-Let the settings view enable and disable each of the three harnesses, the state kept in the part of the variant store file set aside for harness values: every harness starts enabled, whatever its check reports and whatever recipes run on it, and stays enabled until the person disables it, the check result never changing it. A variant with at least one line on a disabled harness, mixed variants included, is left out of the list the pane posts, so out of its recipe's dropdown and refused on a click, a recipe whose every variant is left out loses its button, and where the default or the remembered variant is left out the button runs the default if that variant is still listed and otherwise the first listed variant, the remembered selection kept for when the harness is enabled again. Disabling acts on the mission page's recipe list alone, the seven fixed-name buttons running their recipes as before and the preview's override list, the rules, and the `--line` arguments keeping every named single-task line; verified by unit, pane, and page tests.
-
----
-
 ## Harness Model and Effort Lists
 
 Give each harness its model list and its one effort list for the whole harness in the settings view, Codex a model list and no effort list: each list is read from the `--model` and `--effort` values, on a Codex line `-m`, carried by the lines of the shipped recipes, the own recipes, and the stored variants, the extension shipping no list of its own and querying no harness. The person can add an entry no line uses yet, typed into VS Code's own input box, and remove a derived entry from the offer, the additions and removals stored per user as an overlay on the derived lists in the harness part of the variant store file. Verified by `node:test` unit tests of the derivation and the overlay and by pane and page tests of the add and remove controls.

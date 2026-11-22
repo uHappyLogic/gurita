@@ -12,7 +12,8 @@
 //     being `shipped` or `own`;
 //   `defaults` — each recipe's picked default, `{ "recipe", "name", "origin" }`, `origin` being
 //     `shipped`, `own`, or `stored`;
-//   `harnesses` — the part set aside for harness values, kept as read.
+//   `harnesses` — the part set aside for harness values, kept as read here, each harness's
+//     enabled state read and written in it by `harnessSettings.ts`.
 //
 // A missing file holds nothing; a file that is not in this form is refused with an error naming it.
 // How the records are laid over the recipe list is the recipe reader's (`overlayVariantStore` in

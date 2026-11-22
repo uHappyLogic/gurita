@@ -1,0 +1,179 @@
+import { test } from 'node:test';
+import * as assert from 'node:assert';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
+import {
+  disabledCommands,
+  harnessStates,
+  isHarnessKey,
+  readHarnessStates,
+  setHarnessEnabled,
+  withHarnessEnabled,
+} from '../harnessSettings';
+import { singleTaskLines } from '../loop';
+import { BUTTON_RECIPES, Recipe, buttonRecipe, pageRecipes, parseShippedRecipes } from '../recipes';
+import { VariantStoreError, emptyVariantStore, parseVariantStore, readVariantStore } from '../variantStore';
+
+const FILE = '/home/someone/.gurita/variants.json';
+
+test('the module imports nothing from vscode', () => {
+  const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'harnessSettings.ts'), 'utf8');
+  assert.doesNotMatch(source, /from\s+['"]vscode['"]|require\(\s*['"]vscode['"]\s*\)/);
+});
+
+test('every harness starts enabled: a store with no harness part, or naming a harness without a state, disables none', () => {
+  assert.deepStrictEqual(harnessStates(emptyVariantStore(), FILE), { claude: true, antigravity: true, codex: true });
+  const store = parseVariantStore(JSON.stringify({ harnesses: { claude: {}, kept: ['as', 'read'] } }), FILE);
+  assert.deepStrictEqual(harnessStates(store, FILE), { claude: true, antigravity: true, codex: true });
+  assert.deepStrictEqual(disabledCommands(harnessStates(store, FILE)), []);
+});
+
+test('a harness disabled in the harness part reads disabled, and its lines are named by the command they open with', () => {
+  const store = parseVariantStore(JSON.stringify({ harnesses: { antigravity: { enabled: false }, codex: { enabled: true } } }), FILE);
+  const states = harnessStates(store, FILE);
+  assert.deepStrictEqual(states, { claude: true, antigravity: false, codex: true });
+  assert.deepStrictEqual(disabledCommands(states), ['agy']);
+  assert.deepStrictEqual(disabledCommands({ claude: false, antigravity: false, codex: false }), ['claude', 'agy', 'codex']);
+  assert.ok(isHarnessKey('antigravity') && isHarnessKey('codex') && !isHarnessKey('agy') && !isHarnessKey(undefined));
+});
+
+test('a harness part not in its form is refused, naming the file', () => {
+  for (const harnesses of [[], 'off', { claude: false }, { codex: { enabled: 'no' } }]) {
+    const store = parseVariantStore(JSON.stringify({ harnesses }), FILE);
+    assert.throws(() => harnessStates(store, FILE), (error: unknown) => error instanceof VariantStoreError && error.message.includes(FILE));
+    assert.throws(() => withHarnessEnabled(store, FILE, 'claude', false), VariantStoreError);
+  }
+});
+
+test('enabling or disabling a harness keeps every other value of the harness part and of the store as read', () => {
+  const store = parseVariantStore(
+    JSON.stringify({
+      variants: [{ recipe: 'First run', name: 'Copy', lines: ['echo one'] }],
+      defaults: [{ recipe: 'First run', name: 'Copy', origin: 'stored' }],
+      harnesses: { claude: { models: ['opus'] }, kept: ['as', 'read'] },
+    }),
+    FILE,
+  );
+  const disabled = withHarnessEnabled(store, FILE, 'claude', false);
+  assert.deepStrictEqual(disabled.harnesses, { claude: { models: ['opus'], enabled: false }, kept: ['as', 'read'] });
+  assert.deepStrictEqual(disabled.variants, store.variants);
+  assert.deepStrictEqual(disabled.defaults, store.defaults);
+  assert.deepStrictEqual(store.harnesses, { claude: { models: ['opus'] }, kept: ['as', 'read'] }, 'the store given is not changed');
+  const again = withHarnessEnabled(disabled, FILE, 'claude', true);
+  assert.deepStrictEqual(harnessStates(again, FILE), { claude: true, antigravity: true, codex: true });
+});
+
+test('the state is written to the variant store file, created when missing, and read back from it', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-harness-settings-'));
+  const file = path.join(dir, '.gurita', 'variants.json');
+  assert.deepStrictEqual(readHarnessStates(file), { claude: true, antigravity: true, codex: true }, 'a missing file disables nothing');
+  setHarnessEnabled(file, 'codex', false);
+  assert.deepStrictEqual(readHarnessStates(file), { claude: true, antigravity: true, codex: false });
+  assert.deepStrictEqual(readVariantStore(file).harnesses, { codex: { enabled: false } });
+  setHarnessEnabled(file, 'claude', false);
+  setHarnessEnabled(file, 'codex', true);
+  assert.deepStrictEqual(readHarnessStates(file), { claude: false, antigravity: true, codex: true });
+  assert.deepStrictEqual(fs.readdirSync(path.join(dir, '.gurita')), ['variants.json'], 'no temporary file is left');
+});
+
+/** A shipped file of recipes on each harness, a mixed one, a fixed-name button recipe, and two single-task lines. */
+const SHIPPED_TEXT = `## Recipes
+
+### Review
+
+#### Claude Code
+\`\`\`
+claude -p "/gurita:review-mission-requirements --mission <path>" --model "fable" --effort xhigh;
+\`\`\`
+
+#### Antigravity
+\`\`\`
+agy -p "/gurita:review-mission-requirements --mission <path>" --model "gemini-4-argon" --effort medium;
+\`\`\`
+
+#### Mixed
+\`\`\`
+agy -p "/gurita:review-mission-requirements --mission <path>" --model "gemini-4-argon" --effort medium;
+echo between;
+claude -p "/gurita:recommend-all-open-questions --mission <path>" --model "fable" --effort xhigh;
+\`\`\`
+
+### Antigravity only
+\`\`\`
+agy -p "/gurita:finish-mission --mission <path>" --model "gemini-4-argon" --effort medium;
+\`\`\`
+
+### Shell only
+\`\`\`
+echo <path>
+\`\`\`
+
+### ${BUTTON_RECIPES.answerWithRecommendation}
+\`\`\`
+agy -p "/gurita:answer-open-question-with-recommendation --mission <path> <Short Title>" --model "gemini-4-argon";
+\`\`\`
+
+### Single task (Claude Code)
+\`\`\`
+claude -p "/gurita:complete-task --mission <path> <Task Title>" --model "opus" --effort high;
+\`\`\`
+
+### Single task (Antigravity)
+\`\`\`
+agy -p "/gurita:complete-task --mission <path> <Task Title>" --model "claude-opus-5-5" --effort high;
+\`\`\`
+`;
+
+function recipes(): Recipe[] {
+  return parseShippedRecipes(SHIPPED_TEXT, '/shipped.md');
+}
+
+/** Each listed recipe's name with the variants its dropdown offers and the one it stands on. */
+function listed(disabled: ('claude' | 'agy' | 'codex')[], remembered: [string, string][] = [], from: Recipe[] = recipes()): [string, string[], string][] {
+  return pageRecipes(from, ['path'], new Map(remembered), disabled).map((entry) => [
+    entry.name,
+    entry.variants.map((each) => each.name),
+    entry.variants[entry.selected].name,
+  ]);
+}
+
+test('with every harness enabled the page lists every variant, as it does with no disabled harness given', () => {
+  assert.deepStrictEqual(listed([]), [
+    ['Review', ['Claude Code', 'Antigravity', 'Mixed'], 'Claude Code'],
+    ['Antigravity only', ['Antigravity only'], 'Antigravity only'],
+    ['Shell only', ['Shell only'], 'Shell only'],
+  ]);
+  assert.deepStrictEqual(pageRecipes(recipes(), ['path']), pageRecipes(recipes(), ['path'], new Map(), []));
+});
+
+test('a variant with at least one line on a disabled harness is left out, mixed variants included, and a recipe so left with none loses its button', () => {
+  assert.deepStrictEqual(listed(['agy']), [
+    ['Review', ['Claude Code'], 'Claude Code'],
+    ['Shell only', ['Shell only'], 'Shell only'],
+  ]);
+  assert.deepStrictEqual(listed(['claude']), [
+    ['Review', ['Antigravity'], 'Antigravity'],
+    ['Antigravity only', ['Antigravity only'], 'Antigravity only'],
+    ['Shell only', ['Shell only'], 'Shell only'],
+  ]);
+  assert.deepStrictEqual(listed(['claude', 'agy', 'codex']), [['Shell only', ['Shell only'], 'Shell only']], 'a line of no harness is never left out');
+});
+
+test('a left-out remembered variant or default gives way to the default when still listed, else to the first listed variant', () => {
+  const picked = (name: string) => recipes().map((recipe) => (recipe.name === 'Review' ? { ...recipe, picked: { name, origin: 'shipped' as const } } : recipe));
+  assert.deepStrictEqual(listed(['claude'], [['Review', 'Mixed']], picked('Antigravity'))[0], ['Review', ['Antigravity'], 'Antigravity'], 'the default, still listed');
+  assert.deepStrictEqual(listed(['agy'], [['Review', 'Mixed']], picked('Antigravity'))[0], ['Review', ['Claude Code'], 'Claude Code'], 'the first listed');
+  assert.deepStrictEqual(listed(['agy'], [], picked('Mixed'))[0], ['Review', ['Claude Code'], 'Claude Code'], 'a left-out default: the first listed');
+  assert.deepStrictEqual(listed([], [['Review', 'Mixed']], picked('Antigravity'))[0], ['Review', ['Claude Code', 'Antigravity', 'Mixed'], 'Mixed'], 'enabled again, the remembered selection comes back');
+});
+
+test('disabling leaves the fixed-name buttons and the named single-task lines as they are', () => {
+  const button = buttonRecipe(recipes(), BUTTON_RECIPES.answerWithRecommendation, ['path', 'Short Title']);
+  assert.ok(button.state === 'found');
+  assert.match(button.variant.lines[0], /^agy /, 'the button runs its default whatever harness its line names');
+  assert.deepStrictEqual(
+    singleTaskLines(recipes()).map((line) => line.name),
+    ['Single task (Claude Code)', 'Single task (Antigravity)'],
+  );
+});

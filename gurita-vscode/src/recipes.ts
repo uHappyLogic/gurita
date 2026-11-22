@@ -42,10 +42,13 @@
 // cannot fill, hold within that list, and the buttons that run a recipe by its fixed name are untouched by
 // it. In the shipped file every chain declares its one step and spans no other, each variant of an
 // execution chain holding its `complete-all-tasks` line alone, while the button recipes and the
-// single-task lines declare nothing. This module imports nothing from `vscode`.
+// single-task lines declare nothing. A mission page also leaves out every variant with at least
+// one line on a harness the settings view disabled, a recipe so left with no variant losing its
+// button, while the buttons that run a recipe by its fixed name and the looped run's named
+// single-task lines keep every variant. This module imports nothing from `vscode`.
 
 import * as fs from 'node:fs';
-import { VariantValues, variantValues } from './lineValues';
+import { Harness, VariantValues, readLine, variantValues } from './lineValues';
 import { ReadVariantRef, StoredVariant, VariantOrigin, VariantRef, VariantStore, readVariantStore } from './variantStore';
 import type { WorkflowStep } from './workflow';
 
@@ -592,11 +595,21 @@ function variantEntry(recipe: Recipe, runs: Variant, fillable: readonly string[]
   return { kind: 'runnable', name: recipe.name, group: recipe.group, lines: [...runs.lines], values: variantValues(runs.lines) };
 }
 
+/** Whether at least one of the variant's lines runs on one of the harnesses `disabled` names. */
+function onDisabledHarness(variant: Variant, disabled: readonly Harness[]): boolean {
+  return disabled.length > 0 && variant.lines.some((line) => {
+    const harness = readLine(line)?.harness;
+    return harness !== undefined && disabled.includes(harness);
+  });
+}
+
 /**
  * The recipes a mission page lists out of `recipes`, for a page the part of the merged list
  * `stageRecipes` keeps for its step, given the placeholder names the page holds a value for and the
  * variant name `remembered` holds for each recipe, the dropdown selection remembered for the page's
- * mission. Each variant is drawn by its content: one holding a placeholder the extension does not
+ * mission, and the harnesses `disabled` names, those the settings view disabled. A variant with at
+ * least one line on a disabled harness is left out, mixed variants included. Every other variant is
+ * drawn by its content: one holding a placeholder the extension does not
  * know as a non-runnable entry naming it and its file, a looped one as its own kind, run through
  * its preview rather than as a chain, when every placeholder it holds is one a looped run fills
  * itself, and every other one as a button, carrying the distinct harnesses, models, and efforts its
@@ -607,9 +620,15 @@ function variantEntry(recipe: Recipe, runs: Variant, fillable: readonly string[]
  * variant is its default alone. Each entry offers the variants the page draws in its dropdown and
  * describes the one selected: the first carrying the remembered name, a remembered selection always
  * winning over the default, and otherwise the recipe's default when it is drawn, and otherwise its
- * first variant drawn.
+ * first variant drawn, so a remembered variant left out for a disabled harness gives way without
+ * being forgotten and is selected again once the harness is enabled.
  */
-export function pageRecipes(recipes: Recipe[], fillable: readonly string[], remembered: ReadonlyMap<string, string> = new Map()): PageRecipe[] {
+export function pageRecipes(
+  recipes: Recipe[],
+  fillable: readonly string[],
+  remembered: ReadonlyMap<string, string> = new Map(),
+  disabled: readonly Harness[] = [],
+): PageRecipe[] {
   const fixed: readonly string[] = Object.values(BUTTON_RECIPES);
   const listed: PageRecipe[] = [];
   for (const recipe of recipes) {
@@ -618,6 +637,9 @@ export function pageRecipes(recipes: Recipe[], fillable: readonly string[], reme
     }
     const drawn: { variant: Variant; entry: PageEntry }[] = [];
     for (const variant of recipe.variants) {
+      if (onDisabledHarness(variant, disabled)) {
+        continue;
+      }
       const entry = variantEntry(recipe, variant, fillable);
       if (entry !== undefined) {
         drawn.push({ variant, entry });

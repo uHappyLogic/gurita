@@ -42,8 +42,8 @@ Every Node command runs under Node 22 through nvm, in a subshell, from the repos
   page's recipe list, the `open_questions.xml` parser, and the `TASKS_TODO.md` heading read,
   among others, with Node's built-in `node:test` over the compiled files under `out/test/`; the
   run path, the pane's answer to a tab click, the recipe list it posts, with the variant
-  selection it remembers, and the harness check it runs, with the check script's print stubbed,
-  are tested against a stub of the `vscode` module,
+  selection it remembers, the harness check it runs, with the check script's print stubbed, and
+  the harnesses it enables and disables, are tested against a stub of the `vscode` module,
   and the page script against a small stand-in for the DOM. Nothing runs inside an editor.
 - `npm run package` runs `vsce package`, which first runs the `vscode:prepublish` script: the
   compile, then `scripts/bundle.js`, the extension's own build step, which copies
@@ -212,6 +212,28 @@ the pane runs it. A failed check is shown only here. The mission pages still dra
 the buttons that run a recipe of a fixed name, and the looped run exactly as they would if every
 check passed, and a click runs the lines as written. When the check cannot run at all, the view
 shows one line saying so, with the cause beneath it.
+
+#### Enabling and disabling harnesses
+
+Beside each harness the view also shows whether it is **Enabled** or **Disabled**, with one
+control, **Disable** or **Enable**, that switches it. Every harness starts enabled, whatever its
+check reports and whatever recipes run on it, and stays enabled until you disable it; the check
+never changes it. The state is kept in your per-user variant store, `~/.gurita/variants.json`, in
+the part of that file set aside for harness values, its `harnesses` object, as
+`"<harness>": { "enabled": false }` keyed `claude`, `antigravity`, or `codex`, so it lasts across
+the pane, the editor, and every project. When the file cannot be read, the view says so with the
+cause beneath it and draws no control.
+
+Disabling a harness acts on the mission pages' recipe lists alone. A variant with at least one
+line on a disabled harness (a line opening with `claude`, `agy`, or `codex`) is left out of the
+list, mixed variants included, so it leaves its recipe's dropdown and a click on it starts
+nothing, and a recipe every variant of which is left out loses its button. Where the variant
+selected for a recipe or its default is left out, the button stands on the default if that
+variant is still listed and otherwise on the first listed variant; the remembered selection is
+kept and comes back once the harness is enabled again. The buttons that run a recipe by its fixed
+name run their recipe's default as before, whatever harness its lines name, and the looped run is
+untouched: its preview's override list offers every named single-task line, the rule file chooses
+among all of them, and every one is passed to the runner.
 
 ## Recipes
 

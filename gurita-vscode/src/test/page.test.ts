@@ -1219,7 +1219,14 @@ function harnessRows(page: Page): [string, string | undefined, string[]][] {
   return view
     .all()
     .filter((each) => each.tagName === 'li' && each.dataset.harness !== undefined)
-    .map((each) => [each.dataset.harness, each.dataset.failed, each.all().slice(1).map((child) => child.textContent)]);
+    .map((each) => [
+      each.dataset.harness,
+      each.dataset.failed,
+      each
+        .all()
+        .filter((child) => child.has('harness-name') || child.has('harness-status'))
+        .map((child) => child.textContent),
+    ]);
 }
 
 test('every opening of the settings view is posted, and the view shows the check running with check again disabled until a result comes', () => {
@@ -1320,4 +1327,116 @@ test('a failed check is shown in the settings view alone, every mission page dra
     return page.posted.slice(count);
   };
   assert.deepStrictEqual(clicks(failing), clicks(passing), 'every click posts as it would with every check passing');
+});
+
+/** Each harness's enabled state as the extension posts it. */
+function harnessSettings(enabled: Record<string, boolean>): unknown {
+  return { type: 'harnessSettings', settings: { state: 'read', enabled } };
+}
+
+/** Each harness the settings view lists: its key, the state it shows, and its control's label, or undefined without one. */
+function enabledRows(page: Page): [string, string | undefined, string | undefined][] {
+  const view = settingsView(page);
+  assert.ok(view !== undefined, 'the settings view is drawn');
+  return view
+    .all()
+    .filter((each) => each.tagName === 'li' && each.dataset.harness !== undefined)
+    .map((each) => [
+      each.dataset.harness as string,
+      each.all().find((child) => child.has('harness-state'))?.textContent,
+      each.all().find((child) => child.tagName === 'button')?.textContent,
+    ]);
+}
+
+/** The enable or disable control of the harness `key` in the settings view. */
+function harnessToggle(page: Page, key: string): FakeElement {
+  const found = page.root.querySelector(`[data-focus="harness-${key}"]`);
+  assert.ok(found !== null, `no control for ${key}`);
+  return found;
+}
+
+test('the settings view shows each harness enabled with its disable control, whatever its check reports or while it runs', () => {
+  const page = loadPage();
+  page.send(live([]));
+  named(page, 'Settings').click();
+  page.send(harnessSettings({ claude: true, antigravity: true, codex: true }));
+  assert.ok(texts(page).includes('Checking the harnesses…'));
+  const all: [string, string, string][] = [
+    ['claude', 'Enabled', 'Disable'],
+    ['antigravity', 'Enabled', 'Disable'],
+    ['codex', 'Enabled', 'Disable'],
+  ];
+  assert.deepStrictEqual(enabledRows(page), all, 'drawn while the check runs');
+  page.send(CHECKED);
+  assert.deepStrictEqual(enabledRows(page), all, 'a failed check changes no state');
+  assert.deepStrictEqual(harnessRows(page)[2], ['codex', 'cli', ['Codex', "CLI not found: the runner's shell finds no codex command."]]);
+  page.send({ type: 'harnessCheck', check: { state: 'failed', cause: 'python3: not found' } });
+  assert.deepStrictEqual(enabledRows(page), all, 'drawn when the check could not run');
+});
+
+test("a harness's control posts the state it asks for and the view shows only the state the extension posts back", () => {
+  const page = loadPage();
+  page.send({ type: 'liveFailure', cause: 'Error: no repository' });
+  named(page, 'Settings').click();
+  page.send(harnessSettings({ claude: true, antigravity: false, codex: true }));
+  assert.deepStrictEqual(enabledRows(page), [
+    ['claude', 'Enabled', 'Disable'],
+    ['antigravity', 'Disabled', 'Enable'],
+    ['codex', 'Enabled', 'Disable'],
+  ]);
+  const count = page.posted.length;
+  harnessToggle(page, 'codex').click();
+  assert.deepStrictEqual(page.posted.slice(count), [{ type: 'setHarnessEnabled', harness: 'codex', enabled: false }]);
+  assert.deepStrictEqual(enabledRows(page)[2], ['codex', 'Enabled', 'Disable'], 'nothing changes until the extension posts it');
+  page.send(harnessSettings({ claude: true, antigravity: false, codex: false }));
+  assert.deepStrictEqual(enabledRows(page)[2], ['codex', 'Disabled', 'Enable']);
+  harnessToggle(page, 'antigravity').click();
+  assert.deepStrictEqual(page.posted.slice(count + 1), [{ type: 'setHarnessEnabled', harness: 'antigravity', enabled: true }]);
+  page.send({ type: 'live', missions: [mission(ALPHA, 'Alpha')], running: [ALPHA] });
+  assert.strictEqual(harnessToggle(page, 'claude').disabled, false, 'a running chain leaves the controls enabled');
+});
+
+test('harness settings that could not be read are named in the settings view, with no control drawn', () => {
+  const page = loadPage();
+  page.send(live([]));
+  named(page, 'Settings').click();
+  page.send({ type: 'harnessSettings', settings: { state: 'failed', cause: 'The variant store /home/x/.gurita/variants.json is not JSON.' } });
+  assert.ok(texts(page).includes('The harness settings could not be read.'));
+  assert.ok(texts(page).includes('The variant store /home/x/.gurita/variants.json is not JSON.'));
+  assert.deepStrictEqual(enabledRows(page), [
+    ['claude', undefined, undefined],
+    ['antigravity', undefined, undefined],
+    ['codex', undefined, undefined],
+  ]);
+});
+
+test("after a harness is disabled the page draws the list the extension posts: the variant gone from its dropdown and a recipe left with none gone", () => {
+  const both = runnable(
+    'Requirements iteration',
+    'shipped',
+    ['claude -p "/gurita:review-mission-requirements --mission <path>"'],
+    [['claude'], [], []],
+    [
+      { name: 'Claude Code', own: false },
+      { name: 'Antigravity', own: false },
+    ],
+  );
+  const agyOnly = runnable('Gemini review', 'shipped', ['agy -p "/gurita:review-mission-requirements --mission <path>"'], [['agy'], [], []]);
+  const page = loadPage();
+  page.send({ type: 'live', missions: [mission(ALPHA, 'Alpha', { step: 'derive', recipes: { state: 'read', recipes: [both, agyOnly] } })], running: [] });
+  const options = () =>
+    page.root
+      .all()
+      .filter((each) => each.tagName === 'option')
+      .map((each) => each.textContent);
+  assert.deepStrictEqual(recipeNames(page), ['Requirements iteration', 'Gemini review']);
+  assert.deepStrictEqual(options(), ['Claude Code', 'Antigravity', 'Gemini review']);
+  named(page, 'Settings').click();
+  page.send(harnessSettings({ claude: true, antigravity: false, codex: true }));
+  const narrowed = runnable('Requirements iteration', 'shipped', (both as { lines: string[] }).lines, [['claude'], [], []], [{ name: 'Claude Code', own: false }]);
+  page.send({ type: 'live', missions: [mission(ALPHA, 'Alpha', { step: 'derive', recipes: { state: 'read', recipes: [narrowed] } })], running: [] });
+  named(page, 'Close settings').click();
+  assert.deepStrictEqual(recipeNames(page), ['Requirements iteration']);
+  assert.deepStrictEqual(options(), ['Claude Code'], 'the left-out variant is gone from the dropdown, and the recipe left with none with its button');
+  assert.ok(texts(page).includes('Discuss'), 'the fixed-name buttons are drawn as before');
 });

@@ -92,7 +92,12 @@
 // first, named: CLI not found, Gurita plugin not installed, or installed version differing from
 // the packaged one, with the versions read; and its check-again control, disabled while a check
 // runs, asks the extension to run the check afresh. The check is shown in the settings view
-// alone: nothing on a mission page is drawn from it.
+// alone: nothing on a mission page is drawn from it. Beside each harness the view also shows
+// whether it is enabled, as the extension posts it at every opening, with one control that
+// disables an enabled harness or enables a disabled one, posted to the extension, which stores the
+// state and posts it again with the pages, their recipe lists leaving out every variant with a line
+// on a disabled harness. The control is drawn whatever the check reports, while it runs or could
+// not run included, and the state is redrawn only from what the extension posts.
 
 interface VsCodeApi {
   postMessage(message: unknown): void;
@@ -213,13 +218,17 @@ declare function acquireVsCodeApi(): VsCodeApi;
   /** The harness check: running, every harness's outcome, or the cause it could not be run. */
   type HarnessCheck = { state: 'running' } | { state: 'checked'; harnesses: HarnessOutcome[] } | { state: 'failed'; cause: string };
 
+  /** Each harness's enabled state, by its key, or the cause it could not be read. */
+  type HarnessSettings = { state: 'read'; enabled: Record<string, boolean> } | { state: 'failed'; cause: string };
+
   type PaneMessage =
     | { type: 'live'; missions: Mission[]; running: string[] }
     | { type: 'liveFailure'; cause: string }
     | { type: 'running'; missions: string[] }
     | { type: 'preview'; mission: string; recipe: string; lines: string[]; names: string[]; result: PreviewRead }
     | { type: 'loopStarted'; mission: string }
-    | { type: 'harnessCheck'; check: HarnessCheck };
+    | { type: 'harnessCheck'; check: HarnessCheck }
+    | { type: 'harnessSettings'; settings: HarnessSettings };
 
   /** Where a mission's question view stands: the Short Title shown and its place in the list. */
   interface Position {
@@ -244,6 +253,17 @@ declare function acquireVsCodeApi(): VsCodeApi;
   const HARNESSES_HEADING = 'Harnesses';
   const CHECKING_LINE = 'Checking the harnesses…';
   const CHECK_FAILURE_LINE = 'The harness check could not be run.';
+  const SETTINGS_FAILURE_LINE = 'The harness settings could not be read.';
+  /** The three harnesses the settings view lists, in its order, each with its key and its name. */
+  const HARNESSES: [string, string][] = [
+    ['claude', 'Claude Code'],
+    ['antigravity', 'Antigravity'],
+    ['codex', 'Codex'],
+  ];
+  const ENABLED_LABEL = 'Enabled';
+  const DISABLED_LABEL = 'Disabled';
+  const ENABLE_LABEL = 'Enable';
+  const DISABLE_LABEL = 'Disable';
   /** The name of each of a harness's three checks, as the settings view names the one that failed. */
   const FAILED_CHECKS: Record<FailedCheck, string> = {
     cli: 'CLI not found',
@@ -294,6 +314,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
   let settingsShown = false;
   /** The harness check the extension last posted, drawn by the settings view; undefined until one is posted. */
   let harnessCheck: HarnessCheck | undefined;
+  /** Each harness's enabled state the extension last posted, drawn by the settings view; undefined until one is posted. */
+  let harnessSettings: HarnessSettings | undefined;
   /** The cause of the failure state, kept while it is drawn so the settings view can swap back to it. */
   let failureCause = '';
   /** The card drawn on the page, so a dependency link can scroll to the card it jumped to. */
@@ -449,8 +471,27 @@ declare function acquireVsCodeApi(): VsCodeApi;
   }
 
   /**
-   * The settings view's harness part: each harness with what its checks gave, or that the check
-   * runs or could not be run, and the check-again control, disabled while a check runs.
+   * A harness's enabled state and the one control that disables it while enabled and enables it
+   * while disabled, posted to the extension, which stores the state and posts it again.
+   */
+  function drawEnabled(key: string, name: string, enabled: boolean): HTMLElement {
+    const part = element('span', undefined, 'harness-enabled');
+    const toggle = button(enabled ? DISABLE_LABEL : ENABLE_LABEL, 'action', () =>
+      vscode.postMessage({ type: 'setHarnessEnabled', harness: key, enabled: !enabled }),
+    );
+    toggle.title = enabled
+      ? `Leave every variant with a line on ${name} out of the mission pages' recipe lists`
+      : `List the variants with a line on ${name} on the mission pages again`;
+    toggle.setAttribute('aria-pressed', String(!enabled));
+    toggle.dataset.focus = `harness-${key}`;
+    part.append(element('span', enabled ? ENABLED_LABEL : DISABLED_LABEL, 'harness-state'), toggle);
+    return part;
+  }
+
+  /**
+   * The settings view's harness part: that the check runs or could not be run, then each harness
+   * with what its checks gave, when they gave anything, and whether it is enabled, with its enable
+   * or disable control, and the check-again control, disabled while a check runs.
    */
   function drawHarnesses(): HTMLElement {
     const part = element('div', undefined, 'harnesses');
@@ -463,19 +504,32 @@ declare function acquireVsCodeApi(): VsCodeApi;
       box.setAttribute('role', 'alert');
       box.append(element('p', CHECK_FAILURE_LINE), element('pre', check.cause));
       part.append(box);
-    } else {
-      const list = element('ul', undefined, 'harness-list');
-      for (const outcome of check.harnesses) {
-        const item = element('li', undefined, outcome.failed === undefined ? 'harness passed' : 'harness failed');
-        item.dataset.harness = outcome.key;
-        if (outcome.failed !== undefined) {
-          item.dataset.failed = outcome.failed;
-        }
-        item.append(element('span', outcome.name, 'harness-name'), element('span', harnessStatus(outcome), 'harness-status'));
-        list.append(item);
-      }
-      part.append(list);
     }
+    const settings = harnessSettings;
+    if (settings !== undefined && settings.state === 'failed') {
+      const box = element('div', undefined, 'notice');
+      box.setAttribute('role', 'alert');
+      box.append(element('p', SETTINGS_FAILURE_LINE), element('pre', settings.cause));
+      part.append(box);
+    }
+    const list = element('ul', undefined, 'harness-list');
+    for (const [key, name] of HARNESSES) {
+      const outcome = check?.state === 'checked' ? check.harnesses.find((each) => each.key === key) : undefined;
+      const item = element('li', undefined, outcome === undefined ? 'harness' : outcome.failed === undefined ? 'harness passed' : 'harness failed');
+      item.dataset.harness = key;
+      if (outcome?.failed !== undefined) {
+        item.dataset.failed = outcome.failed;
+      }
+      item.append(element('span', outcome?.name ?? name, 'harness-name'));
+      if (outcome !== undefined) {
+        item.append(element('span', harnessStatus(outcome), 'harness-status'));
+      }
+      if (settings?.state === 'read') {
+        item.append(drawEnabled(key, outcome?.name ?? name, settings.enabled[key] !== false));
+      }
+      list.append(item);
+    }
+    part.append(list);
     const controls = element('div', undefined, 'controls');
     const again = button(CHECK_AGAIN_LABEL, 'control', () => vscode.postMessage({ type: 'checkHarnesses' }));
     again.title = "Run the harness check again: each harness's CLI, its Gurita plugin, and that copy's version";
@@ -1100,8 +1154,12 @@ declare function acquireVsCodeApi(): VsCodeApi;
     } else if (message.type === 'loopStarted') {
       previews.delete(message.mission);
       draw();
-    } else if (message.type === 'harnessCheck') {
-      harnessCheck = message.check;
+    } else if (message.type === 'harnessCheck' || message.type === 'harnessSettings') {
+      if (message.type === 'harnessCheck') {
+        harnessCheck = message.check;
+      } else {
+        harnessSettings = message.settings;
+      }
       if (settingsShown) {
         if (drawn === 'failure') {
           drawFailure(failureCause);

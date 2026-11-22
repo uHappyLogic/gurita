@@ -53,6 +53,17 @@
 // opening posting the result kept without running the check again. Only the view's check-again
 // control runs it afresh; no re-read of the pane and no Refresh runs it, and its result reaches
 // the settings view alone, the mission pages drawn and their clicks run whatever it reports. The
+// view also enables and disables each harness: every opening posts each harness's enabled state, read
+// afresh from the harness part of the variant store file, and a click of a harness's enable or
+// disable control writes that state there and posts it again with the pages, re-read. Every harness
+// starts enabled and stays so until the person disables it, the check never changing it. A variant
+// with at least one line on a disabled harness is left out of the list the pane posts, so out of
+// its recipe's dropdown and refused on a click as any variant the list lacks is, a recipe whose
+// every variant is left out loses its button, and where the remembered variant or the default is
+// left out the button stands on the default when it is still listed and otherwise on the first
+// listed variant, the remembered selection kept for when the harness is enabled again. Disabling
+// acts on that list alone: the fixed-name buttons run their recipes' defaults, and the looped run's
+// preview, overrides, and lines keep every named single-task line. The
 // extension posts the
 // paths of the missions with a running runner to the page when a run starts and when its terminal closes, and
 // with every redraw, so a hidden pane shown again draws them too; a click that still reaches the
@@ -89,6 +100,8 @@ import { PreviewRead, SingleTaskLine, loopArguments, ruleFile, runOverrides, run
 import { BUTTON_RECIPES, PageRecipe, Recipe, buttonRecipe, ownRecipesFile, pageRecipes, readRecipes, selectedChoice, stageRecipes } from './recipes';
 import { SELECTIONS_KEY, Selections, dropStaleSelections, missionSelections, readSelections, rememberSelection } from './selections';
 import { variantStoreFile } from './variantStore';
+import { HarnessStates, disabledCommands, isHarnessKey, readHarnessStates, setHarnessEnabled } from './harnessSettings';
+import type { Harness } from './lineValues';
 import { FileEventKind, RefreshBatch, RefreshQueue, WATCHED_PATTERN, eventEffect } from './refresh';
 import { OPTIONAL_PLACEHOLDERS } from './placeholders';
 import { CHECK_SCRIPT, CheckResult, PLUGIN_VERSION_FILE, readPackagedVersion, runHarnessCheck } from './harnessCheck';
@@ -121,13 +134,20 @@ type PageMessage =
   | { type: 'previewLoop'; mission: string; recipe: string; variant: string }
   | { type: 'startLoop'; mission: string; recipe: string; overrides: Record<string, string> }
   | { type: 'settingsOpened' }
-  | { type: 'checkHarnesses' };
+  | { type: 'checkHarnesses' }
+  | { type: 'setHarnessEnabled'; harness: string; enabled: boolean };
 
 /** The harness check as the settings view shows it: running, or what it gave. */
 type HarnessCheck = { state: 'running' } | CheckResult;
 
-/** The merged recipe list as read from the two recipe files, or the cause it could not be read. */
-type RecipeRead = { state: 'read'; recipes: Recipe[] } | { state: 'failed'; cause: string };
+/**
+ * The merged recipe list as read from the two recipe files, with the commands of the harnesses the
+ * settings view disabled, or the cause they could not be read.
+ */
+type RecipeRead = { state: 'read'; recipes: Recipe[]; disabled: Harness[] } | { state: 'failed'; cause: string };
+
+/** Each harness's enabled state as the variant store file holds it, or the cause it could not be read. */
+type HarnessSettings = { state: 'read'; enabled: HarnessStates } | { state: 'failed'; cause: string };
 
 /** The recipe list one mission's page shows, or the cause the recipes could not be read. */
 type RecipePart = { state: 'read'; recipes: PageRecipe[] } | { state: 'failed'; cause: string };
@@ -162,7 +182,8 @@ type PaneMessage =
       result: PreviewRead;
     }
   | { type: 'loopStarted'; mission: string }
-  | { type: 'harnessCheck'; check: HarnessCheck };
+  | { type: 'harnessCheck'; check: HarnessCheck }
+  | { type: 'harnessSettings'; settings: HarnessSettings };
 
 /** What a mission's latest preview ran with, which starting its run passes on unchanged. */
 interface HeldPreview {
@@ -291,6 +312,8 @@ export function openMissionPane(context: vscode.ExtensionContext): void {
         settingsOpened(context, created);
       } else if (message?.type === 'checkHarnesses') {
         void checkHarnesses(context, created);
+      } else if (message?.type === 'setHarnessEnabled') {
+        void enableHarness(context, created, message.harness, message.enabled);
       }
     },
     undefined,
@@ -412,10 +435,18 @@ function readAllRecipes(context: vscode.ExtensionContext): Recipe[] {
   return readRecipes(context.asAbsolutePath('bundled/GURITA_USAGE.md'), ownRecipesFile(setting, home), variantStoreFile(home));
 }
 
-/** Reads the shipped snippet file and the person's own recipe file into the merged list, or the cause they could not be read. */
+/** The commands of the harnesses the settings view disabled, read afresh from the variant store file. */
+function readDisabled(): Harness[] {
+  return disabledCommands(readHarnessStates(variantStoreFile(os.homedir())));
+}
+
+/**
+ * Reads the shipped snippet file and the person's own recipe file into the merged list, with the
+ * harnesses the settings view disabled, or the cause they could not be read.
+ */
 function readRecipeList(context: vscode.ExtensionContext): RecipeRead {
   try {
-    return { state: 'read', recipes: readAllRecipes(context) };
+    return { state: 'read', recipes: readAllRecipes(context), disabled: readDisabled() };
   } catch (error) {
     return { state: 'failed', cause: error instanceof Error ? error.message : String(error) };
   }
@@ -425,13 +456,14 @@ function readRecipeList(context: vscode.ExtensionContext): RecipeRead {
  * The recipe list the page of a mission whose diagram fills `step` shows, out of the merged list
  * `read`: the recipes `stageRecipes` keeps for that step, every recipe when `step` is undefined,
  * as `pageRecipes` lists them for a page holding its mission's path, each recipe's dropdown on the
- * variant `remembered` names for it. A failed read is posted to the page as it stands.
+ * variant `remembered` names for it, every variant with a line on a disabled harness left out. A
+ * failed read is posted to the page as it stands.
  */
 function missionRecipes(read: RecipeRead, step: WorkflowStep | undefined, remembered: ReadonlyMap<string, string>): RecipePart {
   if (read.state === 'failed') {
     return read;
   }
-  return { state: 'read', recipes: pageRecipes(stageRecipes(read.recipes, step), PAGE_PLACEHOLDERS, remembered) };
+  return { state: 'read', recipes: pageRecipes(stageRecipes(read.recipes, step), PAGE_PLACEHOLDERS, remembered, read.disabled) };
 }
 
 /** The dropdown selections the project's `workspaceState` remembers, by mission path and recipe name. */
@@ -593,11 +625,22 @@ async function selectVariant(
   }
 }
 
+/** Each harness's enabled state, read afresh from the variant store file, or the cause it could not be read. */
+function readHarnessSettings(): HarnessSettings {
+  try {
+    return { state: 'read', enabled: readHarnessStates(variantStoreFile(os.homedir())) };
+  } catch (error) {
+    return { state: 'failed', cause: error instanceof Error ? error.message : String(error) };
+  }
+}
+
 /**
- * Answers an opening of the settings view: the first one after the panel is created runs the
- * harness check, and every later one posts the check kept, running or done, without running it.
+ * Answers an opening of the settings view: each harness's enabled state is posted, read afresh;
+ * the first opening after the panel is created runs the harness check, and every later one posts
+ * the check kept, running or done, without running it.
  */
 function settingsOpened(context: vscode.ExtensionContext, target: vscode.WebviewPanel): void {
+  void post(target, { type: 'harnessSettings', settings: readHarnessSettings() });
   if (harnessCheck === undefined) {
     void checkHarnesses(context, target);
     return;
@@ -626,6 +669,31 @@ async function checkHarnesses(context: vscode.ExtensionContext, target: vscode.W
   }
   harnessCheck = result;
   await post(target, { type: 'harnessCheck', check: result });
+}
+
+/**
+ * Enables or disables the harness `harness` in the harness part of the variant store file, read
+ * afresh and written whole, then posts each harness's state and the pages again, their recipes
+ * re-read, so a variant on a disabled harness leaves its dropdown at once. A key naming no harness
+ * or a state that is not true or false writes nothing; a store that cannot be read or written is
+ * told in an error notification, nothing written.
+ */
+async function enableHarness(context: vscode.ExtensionContext, target: vscode.WebviewPanel, harness: unknown, enabled: unknown): Promise<void> {
+  if (panel !== target || !isHarnessKey(harness) || typeof enabled !== 'boolean') {
+    return;
+  }
+  try {
+    setHarnessEnabled(variantStoreFile(os.homedir()), harness, enabled);
+  } catch (error) {
+    void vscode.window.showErrorMessage(
+      `The harness could not be ${enabled ? 'enabled' : 'disabled'}: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+  await post(target, { type: 'harnessSettings', settings: readHarnessSettings() });
+  if (current !== undefined && panel === target) {
+    current.recipes = readRecipeList(context);
+    await post(target, publish(context, current));
+  }
 }
 
 async function post(target: vscode.WebviewPanel, message: PaneMessage): Promise<void> {
@@ -660,15 +728,17 @@ async function previewLoop(
   }
   const root = posted.root;
   let recipes: Recipe[];
+  let disabled: Harness[];
   try {
     recipes = readAllRecipes(context);
+    disabled = readDisabled();
   } catch (error) {
     previews.delete(mission);
     const cause = `The recipes could not be read: ${error instanceof Error ? error.message : String(error)}`;
     await post(target, { type: 'preview', mission, recipe, lines: listed.lines, names: [], result: { state: 'failed', cause } });
     return;
   }
-  const looped = pageRecipes(recipes, PAGE_PLACEHOLDERS, new Map([[recipe, selectedChoice(listed).name]])).find(
+  const looped = pageRecipes(recipes, PAGE_PLACEHOLDERS, new Map([[recipe, selectedChoice(listed).name]]), disabled).find(
     (entry) => entry.name === recipe && entry.kind === 'looped' && selectedChoice(entry).name === selectedChoice(listed).name,
   );
   if (looped === undefined) {
@@ -987,6 +1057,7 @@ function pageShell(webview: vscode.Webview, script: vscode.Uri): string {
   .harness-list li { display: flex; gap: 0.8em; padding: 0.2em 0; }
   .harness-list .harness-name { font-weight: 600; min-width: 8em; }
   .harness-list li.failed .harness-status { color: var(--vscode-errorForeground); }
+  .harness-list .harness-enabled { margin-left: auto; display: flex; align-items: center; gap: 0.5em; white-space: nowrap; }
   button.action { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: none; padding: 0.15em 0.6em; cursor: pointer; font: inherit; white-space: nowrap; }
   button.action:hover:not(:disabled) { background: var(--vscode-button-secondaryHoverBackground); }
   button.action:disabled, button.recipe:disabled { opacity: 0.5; cursor: default; }

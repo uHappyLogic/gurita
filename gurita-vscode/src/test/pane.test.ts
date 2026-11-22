@@ -13,12 +13,16 @@ const Module = require('node:module') as {
 
 interface StubTerminal {
   name: string;
+  /** The runner's arguments the terminal was created with. */
+  args: string[];
   /** The `preserveFocus` argument of every `show` call, in order. */
   shows: (boolean | undefined)[];
 }
 
 const created: StubTerminal[] = [];
 const notifications: string[] = [];
+/** The values the stub's input boxes answer with, one per box in order; an empty queue dismisses the box. */
+const typedValues: string[] = [];
 /** Every message the extension posted to the page. */
 const posted: unknown[] = [];
 let receive: ((message: unknown) => void) | undefined;
@@ -90,9 +94,10 @@ const stub = {
         },
       };
     },
-    createTerminal(options: { name: string }): StubTerminal & { show(preserveFocus?: boolean): void } {
+    createTerminal(options: { name: string; shellArgs?: string[] }): StubTerminal & { show(preserveFocus?: boolean): void } {
       const terminal = {
         name: options.name,
+        args: [...(options.shellArgs ?? [])],
         shows: [] as (boolean | undefined)[],
         show(preserveFocus?: boolean): void {
           terminal.shows.push(preserveFocus);
@@ -102,6 +107,7 @@ const stub = {
       return terminal;
     },
     onDidCloseTerminal: () => disposable,
+    showInputBox: () => Promise.resolve(typedValues.shift()),
     showInformationMessage: notify,
     showWarningMessage: notify,
     showErrorMessage: notify,
@@ -560,4 +566,133 @@ test('the first opening of the settings view runs the check once, every later op
   send({ type: 'settingsOpened' });
   assert.deepStrictEqual(await checkPosted('checked', from), checked);
   assert.strictEqual(checkRuns(stubbed.log).length, 4);
+});
+
+/** The shipped file of the harness test: a recipe on both harnesses, one on Antigravity alone, the loop, a button recipe, and two single-task lines. */
+const HARNESS_SHIPPED_TEXT = `${SHIPPED_TEXT}
+### discuss-mission-goal
+\`\`\`
+agy "/gurita:discuss-mission-goal <goal>" --model "gemini-4-argon";
+\`\`\`
+
+### Single task (Claude Code)
+\`\`\`
+claude -p "/gurita:complete-task --mission <path> <Task Title>" --model "opus" --effort high;
+\`\`\`
+
+### Single task (Antigravity)
+\`\`\`
+agy -p "/gurita:complete-task --mission <path> <Task Title>" --model "claude-opus-5-5" --effort high;
+\`\`\`
+`;
+
+/** A mission no earlier test holds a run for. */
+const THETA = 'mission_theta/';
+
+test("disabling a harness is stored in the variant store's harness part and leaves its variants out of the posted list alone", async () => {
+  const home = process.env.HOME;
+  const fakeHome = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-home-'));
+  process.env.HOME = fakeHome;
+  try {
+    const root = project(THETA);
+    const files = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-recipes-'));
+    fs.writeFileSync(path.join(files, 'GURITA_USAGE.md'), HARNESS_SHIPPED_TEXT);
+    packaged.set('bundled/missions.py', path.join(__dirname, '..', '..', '..', 'core', 'tools', 'missions.py'));
+    packaged.set('bundled/GURITA_USAGE.md', path.join(files, 'GURITA_USAGE.md'));
+    packaged.set('runner.py', path.join(__dirname, '..', '..', 'runner.py'));
+    workspace.folders = [{ uri: { fsPath: root } }];
+    workspace.settings = { ownRecipesFile: path.join(files, 'recipes.md') };
+    workspaceState.clear();
+    const store = path.join(fakeHome, '.gurita', 'variants.json');
+    const page = async (message: unknown) => {
+      const from = posted.length;
+      send(message);
+      const live = (await postedOf('live', from)) as { missions: { path: string; recipes: { recipes: PostedEntry[] } }[] };
+      return live.missions.find((each) => each.path === THETA)?.recipes.recipes ?? [];
+    };
+    const shown = (entries: PostedEntry[]) => entries.map((entry) => [entry.name, entry.variants.map((each) => each.name), selectedName(entry)]);
+
+    let from = posted.length;
+    const initial = await page({ type: 'ready' });
+    assert.deepStrictEqual(shown(initial), [
+      ['First run', ['Claude Code', 'Antigravity'], 'Claude Code'],
+      ['Execute tasks one at a time', ['Execute tasks one at a time'], 'Execute tasks one at a time'],
+      ['Mixed review', ['Mixed review'], 'Mixed review'],
+    ]);
+    await page({ type: 'selectVariant', mission: THETA, recipe: 'First run', variant: 'Antigravity' });
+
+    from = posted.length;
+    send({ type: 'settingsOpened' });
+    assert.deepStrictEqual(await postedOf('harnessSettings', from), {
+      type: 'harnessSettings',
+      settings: { state: 'read', enabled: { claude: true, antigravity: true, codex: true } },
+    }, 'every harness starts enabled, whatever its check reports');
+    assert.ok(!fs.existsSync(store), 'nothing is written until a harness is disabled');
+
+    from = posted.length;
+    send({ type: 'setHarnessEnabled', harness: 'antigravity', enabled: false });
+    assert.deepStrictEqual(await postedOf('harnessSettings', from), {
+      type: 'harnessSettings',
+      settings: { state: 'read', enabled: { claude: true, antigravity: false, codex: true } },
+    });
+    const live = (await postedOf('live', from)) as { missions: { path: string; recipes: { recipes: PostedEntry[] } }[] };
+    const narrowed = live.missions.find((each) => each.path === THETA)?.recipes.recipes ?? [];
+    assert.deepStrictEqual(shown(narrowed), [
+      ['First run', ['Claude Code'], 'Claude Code'],
+      ['Execute tasks one at a time', ['Execute tasks one at a time'], 'Execute tasks one at a time'],
+    ], 'the Antigravity variant leaves the dropdown, the recipe left with none its button, the remembered one giving way to the first listed');
+    assert.deepStrictEqual(JSON.parse(fs.readFileSync(store, 'utf8')).harnesses, { antigravity: { enabled: false } });
+    assert.deepStrictEqual(workspaceState.get('gurita.variantSelections'), { [THETA]: { 'First run': 'Antigravity' } }, 'the remembered selection is kept');
+
+    let count = created.length;
+    send({ type: 'runRecipe', mission: THETA, recipe: 'First run', variant: 'Antigravity' });
+    send({ type: 'runRecipe', mission: THETA, recipe: 'Mixed review', variant: 'Mixed review' });
+    await page({ type: 'refresh' });
+    assert.strictEqual(created.length, count, 'a click on a left-out variant or recipe is refused');
+    assert.deepStrictEqual(shown(await page({ type: 'refresh' })), shown(narrowed), 'a re-read keeps the harness disabled');
+
+    // The fixed-name button runs its recipe's Antigravity line as before.
+    typedValues.push('A goal');
+    send({ type: 'missionButton', button: 'discussGoal' });
+    for (let attempt = 0; attempt < 200 && created.length === count; attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    assert.deepStrictEqual(created.slice(count).map((terminal) => terminal.name), ['Gurita: discuss-mission-goal']);
+    assert.match(created[created.length - 1].args.join(' '), /^\S+ chain -- agy /);
+
+    // The looped run's preview and run keep every named single-task line.
+    from = posted.length;
+    send({ type: 'previewLoop', mission: THETA, recipe: 'Execute tasks one at a time', variant: 'Execute tasks one at a time' });
+    const preview = await postedOf('preview', from);
+    assert.deepStrictEqual(preview.names, ['Single task (Claude Code)', 'Single task (Antigravity)']);
+    assert.deepStrictEqual((preview.result as { state: string }).state, 'read');
+    count = created.length;
+    send({ type: 'startLoop', mission: THETA, recipe: 'Execute tasks one at a time', overrides: {} });
+    assert.strictEqual(created.length, count + 1);
+    const args = created[created.length - 1].args;
+    assert.deepStrictEqual(
+      args.flatMap((arg, index) => (arg === '--line' ? [args[index + 1]] : [])),
+      ['Single task (Claude Code)', 'Single task (Antigravity)'],
+      'every named single-task line is passed as one --line',
+    );
+
+    from = posted.length;
+    send({ type: 'setHarnessEnabled', harness: 'antigravity', enabled: true });
+    const again = (await postedOf('live', from)) as { missions: { path: string; recipes: { recipes: PostedEntry[] } }[] };
+    assert.deepStrictEqual(
+      shown(again.missions.find((each) => each.path === THETA)?.recipes.recipes ?? [])[0],
+      ['First run', ['Claude Code', 'Antigravity'], 'Antigravity'],
+      'enabled again, the remembered selection comes back',
+    );
+
+    from = posted.length;
+    send({ type: 'setHarnessEnabled', harness: 'agy', enabled: false });
+    send({ type: 'setHarnessEnabled', harness: 'codex', enabled: 'no' });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    assert.deepStrictEqual(posted.slice(from), [], 'a key naming no harness or a state not true or false writes nothing');
+    assert.deepStrictEqual(JSON.parse(fs.readFileSync(store, 'utf8')).harnesses, { antigravity: { enabled: true } });
+    assert.strictEqual(execFileSync('git', ['status', '--porcelain', '--ignored'], { cwd: root, encoding: 'utf8' }), '', "nothing is written into the project's tree");
+  } finally {
+    process.env.HOME = home;
+  }
 });
