@@ -34,6 +34,31 @@
   </open-question>
   <open-question id="Own recipe replacement">
     <question>Today a recipe in a person&apos;s hand-written own recipe file that carries a shipped recipe&apos;s name replaces that recipe whole and in place. Once a recipe carries variants, what does a hand-written own recipe of a shipped recipe&apos;s name do: replace every variant of that recipe, or join them as one more variant?</question>
+    <alternative id="Replace every variant">
+      An own recipe carrying a shipped recipe&apos;s name replaces that recipe whole and in place, every shipped variant included, as `mergeRecipes` does today. The own recipe is read by the same rule as the shipped file, so it brings its own variants when it writes several and is a recipe of one variant when it writes one block. No shipped variant of that name stays on the button, a fixed-name button recipe included.
+      <advantage>It keeps today&apos;s rule and the README&apos;s description unchanged in meaning: the name stays the recipe&apos;s only identity, the merge stays one lookup by name, and a person who wants a shipped variant beside their own copies it into the same own recipe, so what the button offers is exactly what that file says.</advantage>
+      <drawback>A person who wants only to add one variant must copy every shipped variant into their own file to keep it, and those copies stop following the shipped file when a later version changes them; how heavy that is depends on the sibling question of which file the settings view writes its variants to.</drawback>
+    </alternative>
+    <alternative id="Join as more variants">
+      An own recipe carrying a shipped recipe&apos;s name never replaces anything: its block, or each of its variants when it writes several, joins the shipped recipe as one more variant, listed after the shipped variants under its own variant name and marked as the person&apos;s own, a same-named variant kept as a second entry rather than taking the shipped one&apos;s place. The shipped variants all stay on the button.
+      <advantage>Adding a variant costs one block in the own file, with nothing copied, so every shipped variant keeps following the shipped file across versions while the person&apos;s own sits beside them in the same dropdown.</advantage>
+      <drawback>A person can no longer take a shipped variant away or change one in place by hand, since a same-named own variant only stands beside it, so a recipe whose shipped variants a person never wants keeps offering them; it also changes what an existing own recipe of a shipped name does, from replacing the recipe to adding to it, without any edit to the file.</drawback>
+    </alternative>
+    <alternative id="Merge by variant name">
+      An own recipe carrying a shipped recipe&apos;s name is merged into it variant by variant: an own variant carrying a shipped variant&apos;s name replaces that variant in place, and every other own variant joins after the shipped ones. The shipped variants the own recipe does not name stay as they are, and the own recipe always writes its variants in the shipped file&apos;s variant form, each named.
+      <advantage>It gives both moves with no extra syntax, overriding one shipped variant or adding one, while every variant the person did not touch keeps following the shipped file, which matches the variant-grained edits the settings view makes.</advantage>
+      <drawback>The name now has to be matched at two levels, recipe and variant, so a mistyped variant name silently adds a variant instead of replacing one, a person cannot remove a shipped variant without some further rule, and the own file has to spell variant names in whatever form the sibling question on the shipped variant format settles.</drawback>
+    </alternative>
+    <alternative id="Declared per recipe">
+      An own recipe carrying a shipped recipe&apos;s name declares what it does, through one line between its heading and its block like the existing `Stage:` line: one value makes it replace every variant of the shipped recipe, the other makes its variants join the shipped ones, and a recipe declaring nothing takes one fixed default of the two.
+      <advantage>Each person chooses per recipe between taking a recipe over and adding to it, so neither the copying cost of whole replacement nor the inability to remove shipped variants under joining is forced on everyone.</advantage>
+      <drawback>It adds a second declaration line the reader must parse, the README must document, and a person must know about, and which of the two behaviours the undeclared default takes still has to be chosen, an existing own recipe falling under it unchanged.</drawback>
+    </alternative>
+    <alternative id="No override of shipped">
+      An own recipe no longer touches a shipped recipe of its name: the shipped recipe keeps all its variants, and the own recipe of the colliding name is drawn as a non-runnable entry naming the collision and its file, as a recipe with an unknown placeholder is drawn today, so a hand-written recipe must take a name of its own. Changing a shipped recipe&apos;s variants is left to the settings view alone.
+      <advantage>A name then means exactly one recipe, so the pane&apos;s start-by-name check, the fixed-name buttons, and the merge need no rule for a collision, and the settings view becomes the one place a shipped recipe&apos;s variants are changed.</advantage>
+      <drawback>It removes a capability the extension ships today, replacing a recipe by hand, the seven fixed-name button recipes included, and turns every existing own recipe of a shipped name into a dead entry; it is viable only as far as the settings view&apos;s own edits reach shipped variants, which the sibling question on editing shipped variants settles.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Recipe list layout">
     <question>The mission page groups its recipe buttons today under the headings Claude Code, Antigravity, and Your recipes, the last holding a person&apos;s own recipes that replace no shipped one. With the host groups replaced by one button per recipe, does the list keep a separate group for those own recipes, or become one flat list?</question>
