@@ -109,7 +109,15 @@
 // controls, a stored copy also its Reset control, and each variant a hiding record hides with its
 // Reset control alone. Each control posts its edit to the extension, which asks for a duplicate's
 // name or a new name in VS Code's own input box, writes the edit to the variant store, and posts
-// the variants and the pages again; the variants are redrawn only from what it posts.
+// the variants and the pages again; the variants are redrawn only from what it posts. Beneath each
+// listed variant its line editor shows every line as its text, and only a line the extension posts
+// with an editor, a `claude` or `agy` line carrying both `--model` and `--effort`, gets a model
+// and an effort dropdown, a Codex line carrying `-m` its model dropdown alone, every other line
+// staying read-only text. The model dropdown offers the harness's model list and the effort
+// dropdown its whole effort list, whatever the line's model, as the extension last posted them,
+// each standing on the value the line carries, offered too when the list lacks it. A pick posts the
+// line, the kind, and the value to the extension, which replaces the value the line carries and
+// posts the variants again; the line is redrawn only from what it posts.
 
 interface VsCodeApi {
   postMessage(message: unknown): void;
@@ -258,7 +266,16 @@ declare function acquireVsCodeApi(): VsCodeApi;
     /** The shipped or own variant a stored copy stands in for. */
     copies?: ReadVariantRef;
     lines: string[];
+    /** The line editor each line gets, in the lines' order, null for a line shown read-only. */
+    editors?: (LineEditor | null)[];
     isDefault: boolean;
+  }
+
+  /** The dropdowns one line gets: the harness whose lists they offer, its model, and its effort where it gets an effort dropdown. */
+  interface LineEditor {
+    harness: string;
+    model: string;
+    effort?: string;
   }
 
   /** One recipe as the settings view lists it, with its variants and those a hiding record hides. */
@@ -695,11 +712,68 @@ declare function acquireVsCodeApi(): VsCodeApi;
   }
 
   /**
+   * The dropdown of a line's `kind`, offering the harness's list of that kind as the extension last
+   * posted it, the line's value `current` offered too when the list lacks it, and standing on it;
+   * a pick of another value posts it for the line.
+   */
+  function lineDropdown(
+    recipe: string,
+    variant: SettingsVariant,
+    focus: string,
+    lineIndex: number,
+    harness: string,
+    kind: 'model' | 'effort',
+    current: string,
+  ): HTMLSelectElement {
+    const lists = harnessLists?.state === 'read' ? harnessLists.lists[harness] : undefined;
+    const listed = (kind === 'model' ? lists?.models : lists?.efforts) ?? [];
+    const offered = listed.includes(current) ? listed : [current, ...listed];
+    const choice = element('select', undefined, kind === 'model' ? 'line-model' : 'line-effort');
+    choice.setAttribute('aria-label', `The ${kind} of line ${lineIndex + 1} of ${variant.name} in ${recipe}`);
+    choice.title = `Pick the ${kind} this line runs with`;
+    choice.dataset.focus = `line-${kind}-${focus}-${lineIndex}`;
+    for (const value of offered) {
+      const option = element('option', value);
+      option.value = value;
+      option.selected = value === current;
+      choice.append(option);
+    }
+    choice.addEventListener('change', () => {
+      if (choice.value !== current && offered.includes(choice.value)) {
+        vscode.postMessage({ type: 'replaceLineValue', recipe, variant: variantTarget(variant), line: lineIndex, kind, value: choice.value });
+      }
+    });
+    return choice;
+  }
+
+  /**
+   * A variant's line editor: every line as its text, a line posted with an editor followed by its
+   * model dropdown and, where it gets one, its effort dropdown, every other line read-only.
+   */
+  function drawLines(recipe: string, variant: SettingsVariant, focus: string): HTMLElement {
+    const list = element('ul', undefined, 'variant-lines');
+    variant.lines.forEach((line, lineIndex) => {
+      const item = element('li', undefined, 'variant-line');
+      item.append(element('code', line, 'line-text'));
+      const editor = variant.editors?.[lineIndex];
+      if (editor !== undefined && editor !== null) {
+        item.append(lineDropdown(recipe, variant, focus, lineIndex, editor.harness, 'model', editor.model));
+        if (editor.effort !== undefined) {
+          item.append(lineDropdown(recipe, variant, focus, lineIndex, editor.harness, 'effort', editor.effort));
+        }
+      }
+      list.append(item);
+    });
+    return list;
+  }
+
+  /**
    * The settings view's part of variant edits: the cause the variants could not be read, or each
    * recipe with its variants, each named with where it comes from and whether it is the default,
    * and its duplicate, rename, delete, and default controls, a stored copy's reset control too, and
-   * after them each variant a hiding record hides, with its reset control. Every control posts its
-   * edit; the list is redrawn only from what the extension posts.
+   * after them each variant a hiding record hides, with its reset control. Beneath each listed
+   * variant stands its line editor. Every control posts its edit; the list is redrawn only from
+   * what the extension posts.
    */
   function drawVariants(): HTMLElement {
     const part = element('div', undefined, 'variant-edits');
@@ -762,7 +836,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
             original: { name: variant.copies.name, origin: variant.copies.origin },
           });
         }
-        item.append(actions);
+        item.append(actions, drawLines(recipe.name, variant, `${recipeIndex}-${variantIndex}`));
         list.append(item);
       });
       recipe.hidden.forEach((hidden, hiddenIndex) => {

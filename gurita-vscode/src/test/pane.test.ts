@@ -979,3 +979,114 @@ test('the settings view lists every recipe with its variants and carries out eac
     process.env.HOME = home;
   }
 });
+
+/** A mission no earlier test holds a run for. */
+const KAPPA = 'pkg/mission_kappa/';
+
+interface EditedVariant extends ListedVariant {
+  editors: ({ harness: string; model: string; effort?: string } | null)[];
+}
+
+test("a pick in a line's dropdown replaces the value the line carries through the store's edit, a shipped variant getting a stored copy in its place", async () => {
+  const home = process.env.HOME;
+  const fakeHome = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-home-'));
+  process.env.HOME = fakeHome;
+  try {
+    const root = project(KAPPA);
+    const files = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-recipes-'));
+    fs.writeFileSync(path.join(files, 'GURITA_USAGE.md'), HARNESS_SHIPPED_TEXT);
+    fs.writeFileSync(path.join(files, 'recipes.md'), OWN_TEXT);
+    packaged.set('bundled/missions.py', path.join(__dirname, '..', '..', '..', 'core', 'tools', 'missions.py'));
+    packaged.set('bundled/GURITA_USAGE.md', path.join(files, 'GURITA_USAGE.md'));
+    packaged.set('runner.py', path.join(__dirname, '..', '..', 'runner.py'));
+    workspace.folders = [{ uri: { fsPath: root } }];
+    workspace.settings = { ownRecipesFile: path.join(files, 'recipes.md') };
+    workspaceState.clear();
+    inputBoxes.length = 0;
+    const store = path.join(fakeHome, '.gurita', 'variants.json');
+    const stored = () => JSON.parse(fs.readFileSync(store, 'utf8'));
+    /** Sends `message` and returns the First run variants listed and the First run entry on KAPPA's page posted after it. */
+    const pick = async (message: unknown) => {
+      const from = posted.length;
+      send(message);
+      const recipes = await postedVariants(from);
+      const live = (await postedOf('live', from)) as { missions: { path: string; recipes: { recipes: PostedEntry[] } }[] };
+      const entry = live.missions.find((each) => each.path === KAPPA)?.recipes.recipes.find((each) => each.name === 'First run');
+      assert.ok(entry !== undefined);
+      return { variants: recipes[0].variants as EditedVariant[], entry };
+    };
+
+    await entryAfter({ type: 'ready' }, KAPPA, 'First run');
+    const from = posted.length;
+    send({ type: 'settingsOpened' });
+    const listed = (await postedVariants(from))[0].variants as EditedVariant[];
+    const shippedLines = listed[0].lines;
+    assert.deepStrictEqual(listed.map((each) => [each.name, each.origin, each.editors]), [
+      ['Claude Code', 'shipped', [
+        { harness: 'claude', model: 'fable', effort: 'xhigh' },
+        { harness: 'claude', model: 'opus', effort: 'high' },
+        { harness: 'claude', model: 'fable', effort: 'xhigh' },
+      ]],
+      ['Antigravity', 'shipped', [{ harness: 'antigravity', model: 'gemini-4-argon', effort: 'medium' }]],
+      ['First run', 'own', [null]],
+    ], 'each line with both flags gets its editor, the own line carrying --model alone none');
+
+    // A model pick on a shipped variant's line: a stored copy holding the changed line, in that variant's place.
+    let shown = await pick({ type: 'replaceLineValue', recipe: 'First run', variant: { name: 'Claude Code', origin: 'shipped' }, line: 1, kind: 'model', value: 'fable' });
+    const changed = shippedLines[1].replace('--model "opus"', '--model "fable"');
+    assert.deepStrictEqual(stored().variants, [
+      { recipe: 'First run', name: 'Claude Code', lines: [shippedLines[0], changed, shippedLines[2]], copies: { name: 'Claude Code', origin: 'shipped' } },
+    ]);
+    assert.deepStrictEqual(shown.variants.map((each) => [each.name, each.origin, each.copies?.name]), [
+      ['Claude Code', 'stored', 'Claude Code'],
+      ['Antigravity', 'shipped', undefined],
+      ['First run', 'own', undefined],
+    ], 'the stored copy stands in the shipped variant\'s place');
+    assert.deepStrictEqual(shown.variants[0].lines, [shippedLines[0], changed, shippedLines[2]]);
+    assert.deepStrictEqual(shown.variants[0].editors[1], { harness: 'claude', model: 'fable', effort: 'high' });
+    assert.deepStrictEqual(shown.entry.variants.map((each) => each.name), ['Claude Code', 'Antigravity', 'First run'], "the mission page's dropdown keeps its order");
+    assert.deepStrictEqual(shown.entry.lines, [shippedLines[0], changed, shippedLines[2]], "the page's button runs the changed line");
+
+    // An effort pick, from the harness's whole effort list, on the stored copy changes it in the store.
+    shown = await pick({
+      type: 'replaceLineValue',
+      recipe: 'First run',
+      variant: { name: 'Claude Code', origin: 'stored', copies: { name: 'Claude Code', origin: 'shipped' } },
+      line: 1,
+      kind: 'effort',
+      value: 'xhigh',
+    });
+    assert.strictEqual(stored().variants.length, 1, 'the stored copy is changed in place');
+    assert.strictEqual(stored().variants[0].lines[1], changed.replace('--effort high', '--effort xhigh'));
+
+    // An Antigravity line takes its own harness's effort list.
+    shown = await pick({ type: 'replaceLineValue', recipe: 'First run', variant: { name: 'Antigravity', origin: 'shipped' }, line: 0, kind: 'effort', value: 'high' });
+    assert.match(shown.variants[1].lines[0], /--model "gemini-4-argon" --effort high;$/);
+    assert.deepStrictEqual(shown.variants.map((each) => [each.name, each.origin]), [['Claude Code', 'stored'], ['Antigravity', 'stored'], ['First run', 'own']]);
+
+    // A value the list does not offer, the value the line carries, a line without a control, or a message not in form writes and posts nothing.
+    const before = fs.readFileSync(store, 'utf8');
+    const quiet = posted.length;
+    const copy = { name: 'Claude Code', origin: 'stored', copies: { name: 'Claude Code', origin: 'shipped' } };
+    send({ type: 'replaceLineValue', recipe: 'First run', variant: copy, line: 0, kind: 'effort', value: 'max' });
+    send({ type: 'replaceLineValue', recipe: 'First run', variant: copy, line: 0, kind: 'model', value: 'gemini-4-argon' });
+    send({ type: 'replaceLineValue', recipe: 'First run', variant: copy, line: 0, kind: 'model', value: 'fable' });
+    send({ type: 'replaceLineValue', recipe: 'First run', variant: { name: 'First run', origin: 'own' }, line: 0, kind: 'model', value: 'opus' });
+    send({ type: 'replaceLineValue', recipe: 'First run', variant: { name: 'First run', origin: 'own' }, line: 0, kind: 'effort', value: 'high' });
+    send({ type: 'replaceLineValue', recipe: 'First run', variant: copy, line: 3, kind: 'model', value: 'opus' });
+    send({ type: 'replaceLineValue', recipe: 'First run', variant: copy, line: '0', kind: 'model', value: 'opus' });
+    send({ type: 'replaceLineValue', recipe: 'First run', variant: copy, line: 0, kind: 'models', value: 'opus' });
+    send({ type: 'replaceLineValue', recipe: 'Execute tasks one at a time', variant: { name: 'Execute tasks one at a time', origin: 'shipped' }, line: 0, kind: 'model', value: 'opus' });
+    send({ type: 'replaceLineValue', recipe: 'First run', variant: { name: 'Claude Code', origin: 'shipped' }, line: 0, kind: 'model', value: 'opus' });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    assert.deepStrictEqual(posted.slice(quiet), []);
+    assert.strictEqual(fs.readFileSync(store, 'utf8'), before);
+    assert.strictEqual(inputBoxes.length, 0, 'a pick asks for nothing in an input box');
+
+    assert.strictEqual(fs.readFileSync(path.join(files, 'recipes.md'), 'utf8'), OWN_TEXT, 'the own recipe file is never written');
+    assert.strictEqual(fs.readFileSync(path.join(files, 'GURITA_USAGE.md'), 'utf8'), HARNESS_SHIPPED_TEXT, 'the shipped file is never written');
+    assert.strictEqual(execFileSync('git', ['status', '--porcelain', '--ignored'], { cwd: root, encoding: 'utf8' }), '', "nothing is written into the project's tree");
+  } finally {
+    process.env.HOME = home;
+  }
+});

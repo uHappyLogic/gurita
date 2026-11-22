@@ -1678,3 +1678,125 @@ test("an edit the extension posts reaches the mission page's dropdown", () => {
   page.send({ type: 'live', missions: [{ ...(mission(ALPHA, 'Alpha') as object), recipes: duplicated }, mission(BETA, 'Beta')], running: [] });
   assert.deepStrictEqual(dropdown(), ['review', 'Fast (yours)']);
 });
+
+const MODEL_ONLY_LINE = 'claude -p "/gurita:provide-alternatives-to-all-open-questions --mission <path>" --model "opus";';
+const CODEX_LINE = 'codex exec "/gurita:finish-mission --mission <path>" -m gpt-5.5;';
+
+/** A variant list whose variants carry their line editors, as the extension posts them. */
+const EDITED_VARIANTS = {
+  type: 'variants',
+  variants: {
+    state: 'read',
+    recipes: [
+      {
+        name: 'First run',
+        group: 'shipped',
+        fixed: false,
+        variants: [
+          {
+            name: 'Claude Code',
+            origin: 'shipped',
+            lines: [CLAUDE_LINE, MODEL_ONLY_LINE, 'echo <path>', '<single-task line>'],
+            editors: [{ harness: 'claude', model: 'fable', effort: 'xhigh' }, null, null, null],
+            isDefault: true,
+          },
+          { name: 'Antigravity', origin: 'shipped', lines: [AGY_LINE], editors: [{ harness: 'antigravity', model: 'gemini-4-argon', effort: 'medium' }], isDefault: false },
+          { name: 'Codex', origin: 'own', lines: [CODEX_LINE], editors: [{ harness: 'codex', model: 'gpt-5.5' }], isDefault: false },
+        ],
+        hidden: [],
+      },
+    ],
+  },
+};
+
+/** Each line the settings view's line editor draws: its text, then each dropdown's class, its options, and the one it stands on. */
+function lineRows(page: Page): [string, [string, string[], string | undefined][]][] {
+  const view = settingsView(page);
+  assert.ok(view !== undefined, 'the settings view is drawn');
+  return view
+    .all()
+    .filter((each) => each.has('variant-line'))
+    .map((each) => [
+      each.all().find((part) => part.has('line-text'))?.textContent as string,
+      each
+        .all()
+        .filter((part) => part.tagName === 'select')
+        .map((select): [string, string[], string | undefined] => {
+          const choices = select.children.filter((child): child is FakeElement => child instanceof FakeElement);
+          return [select.className, choices.map((option) => option.textContent), choices.find((option) => option.selected)?.textContent];
+        }),
+    ]);
+}
+
+test("the line editor shows every line as its text, and only a line with both --model and --effort gets the harness's model and whole effort lists, a Codex line its model alone", () => {
+  const page = loadPage();
+  page.send(live([]));
+  named(page, 'Settings').click();
+  page.send(harnessListsMessage(LISTS));
+  page.send(EDITED_VARIANTS);
+  assert.deepStrictEqual(lineRows(page), [
+    [CLAUDE_LINE, [['line-model', ['fable', 'opus'], 'fable'], ['line-effort', ['xhigh', 'high'], 'xhigh']]],
+    [MODEL_ONLY_LINE, []],
+    ['echo <path>', []],
+    ['<single-task line>', []],
+    [AGY_LINE, [['line-model', ['gemini-4-argon'], 'gemini-4-argon'], ['line-effort', ['medium'], 'medium']]],
+    [CODEX_LINE, [['line-model', ['gpt-5.5'], 'gpt-5.5']]],
+  ], 'a line without both flags, a shell step, and the slot line draw no control; a value the list lacks is offered as the line carries it');
+  page.send(harnessListsMessage({ ...LISTS, antigravity: { models: ['gemini-4-argon', 'claude-opus-5-5'], efforts: ['low', 'medium', 'high'] } }));
+  assert.deepStrictEqual(lineRows(page)[4][1], [
+    ['line-model', ['gemini-4-argon', 'claude-opus-5-5'], 'gemini-4-argon'],
+    ['line-effort', ['low', 'medium', 'high'], 'medium'],
+  ], 'the dropdowns follow the lists the extension posts');
+  const view = settingsView(page);
+  assert.ok(view !== undefined);
+  assert.deepStrictEqual(view.all().filter((each) => ['input', 'textarea'].includes(each.tagName)), [], 'nothing is typed on the page');
+  assert.deepStrictEqual(variantEditRows(page)[0][1].map((row) => row[1]), [
+    ['Duplicate', 'Rename', 'Delete'],
+    ['Duplicate', 'Rename', 'Delete', 'Make default'],
+    ['Duplicate', 'Rename', 'Delete', 'Make default'],
+  ], "the line editor adds no button to a variant's controls");
+});
+
+test("a pick in a line's dropdown posts the line, the kind, and the value, and the line changes only when the extension posts it again", () => {
+  const page = loadPage();
+  page.send({ type: 'liveFailure', cause: 'Error: no repository' });
+  named(page, 'Settings').click();
+  page.send(harnessListsMessage(LISTS));
+  page.send(EDITED_VARIANTS);
+  const count = page.posted.length;
+  focused(page, 'line-model-0-0-0').change('opus');
+  focused(page, 'line-effort-0-0-0').change('high');
+  focused(page, 'line-model-0-2-0').change('gpt-5.5');
+  focused(page, 'line-model-0-2-0').change('gpt-5.5');
+  assert.strictEqual(page.root.querySelector('[data-focus="line-effort-0-2-0"]'), null, 'a Codex line has no effort dropdown');
+  assert.strictEqual(page.root.querySelector('[data-focus="line-model-0-0-1"]'), null, 'a line with --model alone has no model dropdown');
+  assert.deepStrictEqual(page.posted.slice(count), [
+    { type: 'replaceLineValue', recipe: 'First run', variant: { name: 'Claude Code', origin: 'shipped' }, line: 0, kind: 'model', value: 'opus' },
+    { type: 'replaceLineValue', recipe: 'First run', variant: { name: 'Claude Code', origin: 'shipped' }, line: 0, kind: 'effort', value: 'high' },
+  ], 'a pick of the value the line carries posts nothing');
+  assert.strictEqual(lineRows(page)[0][1][0][2], 'fable', 'nothing changes until the extension posts it');
+  const copied = { ...EDITED_VARIANTS.variants.recipes[0].variants[0], name: 'Claude Code', origin: 'stored', copies: { name: 'Claude Code', origin: 'shipped' } };
+  const opusLine = CLAUDE_LINE.replace('"fable"', '"opus"');
+  page.send({
+    type: 'variants',
+    variants: {
+      state: 'read',
+      recipes: [
+        {
+          ...EDITED_VARIANTS.variants.recipes[0],
+          variants: [{ ...copied, lines: [opusLine, ...copied.lines.slice(1)], editors: [{ harness: 'claude', model: 'opus', effort: 'xhigh' }, null, null, null] }, ...EDITED_VARIANTS.variants.recipes[0].variants.slice(1)],
+        },
+      ],
+    },
+  });
+  assert.deepStrictEqual(lineRows(page)[0], [opusLine, [['line-model', ['fable', 'opus'], 'opus'], ['line-effort', ['xhigh', 'high'], 'xhigh']]]);
+  focused(page, 'line-effort-0-0-0').change('high');
+  assert.deepStrictEqual(page.posted[page.posted.length - 1], {
+    type: 'replaceLineValue',
+    recipe: 'First run',
+    variant: { name: 'Claude Code', origin: 'stored', copies: { name: 'Claude Code', origin: 'shipped' } },
+    line: 0,
+    kind: 'effort',
+    value: 'high',
+  }, 'a stored copy is named as listed');
+});

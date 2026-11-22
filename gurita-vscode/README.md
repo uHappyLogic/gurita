@@ -44,7 +44,8 @@ Every Node command runs under Node 22 through nvm, in a subshell, from the repos
   run path, the pane's answer to a tab click, the recipe list it posts, with the variant
   selection it remembers, the harness check it runs, with the check script's print stubbed, and
   the harnesses it enables and disables, with their model and effort lists, and the variant
-  edits it makes are tested against a stub of the `vscode` module,
+  edits it makes, the line editor's model and effort picks among them, are tested against a stub
+  of the `vscode` module,
   and the page script against a small stand-in for the DOM. Nothing runs inside an editor.
 - `npm run package` runs `vsce package`, which first runs the `vscode:prepublish` script: the
   compile, then `scripts/bundle.js`, the extension's own build step, which copies
@@ -296,6 +297,24 @@ fixed-name buttons, which read their recipe afresh at every click, run the chang
 their next click. An edit that cannot be made, or a variant store that cannot be read or written,
 is told in an error notification and writes nothing. When the variants cannot be read, the view
 says so with the cause beneath it.
+
+Beneath each variant stands its line editor, which shows every line as its text. Only a line of
+a known harness carrying both `--model` and `--effort`, a `claude` or `agy` line, gets a model
+dropdown and an effort dropdown beside its text; a `codex` line carrying `-m` gets its model
+dropdown alone, since Codex holds no effort list; every other line, a `claude` or `agy` line
+without both flags, a shell step, the slot line `<single-task line>`, or a command the extension
+does not know, stays read-only text. The model dropdown offers the harness's model list and the
+effort dropdown its whole effort list, as **Models and efforts** holds them, whatever the line's
+model; each stands on the value the line carries, offered too when the list lacks it. A line
+given an effort its model lacks is accepted and stops when it is run, with the harness's own
+message, as a hand-written line does.
+
+A pick replaces the value the line already carries, in the quoting it was written in, and never
+inserts text into the line. It is written as the variant's stored copy in
+`~/.gurita/variants.json`: a shipped variant or one of your own recipe file gets a stored copy
+holding the changed line, standing in for it in its place in the recipe's dropdown until you
+reset it, and a stored variant's line is changed in the store. Like every other edit, a pick is
+shown at once in the view and on the mission pages.
 
 ## Recipes
 

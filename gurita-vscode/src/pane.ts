@@ -79,7 +79,15 @@
 // stands, is carried out through the variant store's edits (`variantEdits.ts`); a duplicate's name
 // and a rename are asked for in VS Code's own input box, one box per value as `askValues` asks, a
 // rename's box opening on the current name, and the box's validation refusing an empty name and
-// one the recipe's other variants carry. Every edit posts the variant list and the harness lists
+// one the recipe's other variants carry. Each variant is posted with its lines and the line editor
+// each gets: a `claude` or `agy` line carrying both `--model` and `--effort` gets model and effort
+// dropdowns, a Codex line carrying `-m` its model dropdown alone, and every other line is shown as
+// its text, read-only. A pick in a line's dropdown, of a value the harness's model list or its
+// whole effort list offers, whatever the line's model, replaces the value the line carries, never
+// inserting text into it, through the store's edit (`replaceLineValue`), a shipped or own variant
+// getting a stored copy holding the changed line in its place; a pick of a value the list does not
+// offer, of the value the line already carries, or on a line or variant the list read afresh does
+// not hold with that control writes nothing. Every edit posts the variant list and the harness lists
 // again, and the pages with their recipes re-read, so the mission pages' dropdowns show it at
 // once and the fixed-name buttons, which read their recipe afresh at each click, at the next
 // click. The
@@ -126,6 +134,7 @@ import {
   duplicateVariant,
   pickDefault,
   renameVariant,
+  replaceLineValue,
   resetVariant,
   settingsRecipes,
 } from './variantEdits';
@@ -184,7 +193,8 @@ type PageMessage =
   | { type: 'renameVariant'; recipe: string; variant: VariantTarget }
   | { type: 'deleteVariant'; recipe: string; variant: VariantTarget }
   | { type: 'pickDefault'; recipe: string; variant: VariantTarget }
-  | { type: 'resetVariant'; recipe: string; original: ReadVariantRef };
+  | { type: 'resetVariant'; recipe: string; original: ReadVariantRef }
+  | { type: 'replaceLineValue'; recipe: string; variant: VariantTarget; line: number; kind: string; value: string };
 
 /** The harness check as the settings view shows it: running, or what it gave. */
 type HarnessCheck = { state: 'running' } | CheckResult;
@@ -384,6 +394,8 @@ export function openMissionPane(context: vscode.ExtensionContext): void {
         void editVariant(context, created, message.type, message.recipe, message.variant);
       } else if (message?.type === 'resetVariant') {
         void resetStoredVariant(context, created, message.recipe, message.original);
+      } else if (message?.type === 'replaceLineValue') {
+        void editLineValue(context, created, message.recipe, message.variant, message.line, message.kind, message.value);
       }
     },
     undefined,
@@ -1040,6 +1052,65 @@ async function resetStoredVariant(context: vscode.ExtensionContext, target: vsco
   await postVariantEdit(context, target);
 }
 
+/**
+ * Replaces the model or the effort that line `line` of the variant `variant` of the recipe `recipe`
+ * carries with `value`, picked in the line's dropdown in the settings view, through the store's
+ * edit, a shipped or own variant getting a stored copy holding the changed line in its place, then
+ * posts the variant list, the harness lists, and the pages again. Only a line the variant list read
+ * afresh gives a control of `kind` is changed, and only to a value the harness's list of `kind`
+ * offers: anything else, or the value the line already carries, writes nothing. An edit the store
+ * refuses, or lists or a store that cannot be read or written, is told in an error notification.
+ */
+async function editLineValue(
+  context: vscode.ExtensionContext,
+  target: vscode.WebviewPanel,
+  recipe: unknown,
+  variant: unknown,
+  line: unknown,
+  kind: unknown,
+  value: unknown,
+): Promise<void> {
+  const named = variantTargetOf(variant);
+  if (
+    panel !== target ||
+    typeof recipe !== 'string' ||
+    named === undefined ||
+    typeof line !== 'number' ||
+    !Number.isInteger(line) ||
+    line < 0 ||
+    !isListKind(kind) ||
+    typeof value !== 'string'
+  ) {
+    return;
+  }
+  const read = readVariantList(context);
+  if (read.state === 'failed') {
+    void vscode.window.showErrorMessage(`The variants could not be read: ${read.cause}`);
+    return;
+  }
+  const editor = read.recipes.find((each) => each.name === recipe)?.variants.find((each) => isTarget(each, named))?.editors[line];
+  const current = editor === undefined || editor === null ? undefined : kind === 'model' ? editor.model : editor.effort;
+  if (editor === undefined || editor === null || current === undefined || current === value) {
+    return;
+  }
+  const lists = readListsOf(context);
+  if (lists.state === 'failed') {
+    void vscode.window.showErrorMessage(`The ${kind} list could not be read: ${lists.cause}`);
+    return;
+  }
+  const offered = kind === 'model' ? lists.lists[editor.harness].models : lists.lists[editor.harness].efforts ?? [];
+  if (!offered.includes(value) || panel !== target) {
+    return;
+  }
+  try {
+    const files = recipeFiles(context);
+    replaceLineValue(files.store, readRecipes(files.shipped, files.own), recipe, named, line, kind, value);
+  } catch (error) {
+    void vscode.window.showErrorMessage(`The ${kind} could not be changed: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  await postVariantEdit(context, target);
+}
+
 /** Posts the variant list and the harness lists, read afresh, and the pages again, their recipes re-read. */
 async function postVariantEdit(context: vscode.ExtensionContext, target: vscode.WebviewPanel): Promise<void> {
   if (panel !== target) {
@@ -1429,6 +1500,9 @@ function pageShell(webview: vscode.Webview, script: vscode.Uri): string {
   .variant-list .variant-default { font-weight: 600; }
   .variant-list li.deleted .variant-name { text-decoration: line-through; opacity: 0.7; }
   .variant-list .variant-actions { margin-left: auto; display: flex; gap: 0.3em; }
+  .variant-lines { list-style: none; flex-basis: 100%; margin: 0.1em 0 0.3em; padding: 0 0 0 1em; }
+  .variant-lines li.variant-line { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0.4em; padding: 0.1em 0; }
+  .variant-lines .line-text { flex: 1 1 20em; overflow-wrap: anywhere; font-family: var(--vscode-editor-font-family); }
   button.action { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: none; padding: 0.15em 0.6em; cursor: pointer; font: inherit; white-space: nowrap; }
   button.action:hover:not(:disabled) { background: var(--vscode-button-secondaryHoverBackground); }
   button.action:disabled, button.recipe:disabled { opacity: 0.5; cursor: default; }

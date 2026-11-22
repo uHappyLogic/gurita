@@ -9,6 +9,7 @@ import {
   VariantTarget,
   deleteVariant,
   duplicateVariant,
+  lineEditor,
   pickDefault,
   renameVariant,
   replaceLineValue,
@@ -314,4 +315,31 @@ test('the settings list holds every recipe but the single-task lines, a recipe w
   );
   assert.deepStrictEqual(variants.hidden, [], "a stored copy's reset stands on the copy, not among the hidden");
   assert.deepStrictEqual(listed.filter((recipe) => recipe.fixed).map((recipe) => recipe.name), ['answer-open-question']);
+});
+
+test('only a claude or agy line carrying both --model and --effort gets model and effort controls, a codex line with -m its model control alone', () => {
+  assert.deepStrictEqual(lineEditor('claude -p "/gurita:finish-mission --mission <path>" --model "opus" --effort high;'), {
+    harness: 'claude',
+    model: 'opus',
+    effort: 'high',
+  });
+  assert.deepStrictEqual(lineEditor('agy -p "x" --model=gemini-4-argon --effort medium;'), { harness: 'antigravity', model: 'gemini-4-argon', effort: 'medium' });
+  assert.deepStrictEqual(lineEditor('codex exec "/gurita:finish-mission --mission <path>" -m gpt-5.5;'), { harness: 'codex', model: 'gpt-5.5' });
+  for (const line of [
+    'claude -p "x" --model "opus";',
+    'agy -p "x" --effort high;',
+    'claude "/gurita:discuss-mission-goal <goal>"; # interactive',
+    'codex exec "x";',
+    '<single-task line>',
+    'echo <path>',
+    'gemini -p "x" --model "pro" --effort high;',
+  ]) {
+    assert.strictEqual(lineEditor(line), undefined, `${line} is read-only`);
+  }
+  const listed = settingsRecipes(base(), emptyVariantStore(), '/home/x/.gurita/variants.json', []);
+  for (const recipe of listed) {
+    for (const variant of recipe.variants) {
+      assert.deepStrictEqual(variant.editors, variant.lines.map((line) => lineEditor(line) ?? null), `${recipe.name}: one editor or null per line`);
+    }
+  }
 });

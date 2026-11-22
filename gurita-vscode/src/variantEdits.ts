@@ -18,10 +18,14 @@
 // its first listed variant. An edit that cannot be made is refused with a `VariantEditError`,
 // nothing written. The list the settings view draws its variant edits from is
 // `settingsRecipes`'s: every recipe but the named single-task lines, each with its listed
-// variants, its default marked, and the variants a hiding record hides. This module imports
-// nothing from `vscode`.
+// variants, its default marked, and the variants a hiding record hides, and each variant's lines
+// with the line editor each one gets (`lineEditor`): only a `claude` or `agy` line carrying both
+// `--model` and `--effort` gets model and effort controls, and a `codex` line carrying `-m` its
+// model control alone, every other line shown as its text, read-only. This module imports nothing
+// from `vscode`.
 
-import { LineValues, replaceEffort, replaceModel } from './lineValues';
+import { HARNESSES, Harness as CheckedHarness } from './harnessCheck';
+import { LineValues, readLine, replaceEffort, replaceModel } from './lineValues';
 import { Recipe, Variant, defaultVariant, overlayVariantStore, pickedVariant, sameCopies, variantOrigin } from './recipes';
 import { ReadVariantRef, StoredVariant, VariantOrigin, VariantRef, VariantStore, readVariantStore, writeVariantStore } from './variantStore';
 
@@ -73,10 +77,44 @@ export function resettableVariants(store: VariantStore, recipe: string): ReadVar
   return found;
 }
 
+/**
+ * The line editor one line of a variant gets in the settings view: the key of the harness whose
+ * lists its dropdowns offer, the model the line carries, and the effort it carries, left out for a
+ * Codex line, which gets its model control alone.
+ */
+export interface LineEditor {
+  harness: CheckedHarness['key'];
+  model: string;
+  effort?: string;
+}
+
+/**
+ * The line editor `line` gets: model and effort controls for a `claude` or `agy` line carrying
+ * both `--model` and `--effort`, a model control alone for a `codex` line carrying `-m`, and none,
+ * the line shown as its text, read-only, for every other line, a line of a known harness without
+ * both flags included.
+ */
+export function lineEditor(line: string): LineEditor | undefined {
+  const read = readLine(line);
+  if (read === undefined || read.model === undefined) {
+    return undefined;
+  }
+  const harness = HARNESSES.find((each) => each.cli === read.harness)?.key;
+  if (harness === undefined) {
+    return undefined;
+  }
+  if (read.harness === 'codex') {
+    return { harness, model: read.model };
+  }
+  return read.effort === undefined ? undefined : { harness, model: read.model, effort: read.effort };
+}
+
 /** One variant as the settings view lists it, with what it may be reset to. */
 export interface SettingsVariant extends VariantTarget {
   /** The variant's lines as written. */
   lines: string[];
+  /** The line editor each of its lines gets, in the lines' order, null for a line shown read-only. */
+  editors: (LineEditor | null)[];
   /** Whether it is its recipe's default, picked or, while no pick stands, its first listed variant. */
   isDefault: boolean;
 }
@@ -119,6 +157,7 @@ export function settingsRecipes(base: readonly Recipe[], store: VariantStore, fi
     const variants = (recipe?.variants ?? []).map((variant) => ({
       ...variantTarget(variant),
       lines: [...variant.lines],
+      editors: variant.lines.map((line) => lineEditor(line) ?? null),
       isDefault: variant === standing,
     }));
     const hidden = resettableVariants(store, name).filter(
