@@ -113,6 +113,26 @@
   </open-question>
   <open-question id="Default versus remembered choice">
     <question>The settings view picks each recipe&apos;s default variant, and the mission page remembers the variant last selected in the recipe&apos;s dropdown. When does the default decide which variant a button runs: only until a first selection is remembered, or does picking a new default also replace a remembered selection?</question>
+    <alternative id="Default seeds only">
+      The default the settings view picks decides a recipe button&apos;s variant only while no dropdown selection is remembered for it. A remembered selection always wins over the default, and picking a new default in the settings view leaves every remembered selection as it stands. A remembered variant that no longer exists (deleted or renamed in the settings view) is dropped and the button falls back to the current default.
+      <advantage>A person&apos;s own dropdown choice is never overridden by something done elsewhere: the button runs what that person last chose, and the rule is one plain precedence, with the default needing no write to the remembered store and the remembered store no reaction to a default change.</advantage>
+      <drawback>Once a selection is remembered, a new default has no visible effect on that recipe&apos;s button, so a person who changes the default in the settings view and expects the button to follow sees nothing change and must reselect in the dropdown itself; how many buttons are affected depends on the reach the sibling question on the remembered choice&apos;s scope gives a selection.</drawback>
+    </alternative>
+    <alternative id="New default resets selection">
+      Picking a new default for a recipe in the settings view clears every remembered selection of that recipe, so its button runs the new default until a later dropdown selection is remembered again. Between default changes a remembered selection wins over the default, and a remembered variant that no longer exists falls back to the default.
+      <advantage>The settings view&apos;s default pick always takes effect at once on the button, which matches the plain reading of setting a default, while a dropdown choice still lasts for as long as no new default is picked.</advantage>
+      <drawback>A deliberate dropdown choice of a non-default variant is silently lost whenever the default changes, even when the person changed the default for a different reason; where the remembered choice is kept per project or per mission (the sibling scope question), one default change clears selections on many pages at once.</drawback>
+    </alternative>
+    <alternative id="Selection of default follows it">
+      A remembered selection is kept only for a variant other than the default: selecting the current default in the dropdown removes the remembered selection, so the button then follows the default and moves with a later default change, while a remembered non-default variant stays across default changes. A remembered variant that no longer exists falls back to the default.
+      <advantage>Each case behaves as intended: a person who never left the default, or returned to it, tracks the new default, and a person who deliberately chose another variant keeps it, with no choice lost and no new default left without effect for those who were on the old one.</advantage>
+      <drawback>The rule is less obvious than either plain precedence: whether a default change moves a button depends on whether the selection happened to be the old default, which the dropdown alone does not show, and if the new default is the variant a person had remembered, that selection becomes indistinguishable from following the default.</drawback>
+    </alternative>
+    <alternative id="Dropdown sets the default">
+      There is one stored choice per recipe rather than two: selecting a variant in the button&apos;s dropdown sets that recipe&apos;s default, and picking the default in the settings view changes the same value, so the last write from either place decides which variant the button runs. A variant that no longer exists falls back to the first variant left.
+      <advantage>No precedence rule exists to be learned or misread: the dropdown and the settings view always show the same variant, and the button runs exactly what both show.</advantage>
+      <drawback>The default and the remembered selection become one value held at one reach, which is viable only if the sibling question on the remembered choice&apos;s scope keeps the selection as widely as the default is kept; a selection made on one mission page then changes the button on every page the default reaches, and the settings view&apos;s default pick stops being a separate fallback.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Shipped variant editing">
     <question>The settings view duplicates, renames, and deletes variants and changes each line&apos;s model and effort, storing the result in a per-user file. Do those edits apply to a shipped variant directly, the stored copy standing in for the shipped one, or are shipped variants read-only, so that only a duplicate can be renamed, deleted, or changed?</question>
