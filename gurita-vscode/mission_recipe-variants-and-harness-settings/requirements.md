@@ -86,5 +86,7 @@ No other live mission's scope overlaps `gurita-vscode/`, so nothing holds or sha
 
 - **Claude Code plugin entry.** The candidates are the `gurita@gurita` entries that apply to the open project: the `user`-scope entry, and every `project`- or `local`-scope entry whose `projectPath` equals the project root the extension already resolves. Entries for other projects and `synced` entries are ignored. Of the candidates the most specific scope wins, `local` over `project` over `user`, and that one entry is the installed copy. Its `enabled` value counts: a disabled winning entry means Gurita is not installed for the project, even when a less specific entry is enabled. Matching is done on `projectPath`, so the command may run from any working directory.
 
+- **Folder-read copy's version.** The check takes `folderVersion` as the copy's version whenever the entry carries `readFromFolder`, and `version` for every entry without it.
+
 ## Out of Scope
 
