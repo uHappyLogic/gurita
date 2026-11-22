@@ -16,8 +16,9 @@
 // Over that merged list the per-user variant store (`variantStore.ts`) is laid wherever the
 // extension reads recipes: a stored copy stands in for the shipped or own variant it copies and
 // keeps its place in the recipe's order, a hidden variant is left out, and the further stored
-// variants are listed after the recipe's other variants, in the store's order, the first of a
-// stored name repeated within one recipe kept; stored variants of a recipe the files do not hold
+// variants are listed after the recipe's other variants, in the store's order, of a stored
+// variant repeated within one recipe, the same name standing in for the same variant or for none,
+// the first kept; stored variants of a recipe the files do not hold
 // form a recipe of their own, listed after every other in the own group, and a recipe every
 // variant of which is left out is dropped. A recipe's default is its picked variant, the store's
 // pick standing for it when it names a listed variant, a pick of a copied variant meaning the copy
@@ -365,11 +366,18 @@ function storedVariant(stored: StoredVariant, file: string): Variant {
   };
 }
 
+/** Whether two stored variants stand in for the same shipped or own variant, or both for none. */
+export function sameCopies(one: ReadVariantRef | undefined, other: ReadVariantRef | undefined): boolean {
+  return one === undefined || other === undefined ? one === other : one.name === other.name && one.origin === other.origin;
+}
+
 /**
  * Lays the variant store `store`, read from `file`, over the merged recipe list: in each recipe a
  * stored copy stands in for the shipped or own variant it copies, in that variant's place, the
  * first copy of a variant doing so; a hidden variant not copied is left out; every other stored
- * variant of the recipe follows, in the store's order, the first of a repeated stored name kept.
+ * variant of the recipe follows, in the store's order. Of stored variants of one recipe carrying
+ * one name and standing in for the same variant, or for none, the first is kept, so a copy of a
+ * shipped variant and a copy of an own variant of that name stand side by side as the two do.
  * Stored variants of a recipe the list does not hold form a recipe of that name in the own group,
  * listed after every other in the order the store first names them, and a recipe left with no
  * variant is dropped. The first pick the store holds for a recipe is carried as its `picked`.
@@ -379,7 +387,7 @@ export function overlayVariantStore(recipes: readonly Recipe[], store: VariantSt
   for (const each of store.variants) {
     const list = storedBy.get(each.recipe) ?? [];
     storedBy.set(each.recipe, list);
-    if (!list.some((kept) => kept.name === each.name)) {
+    if (!list.some((kept) => kept.name === each.name && sameCopies(kept.copies, each.copies))) {
       list.push(each);
     }
   }
@@ -428,21 +436,27 @@ export function overlayVariantStore(recipes: readonly Recipe[], store: VariantSt
 }
 
 /**
- * The variant a recipe runs, its default: the listed variant its `picked` names, or the stored
- * copy standing in for the variant it names, and, while no pick stands or the pick names no listed
- * variant, its first variant in order.
+ * The variant a recipe's standing pick names: the listed variant its `picked` names, or the stored
+ * copy standing in for the variant it names; undefined while no pick stands or the pick names no
+ * listed variant.
+ */
+export function pickedVariant(recipe: Recipe): Variant | undefined {
+  const pick = recipe.picked;
+  if (pick === undefined) {
+    return undefined;
+  }
+  return (
+    recipe.variants.find((each) => each.name === pick.name && variantOrigin(each) === pick.origin) ??
+    recipe.variants.find((each) => each.copies?.name === pick.name && each.copies.origin === pick.origin)
+  );
+}
+
+/**
+ * The variant a recipe runs, its default: the variant its standing pick names (`pickedVariant`),
+ * and, while no pick stands or the pick names no listed variant, its first variant in order.
  */
 export function defaultVariant(recipe: Recipe): Variant {
-  const pick = recipe.picked;
-  if (pick !== undefined) {
-    const named =
-      recipe.variants.find((each) => each.name === pick.name && variantOrigin(each) === pick.origin) ??
-      recipe.variants.find((each) => each.copies?.name === pick.name && each.copies.origin === pick.origin);
-    if (named !== undefined) {
-      return named;
-    }
-  }
-  return firstVariant(recipe);
+  return pickedVariant(recipe) ?? firstVariant(recipe);
 }
 
 /**

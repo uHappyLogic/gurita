@@ -16,9 +16,12 @@
 //
 // A missing file holds nothing; a file that is not in this form is refused with an error naming it.
 // How the records are laid over the recipe list is the recipe reader's (`overlayVariantStore` in
-// `recipes.ts`); this module reads the file only. It imports nothing from `vscode`.
+// `recipes.ts`), and the edits the settings view makes are `variantEdits.ts`'s; this module reads
+// the file and writes it whole, the harness part written back as read. It imports nothing from
+// `vscode`.
 
 import * as fs from 'node:fs';
+import * as path from 'node:path';
 
 /** The default path of the variant store, under the person's home directory beside the default own recipe file. */
 export const DEFAULT_VARIANT_STORE_FILE = '~/.gurita/variants.json';
@@ -180,4 +183,38 @@ export function readVariantStore(file: string): VariantStore {
     throw error;
   }
   return parseVariantStore(text, file);
+}
+
+/** The store's text as written: one JSON object of its parts, the harness part only when it holds one. */
+export function serializeVariantStore(store: VariantStore): string {
+  const written: Record<string, unknown> = {
+    variants: store.variants.map((each) => ({
+      recipe: each.recipe,
+      name: each.name,
+      lines: [...each.lines],
+      ...(each.copies === undefined ? {} : { copies: { name: each.copies.name, origin: each.copies.origin } }),
+    })),
+    hidden: store.hidden.map((each) => ({ recipe: each.recipe, name: each.name, origin: each.origin })),
+    defaults: store.defaults.map((each) => ({ recipe: each.recipe, name: each.name, origin: each.origin })),
+  };
+  if (store.harnesses !== undefined) {
+    written.harnesses = store.harnesses;
+  }
+  return `${JSON.stringify(written, null, 2)}\n`;
+}
+
+/**
+ * Writes the whole store to `file`, creating its directory when missing: the text goes to a
+ * temporary file beside it, renamed into place, so a reader never sees a half-written store.
+ */
+export function writeVariantStore(file: string, store: VariantStore): void {
+  const dir = path.dirname(file);
+  fs.mkdirSync(dir, { recursive: true });
+  const temporary = path.join(dir, `.${path.basename(file)}.${process.pid}.tmp`);
+  try {
+    fs.writeFileSync(temporary, serializeVariantStore(store));
+    fs.renameSync(temporary, file);
+  } finally {
+    fs.rmSync(temporary, { force: true });
+  }
 }

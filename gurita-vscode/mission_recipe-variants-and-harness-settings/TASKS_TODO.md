@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Variant Store Edit Operations
-
-Add the edits the settings view makes, as functions that write the variant store file, the extension its only writer and the own recipe file never touched: duplicate a variant under a new name, rename one, delete one, replace a line's model or effort value, pick a recipe's default, and reset a variant. Changing a line of, or renaming, a shipped or own-file variant writes a stored copy that stands in for it and keeps its place, deleting one writes a hiding record, and a reset removes the copy or record so the original shows again; renaming the picked default carries the pick to the new name, and only deleting the picked default drops the pick, the recipe falling back to its first listed variant. Verified by `node:test` unit tests that apply each edit to a temporary store file and read the merged recipe list back.
-
----
-
 ## Variant Dropdown With Remembered Selection
 
 Draw beside each recipe button on the mission page a dropdown that switches the recipe's variant, a person's own variants marked as theirs, the button's label and hover text following the selected variant and a click running it, with no dropdown beside any of the seven fixed-name buttons. The selection is remembered per recipe name on one mission, keyed by the mission's path as the pane lists it, in the project's `ExtensionContext.workspaceState` as a map from mission path and recipe name to variant name, nothing written into the project's tree. A remembered selection always wins over the recipe's default, a remembered variant that no longer exists is dropped so the button falls back to the current default, and the pane starts no variant its last posted list lacks; verified by the page and pane tests, with `gurita-vscode/README.md` describing the dropdown.
