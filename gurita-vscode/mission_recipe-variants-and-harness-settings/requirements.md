@@ -84,5 +84,7 @@ No other live mission's scope overlaps `gurita-vscode/`, so nothing holds or sha
 
 - **Shell.** A new stdlib Python script beside `runner.py` runs the check. It imports the runner as a module, as `runner_tests/conftest.py` already does, and calls its `session_shell` for the shell, then runs the CLI lookup and the harness's `plugin list --json` in that one session and prints one result, which the extension reads from an `execFile` call and parses. `runner.py` itself is not changed.
 
+- **Claude Code plugin entry.** The candidates are the `gurita@gurita` entries that apply to the open project: the `user`-scope entry, and every `project`- or `local`-scope entry whose `projectPath` equals the project root the extension already resolves. Entries for other projects and `synced` entries are ignored. Of the candidates the most specific scope wins, `local` over `project` over `user`, and that one entry is the installed copy. Its `enabled` value counts: a disabled winning entry means Gurita is not installed for the project, even when a less specific entry is enabled. Matching is done on `projectPath`, so the command may run from any working directory.
+
 ## Out of Scope
 
