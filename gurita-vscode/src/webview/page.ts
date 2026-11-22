@@ -76,9 +76,17 @@
 // its question card's buttons, its preview's start button, and its New task button, and its
 // workflow diagram's filled block pulses; the recipe dropdowns, the tabs, the refresh control, the question view's
 // previous and next buttons and dependency links, the preview's close button, the other missions'
-// pages, the two pane headers, and the two mission-starting buttons stay enabled, and the left and
-// right arrow keys move the question view only while its pane is shown. Every value is drawn as
-// text, never as markup, since it comes from the workspace.
+// pages, the two pane headers, the two mission-starting buttons, and the settings control stay
+// enabled, and the left and right arrow keys move the question view only while its pane is shown.
+// Every value is drawn as text, never as markup, since it comes from the workspace.
+// The settings control at the tab row's very end, beside the refresh control and the two
+// mission-starting buttons and drawn in the failure state as they are, swaps whatever stands
+// beneath the row, the selected mission's page or the failure state, for the settings view, which
+// belongs to no mission and is no tab, holds buttons and dropdowns only, and is opened by nothing
+// else. The view's close control swaps back to the mission page or the failure state shown before,
+// and a click on any mission tab to that mission's page. The view stays shown through every answer
+// the extension posts until one of the two swaps it back, and while it is shown no tab reads
+// selected.
 
 interface VsCodeApi {
   postMessage(message: unknown): void;
@@ -205,6 +213,9 @@ declare function acquireVsCodeApi(): VsCodeApi;
   const NO_MISSION_LINE = 'No mission is live.';
   const RECIPE_FAILURE_LINE = 'The recipes could not be read.';
   const PREVIEW_FAILURE_LINE = 'The preview could not be run.';
+  /** The settings control's label, which is also the settings view's heading. */
+  const SETTINGS_LABEL = 'Settings';
+  const CLOSE_SETTINGS_LABEL = 'Close settings';
   /** The buttons on a question's card, each with its label and hover text. */
   const QUESTION_BUTTONS: [string, string, string][] = [
     ['discussQuestion', 'Discuss', 'Type an optional note and open an interactive discussion of this question'],
@@ -245,6 +256,10 @@ declare function acquireVsCodeApi(): VsCodeApi;
   let drawn: 'nothing' | 'live' | 'failure' = 'nothing';
   /** Each mission's preview, by its path, while it stands on the page. */
   const previews = new Map<string, Preview>();
+  /** Whether the settings view stands beneath the tab row in place of the mission page or the failure state. */
+  let settingsShown = false;
+  /** The cause of the failure state, kept while it is drawn so the settings view can swap back to it. */
+  let failureCause = '';
   /** The card drawn on the page, so a dependency link can scroll to the card it jumped to. */
   let card: HTMLElement | undefined;
   /** The workflow diagram drawn on the page and its line of blocks, so it can be laid out again whenever the pane's width changes. */
@@ -336,6 +351,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
   function shownQuestions(): { mission: string; questions: Question[] } | undefined {
     const mission = missions.find((each) => each.path === selected);
     if (
+      settingsShown ||
       mission === undefined ||
       shownPane(mission) !== 'questions' ||
       mission.questions.state !== 'read' ||
@@ -364,7 +380,38 @@ declare function acquireVsCodeApi(): VsCodeApi;
     card?.scrollIntoView({ block: 'start' });
   }
 
-  /** The refresh control and the two mission-starting buttons, belonging to no mission, at the tab row's end. */
+  /** Swaps the settings view in beneath the tab row, or out again, redrawing whatever the pane last drew. */
+  function showSettings(shown: boolean): void {
+    settingsShown = shown;
+    if (drawn === 'failure') {
+      drawFailure(failureCause);
+    } else {
+      draw();
+    }
+  }
+
+  /**
+   * The settings view, belonging to no mission: its heading and the control that swaps back to the
+   * mission page or failure state shown before. It holds buttons and dropdowns only.
+   */
+  function drawSettings(): HTMLElement {
+    const view = element('section', undefined, 'settings');
+    view.setAttribute('role', 'region');
+    view.setAttribute('aria-label', SETTINGS_LABEL);
+    view.append(element('h3', SETTINGS_LABEL));
+    const controls = element('div', undefined, 'controls');
+    const close = button(CLOSE_SETTINGS_LABEL, 'control', () => showSettings(false));
+    close.title = 'Go back to the page shown before';
+    close.dataset.focus = 'close-settings';
+    controls.append(close);
+    view.append(controls);
+    return view;
+  }
+
+  /**
+   * The refresh control, the two mission-starting buttons, and the settings control, belonging to
+   * no mission, at the tab row's end.
+   */
   function drawStarting(): HTMLElement {
     const ends = element('div', undefined, 'ends');
     const refresh = button('Refresh', 'control', () => vscode.postMessage({ type: 'refresh' }));
@@ -375,7 +422,11 @@ declare function acquireVsCodeApi(): VsCodeApi;
     const define = button('Define mission', 'recipe', () => vscode.postMessage({ type: 'missionButton', button: 'defineMission' }));
     define.title = 'Type a goal and its scope and define the mission';
     starting.append(discuss, define);
-    ends.append(refresh, starting);
+    const settings = button(SETTINGS_LABEL, 'control', () => showSettings(true));
+    settings.title = 'Open the settings view';
+    settings.setAttribute('aria-pressed', String(settingsShown));
+    settings.dataset.focus = 'settings';
+    ends.append(refresh, starting, settings);
     return ends;
   }
 
@@ -389,10 +440,11 @@ declare function acquireVsCodeApi(): VsCodeApi;
       tab.type = 'button';
       tab.title = mission.path;
       tab.setAttribute('role', 'tab');
-      tab.setAttribute('aria-selected', String(mission.path === selected));
+      tab.setAttribute('aria-selected', String(!settingsShown && mission.path === selected));
       // Posted on every click, selected or not, so the extension can show the mission's run terminal.
       tab.addEventListener('click', () => {
         vscode.postMessage({ type: 'missionTab', mission: mission.path });
+        settingsShown = false;
         select(mission.path);
       });
       list.append(tab);
@@ -883,7 +935,11 @@ declare function acquireVsCodeApi(): VsCodeApi;
     diagram = undefined;
     const shown = missions.find((mission) => mission.path === selected);
     root.replaceChildren(drawTabs());
-    root.append(shown === undefined ? element('p', NO_MISSION_LINE) : drawPage(shown));
+    if (settingsShown) {
+      root.append(drawSettings());
+    } else {
+      root.append(shown === undefined ? element('p', NO_MISSION_LINE) : drawPage(shown));
+    }
     fitWorkflow();
     window.scrollTo(0, scrolled);
     if (focused !== undefined) {
@@ -894,12 +950,19 @@ declare function acquireVsCodeApi(): VsCodeApi;
     }
   }
 
+  /** Draws the failure state beneath the row of the controls belonging to no mission, or the settings view while it is shown. */
   function drawFailure(cause: string): void {
+    failureCause = cause;
     diagram = undefined;
-    const failure = element('section', undefined, 'failure');
-    failure.append(element('p', FAILURE_LINE), element('pre', cause));
+    card = undefined;
     const tabs = element('div', undefined, 'tabs');
     tabs.append(drawStarting());
+    if (settingsShown) {
+      root.replaceChildren(tabs, drawSettings());
+      return;
+    }
+    const failure = element('section', undefined, 'failure');
+    failure.append(element('p', FAILURE_LINE), element('pre', cause));
     root.replaceChildren(tabs, failure);
   }
 

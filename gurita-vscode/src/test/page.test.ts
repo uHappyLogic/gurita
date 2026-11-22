@@ -270,8 +270,8 @@ const ACTIONS: Record<PaneName, string[]> = {
 
 /** The buttons that stay enabled whatever runs, with each pane shown. */
 const STAYING: Record<PaneName, string[]> = {
-  questions: ['Alpha', 'Beta', 'Refresh', 'New mission', 'Define mission', 'Open questions', 'Remaining tasks', 'Next'],
-  tasks: ['Alpha', 'Beta', 'Refresh', 'New mission', 'Define mission', 'Open questions', 'Remaining tasks'],
+  questions: ['Alpha', 'Beta', 'Refresh', 'New mission', 'Define mission', 'Settings', 'Open questions', 'Remaining tasks', 'Next'],
+  tasks: ['Alpha', 'Beta', 'Refresh', 'New mission', 'Define mission', 'Settings', 'Open questions', 'Remaining tasks'],
 };
 
 /** Shows the Remaining tasks pane, then the Open questions pane, running `check` with each shown. */
@@ -1065,4 +1065,134 @@ test('the arrow keys move the question view only while the Open questions pane i
   assert.strictEqual(shownPane(page), 'tasks');
   named(page, 'Open questions').click();
   assert.ok(texts(page).includes('1 / 2'));
+});
+
+/** The settings view drawn beneath the tab row, when one is. */
+function settingsView(page: Page): FakeElement | undefined {
+  const drawn = page.root.all().filter((each) => each.has('settings'));
+  assert.ok(drawn.length <= 1);
+  return drawn[0];
+}
+
+/** The tab row's controls belonging to no mission, in the order drawn. */
+function rowEnds(page: Page): string[] {
+  const ends = page.root.all().find((each) => each.has('ends'));
+  assert.ok(ends !== undefined);
+  return ends.all().filter((each) => each.tagName === 'button').map((each) => each.textContent);
+}
+
+/** The titles of the mission tabs that read selected. */
+function selectedTabs(page: Page): string[] {
+  return page.root
+    .all()
+    .filter((each) => each.getAttribute('role') === 'tab' && each.getAttribute('aria-selected') === 'true' && !each.has('pane-tab'))
+    .map((each) => each.textContent);
+}
+
+test('the settings control stands at the end of the tab row, after Refresh, New mission, and Define mission, in the failure state too', () => {
+  const page = loadPage();
+  page.send(live([]));
+  assert.deepStrictEqual(rowEnds(page), ['Refresh', 'New mission', 'Define mission', 'Settings']);
+  const tabs = page.root.all().find((each) => each.has('tab-list'));
+  assert.ok(tabs !== undefined);
+  assert.deepStrictEqual(
+    tabs.all().filter((each) => each.tagName === 'button').map((each) => each.textContent),
+    ['Alpha', 'Beta'],
+    'the mission tabs hold missions only',
+  );
+  page.send({ type: 'liveFailure', cause: 'Error: no repository' });
+  assert.deepStrictEqual(rowEnds(page), ['Refresh', 'New mission', 'Define mission', 'Settings']);
+});
+
+test('the settings control swaps the mission page for the settings view, and its close control swaps back to the page shown before', () => {
+  const page = loadPage();
+  page.send(liveWith('questions', 'questions'));
+  named(page, 'Beta').click();
+  named(page, 'Remaining tasks').click();
+  const count = page.posted.length;
+  named(page, 'Settings').click();
+  const view = settingsView(page);
+  assert.ok(view !== undefined, 'the settings view is drawn');
+  assert.strictEqual(page.root.all().filter((each) => each.has('page')).length, 0, 'no mission page beneath the row');
+  assert.strictEqual(blocks(page).length, 0, 'no workflow diagram');
+  assert.deepStrictEqual(selectedTabs(page), [], 'no tab reads selected');
+  assert.strictEqual(named(page, 'Settings').getAttribute('aria-pressed'), 'true');
+  assert.deepStrictEqual(rowEnds(page), ['Refresh', 'New mission', 'Define mission', 'Settings']);
+  assert.deepStrictEqual(
+    view.all().filter((each) => ['input', 'textarea'].includes(each.tagName)),
+    [],
+    'nothing is typed on the settings view',
+  );
+  assert.deepStrictEqual(
+    [...new Set(view.all().map((each) => each.tagName))].filter((tag) => !['section', 'h3', 'div', 'button', 'select', 'option'].includes(tag)),
+    [],
+    'the settings view holds buttons and dropdowns only',
+  );
+  named(page, 'Close settings').click();
+  assert.strictEqual(settingsView(page), undefined);
+  assert.deepStrictEqual(selectedTabs(page), ['Beta'], 'back on the mission shown before');
+  assert.strictEqual(shownPane(page), 'tasks', 'with the pane it showed');
+  assert.strictEqual(named(page, 'Settings').getAttribute('aria-pressed'), 'false');
+  assert.deepStrictEqual(page.posted.slice(count), [], 'the swap posts nothing');
+});
+
+test("a click on any mission tab swaps the settings view back to that mission's page", () => {
+  const page = loadPage();
+  page.send(live([]));
+  named(page, 'Settings').click();
+  const count = page.posted.length;
+  named(page, 'Beta').click();
+  assert.strictEqual(settingsView(page), undefined);
+  assert.deepStrictEqual(selectedTabs(page), ['Beta']);
+  assert.strictEqual(page.root.all().filter((each) => each.has('page')).length, 1);
+  assert.deepStrictEqual(page.posted.slice(count), [{ type: 'missionTab', mission: BETA }]);
+  named(page, 'Settings').click();
+  named(page, 'Beta').click();
+  assert.strictEqual(settingsView(page), undefined, 'the tab of the mission shown before swaps back too');
+  assert.deepStrictEqual(selectedTabs(page), ['Beta']);
+});
+
+test('the settings view stays shown through every answer the extension posts until it is swapped back', () => {
+  const page = loadPage();
+  page.send(live([]));
+  named(page, 'Settings').click();
+  page.send(live([ALPHA]));
+  assert.ok(settingsView(page) !== undefined);
+  page.send({ type: 'running', missions: [] });
+  assert.ok(settingsView(page) !== undefined);
+  assert.strictEqual(named(page, 'Settings').disabled, false);
+  page.key('ArrowRight');
+  assert.ok(settingsView(page) !== undefined, 'the arrow keys move no question view');
+  page.send({ type: 'liveFailure', cause: 'Error: no repository' });
+  assert.ok(settingsView(page) !== undefined);
+  assert.ok(!texts(page).includes('The live missions could not be read.'));
+  named(page, 'Close settings').click();
+  assert.ok(texts(page).includes('The live missions could not be read.'), 'back on the failure state shown before');
+});
+
+test('in the failure state the settings control swaps the failure for the settings view, and its close control swaps back', () => {
+  const page = loadPage();
+  page.send({ type: 'liveFailure', cause: 'Error: no repository' });
+  named(page, 'Settings').click();
+  assert.ok(settingsView(page) !== undefined);
+  assert.ok(!texts(page).includes('The live missions could not be read.'));
+  assert.ok(!texts(page).includes('Error: no repository'));
+  assert.deepStrictEqual(rowEnds(page), ['Refresh', 'New mission', 'Define mission', 'Settings']);
+  named(page, 'Close settings').click();
+  assert.strictEqual(settingsView(page), undefined);
+  assert.ok(texts(page).includes('The live missions could not be read.'));
+  assert.ok(texts(page).includes('Error: no repository'));
+  page.send(live([]));
+  assert.strictEqual(settingsView(page), undefined, 'a later answer draws the mission pages');
+  assert.deepStrictEqual(selectedTabs(page), ['Alpha']);
+});
+
+test('the extension contributes no command for the settings view', () => {
+  const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8')) as {
+    contributes: { commands: { command: string }[] };
+  };
+  assert.deepStrictEqual(
+    manifest.contributes.commands.map((each) => each.command),
+    ['gurita.openMissionPane', 'gurita.refreshMissionPane'],
+  );
 });

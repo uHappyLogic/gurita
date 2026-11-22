@@ -44,7 +44,10 @@
 // closes, that mission's page draws every action button on it disabled, its recipe buttons, its
 // question card's buttons, its preview's start button, and its New task button, and pulses its
 // workflow diagram's filled block, while the tabs, the two pane headers, the refresh control, the
-// other missions' pages, and the two mission-starting buttons stay enabled. The extension posts the
+// other missions' pages, the two mission-starting buttons, and the settings control stay enabled.
+// The settings control at the tab row's end swaps the page beneath the row for the settings view
+// and back within the page itself, posting nothing, and the extension contributes no command for
+// that view. The extension posts the
 // paths of the missions with a running runner to the page when a run starts and when its terminal closes, and
 // with every redraw, so a hidden pane shown again draws them too; a click that still reaches the
 // extension for such a mission is refused as before. The page posts the clicked mission's path on
@@ -918,6 +921,8 @@ function pageShell(webview: vscode.Webview, script: vscode.Uri): string {
   .controls { display: flex; gap: 0.5em; margin-bottom: 0.5em; }
   button.control { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: none; padding: 0.25em 0.8em; cursor: pointer; font: inherit; }
   button.control:disabled { opacity: 0.5; cursor: default; }
+  .tabs button.control[aria-pressed="true"] { outline: 1px solid var(--vscode-focusBorder); }
+  .settings { margin-top: 1em; }
   button.action { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: none; padding: 0.15em 0.6em; cursor: pointer; font: inherit; white-space: nowrap; }
   button.action:hover:not(:disabled) { background: var(--vscode-button-secondaryHoverBackground); }
   button.action:disabled, button.recipe:disabled { opacity: 0.5; cursor: default; }

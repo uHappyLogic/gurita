@@ -95,7 +95,8 @@ from that root:
 
 - A row of tabs across the top, one per live mission, each showing the mission's title with its
   path as a tooltip, and at its end the two mission-starting buttons, **New mission** (runs the
-  `discuss-mission-goal` recipe) and **Define mission** (runs the `define-mission-goal` recipe).
+  `discuss-mission-goal` recipe) and **Define mission** (runs the `define-mission-goal` recipe),
+  and last the **Settings** control, which opens the settings view (see below).
 - Under the selected tab, the mission's page: the workflow diagram, the recipe buttons of the
   recipes that fit the step its diagram fills, each with a dropdown of its variants beside it
   (see The recipes a page lists), and two
@@ -155,7 +156,7 @@ mission's page shows it: every action button on the page (the recipe buttons, th
 the question card and its alternatives, a preview's **Start run**, and **New task**) is
 disabled, and the workflow diagram's filled block pulses. The recipe dropdowns, the tabs, the **Open questions** and
 **Remaining tasks** headers, **Refresh**, the question view's **Previous** and **Next**, the
-other missions' pages, and **New mission** and **Define mission** stay enabled, and the page is
+other missions' pages, **New mission** and **Define mission**, and **Settings** stay enabled, and the page is
 drawn this way again whenever it is redrawn, after the pane was hidden and shown included.
 Should a click still reach the extension for that mission, it starts nothing: a notification
 says a chain is already running and the run's terminal is shown. Clicking a mission's tab,
@@ -166,9 +167,21 @@ only shows the mission's page, with no notification.
 The pane re-reads by itself after each of its runs, once you dismiss the run's terminal, and on
 changes to any mission's `requirements.md`, `open_questions.xml`, or `TASKS_TODO.md`; git state
 is not watched. When the live missions cannot be read, the pane shows one line saying so with
-the cause beneath it, and the two mission-starting buttons stay. When a single mission document
-is missing or does not parse, only the part of the page drawn from it is replaced by a notice
-naming the file.
+the cause beneath it, and the two mission-starting buttons and **Settings** stay. When a single
+mission document is missing or does not parse, only the part of the page drawn from it is
+replaced by a notice naming the file.
+
+### The settings view
+
+The settings view is opened only by the **Settings** control at the end of the tab row, beside
+**Refresh**, **New mission**, and **Define mission**; there is no command for it, and it is not a
+tab. A click swaps whatever stands beneath the row, the selected mission's page or the failure
+state, for the settings view, and the row stays as it was. **Close settings** on the view swaps
+back to the mission page or failure state shown before, with the pane you had picked on it, and
+a click on any mission tab swaps back to that mission's page. The view stays open through
+refreshes and re-reads until you swap back, and while it is open no mission tab reads selected.
+Like the rest of the page it holds buttons and dropdowns only: anything you type is asked for in
+VS Code's own input box.
 
 ## Recipes
 

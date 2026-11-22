@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Settings View Placement in the Pane
-
-Add the settings view to the pane: a control at the end of the tab row, beside Refresh, New mission, and Define mission and drawn in the failure state as they are, swaps the page beneath the row for the settings view, and a control on that view, or a click on any mission tab, swaps back to the mission page shown before. The mission tabs keep holding missions only, the extension contributes no command for the view, and the view holds buttons and dropdowns only, its harness and variant sections being added by the tasks that follow. Verified by page tests of the swap in both directions and in the failure state, with `gurita-vscode/README.md` saying how the view is opened.
-
----
-
 ## Bundle the Packaged Plugin Version
 
 Have `gurita-vscode/scripts/bundle.js` record the plugin version the extension is packaged from: it reads the repository's `VERSION` and writes it into `bundled/` beside the files it already writes, because the package holds no record of that version and the harness check compares an installed Gurita copy's version against it. Verified by running the package script under Node 22 through nvm: the VSIX holds the record reading what `VERSION` reads, and nothing the step writes is tracked.
