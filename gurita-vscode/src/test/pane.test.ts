@@ -22,6 +22,8 @@ const notifications: string[] = [];
 /** Every message the extension posted to the page. */
 const posted: unknown[] = [];
 let receive: ((message: unknown) => void) | undefined;
+/** Closes the panel the extension created last, as the editor does when the person closes it. */
+let dispose: (() => void) | undefined;
 
 function notify(message: string): Promise<undefined> {
   notifications.push(message);
@@ -82,7 +84,10 @@ const stub = {
           },
         },
         onDidChangeViewState: () => disposable,
-        onDidDispose: () => disposable,
+        onDidDispose(listener: () => void) {
+          dispose = listener;
+          return disposable;
+        },
       };
     },
     createTerminal(options: { name: string }): StubTerminal & { show(preserveFocus?: boolean): void } {
@@ -418,4 +423,141 @@ test('a selected variant is remembered per recipe on one mission in workspaceSta
   } finally {
     process.env.HOME = home;
   }
+});
+
+/**
+ * A stand-in for the packaged check script: it prints the JSON held in `print`, and appends each
+ * run's arguments and working directory to `log` as one JSON line.
+ */
+function stubCheckScript(dir: string): { script: string; print: string; log: string } {
+  const script = path.join(dir, 'harness_check.py');
+  const print = path.join(dir, 'print.json');
+  const log = path.join(dir, 'runs.log');
+  fs.writeFileSync(
+    script,
+    [
+      'import json, os, sys',
+      `with open(${JSON.stringify(log)}, "a") as handle:`,
+      '    handle.write(json.dumps({"argv": sys.argv[1:], "cwd": os.getcwd()}) + "\\n")',
+      `with open(${JSON.stringify(print)}) as handle:`,
+      '    sys.stdout.write(handle.read())',
+      '',
+    ].join('\n'),
+  );
+  return { script, print, log };
+}
+
+/** The runs the stub check script logged, each its arguments and working directory. */
+function checkRuns(log: string): { argv: string[]; cwd: string }[] {
+  if (!fs.existsSync(log)) {
+    return [];
+  }
+  return fs
+    .readFileSync(log, 'utf8')
+    .split('\n')
+    .filter((line) => line !== '')
+    .map((line) => JSON.parse(line) as { argv: string[]; cwd: string });
+}
+
+/** Waits until the extension has posted a harness check of `state` beyond the first `from`, and returns it. */
+async function checkPosted(state: string, from: number): Promise<Record<string, unknown>> {
+  for (let attempt = 0; attempt < 400; attempt++) {
+    const found = posted
+      .slice(from)
+      .find((message) => (message as { type?: string }).type === 'harnessCheck' && (message as { check: { state: string } }).check.state === state);
+    if (found !== undefined) {
+      return (found as { check: Record<string, unknown> }).check;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+  assert.fail(`no ${state} harness check was posted`);
+}
+
+const CHECK_PRINT = {
+  claude: { found: true, installed: true, version: '2.0.0' },
+  antigravity: { found: true, installed: true, version: '1.9.0' },
+  codex: { found: false, installed: false, version: null },
+};
+
+/** A mission no earlier test holds a run for. */
+const ETA = 'pkg/mission_eta/';
+
+test('the first opening of the settings view runs the check once, every later opening and re-read posting the result kept without running it', async () => {
+  const root = project(ETA);
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-check-'));
+  const stubbed = stubCheckScript(dir);
+  fs.writeFileSync(stubbed.print, JSON.stringify(CHECK_PRINT) + '\n');
+  fs.writeFileSync(path.join(dir, 'plugin_version.txt'), '2.0.0\n');
+  const files = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-recipes-'));
+  fs.writeFileSync(path.join(files, 'GURITA_USAGE.md'), SHIPPED_TEXT);
+  fs.writeFileSync(path.join(files, 'recipes.md'), OWN_TEXT);
+  packaged.set('bundled/missions.py', path.join(__dirname, '..', '..', '..', 'core', 'tools', 'missions.py'));
+  packaged.set('bundled/GURITA_USAGE.md', path.join(files, 'GURITA_USAGE.md'));
+  packaged.set('harness_check.py', stubbed.script);
+  packaged.set('bundled/plugin_version.txt', path.join(dir, 'plugin_version.txt'));
+  workspace.folders = [{ uri: { fsPath: root } }];
+  workspace.settings = { ownRecipesFile: path.join(files, 'recipes.md') };
+  workspaceState.clear();
+
+  const before = (await entryAfter({ type: 'ready' }, ETA, 'First run')) as unknown;
+  assert.deepStrictEqual(checkRuns(stubbed.log), [], 'no answer of the pane runs the check');
+
+  let from = posted.length;
+  send({ type: 'settingsOpened' });
+  await checkPosted('running', from);
+  const checked = await checkPosted('checked', from);
+  assert.deepStrictEqual(checkRuns(stubbed.log), [{ argv: ['--project', root], cwd: root }], 'run once, from the project root');
+  assert.deepStrictEqual(checked, {
+    state: 'checked',
+    harnesses: [
+      { key: 'claude', name: 'Claude Code', cli: 'claude', packaged: '2.0.0', installed: '2.0.0' },
+      { key: 'antigravity', name: 'Antigravity', cli: 'agy', packaged: '2.0.0', installed: '1.9.0', failed: 'version' },
+      { key: 'codex', name: 'Codex', cli: 'codex', packaged: '2.0.0', failed: 'cli' },
+    ],
+  });
+
+  from = posted.length;
+  send({ type: 'settingsOpened' });
+  assert.deepStrictEqual(await checkPosted('checked', from), checked, 'a later opening posts the result kept');
+  const after = (await entryAfter({ type: 'refresh' }, ETA, 'First run')) as unknown;
+  await entryAfter({ type: 'ready' }, ETA, 'First run');
+  assert.strictEqual(checkRuns(stubbed.log).length, 1, 'no later opening, re-read, or Refresh runs the check');
+  assert.deepStrictEqual(after, before, "a failed check leaves the mission page's recipes as posted");
+  const count = created.length;
+  send({ type: 'runRecipe', mission: ETA, recipe: 'First run', variant: 'Claude Code' });
+  assert.deepStrictEqual(created.slice(count).map((terminal) => terminal.name), [`Gurita: First run (${ETA})`], 'a click runs the lines as written');
+
+  fs.writeFileSync(stubbed.print, JSON.stringify({ ...CHECK_PRINT, antigravity: { found: true, installed: false, version: null } }) + '\n');
+  from = posted.length;
+  send({ type: 'checkHarnesses' });
+  const again = (await checkPosted('checked', from)) as { harnesses: { key: string; failed?: string }[] };
+  assert.strictEqual(checkRuns(stubbed.log).length, 2, 'check again runs it afresh');
+  assert.deepStrictEqual(
+    again.harnesses.map((each) => [each.key, each.failed]),
+    [
+      ['claude', undefined],
+      ['antigravity', 'plugin'],
+      ['codex', 'cli'],
+    ],
+  );
+  from = posted.length;
+  send({ type: 'settingsOpened' });
+  assert.deepStrictEqual(await checkPosted('checked', from), again, 'the fresh result is the one kept');
+
+  fs.writeFileSync(stubbed.print, 'not json\n');
+  from = posted.length;
+  send({ type: 'checkHarnesses' });
+  const failed = await checkPosted('failed', from);
+  assert.match(String(failed.cause), /the harness check printed no JSON/);
+
+  // A panel created afresh runs the check again at its first opening.
+  fs.writeFileSync(stubbed.print, JSON.stringify(CHECK_PRINT) + '\n');
+  assert.ok(dispose !== undefined);
+  dispose();
+  pane.openMissionPane(context);
+  await entryAfter({ type: 'ready' }, ETA, 'First run');
+  from = posted.length;
+  send({ type: 'settingsOpened' });
+  assert.deepStrictEqual(await checkPosted('checked', from), checked);
+  assert.strictEqual(checkRuns(stubbed.log).length, 4);
 });

@@ -86,7 +86,13 @@
 // else. The view's close control swaps back to the mission page or the failure state shown before,
 // and a click on any mission tab to that mission's page. The view stays shown through every answer
 // the extension posts until one of the two swaps it back, and while it is shown no tab reads
-// selected.
+// selected. Every opening of the view is posted to the extension, which runs the harness check on
+// the first opening after the panel is created and otherwise posts the result it keeps. The view
+// lists Claude Code, Antigravity, and Codex, each with the checks it passed or the one that failed
+// first, named: CLI not found, Gurita plugin not installed, or installed version differing from
+// the packaged one, with the versions read; and its check-again control, disabled while a check
+// runs, asks the extension to run the check afresh. The check is shown in the settings view
+// alone: nothing on a mission page is drawn from it.
 
 interface VsCodeApi {
   postMessage(message: unknown): void;
@@ -190,12 +196,30 @@ declare function acquireVsCodeApi(): VsCodeApi;
     overrides: Map<string, string>;
   }
 
+  /** The check of a harness that failed first: its CLI, its installed plugin, or that copy's version. */
+  type FailedCheck = 'cli' | 'plugin' | 'version';
+
+  /** One harness's outcome, as the extension posts it. */
+  interface HarnessOutcome {
+    key: string;
+    name: string;
+    cli: string;
+    failed?: FailedCheck;
+    installed?: string;
+    packaged?: string;
+    detail?: string;
+  }
+
+  /** The harness check: running, every harness's outcome, or the cause it could not be run. */
+  type HarnessCheck = { state: 'running' } | { state: 'checked'; harnesses: HarnessOutcome[] } | { state: 'failed'; cause: string };
+
   type PaneMessage =
     | { type: 'live'; missions: Mission[]; running: string[] }
     | { type: 'liveFailure'; cause: string }
     | { type: 'running'; missions: string[] }
     | { type: 'preview'; mission: string; recipe: string; lines: string[]; names: string[]; result: PreviewRead }
-    | { type: 'loopStarted'; mission: string };
+    | { type: 'loopStarted'; mission: string }
+    | { type: 'harnessCheck'; check: HarnessCheck };
 
   /** Where a mission's question view stands: the Short Title shown and its place in the list. */
   interface Position {
@@ -216,6 +240,16 @@ declare function acquireVsCodeApi(): VsCodeApi;
   /** The settings control's label, which is also the settings view's heading. */
   const SETTINGS_LABEL = 'Settings';
   const CLOSE_SETTINGS_LABEL = 'Close settings';
+  const CHECK_AGAIN_LABEL = 'Check again';
+  const HARNESSES_HEADING = 'Harnesses';
+  const CHECKING_LINE = 'Checking the harnesses…';
+  const CHECK_FAILURE_LINE = 'The harness check could not be run.';
+  /** The name of each of a harness's three checks, as the settings view names the one that failed. */
+  const FAILED_CHECKS: Record<FailedCheck, string> = {
+    cli: 'CLI not found',
+    plugin: 'Gurita plugin not installed',
+    version: 'Installed version differs from the packaged one',
+  };
   /** The buttons on a question's card, each with its label and hover text. */
   const QUESTION_BUTTONS: [string, string, string][] = [
     ['discussQuestion', 'Discuss', 'Type an optional note and open an interactive discussion of this question'],
@@ -258,6 +292,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
   const previews = new Map<string, Preview>();
   /** Whether the settings view stands beneath the tab row in place of the mission page or the failure state. */
   let settingsShown = false;
+  /** The harness check the extension last posted, drawn by the settings view; undefined until one is posted. */
+  let harnessCheck: HarnessCheck | undefined;
   /** The cause of the failure state, kept while it is drawn so the settings view can swap back to it. */
   let failureCause = '';
   /** The card drawn on the page, so a dependency link can scroll to the card it jumped to. */
@@ -380,8 +416,14 @@ declare function acquireVsCodeApi(): VsCodeApi;
     card?.scrollIntoView({ block: 'start' });
   }
 
-  /** Swaps the settings view in beneath the tab row, or out again, redrawing whatever the pane last drew. */
+  /**
+   * Swaps the settings view in beneath the tab row, or out again, redrawing whatever the pane last
+   * drew. Every opening is posted, so the extension runs the harness check or posts the one it keeps.
+   */
   function showSettings(shown: boolean): void {
+    if (shown && !settingsShown) {
+      vscode.postMessage({ type: 'settingsOpened' });
+    }
     settingsShown = shown;
     if (drawn === 'failure') {
       drawFailure(failureCause);
@@ -390,9 +432,64 @@ declare function acquireVsCodeApi(): VsCodeApi;
     }
   }
 
+  /** What a harness's checks gave: every check passing, or the one that failed first, named, with what it read. */
+  function harnessStatus(outcome: HarnessOutcome): string {
+    const installed = outcome.installed ?? 'unknown';
+    const packaged = outcome.packaged ?? 'unknown';
+    if (outcome.failed === undefined) {
+      return `Every check passes: Gurita ${installed} is installed, the packaged version.`;
+    }
+    if (outcome.failed === 'cli') {
+      return `${FAILED_CHECKS.cli}: the runner's shell finds no ${outcome.cli} command.`;
+    }
+    if (outcome.failed === 'plugin') {
+      return outcome.detail !== undefined ? `${FAILED_CHECKS.plugin}: ${outcome.detail}` : `${FAILED_CHECKS.plugin}.`;
+    }
+    return `${FAILED_CHECKS.version}: installed ${installed}, packaged ${packaged}.`;
+  }
+
   /**
-   * The settings view, belonging to no mission: its heading and the control that swaps back to the
-   * mission page or failure state shown before. It holds buttons and dropdowns only.
+   * The settings view's harness part: each harness with what its checks gave, or that the check
+   * runs or could not be run, and the check-again control, disabled while a check runs.
+   */
+  function drawHarnesses(): HTMLElement {
+    const part = element('div', undefined, 'harnesses');
+    part.append(element('h4', HARNESSES_HEADING));
+    const check = harnessCheck;
+    if (check === undefined || check.state === 'running') {
+      part.append(element('p', CHECKING_LINE, 'checking'));
+    } else if (check.state === 'failed') {
+      const box = element('div', undefined, 'notice');
+      box.setAttribute('role', 'alert');
+      box.append(element('p', CHECK_FAILURE_LINE), element('pre', check.cause));
+      part.append(box);
+    } else {
+      const list = element('ul', undefined, 'harness-list');
+      for (const outcome of check.harnesses) {
+        const item = element('li', undefined, outcome.failed === undefined ? 'harness passed' : 'harness failed');
+        item.dataset.harness = outcome.key;
+        if (outcome.failed !== undefined) {
+          item.dataset.failed = outcome.failed;
+        }
+        item.append(element('span', outcome.name, 'harness-name'), element('span', harnessStatus(outcome), 'harness-status'));
+        list.append(item);
+      }
+      part.append(list);
+    }
+    const controls = element('div', undefined, 'controls');
+    const again = button(CHECK_AGAIN_LABEL, 'control', () => vscode.postMessage({ type: 'checkHarnesses' }));
+    again.title = "Run the harness check again: each harness's CLI, its Gurita plugin, and that copy's version";
+    again.disabled = check === undefined || check.state === 'running';
+    again.dataset.focus = 'check-again';
+    controls.append(again);
+    part.append(controls);
+    return part;
+  }
+
+  /**
+   * The settings view, belonging to no mission: its heading, the control that swaps back to the
+   * mission page or failure state shown before, and the harness check. It holds buttons and
+   * dropdowns only.
    */
   function drawSettings(): HTMLElement {
     const view = element('section', undefined, 'settings');
@@ -404,7 +501,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
     close.title = 'Go back to the page shown before';
     close.dataset.focus = 'close-settings';
     controls.append(close);
-    view.append(controls);
+    view.append(controls, drawHarnesses());
     return view;
   }
 
@@ -1003,6 +1100,15 @@ declare function acquireVsCodeApi(): VsCodeApi;
     } else if (message.type === 'loopStarted') {
       previews.delete(message.mission);
       draw();
+    } else if (message.type === 'harnessCheck') {
+      harnessCheck = message.check;
+      if (settingsShown) {
+        if (drawn === 'failure') {
+          drawFailure(failureCause);
+        } else {
+          draw();
+        }
+      }
     }
   });
 

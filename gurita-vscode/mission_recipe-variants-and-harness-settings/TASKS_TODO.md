@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Harness Check in the Settings View
-
-Show the harness check in the settings view: the extension runs the check script through `execFile` the first time the view is opened after the panel is created, keeps the result for the panel's lifetime and shows it on every later opening without running again, and re-runs it only from a check-again control in the view, no pane re-read or Refresh running it. Beside each of Claude Code, Antigravity, and Codex the view names which of the three checks failed: CLI not found, Gurita plugin not installed, or installed version differing from the packaged one, the version `bundle.js` recorded. A failed check is shown in the settings view alone, the mission pages drawing every variant, the seven fixed-name buttons, and the looped run exactly as they would with every check passing; verified by pane and page tests with the script's print stubbed, with `gurita-vscode/README.md` describing the check.
-
----
-
 ## Enable and Disable Harnesses
 
 Let the settings view enable and disable each of the three harnesses, the state kept in the part of the variant store file set aside for harness values: every harness starts enabled, whatever its check reports and whatever recipes run on it, and stays enabled until the person disables it, the check result never changing it. A variant with at least one line on a disabled harness, mixed variants included, is left out of the list the pane posts, so out of its recipe's dropdown and refused on a click, a recipe whose every variant is left out loses its button, and where the default or the remembered variant is left out the button runs the default if that variant is still listed and otherwise the first listed variant, the remembered selection kept for when the harness is enabled again. Disabling acts on the mission page's recipe list alone, the seven fixed-name buttons running their recipes as before and the preview's override list, the rules, and the `--line` arguments keeping every named single-task line; verified by unit, pane, and page tests.

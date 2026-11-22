@@ -1124,16 +1124,18 @@ test('the settings control swaps the mission page for the settings view, and its
     'nothing is typed on the settings view',
   );
   assert.deepStrictEqual(
-    [...new Set(view.all().map((each) => each.tagName))].filter((tag) => !['section', 'h3', 'div', 'button', 'select', 'option'].includes(tag)),
+    [...new Set(view.all().map((each) => each.tagName))].filter(
+      (tag) => !['section', 'h3', 'h4', 'div', 'p', 'pre', 'ul', 'li', 'span', 'button', 'select', 'option'].includes(tag),
+    ),
     [],
-    'the settings view holds buttons and dropdowns only',
+    'the settings view holds text, buttons, and dropdowns only',
   );
   named(page, 'Close settings').click();
   assert.strictEqual(settingsView(page), undefined);
   assert.deepStrictEqual(selectedTabs(page), ['Beta'], 'back on the mission shown before');
   assert.strictEqual(shownPane(page), 'tasks', 'with the pane it showed');
   assert.strictEqual(named(page, 'Settings').getAttribute('aria-pressed'), 'false');
-  assert.deepStrictEqual(page.posted.slice(count), [], 'the swap posts nothing');
+  assert.deepStrictEqual(page.posted.slice(count), [{ type: 'settingsOpened' }], 'the opening is posted, the swap back posts nothing');
 });
 
 test("a click on any mission tab swaps the settings view back to that mission's page", () => {
@@ -1195,4 +1197,127 @@ test('the extension contributes no command for the settings view', () => {
     manifest.contributes.commands.map((each) => each.command),
     ['gurita.openMissionPane', 'gurita.refreshMissionPane'],
   );
+});
+
+/** A harness check as the extension posts it: Claude Code passing, Antigravity on another version, Codex not found. */
+const CHECKED = {
+  type: 'harnessCheck',
+  check: {
+    state: 'checked',
+    harnesses: [
+      { key: 'claude', name: 'Claude Code', cli: 'claude', installed: '2.0.0', packaged: '2.0.0' },
+      { key: 'antigravity', name: 'Antigravity', cli: 'agy', failed: 'version', installed: '1.9.0', packaged: '2.0.0' },
+      { key: 'codex', name: 'Codex', cli: 'codex', failed: 'cli', packaged: '2.0.0' },
+    ],
+  },
+};
+
+/** Each harness the settings view lists: its key, the check that failed when one did, and its two lines of text. */
+function harnessRows(page: Page): [string, string | undefined, string[]][] {
+  const view = settingsView(page);
+  assert.ok(view !== undefined, 'the settings view is drawn');
+  return view
+    .all()
+    .filter((each) => each.tagName === 'li' && each.dataset.harness !== undefined)
+    .map((each) => [each.dataset.harness, each.dataset.failed, each.all().slice(1).map((child) => child.textContent)]);
+}
+
+test('every opening of the settings view is posted, and the view shows the check running with check again disabled until a result comes', () => {
+  const page = loadPage();
+  page.send(live([]));
+  const count = page.posted.length;
+  named(page, 'Settings').click();
+  named(page, 'Settings').click();
+  assert.deepStrictEqual(page.posted.slice(count), [{ type: 'settingsOpened' }], 'a click while the view is open opens nothing');
+  assert.ok(texts(page).includes('Checking the harnesses…'));
+  assert.strictEqual(named(page, 'Check again').disabled, true);
+  named(page, 'Close settings').click();
+  named(page, 'Settings').click();
+  assert.deepStrictEqual(page.posted.slice(count), [{ type: 'settingsOpened' }, { type: 'settingsOpened' }], 'each opening is posted');
+  page.send({ type: 'harnessCheck', check: { state: 'running' } });
+  assert.ok(texts(page).includes('Checking the harnesses…'));
+  assert.strictEqual(named(page, 'Check again').disabled, true);
+});
+
+test('the settings view names beside each harness the check that failed, or that every check passed', () => {
+  const page = loadPage();
+  page.send(live([]));
+  named(page, 'Settings').click();
+  page.send(CHECKED);
+  assert.deepStrictEqual(harnessRows(page), [
+    ['claude', undefined, ['Claude Code', 'Every check passes: Gurita 2.0.0 is installed, the packaged version.']],
+    ['antigravity', 'version', ['Antigravity', 'Installed version differs from the packaged one: installed 1.9.0, packaged 2.0.0.']],
+    ['codex', 'cli', ['Codex', "CLI not found: the runner's shell finds no codex command."]],
+  ]);
+  page.send({
+    type: 'harnessCheck',
+    check: {
+      state: 'checked',
+      harnesses: [
+        { key: 'claude', name: 'Claude Code', cli: 'claude', failed: 'plugin', packaged: '2.0.0' },
+        { key: 'antigravity', name: 'Antigravity', cli: 'agy', failed: 'plugin', packaged: '2.0.0', detail: 'the listing exited with status 1: boom' },
+        { key: 'codex', name: 'Codex', cli: 'codex', failed: 'version', packaged: '2.0.0' },
+      ],
+    },
+  });
+  assert.deepStrictEqual(harnessRows(page), [
+    ['claude', 'plugin', ['Claude Code', 'Gurita plugin not installed.']],
+    ['antigravity', 'plugin', ['Antigravity', 'Gurita plugin not installed: the listing exited with status 1: boom']],
+    ['codex', 'version', ['Codex', 'Installed version differs from the packaged one: installed unknown, packaged 2.0.0.']],
+  ]);
+});
+
+test("the settings view's check again control asks for the check afresh, and a check that could not run shows its cause", () => {
+  const page = loadPage();
+  page.send({ type: 'liveFailure', cause: 'Error: no repository' });
+  named(page, 'Settings').click();
+  page.send({ type: 'harnessCheck', check: { state: 'failed', cause: 'python3: not found' } });
+  assert.ok(texts(page).includes('The harness check could not be run.'));
+  assert.ok(texts(page).includes('python3: not found'));
+  const again = named(page, 'Check again');
+  assert.strictEqual(again.disabled, false);
+  const count = page.posted.length;
+  again.click();
+  assert.deepStrictEqual(page.posted.slice(count), [{ type: 'checkHarnesses' }]);
+  page.send({ type: 'live', missions: [mission(ALPHA, 'Alpha')], running: [ALPHA] });
+  assert.strictEqual(named(page, 'Check again').disabled, false, 'a running chain leaves check again enabled');
+});
+
+/** The mission page as drawn: every element's tag, text, class, and state, in document order. */
+function pageShape(page: Page): string[] {
+  return page.root.all().map((each) => `${each.tagName}|${each.textContent}|${each.className}|${each.disabled}|${each.title}`);
+}
+
+test('a failed check is shown in the settings view alone, every mission page drawn and its clicks posted as with every check passing', () => {
+  const passing = loadPage();
+  passing.send(live([]));
+  passing.send({
+    type: 'harnessCheck',
+    check: {
+      state: 'checked',
+      harnesses: CHECKED.check.harnesses.map(({ key, name, cli }) => ({ key, name, cli, installed: '2.0.0', packaged: '2.0.0' })),
+    },
+  });
+  const failing = loadPage();
+  failing.send(live([]));
+  failing.send(CHECKED);
+  for (const page of [passing, failing]) {
+    named(page, 'Settings').click();
+    named(page, 'Close settings').click();
+    named(page, 'Remaining tasks').click();
+  }
+  assert.deepStrictEqual(pageShape(failing), pageShape(passing), 'the mission page draws every recipe, button, and the looped run alike');
+  assert.ok(!texts(failing).some((text) => text.includes('not found') || text.includes('differs')), 'no failure is named on the mission page');
+  for (const page of [passing, failing]) {
+    named(page, 'Open questions').click();
+  }
+  assert.deepStrictEqual(pageShape(failing), pageShape(passing));
+  const clicks = (page: Page): unknown[] => {
+    const count = page.posted.length;
+    for (const text of ['review', 'complete', 'Discuss', 'Answer', 'Answer with recommendation', 'Answer with this alternative', 'New mission', 'Define mission']) {
+      named(page, text).click();
+    }
+    return page.posted.slice(count);
+  };
+  assert.deepStrictEqual(clicks(failing), clicks(passing), 'every click posts as it would with every check passing');
 });

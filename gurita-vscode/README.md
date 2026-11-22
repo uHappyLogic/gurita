@@ -41,8 +41,9 @@ Every Node command runs under Node 22 through nvm, in a subshell, from the repos
 - `npm test` compiles, then runs the unit tests of the recipe reader and the stage filter of a
   page's recipe list, the `open_questions.xml` parser, and the `TASKS_TODO.md` heading read,
   among others, with Node's built-in `node:test` over the compiled files under `out/test/`; the
-  run path, the pane's answer to a tab click, and the recipe list it posts, with the variant
-  selection it remembers, are tested against a stub of the `vscode` module,
+  run path, the pane's answer to a tab click, the recipe list it posts, with the variant
+  selection it remembers, and the harness check it runs, with the check script's print stubbed,
+  are tested against a stub of the `vscode` module,
   and the page script against a small stand-in for the DOM. Nothing runs inside an editor.
 - `npm run package` runs `vsce package`, which first runs the `vscode:prepublish` script: the
   compile, then `scripts/bundle.js`, the extension's own build step, which copies
@@ -184,6 +185,33 @@ a click on any mission tab swaps back to that mission's page. The view stays ope
 refreshes and re-reads until you swap back, and while it is open no mission tab reads selected.
 Like the rest of the page it holds buttons and dropdowns only: anything you type is asked for in
 VS Code's own input box.
+
+#### The harness check
+
+Under **Harnesses** the view lists Claude Code, Antigravity, and Codex, each with the result of
+the harness check. The check is the packaged `harness_check.py`, beside `runner.py`, which the
+extension runs with `python3` from the project root. In one session of the shell the runner
+starts its chains in, it looks up each harness's CLI (`claude`, `agy`, `codex`) and, when found,
+reads which Gurita copy that harness has installed (`claude plugin list --json`,
+`agy plugin list --json`, `codex plugin list -m gurita --json`). The extension then compares each
+installed copy's version with the plugin version the package was built from, the one
+`scripts/bundle.js` recorded in `bundled/plugin_version.txt`. Beside each harness the view either
+says that every check passes, with the version installed, or names the first of the three checks
+that failed:
+
+- **CLI not found**: the runner's shell finds no such command.
+- **Gurita plugin not installed**: the harness lists no enabled Gurita copy for the project, or
+  its listing could not be read, the reason shown after the check's name.
+- **Installed version differs from the packaged one**: the installed and the packaged versions
+  are both shown.
+
+The check runs the first time you open the settings view after the pane is created. Its result
+is kept while the pane stays open and is shown again at every later opening without the check
+running again. **Check again** on the view runs it afresh. Neither **Refresh** nor any re-read of
+the pane runs it. A failed check is shown only here. The mission pages still draw every variant,
+the buttons that run a recipe of a fixed name, and the looped run exactly as they would if every
+check passed, and a click runs the lines as written. When the check cannot run at all, the view
+shows one line saying so, with the cause beneath it.
 
 ## Recipes
 

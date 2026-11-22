@@ -46,8 +46,14 @@
 // workflow diagram's filled block, while the tabs, the two pane headers, the refresh control, the
 // other missions' pages, the two mission-starting buttons, and the settings control stay enabled.
 // The settings control at the tab row's end swaps the page beneath the row for the settings view
-// and back within the page itself, posting nothing, and the extension contributes no command for
-// that view. The extension posts the
+// and back within the page itself, and the extension contributes no command for that view. The
+// view shows the harness check: the page posts every opening of the view, and the first opening
+// after the panel is created runs the packaged `harness_check.py` through `execFile` from the
+// project root, its result posted to the page and kept for the panel's lifetime, every later
+// opening posting the result kept without running the check again. Only the view's check-again
+// control runs it afresh; no re-read of the pane and no Refresh runs it, and its result reaches
+// the settings view alone, the mission pages drawn and their clicks run whatever it reports. The
+// extension posts the
 // paths of the missions with a running runner to the page when a run starts and when its terminal closes, and
 // with every redraw, so a hidden pane shown again draws them too; a click that still reaches the
 // extension for such a mission is refused as before. The page posts the clicked mission's path on
@@ -85,6 +91,7 @@ import { SELECTIONS_KEY, Selections, dropStaleSelections, missionSelections, rea
 import { variantStoreFile } from './variantStore';
 import { FileEventKind, RefreshBatch, RefreshQueue, WATCHED_PATTERN, eventEffect } from './refresh';
 import { OPTIONAL_PLACEHOLDERS } from './placeholders';
+import { CHECK_SCRIPT, CheckResult, PLUGIN_VERSION_FILE, readPackagedVersion, runHarnessCheck } from './harnessCheck';
 import { refuseWhileRunning, runnerFile, runningMissions, showRun, startChain, startLoop } from './runs';
 import { MissionWorkflow, WorkflowStep, missionWorkflow, reviewCount } from './workflow';
 
@@ -112,7 +119,12 @@ type PageMessage =
   | { type: 'missionButton'; button: MissionButton }
   | { type: 'taskButton'; mission: string }
   | { type: 'previewLoop'; mission: string; recipe: string; variant: string }
-  | { type: 'startLoop'; mission: string; recipe: string; overrides: Record<string, string> };
+  | { type: 'startLoop'; mission: string; recipe: string; overrides: Record<string, string> }
+  | { type: 'settingsOpened' }
+  | { type: 'checkHarnesses' };
+
+/** The harness check as the settings view shows it: running, or what it gave. */
+type HarnessCheck = { state: 'running' } | CheckResult;
 
 /** The merged recipe list as read from the two recipe files, or the cause it could not be read. */
 type RecipeRead = { state: 'read'; recipes: Recipe[] } | { state: 'failed'; cause: string };
@@ -149,7 +161,8 @@ type PaneMessage =
       names: string[];
       result: PreviewRead;
     }
-  | { type: 'loopStarted'; mission: string };
+  | { type: 'loopStarted'; mission: string }
+  | { type: 'harnessCheck'; check: HarnessCheck };
 
 /** What a mission's latest preview ran with, which starting its run passes on unchanged. */
 interface HeldPreview {
@@ -202,6 +215,12 @@ let reads = 0;
 
 /** Each mission's latest preview, by the mission's path. */
 const previews = new Map<string, HeldPreview>();
+
+/** The harness check kept for the panel's lifetime: undefined until the settings view is first opened. */
+let harnessCheck: HarnessCheck | undefined;
+
+/** The number of harness checks started, so only the latest one started keeps its result. */
+let checks = 0;
 
 /**
  * Re-reads the pane, when the extension holds one, and posts the fresh parse to its page: the live
@@ -268,6 +287,10 @@ export function openMissionPane(context: vscode.ExtensionContext): void {
         void previewLoop(context, created, message.mission, message.recipe, message.variant);
       } else if (message?.type === 'startLoop') {
         runLoop(context, created, message.mission, message.recipe, message.overrides);
+      } else if (message?.type === 'settingsOpened') {
+        settingsOpened(context, created);
+      } else if (message?.type === 'checkHarnesses') {
+        void checkHarnesses(context, created);
       }
     },
     undefined,
@@ -290,6 +313,7 @@ export function openMissionPane(context: vscode.ExtensionContext): void {
         current = undefined;
         stale = false;
         previews.clear();
+        harnessCheck = undefined;
         queue?.dispose();
         queue = undefined;
         unwatch();
@@ -567,6 +591,41 @@ async function selectVariant(
   if (current !== undefined && panel === target) {
     await post(target, publish(context, current));
   }
+}
+
+/**
+ * Answers an opening of the settings view: the first one after the panel is created runs the
+ * harness check, and every later one posts the check kept, running or done, without running it.
+ */
+function settingsOpened(context: vscode.ExtensionContext, target: vscode.WebviewPanel): void {
+  if (harnessCheck === undefined) {
+    void checkHarnesses(context, target);
+    return;
+  }
+  void post(target, { type: 'harnessCheck', check: harnessCheck });
+}
+
+/**
+ * Runs the harness check afresh, unless one is running: the packaged `harness_check.py` run from
+ * the project root, else the home directory when no folder is open, its installed versions
+ * compared with the packaged plugin version. The page is told it runs, and then what it gave,
+ * which is kept for the panel's lifetime.
+ */
+async function checkHarnesses(context: vscode.ExtensionContext, target: vscode.WebviewPanel): Promise<void> {
+  if (panel !== target || harnessCheck?.state === 'running') {
+    return;
+  }
+  const sequence = ++checks;
+  harnessCheck = { state: 'running' };
+  await post(target, { type: 'harnessCheck', check: harnessCheck });
+  const root = (await startingRoot()) ?? os.homedir();
+  const packaged = readPackagedVersion(context.asAbsolutePath(PLUGIN_VERSION_FILE));
+  const result = await runHarnessCheck(context.asAbsolutePath(CHECK_SCRIPT), root, packaged);
+  if (panel !== target || sequence !== checks) {
+    return;
+  }
+  harnessCheck = result;
+  await post(target, { type: 'harnessCheck', check: result });
 }
 
 async function post(target: vscode.WebviewPanel, message: PaneMessage): Promise<void> {
@@ -923,6 +982,11 @@ function pageShell(webview: vscode.Webview, script: vscode.Uri): string {
   button.control:disabled { opacity: 0.5; cursor: default; }
   .tabs button.control[aria-pressed="true"] { outline: 1px solid var(--vscode-focusBorder); }
   .settings { margin-top: 1em; }
+  .settings h4 { margin: 0.8em 0 0.3em; }
+  .harness-list { list-style: none; margin: 0 0 0.5em; padding: 0; }
+  .harness-list li { display: flex; gap: 0.8em; padding: 0.2em 0; }
+  .harness-list .harness-name { font-weight: 600; min-width: 8em; }
+  .harness-list li.failed .harness-status { color: var(--vscode-errorForeground); }
   button.action { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: none; padding: 0.15em 0.6em; cursor: pointer; font: inherit; white-space: nowrap; }
   button.action:hover:not(:disabled) { background: var(--vscode-button-secondaryHoverBackground); }
   button.action:disabled, button.recipe:disabled { opacity: 0.5; cursor: default; }
