@@ -56,5 +56,9 @@ No other live mission's scope overlaps `gurita-vscode/`, so nothing holds or sha
 
 ## Decisions
 
+### Settings view
+
+- **Single-task lines.** The settings view lists the named single-task lines and gives them the same edits it gives variants: duplicate, rename, delete, and change the line's model and effort. Shipped single-task lines are treated exactly as shipped variants are. The results go to the same per-user store as variants, and a stored line reaches the merged recipe list under its name, so the looped run's named lines, the rule file, and the override list see it unchanged in form.
+
 ## Out of Scope
 
