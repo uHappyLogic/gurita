@@ -95,45 +95,6 @@
       <drawback>The settings view offers nothing until the person has typed every model and effort by hand, so a first-time person cannot change a line&apos;s model or effort without first learning the harness&apos;s names from its own help, and a mistyped entry is only found when a line using it stops at run time; it needs a per-user store (the Harness state store question&apos;s).</drawback>
     </alternative>
   </open-question>
-  <open-question id="Initial enabled state">
-    <question>The settings view enables or disables each harness. Before a person has enabled or disabled anything, which harnesses are enabled: all of them, those whose check passes, or those the shipped recipes run on?</question>
-    <recommendation option="All enabled">It keeps what the extension offers today, so no variant disappears before a person has chosen anything, and it needs no check result, so it holds however late the check runs and is never flipped by a strict version mismatch. A harness is then disabled only by the person&apos;s own act.</recommendation>
-    <alternative id="All enabled">
-      Every harness the settings view covers starts enabled, whatever its check reports and whatever recipes run on it. Each harness stays enabled until the person disables it, harness by harness, and the check result never changes the enabled state.
-      <advantage>It keeps today&apos;s behaviour on upgrade. The extension has no enabled state now and offers every recipe, so no variant disappears before the person has chosen anything, and the default needs no check result, which matters wherever the check runs late or only on request.</advantage>
-      <drawback>A harness whose CLI is missing or whose Gurita copy is stale still counts as enabled until the person turns it off, so its variants stay offered. Whether that matters depends on what a failed check does on the mission pages and what disabling does, which the sibling questions on failed-check consequence and disabled-harness effect own.</drawback>
-    </alternative>
-    <alternative id="Follows check, unchecked enabled">
-      Until the person sets a harness&apos;s state, that harness is enabled exactly while its latest check passes (CLI found, Gurita installed, version equal to the packaged one), and it is re-derived on every check. A harness whose check has not run yet counts as enabled. Once the person enables or disables a harness, that choice holds and the check no longer moves it.
-      <advantage>The default follows what can actually run. A harness installed or updated later turns on by itself, and one that breaks turns off by itself, with no action from the person and no state written until they act.</advantage>
-      <drawback>The version test is strict: on this machine every installed copy reads 1.9.0 against a VERSION of 2.0.0, so every harness would start disabled after its first check. A harness can also flip between enabled and disabled from one check to the next with nothing the person did, and its timing depends on when the check runs, which the check-timing sibling owns.</drawback>
-    </alternative>
-    <alternative id="Enabled once checked">
-      Until the person sets a harness&apos;s state, that harness is enabled only while a check of it has run and passed, re-derived on every check. A harness not yet checked counts as disabled. A choice the person makes holds from then on, as in the option above.
-      <advantage>No harness is offered on the extension&apos;s word alone. Every enabled harness has been verified by the check, so a variant is never offered for a CLI that is absent or a Gurita copy that does not match.</advantage>
-      <drawback>Nothing is enabled until a check has run. If the check runs only when the person opens the settings view or asks for it (the check-timing sibling&apos;s axis), a fresh install or upgrade shows no enabled harness on the mission pages until then. The version mismatch seen on this machine would keep every harness disabled as well.</drawback>
-    </alternative>
-    <alternative id="First check written as choice">
-      The first completed check of each harness writes its result as that harness&apos;s enabled or disabled state, as if the person had set it: enabled if it passed, disabled if it failed. Later checks change nothing. Before that first check the harness counts as enabled.
-      <advantage>The starting state reflects the machine, and it then stays put. A later check, a slow shell start, or a harness briefly missing from the PATH can never toggle the state on its own, and the person sees one stored state per harness from the start.</advantage>
-      <drawback>A harness that failed its first check, because its CLI was installed later or its Gurita copy was updated later, stays disabled until the person turns it on by hand, and the stored state no longer tells a person&apos;s choice from the extension&apos;s guess. It also writes state before the person has acted, in whichever store the harness-state-store sibling picks.</drawback>
-    </alternative>
-    <alternative id="Shipped recipe harnesses">
-      Exactly the harnesses the shipped recipe file&apos;s lines run on start enabled, today Claude Code (`claude`) and Antigravity (`agy`). Any other harness the settings view covers starts disabled. This is fixed by the shipped file and ignores both the check and the person&apos;s own recipes.
-      <advantage>The default matches what the extension ships for. The harnesses its own recipes are written and tested against are on, and a harness with no shipped lines and no checked line shape stays off until the person opts in.</advantage>
-      <drawback>It differs from all enabled only for a harness the view covers without shipped lines. If the Codex-in-settings-view sibling covers Claude Code and Antigravity only, this option is the same as all enabled. If it covers Codex, a person&apos;s own Codex recipes start disabled although that person wrote them.</drawback>
-    </alternative>
-    <alternative id="Harnesses any recipe runs on">
-      Until the person sets a harness&apos;s state, a harness is enabled while any recipe line read on the last re-read runs on it, the shipped recipe file and the person&apos;s own recipe file together. A harness no recipe line runs on starts disabled. The check plays no part.
-      <advantage>A harness the person writes their own recipes for, such as a Codex line in `~/.gurita/recipes.md`, turns on by itself, while a covered harness no recipe uses stays out of the way. The default needs no check run.</advantage>
-      <drawback>The default moves whenever the person edits their own recipe file, and it depends on reading each line&apos;s harness from its text. A line the extension cannot read, which the unreadable-lines sibling governs, enables nothing. Like the option above, it differs from all enabled only if the view covers a harness without shipped lines.</drawback>
-    </alternative>
-    <alternative id="None enabled">
-      Every harness starts disabled, and the person enables each one in the settings view before its variants count as enabled. The check result never changes the state.
-      <advantage>Nothing runs on a harness the person has not chosen. The enabled state always means a deliberate choice, never a default the extension guessed.</advantage>
-      <drawback>On upgrade the extension stops offering what it offers today until the person visits the settings view, and a fresh install starts with no enabled harness. How badly that hurts depends on what disabling does to variants and buttons, which the disabled-harness-effect and disabled-harness-reach siblings own.</drawback>
-    </alternative>
-  </open-question>
   <open-question id="Design draft revision">
     <question>The design draft `ideas/vscode_extension.md` records under Decided that the extension composes no line and holds no host flag, model name, or effort level, and that a variant of a shipped chain is a chain copied into a person&apos;s own recipe file. This mission has the extension read each line&apos;s harness, model, and effort, hold model and effort lists per harness, and rewrite a line&apos;s model and effort. Does the mission revise that draft and `ideas/vscode_extension_follow_up.md` to record the change, or leave both as written?</question>
     <recommendation option="Status note in both">It follows the draft&apos;s one precedent for a revision after delivery: the opening tells a reader which decisions a later mission replaced and where to read why, the dated reasoning stays intact, and the follow-up&apos;s opening, which would otherwise wrongly say the draft&apos;s decisions stand, is corrected. Marking or rewriting every passage would turn a dated record into a second description beside the extension&apos;s README.</recommendation>
@@ -311,7 +272,6 @@
   </open-question>
   <open-question id="Harness check timing">
     <question>The settings view checks each harness by finding its CLI through a shell and reading its installed plugins from the harness&apos;s own `plugin list` command, so every check starts an interactive shell and a harness process. When does the check run: each time the settings view is opened, with every re-read of the pane, or only when the person asks for it?</question>
-    <depends-on question="Initial enabled state" option="All enabled"/>
     <recommendation option="Once per pane, lazily, with re-check">Only a person who opens the settings view pays for the shell and the harness processes, and once per panel, so moving in and out of the view to edit variants never waits on an unchanged result. The check-again control serves the one moment a fresh result matters, after installing or upgrading from a terminal, and nothing outside the view needs the result earlier.</recommendation>
     <alternative id="Once per pane, lazily, with re-check">
       The check runs the first time the settings view is opened after the panel is created, and its result is cached for the panel&apos;s lifetime, shown on every later opening without running again; a check-again control in the settings view re-runs it on request, and no pane re-read or Refresh runs it.
@@ -346,7 +306,6 @@
   </open-question>
   <open-question id="Disabled harness effect">
     <question>The settings view enables or disables each harness, and a variant&apos;s lines each run on one harness, a variant sometimes mixing two. What does disabling a harness do to the variants holding a line that runs on it: are they left out of the recipe dropdowns, listed but not runnable, or still runnable under a mark?</question>
-    <depends-on question="Initial enabled state" option="All enabled"/>
     <recommendation option="Hide on any line">Disabling then means one plain thing, that the list offers nothing running on that harness, and it clears away the copies a person does not use, the job the host groups did. The pane&apos;s existing check against the posted list enforces it with no new non-runnable state, and since a harness is hidden only by the person&apos;s own act, a variant never vanishes for a reason they did not cause.</recommendation>
     <alternative id="Hide on any line">
       A variant that has at least one line on a disabled harness is left out of its recipe&apos;s dropdown, mixed variants included. The pane leaves it out of the list it posts, so a click on it is refused the way a click on any name the posted list lacks is refused now. A recipe whose every variant is left out loses its button. Where the default or remembered variant is left out, the button runs the default if that variant is still listed and otherwise the first listed variant. The remembered selection is kept and comes back once the harness is enabled again.
