@@ -43,7 +43,7 @@ Every Node command runs under Node 22 through nvm, in a subshell, from the repos
   among others, with Node's built-in `node:test` over the compiled files under `out/test/`; the
   run path, the pane's answer to a tab click, the recipe list it posts, with the variant
   selection it remembers, the harness check it runs, with the check script's print stubbed, and
-  the harnesses it enables and disables, are tested against a stub of the `vscode` module,
+  the harnesses it enables and disables, with their model and effort lists, are tested against a stub of the `vscode` module,
   and the page script against a small stand-in for the DOM. Nothing runs inside an editor.
 - `npm run package` runs `vsce package`, which first runs the `vscode:prepublish` script: the
   compile, then `scripts/bundle.js`, the extension's own build step, which copies
@@ -234,6 +234,25 @@ kept and comes back once the harness is enabled again. The buttons that run a re
 name run their recipe's default as before, whatever harness its lines name, and the looped run is
 untouched: its preview's override list offers every named single-task line, the rule file chooses
 among all of them, and every one is passed to the runner.
+
+#### Model and effort lists
+
+Under **Models and efforts** the view holds each harness's model list and its one effort list
+for the whole harness; Codex holds a model list and no effort list. The extension ships no list
+of its own and queries no harness: each list is read, every time the view opens, from the values
+the lines of the shipped recipes, your own recipes, and your stored variants carry, `--model` and
+`--effort` on a `claude` or `agy` line and `-m` on a `codex` line, in the order they first appear.
+Codex's model list therefore starts from the Codex lines you have. The list keeps no record of
+which model takes which effort.
+
+Each entry has a **Remove** control, which takes it out of the offer, and each list an **Add
+model** or **Add effort** control, which asks for an entry no line uses yet in VS Code's own input
+box; the box refuses an empty entry and one the list already offers. Your additions and removals
+are stored as an overlay on the derived lists in the `harnesses` part of
+`~/.gurita/variants.json`, as `addedModels`, `removedModels`, `addedEfforts`, and `removedEfforts`
+beside the harness's `enabled` state. Adding a removed entry back takes it out of the removals, and
+removing an entry you added takes it out of the additions. No recipe file is written. When the
+lists cannot be read, the view says so with the cause beneath it.
 
 ## Recipes
 

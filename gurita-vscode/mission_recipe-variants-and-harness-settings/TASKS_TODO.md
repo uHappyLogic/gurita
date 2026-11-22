@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Harness Model and Effort Lists
-
-Give each harness its model list and its one effort list for the whole harness in the settings view, Codex a model list and no effort list: each list is read from the `--model` and `--effort` values, on a Codex line `-m`, carried by the lines of the shipped recipes, the own recipes, and the stored variants, the extension shipping no list of its own and querying no harness. The person can add an entry no line uses yet, typed into VS Code's own input box, and remove a derived entry from the offer, the additions and removals stored per user as an overlay on the derived lists in the harness part of the variant store file. Verified by `node:test` unit tests of the derivation and the overlay and by pane and page tests of the add and remove controls.
-
----
-
 ## Variant Editing in the Settings View
 
 List in the settings view every recipe with its variants (the chains, the seven fixed-name button recipes, and the recipes and variants that come from the hand-written own recipe file) and offer on each variant duplicate, rename, delete, pick as the recipe's default, and, where a stored copy or a hiding record stands, reset, each carried out through the variant store's edits. A duplicate's name and a rename are asked for in VS Code's own input box, one box per value as `askValues` in `src/pane.ts` asks, a rename opening with the current name filled in and the box's own validation refusing an empty name and one the recipe already uses. Verified by pane tests against the `vscode` stub and page tests of the controls, an edit reaching the mission page's dropdown and the fixed-name buttons at the next re-read, with `gurita-vscode/README.md` describing the edits.

@@ -1,0 +1,155 @@
+import { test } from 'node:test';
+import * as assert from 'node:assert';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
+import {
+  derivedLists,
+  editHarnessList,
+  harnessLists,
+  harnessStates,
+  holdsList,
+  isListKind,
+  readHarnessLists,
+  withHarnessEnabled,
+  withListValueAdded,
+  withListValueRemoved,
+} from '../harnessSettings';
+import { VariantStoreError, emptyVariantStore, parseVariantStore, readVariantStore } from '../variantStore';
+
+const FILE = '/home/someone/.gurita/variants.json';
+const SNIPPETS = path.join(__dirname, '..', '..', '..', 'snippets', 'GURITA_USAGE.md');
+
+/** Lines on each harness, a shell step, the slot line, and a command the extension does not know. */
+const LINES = [
+  'claude -p "/gurita:review-mission-requirements --mission <path>" --model "fable" --effort xhigh;',
+  'echo between;',
+  'agy -p "/gurita:review-mission-requirements --mission <path>" --model "gemini-4-argon" --effort medium;',
+  'claude -p "/gurita:derive-tasks --mission <path>" --model "opus" --effort high;',
+  '<single-task line>',
+  'codex exec "/gurita:complete-task --mission <path>" -m gpt-5.5 --effort high;',
+  'claude -p "/gurita:finish-mission --mission <path>" --model "fable" --effort medium;',
+  'claude -p "/gurita:discuss-mission-goal" --model sonnet;',
+  'claude -p "/gurita:ask-in-mission-context" --effort max;',
+  'mytool --model hidden --effort low',
+];
+
+test('each harness has a model list and one effort list read from the lines, Codex a model list alone', () => {
+  assert.deepStrictEqual(derivedLists(LINES), {
+    claude: { models: ['fable', 'opus', 'sonnet'], efforts: ['xhigh', 'high', 'medium', 'max'] },
+    antigravity: { models: ['gemini-4-argon'], efforts: ['medium'] },
+    codex: { models: ['gpt-5.5'] },
+  });
+  assert.deepStrictEqual(derivedLists([]), {
+    claude: { models: [], efforts: [] },
+    antigravity: { models: [], efforts: [] },
+    codex: { models: [] },
+  }, 'the extension ships no list of its own');
+  assert.ok(holdsList('codex', 'model') && !holdsList('codex', 'effort') && holdsList('antigravity', 'effort'));
+  assert.ok(isListKind('model') && isListKind('effort') && !isListKind('models') && !isListKind(undefined));
+});
+
+test("the shipped recipe file's lines give the lists their models and efforts, and no Codex model", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-harness-lists-'));
+  const lists = readHarnessLists(SNIPPETS, path.join(dir, 'recipes.md'), path.join(dir, 'variants.json'));
+  for (const model of ['fable', 'opus', 'sonnet']) {
+    assert.ok(lists.claude.models.includes(model), model);
+  }
+  for (const effort of ['medium', 'high', 'xhigh']) {
+    assert.ok(lists.claude.efforts?.includes(effort), effort);
+  }
+  assert.deepStrictEqual([...lists.antigravity.models].sort(), ['claude-opus-5-5', 'gemini-4-argon']);
+  assert.deepStrictEqual(lists.codex, { models: [] });
+});
+
+test('an added entry follows the derived ones and a removed one leaves the offer, the overlay kept beside the enabled state', () => {
+  let store = withHarnessEnabled(emptyVariantStore(), FILE, 'claude', false);
+  store = withListValueAdded(store, FILE, LINES, 'claude', 'model', 'claude-sonnet-5');
+  store = withListValueRemoved(store, FILE, LINES, 'claude', 'model', 'sonnet');
+  store = withListValueAdded(store, FILE, LINES, 'claude', 'effort', 'low');
+  store = withListValueRemoved(store, FILE, LINES, 'claude', 'effort', 'max');
+  store = withListValueAdded(store, FILE, LINES, 'codex', 'model', 'gpt-5.5-mini');
+  assert.deepStrictEqual(store.harnesses, {
+    claude: { enabled: false, addedModels: ['claude-sonnet-5'], removedModels: ['sonnet'], addedEfforts: ['low'], removedEfforts: ['max'] },
+    codex: { addedModels: ['gpt-5.5-mini'] },
+  });
+  assert.deepStrictEqual(harnessLists(store, FILE, LINES), {
+    claude: { models: ['fable', 'opus', 'claude-sonnet-5'], efforts: ['xhigh', 'high', 'medium', 'low'] },
+    antigravity: { models: ['gemini-4-argon'], efforts: ['medium'] },
+    codex: { models: ['gpt-5.5', 'gpt-5.5-mini'] },
+  });
+  assert.deepStrictEqual(harnessStates(store, FILE), { claude: false, antigravity: true, codex: true }, 'the enabled state is kept');
+});
+
+test('adding a removed derived entry takes it out of the removed ones, and removing an added entry takes it out of the added ones', () => {
+  let store = withListValueRemoved(emptyVariantStore(), FILE, LINES, 'antigravity', 'model', 'gemini-4-argon');
+  assert.deepStrictEqual(harnessLists(store, FILE, LINES).antigravity.models, []);
+  store = withListValueAdded(store, FILE, LINES, 'antigravity', 'model', 'gemini-4-argon');
+  assert.deepStrictEqual(store.harnesses, { antigravity: {} }, 'a derived entry added back needs no entry of its own');
+  assert.deepStrictEqual(harnessLists(store, FILE, LINES).antigravity.models, ['gemini-4-argon']);
+  store = withListValueAdded(store, FILE, LINES, 'antigravity', 'model', 'gemini-4-neon');
+  store = withListValueRemoved(store, FILE, LINES, 'antigravity', 'model', 'gemini-4-neon');
+  assert.deepStrictEqual(store.harnesses, { antigravity: {} }, 'an added entry removed leaves no removal behind');
+  const kept = parseVariantStore(JSON.stringify({ harnesses: { claude: { models: ['opus'], enabled: true }, kept: ['as', 'read'] } }), FILE);
+  const edited = withListValueAdded(kept, FILE, LINES, 'claude', 'effort', 'low');
+  assert.deepStrictEqual(edited.harnesses, { claude: { models: ['opus'], enabled: true, addedEfforts: ['low'] }, kept: ['as', 'read'] });
+  assert.deepStrictEqual(kept.harnesses, { claude: { models: ['opus'], enabled: true }, kept: ['as', 'read'] }, 'the store given is not changed');
+});
+
+test('a removed entry stays out of the offer when a line carries it again, and an added one carried by a line is listed once', () => {
+  const store = parseVariantStore(JSON.stringify({ harnesses: { claude: { addedModels: ['opus', 'haiku'], removedModels: ['fable'] } } }), FILE);
+  assert.deepStrictEqual(harnessLists(store, FILE, LINES).claude.models, ['opus', 'sonnet', 'haiku']);
+});
+
+test('Codex holds no effort list, and an empty entry is refused, the store unchanged', () => {
+  assert.throws(() => withListValueAdded(emptyVariantStore(), FILE, LINES, 'codex', 'effort', 'high'), /holds no effort list/);
+  assert.throws(() => withListValueRemoved(emptyVariantStore(), FILE, LINES, 'codex', 'effort', 'high'), /holds no effort list/);
+  assert.throws(() => withListValueAdded(emptyVariantStore(), FILE, LINES, 'claude', 'model', ''), /empty model/);
+  const store = parseVariantStore(JSON.stringify({ harnesses: { codex: { addedEfforts: ['high'] } } }), FILE);
+  assert.deepStrictEqual(harnessLists(store, FILE, LINES).codex, { models: ['gpt-5.5'] }, 'an effort overlay on Codex offers nothing');
+});
+
+test('an overlay field not an array of text is refused, naming the file', () => {
+  for (const claude of [{ addedModels: 'opus' }, { removedEfforts: [1] }, { addedEfforts: {} }]) {
+    const store = parseVariantStore(JSON.stringify({ harnesses: { claude } }), FILE);
+    assert.throws(() => harnessLists(store, FILE, LINES), (error: unknown) => error instanceof VariantStoreError && error.message.includes(FILE));
+    assert.throws(() => harnessStates(store, FILE), VariantStoreError);
+  }
+});
+
+test('the lists are read from the shipped, own, and stored lines, and an edit is written to the variant store file', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-harness-lists-'));
+  const shipped = path.join(dir, 'GURITA_USAGE.md');
+  const own = path.join(dir, 'recipes.md');
+  const storeFile = path.join(dir, '.gurita', 'variants.json');
+  fs.writeFileSync(
+    shipped,
+    '## Recipes\n\n### Review\n```\nclaude -p "/gurita:review-mission-requirements --mission <path>" --model "fable" --effort xhigh;\n```\n',
+  );
+  fs.writeFileSync(own, '### Mine\n```\ncodex exec "/gurita:finish-mission --mission <path>" -m gpt-5.5;\n```\n');
+  fs.mkdirSync(path.dirname(storeFile));
+  fs.writeFileSync(
+    storeFile,
+    JSON.stringify({
+      variants: [{ recipe: 'Review', name: 'Agy', lines: ['agy -p "/gurita:review-mission-requirements --mission <path>" --model "gemini-4-neon" --effort xhigh;'] }],
+      hidden: [{ recipe: 'Review', name: 'Review', origin: 'shipped' }],
+    }),
+  );
+  assert.deepStrictEqual(readHarnessLists(shipped, own, storeFile), {
+    claude: { models: ['fable'], efforts: ['xhigh'] },
+    antigravity: { models: ['gemini-4-neon'], efforts: ['xhigh'] },
+    codex: { models: ['gpt-5.5'] },
+  }, 'a hidden shipped variant still carries its values');
+  assert.deepStrictEqual(readHarnessLists(shipped, path.join(dir, 'missing.md'), storeFile).codex, { models: [] }, 'a missing own file holds no line');
+  editHarnessList(shipped, own, storeFile, 'antigravity', 'effort', 'add', 'low');
+  editHarnessList(shipped, own, storeFile, 'claude', 'model', 'remove', 'fable');
+  assert.deepStrictEqual(readHarnessLists(shipped, own, storeFile), {
+    claude: { models: [], efforts: ['xhigh'] },
+    antigravity: { models: ['gemini-4-neon'], efforts: ['xhigh', 'low'] },
+    codex: { models: ['gpt-5.5'] },
+  });
+  const written = readVariantStore(storeFile);
+  assert.deepStrictEqual(written.harnesses, { antigravity: { addedEfforts: ['low'] }, claude: { removedModels: ['fable'] } });
+  assert.strictEqual(written.variants.length, 1, 'the stored variants are kept');
+  assert.deepStrictEqual(fs.readFileSync(own, 'utf8'), '### Mine\n```\ncodex exec "/gurita:finish-mission --mission <path>" -m gpt-5.5;\n```\n', 'the own recipe file is not written');
+});

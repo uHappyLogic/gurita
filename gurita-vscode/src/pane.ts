@@ -63,7 +63,14 @@
 // left out the button stands on the default when it is still listed and otherwise on the first
 // listed variant, the remembered selection kept for when the harness is enabled again. Disabling
 // acts on that list alone: the fixed-name buttons run their recipes' defaults, and the looped run's
-// preview, overrides, and lines keep every named single-task line. The
+// preview, overrides, and lines keep every named single-task line. The view holds each harness's
+// model list and its one effort list for the whole harness, Codex a model list alone: every
+// opening posts them, derived afresh from the `--model` and `--effort` values, on a Codex line
+// `-m`, the lines of the shipped recipes, the own recipes, and the stored variants carry, with the
+// person's overlay from the harness part of the variant store file laid over them. A click of a
+// list's add control asks for the entry in VS Code's own input box, whose validation refuses an
+// empty entry and one the list already offers, and a click of an entry's remove control takes it
+// out of the offer; either is written to the overlay and the lists posted again. The
 // extension posts the
 // paths of the missions with a running runner to the page when a run starts and when its terminal closes, and
 // with every redraw, so a hidden pane shown again draws them too; a click that still reaches the
@@ -100,11 +107,24 @@ import { PreviewRead, SingleTaskLine, loopArguments, ruleFile, runOverrides, run
 import { BUTTON_RECIPES, PageRecipe, Recipe, buttonRecipe, ownRecipesFile, pageRecipes, readRecipes, selectedChoice, stageRecipes } from './recipes';
 import { SELECTIONS_KEY, Selections, dropStaleSelections, missionSelections, readSelections, rememberSelection } from './selections';
 import { variantStoreFile } from './variantStore';
-import { HarnessStates, disabledCommands, isHarnessKey, readHarnessStates, setHarnessEnabled } from './harnessSettings';
+import {
+  HarnessKey,
+  HarnessLists,
+  HarnessStates,
+  ListKind,
+  disabledCommands,
+  editHarnessList,
+  holdsList,
+  isHarnessKey,
+  isListKind,
+  readHarnessLists,
+  readHarnessStates,
+  setHarnessEnabled,
+} from './harnessSettings';
 import type { Harness } from './lineValues';
 import { FileEventKind, RefreshBatch, RefreshQueue, WATCHED_PATTERN, eventEffect } from './refresh';
 import { OPTIONAL_PLACEHOLDERS } from './placeholders';
-import { CHECK_SCRIPT, CheckResult, PLUGIN_VERSION_FILE, readPackagedVersion, runHarnessCheck } from './harnessCheck';
+import { CHECK_SCRIPT, CheckResult, HARNESSES, PLUGIN_VERSION_FILE, readPackagedVersion, runHarnessCheck } from './harnessCheck';
 import { refuseWhileRunning, runnerFile, runningMissions, showRun, startChain, startLoop } from './runs';
 import { MissionWorkflow, WorkflowStep, missionWorkflow, reviewCount } from './workflow';
 
@@ -135,7 +155,9 @@ type PageMessage =
   | { type: 'startLoop'; mission: string; recipe: string; overrides: Record<string, string> }
   | { type: 'settingsOpened' }
   | { type: 'checkHarnesses' }
-  | { type: 'setHarnessEnabled'; harness: string; enabled: boolean };
+  | { type: 'setHarnessEnabled'; harness: string; enabled: boolean }
+  | { type: 'addHarnessValue'; harness: string; kind: string }
+  | { type: 'removeHarnessValue'; harness: string; kind: string; value: string };
 
 /** The harness check as the settings view shows it: running, or what it gave. */
 type HarnessCheck = { state: 'running' } | CheckResult;
@@ -148,6 +170,9 @@ type RecipeRead = { state: 'read'; recipes: Recipe[]; disabled: Harness[] } | { 
 
 /** Each harness's enabled state as the variant store file holds it, or the cause it could not be read. */
 type HarnessSettings = { state: 'read'; enabled: HarnessStates } | { state: 'failed'; cause: string };
+
+/** Each harness's model and effort lists, the overlay laid over them, or the cause they could not be read. */
+type HarnessListsRead = { state: 'read'; lists: HarnessLists } | { state: 'failed'; cause: string };
 
 /** The recipe list one mission's page shows, or the cause the recipes could not be read. */
 type RecipePart = { state: 'read'; recipes: PageRecipe[] } | { state: 'failed'; cause: string };
@@ -183,7 +208,8 @@ type PaneMessage =
     }
   | { type: 'loopStarted'; mission: string }
   | { type: 'harnessCheck'; check: HarnessCheck }
-  | { type: 'harnessSettings'; settings: HarnessSettings };
+  | { type: 'harnessSettings'; settings: HarnessSettings }
+  | { type: 'harnessLists'; lists: HarnessListsRead };
 
 /** What a mission's latest preview ran with, which starting its run passes on unchanged. */
 interface HeldPreview {
@@ -314,6 +340,10 @@ export function openMissionPane(context: vscode.ExtensionContext): void {
         void checkHarnesses(context, created);
       } else if (message?.type === 'setHarnessEnabled') {
         void enableHarness(context, created, message.harness, message.enabled);
+      } else if (message?.type === 'addHarnessValue') {
+        void addHarnessValue(context, created, message.harness, message.kind);
+      } else if (message?.type === 'removeHarnessValue') {
+        void removeHarnessValue(context, created, message.harness, message.kind, message.value);
       }
     },
     undefined,
@@ -430,9 +460,15 @@ async function flushEvents(context: vscode.ExtensionContext, target: vscode.Webv
  * per-user variant store laid over it.
  */
 function readAllRecipes(context: vscode.ExtensionContext): Recipe[] {
+  const files = recipeFiles(context);
+  return readRecipes(files.shipped, files.own, files.store);
+}
+
+/** The shipped snippet file, the person's own recipe file, and the per-user variant store file. */
+function recipeFiles(context: vscode.ExtensionContext): { shipped: string; own: string; store: string } {
   const setting = vscode.workspace.getConfiguration('gurita').get<string>('ownRecipesFile');
   const home = os.homedir();
-  return readRecipes(context.asAbsolutePath('bundled/GURITA_USAGE.md'), ownRecipesFile(setting, home), variantStoreFile(home));
+  return { shipped: context.asAbsolutePath('bundled/GURITA_USAGE.md'), own: ownRecipesFile(setting, home), store: variantStoreFile(home) };
 }
 
 /** The commands of the harnesses the settings view disabled, read afresh from the variant store file. */
@@ -635,12 +671,14 @@ function readHarnessSettings(): HarnessSettings {
 }
 
 /**
- * Answers an opening of the settings view: each harness's enabled state is posted, read afresh;
+ * Answers an opening of the settings view: each harness's enabled state and its model and effort
+ * lists are posted, read afresh;
  * the first opening after the panel is created runs the harness check, and every later one posts
  * the check kept, running or done, without running it.
  */
 function settingsOpened(context: vscode.ExtensionContext, target: vscode.WebviewPanel): void {
   void post(target, { type: 'harnessSettings', settings: readHarnessSettings() });
+  void post(target, { type: 'harnessLists', lists: readListsOf(context) });
   if (harnessCheck === undefined) {
     void checkHarnesses(context, target);
     return;
@@ -694,6 +732,91 @@ async function enableHarness(context: vscode.ExtensionContext, target: vscode.We
     current.recipes = readRecipeList(context);
     await post(target, publish(context, current));
   }
+}
+
+/** Each harness's model and effort lists, read afresh, or the cause they could not be read. */
+function readListsOf(context: vscode.ExtensionContext): HarnessListsRead {
+  try {
+    const files = recipeFiles(context);
+    return { state: 'read', lists: readHarnessLists(files.shipped, files.own, files.store) };
+  } catch (error) {
+    return { state: 'failed', cause: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+/** The name the settings view gives the harness `key`. */
+function harnessName(key: string): string {
+  return HARNESSES.find((harness) => harness.key === key)?.name ?? key;
+}
+
+/**
+ * Adds an entry to the harness `harness`'s list of `kind`: the entry is asked for in VS Code's own
+ * input box, whose validation refuses an empty entry and one the list already offers, and written
+ * to the overlay in the harness part of the variant store file, the lists then posted again. A key
+ * naming no harness, a list the harness does not hold, lists that cannot be read, or a dismissed
+ * box writes nothing; a store that cannot be written is told in an error notification.
+ */
+async function addHarnessValue(context: vscode.ExtensionContext, target: vscode.WebviewPanel, harness: unknown, kind: unknown): Promise<void> {
+  if (panel !== target || !isHarnessKey(harness) || !isListKind(kind) || !holdsList(harness, kind)) {
+    return;
+  }
+  const read = readListsOf(context);
+  if (read.state === 'failed') {
+    void vscode.window.showErrorMessage(`The ${kind} list could not be read: ${read.cause}`);
+    return;
+  }
+  const offered = kind === 'model' ? read.lists[harness].models : read.lists[harness].efforts ?? [];
+  const typed = await vscode.window.showInputBox({
+    prompt: `The ${kind} to add to the ${harnessName(harness)} ${kind} list`,
+    placeHolder: kind === 'model' ? 'a model name' : 'an effort level',
+    ignoreFocusOut: true,
+    validateInput: (value) =>
+      value.trim() === ''
+        ? `Type a ${kind}, or press Escape to add nothing.`
+        : offered.includes(value.trim())
+          ? `The ${kind} list already offers ${value.trim()}.`
+          : undefined,
+  });
+  if (typed === undefined || typed.trim() === '' || offered.includes(typed.trim()) || panel !== target) {
+    return;
+  }
+  editList(context, target, harness, kind, 'add', typed.trim());
+}
+
+/**
+ * Removes the entry `value` from the offer of the harness `harness`'s list of `kind`, written to the
+ * overlay in the harness part of the variant store file, the lists then posted again. A key naming
+ * no harness, a list the harness does not hold, or an entry the list does not offer writes nothing.
+ */
+async function removeHarnessValue(context: vscode.ExtensionContext, target: vscode.WebviewPanel, harness: unknown, kind: unknown, value: unknown): Promise<void> {
+  if (panel !== target || !isHarnessKey(harness) || !isListKind(kind) || !holdsList(harness, kind) || typeof value !== 'string') {
+    return;
+  }
+  const read = readListsOf(context);
+  if (read.state === 'failed' || !(kind === 'model' ? read.lists[harness].models : read.lists[harness].efforts ?? []).includes(value)) {
+    return;
+  }
+  editList(context, target, harness, kind, 'remove', value);
+}
+
+/** Writes one edit of a harness's list to the variant store file and posts the lists again. */
+function editList(
+  context: vscode.ExtensionContext,
+  target: vscode.WebviewPanel,
+  harness: HarnessKey,
+  kind: ListKind,
+  edit: 'add' | 'remove',
+  value: string,
+): void {
+  try {
+    const files = recipeFiles(context);
+    editHarnessList(files.shipped, files.own, files.store, harness, kind, edit, value);
+  } catch (error) {
+    void vscode.window.showErrorMessage(
+      `The ${kind} could not be ${edit === 'add' ? 'added' : 'removed'}: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+  void post(target, { type: 'harnessLists', lists: readListsOf(context) });
 }
 
 async function post(target: vscode.WebviewPanel, message: PaneMessage): Promise<void> {
@@ -1058,6 +1181,12 @@ function pageShell(webview: vscode.Webview, script: vscode.Uri): string {
   .harness-list .harness-name { font-weight: 600; min-width: 8em; }
   .harness-list li.failed .harness-status { color: var(--vscode-errorForeground); }
   .harness-list .harness-enabled { margin-left: auto; display: flex; align-items: center; gap: 0.5em; white-space: nowrap; }
+  .harness-lists h5 { margin: 0.5em 0 0.2em; font-size: 1em; }
+  .value-list { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0.5em; padding: 0.15em 0; }
+  .value-list .value-label { min-width: 5em; opacity: 0.8; }
+  .value-list ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.4em; }
+  .value-list li.value { display: inline-flex; align-items: center; gap: 0.3em; border: 1px solid var(--vscode-panel-border); padding: 0 0 0 0.4em; }
+  .value-list li.value-empty { opacity: 0.7; }
   button.action { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: none; padding: 0.15em 0.6em; cursor: pointer; font: inherit; white-space: nowrap; }
   button.action:hover:not(:disabled) { background: var(--vscode-button-secondaryHoverBackground); }
   button.action:disabled, button.recipe:disabled { opacity: 0.5; cursor: default; }

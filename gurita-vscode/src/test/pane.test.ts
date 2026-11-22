@@ -23,6 +23,13 @@ const created: StubTerminal[] = [];
 const notifications: string[] = [];
 /** The values the stub's input boxes answer with, one per box in order; an empty queue dismisses the box. */
 const typedValues: string[] = [];
+/** The options of a box the stub's editor showed: its prompt and its validation. */
+interface InputBoxOptions {
+  prompt?: string;
+  validateInput?: (value: string) => string | undefined;
+}
+/** The options of every input box the stub's editor showed, in order. */
+const inputBoxes: InputBoxOptions[] = [];
 /** Every message the extension posted to the page. */
 const posted: unknown[] = [];
 let receive: ((message: unknown) => void) | undefined;
@@ -107,7 +114,10 @@ const stub = {
       return terminal;
     },
     onDidCloseTerminal: () => disposable,
-    showInputBox: () => Promise.resolve(typedValues.shift()),
+    showInputBox: (options: InputBoxOptions) => {
+      inputBoxes.push(options);
+      return Promise.resolve(typedValues.shift());
+    },
     showInformationMessage: notify,
     showWarningMessage: notify,
     showErrorMessage: notify,
@@ -692,6 +702,101 @@ test("disabling a harness is stored in the variant store's harness part and leav
     assert.deepStrictEqual(posted.slice(from), [], 'a key naming no harness or a state not true or false writes nothing');
     assert.deepStrictEqual(JSON.parse(fs.readFileSync(store, 'utf8')).harnesses, { antigravity: { enabled: true } });
     assert.strictEqual(execFileSync('git', ['status', '--porcelain', '--ignored'], { cwd: root, encoding: 'utf8' }), '', "nothing is written into the project's tree");
+  } finally {
+    process.env.HOME = home;
+  }
+});
+
+/** Waits until the extension has posted the harness lists beyond the first `from`, and returns them as read. */
+async function postedLists(from: number): Promise<Record<string, { models: string[]; efforts?: string[] }>> {
+  const message = (await postedOf('harnessLists', from)) as { lists: { state: string; lists?: Record<string, { models: string[]; efforts?: string[] }> } };
+  assert.strictEqual(message.lists.state, 'read', JSON.stringify(message.lists));
+  return message.lists.lists as Record<string, { models: string[]; efforts?: string[] }>;
+}
+
+test("the settings view's model and effort lists are derived from the recipe lines, and an added or removed entry is stored as an overlay in the harness part", async () => {
+  const home = process.env.HOME;
+  const fakeHome = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-home-'));
+  process.env.HOME = fakeHome;
+  try {
+    const files = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-recipes-'));
+    fs.writeFileSync(path.join(files, 'GURITA_USAGE.md'), HARNESS_SHIPPED_TEXT);
+    fs.writeFileSync(path.join(files, 'recipes.md'), `${OWN_TEXT}
+### Codex finish
+\`\`\`
+codex exec "/gurita:finish-mission --mission <path>" -m gpt-5.5;
+\`\`\`
+`);
+    packaged.set('bundled/GURITA_USAGE.md', path.join(files, 'GURITA_USAGE.md'));
+    workspace.settings = { ownRecipesFile: path.join(files, 'recipes.md') };
+    const store = path.join(fakeHome, '.gurita', 'variants.json');
+    fs.mkdirSync(path.dirname(store));
+    fs.writeFileSync(
+      store,
+      JSON.stringify({
+        variants: [{ recipe: 'First run', name: 'Neon', lines: ['agy -p "/gurita:review-mission-requirements --mission <path>" --model "gemini-4-neon" --effort xhigh;'] }],
+        harnesses: { antigravity: { enabled: false } },
+      }),
+    );
+
+    let from = posted.length;
+    send({ type: 'settingsOpened' });
+    assert.deepStrictEqual(await postedLists(from), {
+      claude: { models: ['fable', 'opus', 'sonnet'], efforts: ['xhigh', 'high'] },
+      antigravity: { models: ['gemini-4-argon', 'claude-opus-5-5', 'gemini-4-neon'], efforts: ['medium', 'high', 'xhigh'] },
+      codex: { models: ['gpt-5.5'] },
+    }, "the shipped, own, and stored lines' values, Codex with no effort list");
+
+    inputBoxes.length = 0;
+    typedValues.length = 0;
+    typedValues.push(' haiku ');
+    from = posted.length;
+    send({ type: 'addHarnessValue', harness: 'claude', kind: 'model' });
+    assert.deepStrictEqual((await postedLists(from)).claude.models, ['fable', 'opus', 'sonnet', 'haiku']);
+    assert.strictEqual(inputBoxes.length, 1, 'one input box asks for the entry');
+    const validate = inputBoxes[0].validateInput;
+    assert.ok(validate !== undefined);
+    assert.ok(validate('') !== undefined && validate('  ') !== undefined, 'an empty entry is refused');
+    assert.ok(validate('opus') !== undefined && validate(' fable') !== undefined, 'an entry the list already offers is refused');
+    assert.strictEqual(validate('claude-sonnet-5'), undefined);
+
+    from = posted.length;
+    send({ type: 'removeHarnessValue', harness: 'antigravity', kind: 'model', value: 'claude-opus-5-5' });
+    assert.deepStrictEqual((await postedLists(from)).antigravity.models, ['gemini-4-argon', 'gemini-4-neon']);
+    typedValues.push('low');
+    from = posted.length;
+    send({ type: 'addHarnessValue', harness: 'antigravity', kind: 'effort' });
+    assert.deepStrictEqual((await postedLists(from)).antigravity.efforts, ['medium', 'high', 'xhigh', 'low']);
+    from = posted.length;
+    send({ type: 'removeHarnessValue', harness: 'claude', kind: 'model', value: 'haiku' });
+    assert.deepStrictEqual((await postedLists(from)).claude.models, ['fable', 'opus', 'sonnet']);
+    typedValues.push('gpt-5.5-codex');
+    from = posted.length;
+    send({ type: 'addHarnessValue', harness: 'codex', kind: 'model' });
+    assert.deepStrictEqual(await postedLists(from).then((lists) => lists.codex), { models: ['gpt-5.5', 'gpt-5.5-codex'] });
+
+    const written = JSON.parse(fs.readFileSync(store, 'utf8'));
+    assert.deepStrictEqual(written.harnesses, {
+      antigravity: { enabled: false, removedModels: ['claude-opus-5-5'], addedEfforts: ['low'] },
+      claude: {},
+      codex: { addedModels: ['gpt-5.5-codex'] },
+    }, 'the overlay is kept in the harness part beside the enabled state');
+    assert.strictEqual(written.variants.length, 1, 'the stored variant is kept');
+    assert.ok(!fs.readFileSync(path.join(files, 'recipes.md'), 'utf8').includes('gpt-5.5-codex'), 'the own recipe file is not written');
+
+    const before = fs.readFileSync(store, 'utf8');
+    const boxes = inputBoxes.length;
+    from = posted.length;
+    send({ type: 'addHarnessValue', harness: 'codex', kind: 'effort' });
+    send({ type: 'addHarnessValue', harness: 'agy', kind: 'model' });
+    send({ type: 'addHarnessValue', harness: 'claude', kind: 'models' });
+    send({ type: 'removeHarnessValue', harness: 'claude', kind: 'model', value: 'not-offered' });
+    send({ type: 'removeHarnessValue', harness: 'codex', kind: 'effort', value: 'high' });
+    send({ type: 'addHarnessValue', harness: 'claude', kind: 'effort' });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    assert.strictEqual(inputBoxes.length, boxes + 1, 'only the effort of a harness holding an effort list is asked for');
+    assert.deepStrictEqual(posted.slice(from), [], 'no list the harness holds, no entry offered, or a dismissed box writes and posts nothing');
+    assert.strictEqual(fs.readFileSync(store, 'utf8'), before);
   } finally {
     process.env.HOME = home;
   }

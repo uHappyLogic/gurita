@@ -1440,3 +1440,94 @@ test("after a harness is disabled the page draws the list the extension posts: t
   assert.deepStrictEqual(options(), ['Claude Code'], 'the left-out variant is gone from the dropdown, and the recipe left with none with its button');
   assert.ok(texts(page).includes('Discuss'), 'the fixed-name buttons are drawn as before');
 });
+
+/** Each harness's lists as the extension posts them. */
+function harnessListsMessage(lists: Record<string, { models: string[]; efforts?: string[] }>): unknown {
+  return { type: 'harnessLists', lists: { state: 'read', lists } };
+}
+
+const LISTS = {
+  claude: { models: ['fable', 'opus'], efforts: ['xhigh', 'high'] },
+  antigravity: { models: ['gemini-4-argon'], efforts: [] },
+  codex: { models: ['gpt-5.5'] },
+};
+
+/** Each harness's lists the settings view draws: its key, then each list's kind and its entries, in order. */
+function listRows(page: Page): [string, [string, string[]][]][] {
+  const view = settingsView(page);
+  assert.ok(view !== undefined, 'the settings view is drawn');
+  return view
+    .all()
+    .filter((each) => each.has('harness-lists'))
+    .map((each) => [
+      each.dataset.harness as string,
+      each
+        .all()
+        .filter((row) => row.has('value-list'))
+        .map((row): [string, string[]] => [row.dataset.kind as string, row.all().filter((item) => item.has('value')).map((item) => item.dataset.value as string)]),
+    ]);
+}
+
+/** The control in the settings view whose focus key is `key`. */
+function focused(page: Page, key: string): FakeElement {
+  const found = page.root.querySelector(`[data-focus="${key}"]`);
+  assert.ok(found !== null, `no control ${key}`);
+  return found;
+}
+
+test("the settings view draws each harness's model list and effort list, Codex its model list alone, each entry with a remove control and each list with an add control", () => {
+  const page = loadPage();
+  page.send(live([]));
+  named(page, 'Settings').click();
+  assert.ok(texts(page).includes('Models and efforts'));
+  assert.deepStrictEqual(listRows(page), [], 'nothing is drawn before the extension posts the lists');
+  page.send(harnessListsMessage(LISTS));
+  assert.deepStrictEqual(listRows(page), [
+    ['claude', [['model', ['fable', 'opus']], ['effort', ['xhigh', 'high']]]],
+    ['antigravity', [['model', ['gemini-4-argon']], ['effort', []]]],
+    ['codex', [['model', ['gpt-5.5']]]],
+  ]);
+  assert.ok(texts(page).includes('No entry'), 'an empty list says so');
+  for (const key of ['add-model-claude', 'add-effort-claude', 'add-model-antigravity', 'add-effort-antigravity', 'add-model-codex', 'remove-effort-claude-high']) {
+    focused(page, key);
+  }
+  assert.strictEqual(page.root.querySelector('[data-focus="add-effort-codex"]'), null, 'Codex has no effort list to add to');
+  const view = settingsView(page);
+  assert.ok(view !== undefined);
+  assert.deepStrictEqual(
+    view.all().filter((each) => ['input', 'textarea'].includes(each.tagName)),
+    [],
+    'nothing is typed on the page',
+  );
+});
+
+test('an add or remove control posts its edit and the lists change only when the extension posts them again', () => {
+  const page = loadPage();
+  page.send({ type: 'liveFailure', cause: 'Error: no repository' });
+  named(page, 'Settings').click();
+  page.send(harnessListsMessage(LISTS));
+  const count = page.posted.length;
+  focused(page, 'add-model-codex').click();
+  focused(page, 'add-effort-antigravity').click();
+  focused(page, 'remove-model-claude-opus').click();
+  assert.deepStrictEqual(page.posted.slice(count), [
+    { type: 'addHarnessValue', harness: 'codex', kind: 'model' },
+    { type: 'addHarnessValue', harness: 'antigravity', kind: 'effort' },
+    { type: 'removeHarnessValue', harness: 'claude', kind: 'model', value: 'opus' },
+  ]);
+  assert.deepStrictEqual(listRows(page)[0], ['claude', [['model', ['fable', 'opus']], ['effort', ['xhigh', 'high']]]], 'nothing changes until the extension posts it');
+  page.send(harnessListsMessage({ ...LISTS, claude: { models: ['fable', 'haiku'], efforts: ['xhigh', 'high'] } }));
+  assert.deepStrictEqual(listRows(page)[0], ['claude', [['model', ['fable', 'haiku']], ['effort', ['xhigh', 'high']]]]);
+  page.send({ type: 'live', missions: [mission(ALPHA, 'Alpha')], running: [ALPHA] });
+  assert.strictEqual(focused(page, 'remove-model-claude-haiku').disabled, false, 'a running chain leaves the controls enabled');
+});
+
+test('lists that could not be read are named in the settings view, with no list drawn', () => {
+  const page = loadPage();
+  page.send(live([]));
+  named(page, 'Settings').click();
+  page.send({ type: 'harnessLists', lists: { state: 'failed', cause: 'The variant store /home/x/.gurita/variants.json is not JSON.' } });
+  assert.ok(texts(page).includes('The model and effort lists could not be read.'));
+  assert.ok(texts(page).includes('The variant store /home/x/.gurita/variants.json is not JSON.'));
+  assert.deepStrictEqual(listRows(page), []);
+});

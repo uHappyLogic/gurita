@@ -97,7 +97,12 @@
 // disables an enabled harness or enables a disabled one, posted to the extension, which stores the
 // state and posts it again with the pages, their recipe lists leaving out every variant with a line
 // on a disabled harness. The control is drawn whatever the check reports, while it runs or could
-// not run included, and the state is redrawn only from what the extension posts.
+// not run included, and the state is redrawn only from what the extension posts. Under Models and
+// efforts the view draws each harness's model list and its one effort list, Codex's model list
+// alone, as the extension posts them at every opening: each entry with its remove control, and
+// each list with its add control, each posted to the extension, which asks for an added entry in
+// VS Code's own input box, writes the change, and posts the lists again; the lists are redrawn
+// only from what it posts.
 
 interface VsCodeApi {
   postMessage(message: unknown): void;
@@ -221,6 +226,15 @@ declare function acquireVsCodeApi(): VsCodeApi;
   /** Each harness's enabled state, by its key, or the cause it could not be read. */
   type HarnessSettings = { state: 'read'; enabled: Record<string, boolean> } | { state: 'failed'; cause: string };
 
+  /** One harness's lists: its models, and its efforts where it holds an effort list. */
+  interface HarnessList {
+    models: string[];
+    efforts?: string[];
+  }
+
+  /** Each harness's model and effort lists, by its key, or the cause they could not be read. */
+  type HarnessLists = { state: 'read'; lists: Record<string, HarnessList> } | { state: 'failed'; cause: string };
+
   type PaneMessage =
     | { type: 'live'; missions: Mission[]; running: string[] }
     | { type: 'liveFailure'; cause: string }
@@ -228,7 +242,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
     | { type: 'preview'; mission: string; recipe: string; lines: string[]; names: string[]; result: PreviewRead }
     | { type: 'loopStarted'; mission: string }
     | { type: 'harnessCheck'; check: HarnessCheck }
-    | { type: 'harnessSettings'; settings: HarnessSettings };
+    | { type: 'harnessSettings'; settings: HarnessSettings }
+    | { type: 'harnessLists'; lists: HarnessLists };
 
   /** Where a mission's question view stands: the Short Title shown and its place in the list. */
   interface Position {
@@ -254,6 +269,15 @@ declare function acquireVsCodeApi(): VsCodeApi;
   const CHECKING_LINE = 'Checking the harnesses…';
   const CHECK_FAILURE_LINE = 'The harness check could not be run.';
   const SETTINGS_FAILURE_LINE = 'The harness settings could not be read.';
+  const LISTS_HEADING = 'Models and efforts';
+  const LISTS_FAILURE_LINE = 'The model and effort lists could not be read.';
+  const REMOVE_LABEL = 'Remove';
+  const NO_ENTRY_LINE = 'No entry';
+  /** Each of a harness's two lists, with its kind, its label, and its add control's label. */
+  const LISTS: ['model' | 'effort', string, string][] = [
+    ['model', 'Models', 'Add model'],
+    ['effort', 'Efforts', 'Add effort'],
+  ];
   /** The three harnesses the settings view lists, in its order, each with its key and its name. */
   const HARNESSES: [string, string][] = [
     ['claude', 'Claude Code'],
@@ -316,6 +340,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
   let harnessCheck: HarnessCheck | undefined;
   /** Each harness's enabled state the extension last posted, drawn by the settings view; undefined until one is posted. */
   let harnessSettings: HarnessSettings | undefined;
+  /** Each harness's lists the extension last posted, drawn by the settings view; undefined until they are posted. */
+  let harnessLists: HarnessLists | undefined;
   /** The cause of the failure state, kept while it is drawn so the settings view can swap back to it. */
   let failureCause = '';
   /** The card drawn on the page, so a dependency link can scroll to the card it jumped to. */
@@ -541,6 +567,65 @@ declare function acquireVsCodeApi(): VsCodeApi;
   }
 
   /**
+   * The settings view's part of model and effort lists: the cause they could not be read, or for
+   * each harness its model list and, but for a harness holding none, its effort list, each entry
+   * with its remove control and each list with its add control.
+   */
+  function drawLists(): HTMLElement {
+    const part = element('div', undefined, 'harness-values');
+    part.append(element('h4', LISTS_HEADING));
+    const read = harnessLists;
+    if (read === undefined) {
+      return part;
+    }
+    if (read.state === 'failed') {
+      const box = element('div', undefined, 'notice');
+      box.setAttribute('role', 'alert');
+      box.append(element('p', LISTS_FAILURE_LINE), element('pre', read.cause));
+      part.append(box);
+      return part;
+    }
+    for (const [key, name] of HARNESSES) {
+      const lists = read.lists[key];
+      if (lists === undefined) {
+        continue;
+      }
+      const harness = element('div', undefined, 'harness-lists');
+      harness.dataset.harness = key;
+      harness.append(element('h5', name));
+      for (const [kind, label, addLabel] of LISTS) {
+        const entries = kind === 'model' ? lists.models : lists.efforts;
+        if (entries === undefined) {
+          continue;
+        }
+        const row = element('div', undefined, 'value-list');
+        row.dataset.kind = kind;
+        row.append(element('span', label, 'value-label'));
+        const list = element('ul');
+        for (const value of entries) {
+          const item = element('li', undefined, 'value');
+          item.dataset.value = value;
+          const remove = button(REMOVE_LABEL, 'action', () => vscode.postMessage({ type: 'removeHarnessValue', harness: key, kind, value }));
+          remove.title = `Remove ${value} from the ${name} ${kind} list`;
+          remove.dataset.focus = `remove-${kind}-${key}-${value}`;
+          item.append(element('span', value, 'value-name'), remove);
+          list.append(item);
+        }
+        if (entries.length === 0) {
+          list.append(element('li', NO_ENTRY_LINE, 'value-empty'));
+        }
+        const add = button(addLabel, 'action', () => vscode.postMessage({ type: 'addHarnessValue', harness: key, kind }));
+        add.title = `Type a ${kind} to add to the ${name} ${kind} list`;
+        add.dataset.focus = `add-${kind}-${key}`;
+        row.append(list, add);
+        harness.append(row);
+      }
+      part.append(harness);
+    }
+    return part;
+  }
+
+  /**
    * The settings view, belonging to no mission: its heading, the control that swaps back to the
    * mission page or failure state shown before, and the harness check. It holds buttons and
    * dropdowns only.
@@ -555,7 +640,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
     close.title = 'Go back to the page shown before';
     close.dataset.focus = 'close-settings';
     controls.append(close);
-    view.append(controls, drawHarnesses());
+    view.append(controls, drawHarnesses(), drawLists());
     return view;
   }
 
@@ -1154,11 +1239,13 @@ declare function acquireVsCodeApi(): VsCodeApi;
     } else if (message.type === 'loopStarted') {
       previews.delete(message.mission);
       draw();
-    } else if (message.type === 'harnessCheck' || message.type === 'harnessSettings') {
+    } else if (message.type === 'harnessCheck' || message.type === 'harnessSettings' || message.type === 'harnessLists') {
       if (message.type === 'harnessCheck') {
         harnessCheck = message.check;
-      } else {
+      } else if (message.type === 'harnessSettings') {
         harnessSettings = message.settings;
+      } else {
+        harnessLists = message.lists;
       }
       if (settingsShown) {
         if (drawn === 'failure') {
