@@ -647,6 +647,31 @@
   </open-question>
   <open-question id="Folder-read plugin version">
     <question>The harness check compares the installed Gurita copy&apos;s version with the plugin version the extension was packaged from. A Claude Code plugin entry read from a local folder carries two values, `version` (1.9.0 on the maintainer&apos;s machine) and, beside `readFromFolder`, `folderVersion` (2.0.0 there). Which of the two does the check take as that copy&apos;s version?</question>
+    <alternative id="Folder version first">
+      The check takes `folderVersion` as the copy&apos;s version whenever the entry carries `readFromFolder`, and `version` for every entry without it. On the maintainer&apos;s machine today the Claude Code copy then reads 2.0.0, equal to `VERSION` and to `hosts/claude/.claude-plugin/plugin.json`.
+      <advantage>It reports the version of the files Claude Code actually runs. Both `gurita@gurita` entries point `readFromFolder` at this repository&apos;s `hosts/claude`, and this session&apos;s plugin root resolved to that folder, not to the 1.9.0 cache at `installPath`. A maintainer working from the checkout therefore sees a pass when the folder matches the packaged version.</advantage>
+      <drawback>It relies on an undocumented field of `claude plugin list --json`, and it hides the stale 1.9.0 install record, which is what a reinstall or a switch away from the folder would fall back to. The check passes on a machine where the cached copy is two releases old.</drawback>
+    </alternative>
+    <alternative id="Recorded version only">
+      The check always takes the entry&apos;s `version` field and ignores `readFromFolder` and `folderVersion`, so a folder-read entry is compared on the same field as any installed one. On the maintainer&apos;s machine it reads 1.9.0 and fails against 2.0.0.
+      <advantage>It applies one rule to every entry and reads the field that every plugin entry carries. The extension does not have to understand folder-read installs, which ordinary users installing from the distribution repositories never have.</advantage>
+      <drawback>For a folder-read copy it compares the wrong thing. The 1.9.0 it reads is the cache recorded at install on 2026-11-18, not the 2.0.0 files Claude Code loads from `hosts/claude`. So the maintainer, the one person who has this kind of entry, gets a failed check that no reinstall from the folder clears.</drawback>
+    </alternative>
+    <alternative id="Both must match">
+      For a folder-read entry the check passes only when both `version` and `folderVersion` equal the packaged version, and it fails naming whichever differs. An entry without `readFromFolder` is checked on `version` alone.
+      <advantage>It shows every mismatch between the loaded folder, the cached install record, and the packaged extension. Neither a stale folder nor a stale cache passes unnoticed.</advantage>
+      <drawback>On the maintainer&apos;s machine it fails today because the 1.9.0 cache entry is out of date, even though the copy that runs matches. Its value then depends on what the sibling question of a failed check&apos;s consequence decides: if a failure marks or blocks variants, a harmless stale cache would mark or block the maintainer&apos;s working harness.</drawback>
+    </alternative>
+    <alternative id="Manifest at loaded path">
+      The check uses neither field directly. It takes the directory the entry is loaded from (`readFromFolder` when present, `installPath` otherwise) and reads `version` from that directory&apos;s `.claude-plugin/plugin.json`, the manifest the build renders from `VERSION`.
+      <advantage>Its source of truth is the plugin&apos;s own manifest, the same file the extension&apos;s packaged version comes from in the tree. The result stays correct if `folderVersion` is renamed, dropped, or goes stale between `plugin list` runs.</advantage>
+      <drawback>It adds a file read and a JSON parse outside the CLI&apos;s output, at a path the extension has to trust from that output. It still depends on the undocumented `readFromFolder` field to choose the directory. And it gives the same 2.0.0 that `folderVersion` already prints, so the extra work buys only robustness.</drawback>
+    </alternative>
+    <alternative id="No folder comparison">
+      For an entry carrying `readFromFolder`, the check compares no version at all. It reports the copy as read from a local folder, shows the folder&apos;s path with both printed values, and returns neither a pass nor a fail on version. An entry without `readFromFolder` is compared on `version`.
+      <advantage>It treats a folder-read copy as what it is: a development checkout whose version can change with every edit and rebuild, and which only the maintainer has. That spares the check from guessing which of two undocumented values is authoritative.</advantage>
+      <drawback>The maintainer&apos;s own setup, which is where the extension is developed and tried, never gets a version verdict. A folder left on an old commit then passes silently against a newer packaged extension, and the goal&apos;s version check is only partly met.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Failed check consequence">
     <question>The settings view checks each harness: its CLI found, its Gurita plugin installed, and that copy&apos;s version equal to the one the extension was packaged from. Is a failed check shown in the settings view only, or does it also act elsewhere, marking or blocking that harness&apos;s variants on the mission pages?</question>
