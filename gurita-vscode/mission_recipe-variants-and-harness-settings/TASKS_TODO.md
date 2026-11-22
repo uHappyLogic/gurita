@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Harness Check Script Beside the Runner
-
-Add a new stdlib Python script beside `gurita-vscode/runner.py` that runs the harness check for Claude Code, Antigravity, and Codex: it imports the runner as a module, as `runner_tests/conftest.py` already does, calls its `session_shell` for the shell, runs each harness's CLI lookup and its listing (`claude plugin list --json`, `agy plugin list --json`, `codex plugin list -m gurita --json`) in that one session, and prints one result saying for each harness whether its CLI was found and which version its installed Gurita copy reads, or that none is installed, `runner.py` itself unchanged. For Claude Code the installed copy is chosen among the `gurita@gurita` entries that apply to the project root the script is given (the `user`-scope entry and every `project`- or `local`-scope entry whose `projectPath` equals that root, other projects' entries and `synced` entries ignored, `local` winning over `project` over `user`, a disabled winning entry meaning not installed), and its version is `folderVersion` whenever the entry carries `readFromFolder` and `version` for every entry without it. Verified by pytest tests under `gurita-vscode/runner_tests/` over canned listings, starting no shell session and passing in both pytest runs, and by one run of the script on this machine.
-
----
-
 ## Harness Check in the Settings View
 
 Show the harness check in the settings view: the extension runs the check script through `execFile` the first time the view is opened after the panel is created, keeps the result for the panel's lifetime and shows it on every later opening without running again, and re-runs it only from a check-again control in the view, no pane re-read or Refresh running it. Beside each of Claude Code, Antigravity, and Codex the view names which of the three checks failed: CLI not found, Gurita plugin not installed, or installed version differing from the packaged one, the version `bundle.js` recorded. A failed check is shown in the settings view alone, the mission pages drawing every variant, the seven fixed-name buttons, and the looped run exactly as they would with every check passing; verified by pane and page tests with the script's print stubbed, with `gurita-vscode/README.md` describing the check.
