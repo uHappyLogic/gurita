@@ -117,7 +117,12 @@
 // dropdown its whole effort list, whatever the line's model, as the extension last posted them,
 // each standing on the value the line carries, offered too when the list lacks it. A pick posts the
 // line, the kind, and the value to the extension, which replaces the value the line carries and
-// posts the variants again; the line is redrawn only from what it posts.
+// posts the variants again; the line is redrawn only from what it posts. Under Single-task lines
+// the view draws every named single-task line the extension posts, shipped and own alike: each
+// with where it comes from, its Duplicate, Rename, and Delete controls, a stored copy also its
+// Reset control, and its one line beneath with the line editor it gets, and each line a hiding
+// record hides with its Reset control alone, every control posted to the extension and the lines
+// redrawn only from what it posts.
 
 interface VsCodeApi {
   postMessage(message: unknown): void;
@@ -257,6 +262,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
   interface ReadVariantRef {
     name: string;
     origin: 'shipped' | 'own';
+    /** The recipe it belongs to, named where a renamed single-task line copies it under another name. */
+    recipe?: string;
   }
 
   /** One variant as the settings view lists it. */
@@ -291,6 +298,26 @@ declare function acquireVsCodeApi(): VsCodeApi;
   /** The recipes and variants the settings view edits, or the cause they could not be read. */
   type VariantsRead = { state: 'read'; recipes: SettingsRecipe[] } | { state: 'failed'; cause: string };
 
+  /** One named single-task line as the settings view lists it. */
+  interface SettingsLine {
+    /** The line's name, the one the looped run, the rule file, and the override list use. */
+    name: string;
+    group: RecipeGroup;
+    /** The variant of its recipe the line is. */
+    variant: { name: string; origin: VariantOrigin; copies?: ReadVariantRef };
+    line: string;
+    editor: LineEditor | null;
+    /** Whether the looped run takes it for the name. */
+    isDefault: boolean;
+    /** The shipped or own line a stored copy stands in for, which its reset shows again. */
+    reset?: { recipe: string; original: ReadVariantRef };
+  }
+
+  /** The named single-task lines the settings view edits, the deleted shipped and own ones apart, or the cause they could not be read. */
+  type LinesRead =
+    | { state: 'read'; lines: SettingsLine[]; hidden: { name: string; original: ReadVariantRef }[] }
+    | { state: 'failed'; cause: string };
+
   type PaneMessage =
     | { type: 'live'; missions: Mission[]; running: string[] }
     | { type: 'liveFailure'; cause: string }
@@ -300,7 +327,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
     | { type: 'harnessCheck'; check: HarnessCheck }
     | { type: 'harnessSettings'; settings: HarnessSettings }
     | { type: 'harnessLists'; lists: HarnessLists }
-    | { type: 'variants'; variants: VariantsRead };
+    | { type: 'variants'; variants: VariantsRead }
+    | { type: 'singleTaskLines'; lines: LinesRead };
 
   /** Where a mission's question view stands: the Short Title shown and its place in the list. */
   interface Position {
@@ -340,6 +368,9 @@ declare function acquireVsCodeApi(): VsCodeApi;
   const DEFAULT_MARK = 'Default';
   const DELETED_MARK = 'Deleted';
   const FIXED_NOTE = 'Run by a button outside the recipe list, which runs this default.';
+  const LINES_HEADING = 'Single-task lines';
+  const LINES_FAILURE_LINE = 'The single-task lines could not be read.';
+  const NOT_RUN_MARK = 'Not run';
   /** Each of a harness's two lists, with its kind, its label, and its add control's label. */
   const LISTS: ['model' | 'effort', string, string][] = [
     ['model', 'Models', 'Add model'],
@@ -411,6 +442,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
   let harnessLists: HarnessLists | undefined;
   /** The recipes and variants the extension last posted, drawn by the settings view; undefined until they are posted. */
   let variantsRead: VariantsRead | undefined;
+  /** The named single-task lines the extension last posted, drawn by the settings view; undefined until they are posted. */
+  let linesRead: LinesRead | undefined;
   /** The cause of the failure state, kept while it is drawn so the settings view can swap back to it. */
   let failureCause = '';
   /** The card drawn on the page, so a dependency link can scroll to the card it jumped to. */
@@ -703,11 +736,18 @@ declare function acquireVsCodeApi(): VsCodeApi;
   }
 
   /** The variant a control's message names: its name, where it comes from, and, for a stored copy, the variant it stands in for. */
-  function variantTarget(variant: SettingsVariant): { name: string; origin: VariantOrigin; copies?: ReadVariantRef } {
+  function variantTarget(variant: { name: string; origin: VariantOrigin; copies?: ReadVariantRef }): {
+    name: string;
+    origin: VariantOrigin;
+    copies?: ReadVariantRef;
+  } {
+    const copies = variant.copies;
     return {
       name: variant.name,
       origin: variant.origin,
-      ...(variant.copies === undefined ? {} : { copies: { name: variant.copies.name, origin: variant.copies.origin } }),
+      ...(copies === undefined
+        ? {}
+        : { copies: { name: copies.name, origin: copies.origin, ...(copies.recipe === undefined ? {} : { recipe: copies.recipe }) } }),
     };
   }
 
@@ -864,6 +904,97 @@ declare function acquireVsCodeApi(): VsCodeApi;
     return part;
   }
 
+  /** Where a single-task line comes from, as the settings view names it, a stored copy naming the line it stands in for. */
+  function lineOriginLabel(line: SettingsLine): string {
+    const copies = line.variant.copies;
+    if (line.variant.origin === 'stored' && copies !== undefined && line.reset !== undefined) {
+      return `stored copy of ${copies.origin === 'own' ? 'your' : 'the shipped'} line ${line.reset.recipe}`;
+    }
+    return originLabel(line.variant.origin, copies);
+  }
+
+  /**
+   * The settings view's part of single-task line edits: the cause the lines could not be read, or
+   * each named single-task line with its name, where it comes from, its Duplicate, Rename, and
+   * Delete controls, a stored copy's Reset control too, and beneath it its one line with the line
+   * editor it gets; after them each shipped or own line a hiding record hides, with its Reset
+   * control alone. Every control posts its edit; the list is redrawn only from what the extension
+   * posts.
+   */
+  function drawSingleTaskLines(): HTMLElement {
+    const part = element('div', undefined, 'line-edits');
+    part.append(element('h4', LINES_HEADING));
+    const read = linesRead;
+    if (read === undefined) {
+      return part;
+    }
+    if (read.state === 'failed') {
+      const box = element('div', undefined, 'notice');
+      box.setAttribute('role', 'alert');
+      box.append(element('p', LINES_FAILURE_LINE), element('pre', read.cause));
+      part.append(box);
+      return part;
+    }
+    const list = element('ul', undefined, 'variant-list');
+    read.lines.forEach((line, lineIndex) => {
+      const item = element('li', undefined, 'variant single-task-line');
+      item.dataset.line = line.name;
+      item.dataset.variant = line.variant.name;
+      item.dataset.origin = line.variant.origin;
+      const name = element('span', line.variant.name === line.name ? line.name : `${line.name} — ${line.variant.name}`, 'variant-name');
+      name.title = line.line;
+      item.append(name, element('span', lineOriginLabel(line), 'variant-origin'));
+      if (!line.isDefault) {
+        const mark = element('span', NOT_RUN_MARK, 'variant-default');
+        mark.title = `The looped run takes another variant of ${line.name}`;
+        item.append(mark);
+      }
+      const actions = element('span', undefined, 'variant-actions');
+      const control = (label: string, key: string, hover: string, message: Record<string, unknown>): void => {
+        const each = button(label, 'action', () => vscode.postMessage(message));
+        each.title = hover;
+        each.dataset.focus = `line-${key}-${lineIndex}`;
+        actions.append(each);
+      };
+      const named = variantTarget(line.variant);
+      control(DUPLICATE_LABEL, 'duplicate', `Type a name and add a copy of the line ${line.name}`, { type: 'duplicateLine', line: line.name, variant: named });
+      control(RENAME_LABEL, 'rename', `Type a new name for the line ${line.name}`, { type: 'renameLine', line: line.name, variant: named });
+      control(DELETE_LABEL, 'delete', `Take the line ${line.name} out of the named single-task lines`, { type: 'deleteLine', line: line.name, variant: named });
+      if (line.reset !== undefined) {
+        control(RESET_LABEL, 'reset', `Remove this stored copy and show ${line.reset.recipe} again as its file holds it`, {
+          type: 'resetLine',
+          line: line.reset.recipe,
+          original: { name: line.reset.original.name, origin: line.reset.original.origin },
+        });
+      }
+      const variant: SettingsVariant = { ...line.variant, lines: [line.line], editors: [line.editor], isDefault: line.isDefault };
+      item.append(actions, drawLines(line.name, variant, `single-${lineIndex}`));
+      list.append(item);
+    });
+    read.hidden.forEach((hidden, hiddenIndex) => {
+      const item = element('li', undefined, 'variant deleted');
+      item.dataset.line = hidden.name;
+      item.dataset.variant = hidden.original.name;
+      item.dataset.origin = hidden.original.origin;
+      item.append(
+        element('span', hidden.original.name === hidden.name ? hidden.name : `${hidden.name} — ${hidden.original.name}`, 'variant-name'),
+        element('span', originLabel(hidden.original.origin), 'variant-origin'),
+        element('span', DELETED_MARK, 'variant-deleted'),
+      );
+      const actions = element('span', undefined, 'variant-actions');
+      const reset = button(RESET_LABEL, 'action', () =>
+        vscode.postMessage({ type: 'resetLine', line: hidden.name, original: { name: hidden.original.name, origin: hidden.original.origin } }),
+      );
+      reset.title = `Show the line ${hidden.name} again as its file holds it`;
+      reset.dataset.focus = `line-reset-hidden-${hiddenIndex}`;
+      actions.append(reset);
+      item.append(actions);
+      list.append(item);
+    });
+    part.append(list);
+    return part;
+  }
+
   /**
    * The settings view, belonging to no mission: its heading, the control that swaps back to the
    * mission page or failure state shown before, and the harness check. It holds buttons and
@@ -879,7 +1010,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
     close.title = 'Go back to the page shown before';
     close.dataset.focus = 'close-settings';
     controls.append(close);
-    view.append(controls, drawHarnesses(), drawLists(), drawVariants());
+    view.append(controls, drawHarnesses(), drawLists(), drawVariants(), drawSingleTaskLines());
     return view;
   }
 
@@ -1482,7 +1613,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
       message.type === 'harnessCheck' ||
       message.type === 'harnessSettings' ||
       message.type === 'harnessLists' ||
-      message.type === 'variants'
+      message.type === 'variants' ||
+      message.type === 'singleTaskLines'
     ) {
       if (message.type === 'harnessCheck') {
         harnessCheck = message.check;
@@ -1490,8 +1622,10 @@ declare function acquireVsCodeApi(): VsCodeApi;
         harnessSettings = message.settings;
       } else if (message.type === 'harnessLists') {
         harnessLists = message.lists;
-      } else {
+      } else if (message.type === 'variants') {
         variantsRead = message.variants;
+      } else {
+        linesRead = message.lines;
       }
       if (settingsShown) {
         if (drawn === 'failure') {

@@ -1090,3 +1090,180 @@ test("a pick in a line's dropdown replaces the value the line carries through th
     process.env.HOME = home;
   }
 });
+
+/** A mission no earlier test holds a run for. */
+const LAMBDA = 'pkg/mission_lambda/';
+
+/** The own file of the line-edit test: a named single-task line of its own beside the recipes of the recipe-list test. */
+const LINE_OWN_TEXT = `${OWN_TEXT}
+### My own line
+\`\`\`
+claude -p "/gurita:complete-task --mission <path> <Task Title>" --model "sonnet" --effort medium;
+\`\`\`
+`;
+
+interface ListedLine {
+  name: string;
+  variant: { name: string; origin: string; copies?: { name: string; origin: string; recipe?: string } };
+  line: string;
+  editor: { harness: string; model: string; effort?: string } | null;
+  reset?: { recipe: string; original: { name: string; origin: string } };
+}
+
+/** Waits until the extension has posted the single-task lines beyond the first `from`, and returns them as read. */
+async function postedLines(from: number): Promise<{ lines: ListedLine[]; hidden: { name: string; original: { name: string; origin: string } }[] }> {
+  const message = (await postedOf('singleTaskLines', from)) as { lines: { state: string; lines?: ListedLine[]; hidden?: [] } };
+  assert.strictEqual(message.lines.state, 'read', JSON.stringify(message.lines));
+  return { lines: message.lines.lines as ListedLine[], hidden: message.lines.hidden ?? [] };
+}
+
+test("the settings view lists the named single-task lines and carries out each line edit through the store, the looped run's names following", async () => {
+  const home = process.env.HOME;
+  const fakeHome = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-home-'));
+  process.env.HOME = fakeHome;
+  try {
+    const root = project(LAMBDA);
+    const files = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-recipes-'));
+    fs.writeFileSync(path.join(files, 'GURITA_USAGE.md'), HARNESS_SHIPPED_TEXT);
+    fs.writeFileSync(path.join(files, 'recipes.md'), LINE_OWN_TEXT);
+    packaged.set('bundled/missions.py', path.join(__dirname, '..', '..', '..', 'core', 'tools', 'missions.py'));
+    packaged.set('bundled/GURITA_USAGE.md', path.join(files, 'GURITA_USAGE.md'));
+    packaged.set('runner.py', path.join(__dirname, '..', '..', 'runner.py'));
+    workspace.folders = [{ uri: { fsPath: root } }];
+    workspace.settings = { ownRecipesFile: path.join(files, 'recipes.md') };
+    workspaceState.clear();
+    inputBoxes.length = 0;
+    typedValues.length = 0;
+    const store = path.join(fakeHome, '.gurita', 'variants.json');
+    const stored = () => JSON.parse(fs.readFileSync(store, 'utf8'));
+    const CC = 'Single task (Claude Code)';
+    const AGY = 'Single task (Antigravity)';
+    const ccLine = 'claude -p "/gurita:complete-task --mission <path> <Task Title>" --model "opus" --effort high;';
+    const agyLine = 'agy -p "/gurita:complete-task --mission <path> <Task Title>" --model "claude-opus-5-5" --effort high;';
+    /** Each listed line by its name, its origin, and the line it holds. */
+    const rows = (listed: { lines: ListedLine[] }) => listed.lines.map((each) => [each.name, each.variant.origin, each.line]);
+    /** Sends `message` and returns the line list posted after it, checking the variant list and the pages are posted again too. */
+    const edit = async (message: unknown) => {
+      const from = posted.length;
+      send(message);
+      const listed = await postedLines(from);
+      await postedVariants(from);
+      await postedOf('live', from);
+      return listed;
+    };
+    /** The looped run's preview on LAMBDA's page: the names its override list offers. */
+    const previewNames = async () => {
+      const from = posted.length;
+      send({ type: 'previewLoop', mission: LAMBDA, recipe: 'Execute tasks one at a time', variant: 'Execute tasks one at a time' });
+      const preview = await postedOf('preview', from);
+      assert.strictEqual((preview.result as { state: string }).state, 'read');
+      return preview.names;
+    };
+
+    await entryAfter({ type: 'ready' }, LAMBDA, 'First run');
+    let from = posted.length;
+    send({ type: 'settingsOpened' });
+    let listed = await postedLines(from);
+    assert.deepStrictEqual(rows(listed), [
+      [CC, 'shipped', ccLine],
+      [AGY, 'shipped', agyLine],
+      ['My own line', 'own', 'claude -p "/gurita:complete-task --mission <path> <Task Title>" --model "sonnet" --effort medium;'],
+    ], 'the shipped lines and the own one, each with its line');
+    assert.deepStrictEqual(listed.lines.map((each) => each.editor), [
+      { harness: 'claude', model: 'opus', effort: 'high' },
+      { harness: 'antigravity', model: 'claude-opus-5-5', effort: 'high' },
+      { harness: 'claude', model: 'sonnet', effort: 'medium' },
+    ]);
+    assert.ok(!fs.existsSync(store), 'opening the view writes nothing');
+
+    // Duplicate: the name is asked for in one input box, which refuses an empty name and one a recipe or line carries.
+    typedValues.push(' Single task (Sonnet) ');
+    listed = await edit({ type: 'duplicateLine', line: CC, variant: { name: CC, origin: 'shipped' } });
+    let box = inputBoxes[0];
+    assert.strictEqual(inputBoxes.length, 1);
+    assert.strictEqual(box.value, undefined, "a duplicate's box opens empty");
+    assert.ok(box.validateInput !== undefined);
+    assert.ok(box.validateInput(' ') !== undefined && box.validateInput(AGY) !== undefined && box.validateInput('First run') !== undefined);
+    assert.strictEqual(box.validateInput('Single task (Sonnet)'), undefined);
+    assert.deepStrictEqual(stored().variants, [{ recipe: 'Single task (Sonnet)', name: 'Single task (Sonnet)', lines: [ccLine] }]);
+    assert.deepStrictEqual(rows(listed).map((each) => each[0]), [CC, AGY, 'My own line', 'Single task (Sonnet)']);
+    assert.deepStrictEqual(await previewNames(), [CC, AGY, 'My own line', 'Single task (Sonnet)'], "the duplicate reaches the override list under its name");
+
+    // Rename: the box opens on the current name; the shipped line gets a stored copy of the new name in its place.
+    typedValues.push('Agy line');
+    listed = await edit({ type: 'renameLine', line: AGY, variant: { name: AGY, origin: 'shipped' } });
+    box = inputBoxes[1];
+    assert.strictEqual(box.value, AGY, 'a rename opens with the current name filled in');
+    assert.ok(box.validateInput !== undefined);
+    assert.strictEqual(box.validateInput(AGY), undefined, 'the current name is no other line');
+    assert.ok(box.validateInput(CC) !== undefined && box.validateInput('') !== undefined);
+    assert.deepStrictEqual(rows(listed), [
+      [CC, 'shipped', ccLine],
+      ['Agy line', 'stored', agyLine],
+      ['My own line', 'own', listed.lines[2].line],
+      ['Single task (Sonnet)', 'stored', ccLine],
+    ]);
+    const renamed = listed.lines[1];
+    assert.deepStrictEqual(renamed.reset, { recipe: AGY, original: { name: AGY, origin: 'shipped' } });
+    assert.deepStrictEqual(await previewNames(), [CC, 'Agy line', 'My own line', 'Single task (Sonnet)'], 'the renamed line keeps its place');
+
+    // A model or effort pick on the renamed line changes the stored copy in place.
+    listed = await edit({ type: 'replaceLineValue', recipe: 'Agy line', variant: renamed.variant, line: 0, kind: 'effort', value: 'medium' });
+    assert.strictEqual(listed.lines[1].line, agyLine.replace('--effort high', '--effort medium'));
+    assert.strictEqual(stored().variants.length, 2);
+    listed = await edit({ type: 'replaceLineValue', recipe: CC, variant: { name: CC, origin: 'shipped' }, line: 0, kind: 'model', value: 'fable' });
+    assert.deepStrictEqual(rows(listed)[0], [CC, 'stored', ccLine.replace('"opus"', '"fable"')], 'a shipped line gets a stored copy under its name');
+
+    // Delete: a stored copy of a shipped line leaves the store and hides it, listed with its reset.
+    listed = await edit({ type: 'deleteLine', line: CC, variant: listed.lines[0].variant });
+    assert.deepStrictEqual(rows(listed).map((each) => each[0]), ['Agy line', 'My own line', 'Single task (Sonnet)']);
+    assert.deepStrictEqual(listed.hidden, [{ name: CC, original: { name: CC, origin: 'shipped' } }]);
+    assert.deepStrictEqual(await previewNames(), ['Agy line', 'My own line', 'Single task (Sonnet)']);
+    listed = await edit({ type: 'deleteLine', line: 'My own line', variant: { name: 'My own line', origin: 'own' } });
+    assert.deepStrictEqual(stored().hidden, [{ recipe: CC, name: CC, origin: 'shipped' }, { recipe: 'My own line', name: 'My own line', origin: 'own' }]);
+
+    // Reset: the deleted and renamed lines show again as their files hold them.
+    await edit({ type: 'resetLine', line: CC, original: { name: CC, origin: 'shipped' } });
+    await edit({ type: 'resetLine', line: 'My own line', original: { name: 'My own line', origin: 'own' } });
+    listed = await edit({ type: 'resetLine', line: AGY, original: { name: AGY, origin: 'shipped' } });
+    assert.deepStrictEqual(rows(listed).map((each) => [each[0], each[1]]), [
+      [CC, 'shipped'],
+      [AGY, 'shipped'],
+      ['My own line', 'own'],
+      ['Single task (Sonnet)', 'stored'],
+    ]);
+    assert.deepStrictEqual(listed.hidden, []);
+
+    // The looped run passes every named line, the stored one included, as one --line.
+    assert.deepStrictEqual(await previewNames(), [CC, AGY, 'My own line', 'Single task (Sonnet)']);
+    const count = created.length;
+    send({ type: 'startLoop', mission: LAMBDA, recipe: 'Execute tasks one at a time', overrides: {} });
+    assert.strictEqual(created.length, count + 1);
+    const args = created[created.length - 1].args;
+    assert.deepStrictEqual(
+      args.flatMap((arg, index) => (arg === '--line' ? [`${args[index + 1]}=${args[index + 2]}`] : [])),
+      [`${CC}=${ccLine}`, `${AGY}=${agyLine}`, `My own line=${listed.lines[2].line}`, `Single task (Sonnet)=${ccLine}`],
+    );
+
+    // A dismissed box, a line the list does not hold, a chain named as a line, or a message not in form writes and posts nothing.
+    const before = fs.readFileSync(store, 'utf8');
+    const boxes = inputBoxes.length;
+    from = posted.length;
+    send({ type: 'renameLine', line: CC, variant: { name: CC, origin: 'shipped' } });
+    send({ type: 'duplicateLine', line: 'No such line', variant: { name: 'No such line', origin: 'shipped' } });
+    send({ type: 'deleteLine', line: 'First run', variant: { name: 'Claude Code', origin: 'shipped' } });
+    send({ type: 'deleteLine', line: CC });
+    send({ type: 'resetLine', line: CC, original: { name: CC, origin: 'shipped' } });
+    send({ type: 'resetLine', line: CC, original: { name: CC, origin: 'elsewhere' } });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    assert.strictEqual(inputBoxes.length, boxes + 1, 'only the rename of a listed line asks for a name');
+    assert.deepStrictEqual(posted.slice(from), []);
+    assert.strictEqual(fs.readFileSync(store, 'utf8'), before);
+
+    assert.strictEqual(fs.readFileSync(path.join(files, 'recipes.md'), 'utf8'), LINE_OWN_TEXT, 'the own recipe file is never written');
+    assert.strictEqual(fs.readFileSync(path.join(files, 'GURITA_USAGE.md'), 'utf8'), HARNESS_SHIPPED_TEXT, 'the shipped file is never written');
+    assert.strictEqual(execFileSync('git', ['status', '--porcelain', '--ignored'], { cwd: root, encoding: 'utf8' }), '', "nothing is written into the project's tree");
+  } finally {
+    process.env.HOME = home;
+  }
+});

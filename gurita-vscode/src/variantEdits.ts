@@ -21,12 +21,16 @@
 // variants, its default marked, and the variants a hiding record hides, and each variant's lines
 // with the line editor each one gets (`lineEditor`): only a `claude` or `agy` line carrying both
 // `--model` and `--effort` gets model and effort controls, and a `codex` line carrying `-m` its
-// model control alone, every other line shown as its text, read-only. This module imports nothing
-// from `vscode`.
+// model control alone, every other line shown as its text, read-only. The named single-task lines
+// are listed apart, by `settingsLines`, and edited as variants are, a line being named by its
+// recipe: a duplicate is a stored line of a new name, a rename of a shipped or own line writes a
+// stored copy of the new name standing in for it in its place, a delete hides it, a reset shows it
+// again, and a new name may be no name a recipe or line carries, since the looped run, the rule
+// file, and the override list name a line by it alone. This module imports nothing from `vscode`.
 
 import { HARNESSES, Harness as CheckedHarness } from './harnessCheck';
 import { LineValues, readLine, replaceEffort, replaceModel } from './lineValues';
-import { Recipe, Variant, defaultVariant, overlayVariantStore, pickedVariant, sameCopies, variantOrigin } from './recipes';
+import { Recipe, Variant, copiedRecipe, defaultVariant, overlayVariantStore, pickedVariant, sameCopies, variantOrigin } from './recipes';
 import { ReadVariantRef, StoredVariant, VariantOrigin, VariantRef, VariantStore, readVariantStore, writeVariantStore } from './variantStore';
 
 /** A variant as the recipe list shows it: its name, where it comes from, and, for a stored copy, the variant it stands in for. */
@@ -60,12 +64,12 @@ export function variantTarget(variant: Variant): VariantTarget {
 export function resettableVariants(store: VariantStore, recipe: string): ReadVariantRef[] {
   const found: ReadVariantRef[] = [];
   const add = (ref: ReadVariantRef): void => {
-    if (!found.some((each) => sameCopies(each, ref))) {
+    if (!found.some((each) => each.name === ref.name && each.origin === ref.origin)) {
       found.push({ name: ref.name, origin: ref.origin });
     }
   };
   for (const each of store.variants) {
-    if (each.recipe === recipe && each.copies !== undefined) {
+    if (each.recipe === recipe && each.copies !== undefined && copiedRecipe(each) === undefined) {
       add(each.copies);
     }
   }
@@ -275,7 +279,8 @@ export function renameVariant(storeFile: string, base: readonly Recipe[], recipe
 
 /**
  * Deletes the variant `target`: a stored variant leaves the store, a stored copy also hiding the
- * variant it stood in for, and a shipped or own variant gets a record hiding it. Deleting the
+ * variant it stood in for, in the recipe it copies from, and a shipped or own variant gets a record
+ * hiding it. Deleting the
  * picked default drops the pick, the recipe falling back to its first listed variant.
  */
 export function deleteVariant(storeFile: string, base: readonly Recipe[], recipeName: string, target: VariantTarget): void {
@@ -288,8 +293,9 @@ export function deleteVariant(storeFile: string, base: readonly Recipe[], recipe
   const hide: ReadVariantRef | undefined = variant.stored
     ? variant.copies
     : { name: variant.name, origin: variantOrigin(variant) as 'shipped' | 'own' };
-  if (hide !== undefined && !store.hidden.some((each) => each.recipe === recipe.name && sameCopies(each, hide))) {
-    store.hidden.push({ recipe: recipe.name, name: hide.name, origin: hide.origin });
+  const from = hide?.recipe ?? recipe.name;
+  if (hide !== undefined && !store.hidden.some((each) => each.recipe === from && each.name === hide.name && each.origin === hide.origin)) {
+    store.hidden.push({ recipe: from, name: hide.name, origin: hide.origin });
   }
   if (picked) {
     setPick(store, recipe.name, undefined);
@@ -355,9 +361,211 @@ export function pickDefault(storeFile: string, base: readonly Recipe[], recipeNa
 export function resetVariant(storeFile: string, recipeName: string, original: ReadVariantRef): void {
   const store = readVariantStore(storeFile);
   const variants = store.variants.filter((each) => !(each.recipe === recipeName && sameCopies(each.copies, original)));
-  const hidden = store.hidden.filter((each) => !(each.recipe === recipeName && sameCopies(each, original)));
+  const hidden = store.hidden.filter((each) => !(each.recipe === recipeName && each.name === original.name && each.origin === original.origin));
   if (variants.length === store.variants.length && hidden.length === store.hidden.length) {
     throw new VariantEditError(`No stored copy or hiding record stands for the ${original.origin} variant ${original.name} of the recipe ${recipeName}.`);
+  }
+  store.variants = variants;
+  store.hidden = hidden;
+  writeVariantStore(storeFile, store);
+}
+
+/**
+ * One named single-task line as the settings view lists it: the line's name, its recipe's name,
+ * the variant the line is, its one line with the line editor it gets, and, for a stored copy of a
+ * shipped or own line, the original a reset shows again, named with the recipe it belongs to.
+ */
+export interface SettingsLine {
+  /** The line's name, its recipe's `###` heading or the name the store gives it. */
+  name: string;
+  group: Recipe['group'];
+  /** The variant of the recipe the line is. */
+  variant: VariantTarget;
+  /** The line as written. */
+  line: string;
+  editor: LineEditor | null;
+  /** Whether it is the variant the looped run takes for the name, its recipe's default. */
+  isDefault: boolean;
+  /** The shipped or own line a stored copy stands in for, which its reset shows again. */
+  reset?: { recipe: string; original: ReadVariantRef };
+}
+
+/** A shipped or own single-task line a hiding record hides and no stored copy stands in for, which a reset shows again. */
+export interface HiddenLine {
+  /** The recipe the hidden line belongs to, its name. */
+  name: string;
+  original: ReadVariantRef;
+}
+
+/** The named single-task lines the settings view lists, and the shipped and own lines deleted there. */
+export interface SettingsLines {
+  lines: SettingsLine[];
+  hidden: HiddenLine[];
+}
+
+/** The original a listed stored copy of a line stands in for, named with the recipe it belongs to. */
+function lineOriginal(recipe: string, variant: Variant): { recipe: string; original: ReadVariantRef } | undefined {
+  if (variant.copies === undefined) {
+    return undefined;
+  }
+  return { recipe: variant.copies.recipe ?? recipe, original: { name: variant.copies.name, origin: variant.copies.origin } };
+}
+
+/**
+ * The named single-task lines the settings view lists, out of `base`, the list the two Markdown
+ * files yield, with the store `store`, read from `file`, laid over it: every recipe whose default
+ * is a single-task line, in the merged order, the lines only the store holds after them, each
+ * single-task variant of it listed as one line with its editor, the default marked. A shipped and an
+ * own line are listed alike, an own one as an own item. The shipped and own lines a hiding record
+ * hides, and no stored copy stands in for, are listed apart, for their resets.
+ */
+export function settingsLines(base: readonly Recipe[], store: VariantStore, file: string): SettingsLines {
+  const overlaid = overlayVariantStore(base, store, file);
+  const lines: SettingsLine[] = [];
+  for (const recipe of overlaid) {
+    const standing = defaultVariant(recipe);
+    if (!standing.singleTask) {
+      continue;
+    }
+    for (const variant of recipe.variants.filter((each) => each.singleTask)) {
+      const reset = lineOriginal(recipe.name, variant);
+      lines.push({
+        name: recipe.name,
+        group: recipe.group,
+        variant: variantTarget(variant),
+        line: variant.lines[0],
+        editor: lineEditor(variant.lines[0]) ?? null,
+        isDefault: variant === standing,
+        ...(reset === undefined ? {} : { reset }),
+      });
+    }
+  }
+  const hidden: HiddenLine[] = [];
+  for (const recipe of base) {
+    const shown = overlaid.find((each) => each.name === recipe.name) ?? recipe;
+    if (!defaultVariant(shown).singleTask) {
+      continue;
+    }
+    for (const each of store.hidden) {
+      const original = recipe.variants.find((variant) => variant.name === each.name && variantOrigin(variant) === each.origin);
+      if (
+        each.recipe !== recipe.name ||
+        original === undefined ||
+        !original.singleTask ||
+        hidden.some((kept) => kept.name === recipe.name && kept.original.name === each.name && kept.original.origin === each.origin) ||
+        lines.some(
+          (line) => line.reset?.recipe === recipe.name && line.reset.original.name === each.name && line.reset.original.origin === each.origin,
+        )
+      ) {
+        continue;
+      }
+      hidden.push({ name: recipe.name, original: { name: each.name, origin: each.origin } });
+    }
+  }
+  return { lines, hidden };
+}
+
+/** Every name a recipe or line carries, in the files or the store, which no new line may take. */
+export function lineNames(base: readonly Recipe[], store: VariantStore, file: string): string[] {
+  return [...base.map((recipe) => recipe.name), ...overlayVariantStore(base, store, file).map((recipe) => recipe.name)].filter(
+    (name, index, all) => all.indexOf(name) === index,
+  );
+}
+
+/** Refuses a new line name that is empty or that a recipe or line already carries. */
+function checkLineName(base: readonly Recipe[], store: VariantStore, file: string, name: string): void {
+  if (name.trim() === '') {
+    throw new VariantEditError('A single-task line needs a name.');
+  }
+  if (lineNames(base, store, file).includes(name)) {
+    throw new VariantEditError(`A recipe or line is already named ${name}.`);
+  }
+}
+
+/** The line `target` names among the single-task variants of the recipe `recipe` lists, refused when it lists none. */
+function findLine(recipe: Recipe, target: VariantTarget): Variant {
+  const variant = find(recipe, target);
+  if (!variant.singleTask || !defaultVariant(recipe).singleTask) {
+    throw new VariantEditError(`The ${describe(target)} of the recipe ${recipe.name} is no named single-task line.`);
+  }
+  return variant;
+}
+
+/**
+ * Duplicates the single-task line `target` of the line named `lineName` as a new line named
+ * `name`: a stored variant of a recipe of that name, holding the same line, listed after every
+ * recipe the files hold. A name a recipe or line already carries is refused.
+ */
+export function duplicateLine(storeFile: string, base: readonly Recipe[], lineName: string, target: VariantTarget, name: string): void {
+  const { store, recipe } = load(storeFile, base, lineName);
+  const source = findLine(recipe, target);
+  checkLineName(base, store, storeFile, name);
+  store.variants.push({ recipe: name, name, lines: [...source.lines] });
+  writeVariantStore(storeFile, store);
+}
+
+/**
+ * Renames the single-task line `target` of the line named `lineName` to `name`: a shipped or own
+ * line gets a stored copy, a line of that name, standing in for it in its place in the list, and a
+ * stored line, a stored copy included, is renamed in the store. A name a recipe or line already
+ * carries is refused; renaming a line to the name it has writes nothing.
+ */
+export function renameLine(storeFile: string, base: readonly Recipe[], lineName: string, target: VariantTarget, name: string): void {
+  const { store, recipe } = load(storeFile, base, lineName);
+  const variant = findLine(recipe, target);
+  if (name === lineName) {
+    return;
+  }
+  checkLineName(base, store, storeFile, name);
+  if (variant.stored) {
+    const stored = record(store, recipe.name, variant);
+    store.variants = store.variants.filter((each) => each === stored || !isRecordOf(each, recipe.name, variant));
+    if (stored.copies !== undefined && stored.copies.recipe === undefined) {
+      stored.copies = { ...stored.copies, recipe: recipe.name };
+    }
+    stored.recipe = name;
+    stored.name = name;
+    if (stored.copies?.recipe === name) {
+      delete stored.copies.recipe;
+    }
+  } else {
+    store.variants.push({
+      recipe: name,
+      name,
+      lines: [...variant.lines],
+      copies: { name: variant.name, origin: variantOrigin(variant) as 'shipped' | 'own', recipe: recipe.name },
+    });
+  }
+  writeVariantStore(storeFile, store);
+}
+
+/**
+ * Deletes the single-task line `target` of the line named `lineName`, as `deleteVariant` deletes a
+ * variant: a stored line leaves the store, a stored copy also hiding the line it stood in for, and
+ * a shipped or own line gets a record hiding it.
+ */
+export function deleteLine(storeFile: string, base: readonly Recipe[], lineName: string, target: VariantTarget): void {
+  const { recipe } = load(storeFile, base, lineName);
+  findLine(recipe, target);
+  deleteVariant(storeFile, base, lineName, target);
+}
+
+/**
+ * Resets the shipped or own single-task line `original` of the recipe `recipeName`: every stored
+ * copy standing in for it, under its own name or another, and every record hiding it leaves the
+ * store, and it shows again as its file holds it. A line no copy or record stands for is refused.
+ */
+export function resetLine(storeFile: string, recipeName: string, original: ReadVariantRef): void {
+  const store = readVariantStore(storeFile);
+  const standsFor = (each: StoredVariant): boolean =>
+    each.copies !== undefined &&
+    each.copies.name === original.name &&
+    each.copies.origin === original.origin &&
+    (copiedRecipe(each) ?? each.recipe) === recipeName;
+  const variants = store.variants.filter((each) => !standsFor(each));
+  const hidden = store.hidden.filter((each) => !(each.recipe === recipeName && each.name === original.name && each.origin === original.origin));
+  if (variants.length === store.variants.length && hidden.length === store.hidden.length) {
+    throw new VariantEditError(`No stored copy or hiding record stands for the ${original.origin} line ${original.name} of the recipe ${recipeName}.`);
   }
   store.variants = variants;
   store.hidden = hidden;

@@ -44,8 +44,9 @@ Every Node command runs under Node 22 through nvm, in a subshell, from the repos
   run path, the pane's answer to a tab click, the recipe list it posts, with the variant
   selection it remembers, the harness check it runs, with the check script's print stubbed, and
   the harnesses it enables and disables, with their model and effort lists, and the variant
-  edits it makes, the line editor's model and effort picks among them, are tested against a stub
-  of the `vscode` module,
+  edits it makes, the line editor's model and effort picks among them, and its single-task line
+  edits, with the looped run's names following them, are tested against a stub of the `vscode`
+  module,
   and the page script against a small stand-in for the DOM. Nothing runs inside an editor.
 - `npm run package` runs `vsce package`, which first runs the `vscode:prepublish` script: the
   compile, then `scripts/bundle.js`, the extension's own build step, which copies
@@ -262,7 +263,7 @@ Under **Variants** the view lists every recipe with its variants, read afresh ev
 opens: the chains, the seven recipes the buttons outside the recipe list run by their fixed names,
 and the recipes and variants of your own recipe file, in the order the mission pages list them,
 with the recipes only your stored variants make up last. The named single-task lines are not
-listed here, and neither a recipe's stage nor a disabled harness leaves anything out. Each
+listed here but under **Single-task lines** below, and neither a recipe's stage nor a disabled harness leaves anything out. Each
 variant shows its name, its lines in the name's hover text, and where it comes from (`shipped`,
 `yours` for your own recipe file, `stored` for a duplicate, or `stored copy of` the variant it
 stands in for), and the recipe's default is marked **Default**. A button recipe carries a note
@@ -315,6 +316,39 @@ inserts text into the line. It is written as the variant's stored copy in
 holding the changed line, standing in for it in its place in the recipe's dropdown until you
 reset it, and a stored variant's line is changed in the store. Like every other edit, a pick is
 shown at once in the view and on the mission pages.
+
+#### Single-task lines
+
+Under **Single-task lines** the view lists the named single-task lines the looped run takes,
+read afresh every time the view opens: the shipped ones and those of your own recipe file alike,
+in the order the looped run's preview offers them, with the lines only your store holds last.
+Each line shows its name, its line in the name's hover text, where it comes from (`shipped`,
+`yours`, `stored` for a duplicate, or `stored copy of` the line it stands in for), and beneath it
+its one line with the line editor described above, so a line carrying both `--model` and
+`--effort` gets its model and effort dropdowns. Where one of your own variants joins a shipped
+line of the same name it is listed too, marked **Not run**, since the looped run takes the line's
+default. A line has no **Make default** control. The other controls are those a variant has,
+carried out in `~/.gurita/variants.json` and never in the shipped file or your own recipe file:
+
+- **Duplicate** asks for the new line's name and adds a stored line of that name holding the same
+  line, listed after the others.
+- **Rename** asks for the new name, the box opening with the current name filled in. A shipped
+  line or one of your own recipe file gets a stored copy of the new name standing in for it in its
+  place; a stored line, a stored copy included, is renamed in the store.
+- **Delete** takes the line out. A shipped line or one of your own gets a record hiding it and is
+  then listed as **Deleted** with a **Reset** control alone; a stored duplicate leaves the store;
+  a stored copy leaves it and hides the line it stood in for.
+- **Reset**, where a stored copy or a hiding record stands for a shipped line or one of your own,
+  removes them, so the line shows again under its own name as its file holds it.
+- A pick in the line's model or effort dropdown writes a stored copy holding the changed line
+  under the line's name, or changes a stored line in the store.
+
+A name is asked for in VS Code's own input box, which refuses an empty name and one any recipe or
+line already carries, since the looped run, the rule file, and the preview's override list name a
+line by it alone. A stored line reaches the recipe list under its name exactly as a written one
+does, so the looped run passes it as one `--line`, the rule file can name it, and the override
+list offers it; the runner and the rule file are unchanged. A rule naming a line you renamed or
+deleted leaves its task unresolved in the preview until you change the rule or reset the line.
 
 ## Recipes
 
@@ -542,9 +576,10 @@ in your own recipe may read them as `"$GURITA_TASK_TITLE"` and the like.
 
 A click on a looped recipe (one whose last line is the slot line `<single-task line>`) runs
 nothing yet: it shows a preview on the mission's page listing each remaining task with the
-single-task line the rule file gives it. Every recipe whose first variant holds exactly one
-headless line with `<Task Title>`, shipped or your own, counts as a named single-task line, named
-by its `###` heading. In the preview you may
+single-task line the rule file gives it. Every recipe whose default variant holds exactly one
+headless line with `<Task Title>`, shipped, your own, or stored in the settings view, counts as a
+named single-task line, named by its `###` heading or the name the settings view gave it. In the
+preview you may
 override any task's line by picking another named line. **Start run** then starts the loop,
 which before each task re-reads the top remaining heading of `TASKS_TODO.md`, runs the recipe's
 lines with that task's line in the slot, goes on only when the line read from the single-task

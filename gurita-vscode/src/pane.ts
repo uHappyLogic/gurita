@@ -87,7 +87,14 @@
 // inserting text into it, through the store's edit (`replaceLineValue`), a shipped or own variant
 // getting a stored copy holding the changed line in its place; a pick of a value the list does not
 // offer, of the value the line already carries, or on a line or variant the list read afresh does
-// not hold with that control writes nothing. Every edit posts the variant list and the harness lists
+// not hold with that control writes nothing. The view also edits the named single-task lines:
+// every opening posts them, shipped and own alike, each with its one line and line editor, and the
+// shipped and own lines a hiding record hides; a click of a line's duplicate, rename, delete, or
+// reset control is carried out through the store's line edits, a new name asked for in VS Code's
+// own input box, whose validation refuses an empty name and one any recipe or line carries, and a
+// pick in its dropdowns as a variant's line pick is. A stored line reaches the merged recipe list
+// under its name, so the looped run's lines, the rule file, and the override list see it as any
+// named line. Every edit posts the variant and line lists and the harness lists
 // again, and the pages with their recipes re-read, so the mission pages' dropdowns show it at
 // once and the fixed-name buttons, which read their recipe afresh at each click, at the next
 // click. The
@@ -128,14 +135,21 @@ import { BUTTON_RECIPES, PageRecipe, Recipe, buttonRecipe, ownRecipesFile, pageR
 import { SELECTIONS_KEY, Selections, dropStaleSelections, missionSelections, readSelections, rememberSelection } from './selections';
 import { ReadVariantRef, readVariantStore, variantStoreFile } from './variantStore';
 import {
+  SettingsLines,
   SettingsRecipe,
   VariantTarget,
+  deleteLine,
   deleteVariant,
+  duplicateLine,
   duplicateVariant,
+  lineNames,
   pickDefault,
+  renameLine,
   renameVariant,
   replaceLineValue,
+  resetLine,
   resetVariant,
+  settingsLines,
   settingsRecipes,
 } from './variantEdits';
 import {
@@ -194,7 +208,11 @@ type PageMessage =
   | { type: 'deleteVariant'; recipe: string; variant: VariantTarget }
   | { type: 'pickDefault'; recipe: string; variant: VariantTarget }
   | { type: 'resetVariant'; recipe: string; original: ReadVariantRef }
-  | { type: 'replaceLineValue'; recipe: string; variant: VariantTarget; line: number; kind: string; value: string };
+  | { type: 'replaceLineValue'; recipe: string; variant: VariantTarget; line: number; kind: string; value: string }
+  | { type: 'duplicateLine'; line: string; variant: VariantTarget }
+  | { type: 'renameLine'; line: string; variant: VariantTarget }
+  | { type: 'deleteLine'; line: string; variant: VariantTarget }
+  | { type: 'resetLine'; line: string; original: ReadVariantRef };
 
 /** The harness check as the settings view shows it: running, or what it gave. */
 type HarnessCheck = { state: 'running' } | CheckResult;
@@ -213,6 +231,9 @@ type HarnessListsRead = { state: 'read'; lists: HarnessLists } | { state: 'faile
 
 /** The recipes and variants the settings view lists for editing, or the cause they could not be read. */
 type VariantsRead = { state: 'read'; recipes: SettingsRecipe[] } | { state: 'failed'; cause: string };
+
+/** The named single-task lines the settings view lists for editing, or the cause they could not be read. */
+type LinesRead = ({ state: 'read' } & SettingsLines) | { state: 'failed'; cause: string };
 
 /** The recipe list one mission's page shows, or the cause the recipes could not be read. */
 type RecipePart = { state: 'read'; recipes: PageRecipe[] } | { state: 'failed'; cause: string };
@@ -250,7 +271,8 @@ type PaneMessage =
   | { type: 'harnessCheck'; check: HarnessCheck }
   | { type: 'harnessSettings'; settings: HarnessSettings }
   | { type: 'harnessLists'; lists: HarnessListsRead }
-  | { type: 'variants'; variants: VariantsRead };
+  | { type: 'variants'; variants: VariantsRead }
+  | { type: 'singleTaskLines'; lines: LinesRead };
 
 /** What a mission's latest preview ran with, which starting its run passes on unchanged. */
 interface HeldPreview {
@@ -396,6 +418,10 @@ export function openMissionPane(context: vscode.ExtensionContext): void {
         void resetStoredVariant(context, created, message.recipe, message.original);
       } else if (message?.type === 'replaceLineValue') {
         void editLineValue(context, created, message.recipe, message.variant, message.line, message.kind, message.value);
+      } else if (message?.type === 'duplicateLine' || message?.type === 'renameLine' || message?.type === 'deleteLine') {
+        void editLine(context, created, message.type, message.line, message.variant);
+      } else if (message?.type === 'resetLine') {
+        void resetStoredLine(context, created, message.line, message.original);
       }
     },
     undefined,
@@ -732,6 +758,7 @@ function settingsOpened(context: vscode.ExtensionContext, target: vscode.Webview
   void post(target, { type: 'harnessSettings', settings: readHarnessSettings() });
   void post(target, { type: 'harnessLists', lists: readListsOf(context) });
   void post(target, { type: 'variants', variants: readVariantList(context) });
+  void post(target, { type: 'singleTaskLines', lines: readLineList(context) });
   if (harnessCheck === undefined) {
     void checkHarnesses(context, target);
     return;
@@ -887,6 +914,20 @@ function readVariantList(context: vscode.ExtensionContext): VariantsRead {
   }
 }
 
+/**
+ * The named single-task lines the settings view lists, read afresh: the shipped snippet file and
+ * the person's own recipe file merged, the variant store laid over them, as `settingsLines` lists
+ * them, or the cause they could not be read.
+ */
+function readLineList(context: vscode.ExtensionContext): LinesRead {
+  try {
+    const files = recipeFiles(context);
+    return { state: 'read', ...settingsLines(readRecipes(files.shipped, files.own), readVariantStore(files.store), files.store) };
+  } catch (error) {
+    return { state: 'failed', cause: error instanceof Error ? error.message : String(error) };
+  }
+}
+
 function isOrigin(value: unknown, allowed: readonly string[]): boolean {
   return typeof value === 'string' && allowed.includes(value);
 }
@@ -912,8 +953,11 @@ function readVariantRefOf(value: unknown): ReadVariantRef | undefined {
   if (typeof value !== 'object' || value === null) {
     return undefined;
   }
-  const { name, origin } = value as Record<string, unknown>;
-  return typeof name === 'string' && isOrigin(origin, ['shipped', 'own']) ? { name, origin: origin as ReadVariantRef['origin'] } : undefined;
+  const { name, origin, recipe } = value as Record<string, unknown>;
+  if (typeof name !== 'string' || !isOrigin(origin, ['shipped', 'own']) || (recipe !== undefined && typeof recipe !== 'string')) {
+    return undefined;
+  }
+  return { name, origin: origin as ReadVariantRef['origin'], ...(recipe === undefined ? {} : { recipe: recipe as string }) };
 }
 
 /** Whether a listed variant is the one `target` names. */
@@ -923,7 +967,9 @@ function isTarget(variant: VariantTarget, target: VariantTarget): boolean {
     variant.origin === target.origin &&
     (variant.copies === undefined || target.copies === undefined
       ? variant.copies === target.copies
-      : variant.copies.name === target.copies.name && variant.copies.origin === target.copies.origin)
+      : variant.copies.name === target.copies.name &&
+        variant.copies.origin === target.copies.origin &&
+        variant.copies.recipe === target.copies.recipe)
   );
 }
 
@@ -1088,7 +1134,12 @@ async function editLineValue(
     void vscode.window.showErrorMessage(`The variants could not be read: ${read.cause}`);
     return;
   }
-  const editor = read.recipes.find((each) => each.name === recipe)?.variants.find((each) => isTarget(each, named))?.editors[line];
+  const lines = readLineList(context);
+  const editor =
+    read.recipes.find((each) => each.name === recipe)?.variants.find((each) => isTarget(each, named))?.editors[line] ??
+    (lines.state === 'read' && line === 0
+      ? lines.lines.find((each) => each.name === recipe && isTarget(each.variant, named))?.editor
+      : undefined);
   const current = editor === undefined || editor === null ? undefined : kind === 'model' ? editor.model : editor.effort;
   if (editor === undefined || editor === null || current === undefined || current === value) {
     return;
@@ -1111,12 +1162,144 @@ async function editLineValue(
   await postVariantEdit(context, target);
 }
 
-/** Posts the variant list and the harness lists, read afresh, and the pages again, their recipes re-read. */
+/**
+ * Asks for a single-task line's name in VS Code's own input box, one box for the one value, as
+ * `askValues` asks for a page's values: the box opens on `value` when given, and its validation
+ * refuses an empty name and one of `taken`, the names a recipe or another line carries. The name
+ * is returned with its outer spaces trimmed, or undefined when the box is dismissed.
+ */
+async function askLineName(prompt: string, taken: readonly string[], value?: string): Promise<string | undefined> {
+  const typed = await vscode.window.showInputBox({
+    prompt,
+    ...(value === undefined ? {} : { value }),
+    ignoreFocusOut: true,
+    validateInput: (text) =>
+      text.trim() === ''
+        ? 'Type a name, or press Escape to change nothing.'
+        : taken.includes(text.trim())
+          ? `A recipe or line is already named ${text.trim()}.`
+          : undefined,
+  });
+  if (typed === undefined || typed.trim() === '' || taken.includes(typed.trim())) {
+    return undefined;
+  }
+  return typed.trim();
+}
+
+/** The word a notification gives each line edit. */
+const LINE_EDIT_VERBS: Record<'duplicateLine' | 'renameLine' | 'deleteLine' | 'resetLine', string> = {
+  duplicateLine: 'duplicated',
+  renameLine: 'renamed',
+  deleteLine: 'deleted',
+  resetLine: 'reset',
+};
+
+/**
+ * Makes one edit of the settings view on the named single-task line `variant` of the line named
+ * `line`, as the line list read afresh lists it, through the variant store's edits: a duplicate
+ * under a new name and a rename to one, each asked for in VS Code's own input box, a rename's box
+ * opening on the current name, or a delete. A line the list does not hold, or a dismissed box,
+ * writes nothing; an edit the store refuses, or a store that cannot be read or written, is told in
+ * an error notification. Every edit made posts the variant and line lists, the harness lists, and
+ * the pages again, their recipes re-read.
+ */
+async function editLine(
+  context: vscode.ExtensionContext,
+  target: vscode.WebviewPanel,
+  edit: 'duplicateLine' | 'renameLine' | 'deleteLine',
+  line: unknown,
+  variant: unknown,
+): Promise<void> {
+  const named = variantTargetOf(variant);
+  if (panel !== target || typeof line !== 'string' || named === undefined) {
+    return;
+  }
+  const read = readLineList(context);
+  if (read.state === 'failed') {
+    void vscode.window.showErrorMessage(`The single-task lines could not be read: ${read.cause}`);
+    return;
+  }
+  if (!read.lines.some((each) => each.name === line && isTarget(each.variant, named))) {
+    return;
+  }
+  let name: string | undefined;
+  if (edit !== 'deleteLine') {
+    let taken: string[];
+    try {
+      const files = recipeFiles(context);
+      taken = lineNames(readRecipes(files.shipped, files.own), readVariantStore(files.store), files.store);
+    } catch (error) {
+      void vscode.window.showErrorMessage(`The single-task lines could not be read: ${error instanceof Error ? error.message : String(error)}`);
+      return;
+    }
+    name =
+      edit === 'duplicateLine'
+        ? await askLineName(`The name of the duplicate of the line ${line}`, taken)
+        : await askLineName(`The new name of the line ${line}`, taken.filter((each) => each !== line), line);
+    if (name === undefined) {
+      return;
+    }
+  }
+  if (panel !== target) {
+    return;
+  }
+  try {
+    const files = recipeFiles(context);
+    const base = readRecipes(files.shipped, files.own);
+    if (edit === 'duplicateLine') {
+      duplicateLine(files.store, base, line, named, name as string);
+    } else if (edit === 'renameLine') {
+      renameLine(files.store, base, line, named, name as string);
+    } else {
+      deleteLine(files.store, base, line, named);
+    }
+  } catch (error) {
+    void vscode.window.showErrorMessage(
+      `The line could not be ${LINE_EDIT_VERBS[edit]}: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+  await postVariantEdit(context, target);
+}
+
+/**
+ * Resets the shipped or own single-task line `original` of the recipe `line`, removing every stored
+ * copy and hiding record standing for it, so it shows again as its file holds it, then posts the
+ * variant and line lists, the harness lists, and the pages again. A line the list read afresh
+ * offers no reset for writes nothing; a store that cannot be read or written is told in an error
+ * notification.
+ */
+async function resetStoredLine(context: vscode.ExtensionContext, target: vscode.WebviewPanel, line: unknown, original: unknown): Promise<void> {
+  const ref = readVariantRefOf(original);
+  if (panel !== target || typeof line !== 'string' || ref === undefined || ref.recipe !== undefined) {
+    return;
+  }
+  const read = readLineList(context);
+  if (read.state === 'failed') {
+    void vscode.window.showErrorMessage(`The single-task lines could not be read: ${read.cause}`);
+    return;
+  }
+  const offered = [
+    ...read.lines.flatMap((each) => (each.reset === undefined ? [] : [{ name: each.reset.recipe, original: each.reset.original }])),
+    ...read.hidden,
+  ];
+  if (!offered.some((each) => each.name === line && each.original.name === ref.name && each.original.origin === ref.origin)) {
+    return;
+  }
+  try {
+    resetLine(recipeFiles(context).store, line, ref);
+  } catch (error) {
+    void vscode.window.showErrorMessage(`The line could not be ${LINE_EDIT_VERBS.resetLine}: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  await postVariantEdit(context, target);
+}
+
+/** Posts the variant and line lists and the harness lists, read afresh, and the pages again, their recipes re-read. */
 async function postVariantEdit(context: vscode.ExtensionContext, target: vscode.WebviewPanel): Promise<void> {
   if (panel !== target) {
     return;
   }
   await post(target, { type: 'variants', variants: readVariantList(context) });
+  await post(target, { type: 'singleTaskLines', lines: readLineList(context) });
   await post(target, { type: 'harnessLists', lists: readListsOf(context) });
   if (current !== undefined && panel === target) {
     current.recipes = readRecipeList(context);

@@ -18,7 +18,9 @@
 // keeps its place in the recipe's order, a hidden variant is left out, and the further stored
 // variants are listed after the recipe's other variants, in the store's order, of a stored
 // variant repeated within one recipe, the same name standing in for the same variant or for none,
-// the first kept; stored variants of a recipe the files do not hold
+// the first kept; a stored copy of a named single-task line renamed in the settings view stands in
+// for the line it copies as a recipe of its new name, directly after the recipe it copies from;
+// stored variants of a recipe the files do not hold
 // form a recipe of their own, listed after every other in the own group, and a recipe every
 // variant of which is left out is dropped. A recipe's default is its picked variant, the store's
 // pick standing for it when it names a listed variant, a pick of a copied variant meaning the copy
@@ -372,7 +374,18 @@ function storedVariant(stored: StoredVariant, file: string): Variant {
 
 /** Whether two stored variants stand in for the same shipped or own variant, or both for none. */
 export function sameCopies(one: ReadVariantRef | undefined, other: ReadVariantRef | undefined): boolean {
-  return one === undefined || other === undefined ? one === other : one.name === other.name && one.origin === other.origin;
+  return one === undefined || other === undefined
+    ? one === other
+    : one.name === other.name && one.origin === other.origin && one.recipe === other.recipe;
+}
+
+/**
+ * The recipe a stored copy of a renamed single-task line copies its variant from, when it names one
+ * other than its own: undefined for every other stored variant.
+ */
+export function copiedRecipe(stored: StoredVariant): string | undefined {
+  const recipe = stored.copies?.recipe;
+  return recipe === undefined || recipe === stored.recipe ? undefined : recipe;
 }
 
 /**
@@ -382,13 +395,26 @@ export function sameCopies(one: ReadVariantRef | undefined, other: ReadVariantRe
  * variant of the recipe follows, in the store's order. Of stored variants of one recipe carrying
  * one name and standing in for the same variant, or for none, the first is kept, so a copy of a
  * shipped variant and a copy of an own variant of that name stand side by side as the two do.
+ * A stored copy of a renamed single-task line, whose `copies` names another recipe, stands in for
+ * that recipe's variant as a recipe of its own name, listed directly after the recipe it copies
+ * from, with that recipe's group and stage, the copied variant left out there; such a copy under a
+ * name the files hold stands in for nothing, and one whose variant the files no longer list is
+ * listed as the stored variants of a recipe the list does not hold are.
  * Stored variants of a recipe the list does not hold form a recipe of that name in the own group,
  * listed after every other in the order the store first names them, and a recipe left with no
  * variant is dropped. The first pick the store holds for a recipe is carried as its `picked`.
  */
 export function overlayVariantStore(recipes: readonly Recipe[], store: VariantStore, file: string): Recipe[] {
+  const held = new Set(recipes.map((recipe) => recipe.name));
   const storedBy = new Map<string, StoredVariant[]>();
+  const renamed: StoredVariant[] = [];
   for (const each of store.variants) {
+    if (copiedRecipe(each) !== undefined) {
+      if (!held.has(each.recipe) && !renamed.some((kept) => kept.recipe === each.recipe)) {
+        renamed.push(each);
+      }
+      continue;
+    }
     const list = storedBy.get(each.recipe) ?? [];
     storedBy.set(each.recipe, list);
     if (!list.some((kept) => kept.name === each.name && sameCopies(kept.copies, each.copies))) {
@@ -405,11 +431,21 @@ export function overlayVariantStore(recipes: readonly Recipe[], store: VariantSt
     const pick = picks.get(recipe.name);
     return pick === undefined ? recipe : { ...recipe, picked: { ...pick } };
   };
+  /** The stored variants of a recipe only the store holds, each taken once. */
+  const taken = new Set<string>();
+  const storedOnly = (name: string): Variant[] => {
+    if (held.has(name) || taken.has(name)) {
+      return [];
+    }
+    taken.add(name);
+    return (storedBy.get(name) ?? []).map((record) => storedVariant(record, file));
+  };
   const overlaid: Recipe[] = [];
   for (const recipe of recipes) {
     const stored = storedBy.get(recipe.name) ?? [];
     const placed = new Set<StoredVariant>();
     const variants: Variant[] = [];
+    const lines: StoredVariant[] = [];
     for (const each of recipe.variants) {
       const origin = variantOrigin(each);
       const copy = stored.find(
@@ -418,6 +454,17 @@ export function overlayVariantStore(recipes: readonly Recipe[], store: VariantSt
       if (copy !== undefined) {
         placed.add(copy);
         variants.push(storedVariant(copy, file));
+        continue;
+      }
+      const line = renamed.find(
+        (record) =>
+          !lines.includes(record) &&
+          record.copies?.recipe === recipe.name &&
+          record.copies.name === each.name &&
+          record.copies.origin === origin,
+      );
+      if (line !== undefined) {
+        lines.push(line);
         continue;
       }
       if (store.hidden.some((hidden) => hidden.recipe === recipe.name && hidden.name === each.name && hidden.origin === origin)) {
@@ -429,11 +476,26 @@ export function overlayVariantStore(recipes: readonly Recipe[], store: VariantSt
     if (variants.length > 0) {
       overlaid.push(withPick({ ...recipe, variants }));
     }
+    for (const line of lines) {
+      renamed.splice(renamed.indexOf(line), 1);
+      overlaid.push(
+        withPick({
+          name: line.recipe,
+          group: recipe.group,
+          variants: [storedVariant(line, file), ...storedOnly(line.recipe)],
+          ...(recipe.stage === undefined ? {} : { stage: recipe.stage }),
+        }),
+      );
+    }
   }
-  const held = new Set(recipes.map((recipe) => recipe.name));
-  for (const [name, stored] of storedBy) {
-    if (!held.has(name)) {
-      overlaid.push(withPick({ name, group: 'own', variants: stored.map((record) => storedVariant(record, file)) }));
+  for (const name of store.variants.map((each) => each.recipe)) {
+    if (held.has(name) || taken.has(name)) {
+      continue;
+    }
+    const line = renamed.find((record) => record.recipe === name);
+    const variants = [...(line === undefined ? [] : [storedVariant(line, file)]), ...storedOnly(name)];
+    if (variants.length > 0) {
+      overlaid.push(withPick({ name, group: 'own', variants }));
     }
   }
   return overlaid;
