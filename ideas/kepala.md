@@ -1,6 +1,6 @@
 # Kepala
 
-A draft of the orchestrator's name and of the work it might do, in two parts with two histories. The naming part was split on 2026-11-10 from the draft written 2026-10-30 that named the plugin and the orchestrator together; the plugin's half is `ideas/gurita.md`. The outline was merged in the same day from `ideas/karpathy.md`, the sketch of a multi-mission orchestrator kept until then under the working name Karpathy. The draft names that orchestrator **Kepala**, the head of the octopus whose arms are the plugin, Gurita, and the pair written as one word, **Kepalagurita**, names the whole. The orchestrator itself is still being worked out, so the naming part holds what is settled, why the image holds, which names it rules out, and what was checked for collisions and when, while the outline is a potential shape of the work, not a plan. The draft uses `ideas/gurita.md`'s words throughout, Gurita for the plugin and mission for the unit it works on, and that draft, which it waited on, has been carried out first: both of its renames shipped as the plugin's 2.0.0 release.
+A draft of the orchestrator's name and of the work it might do, in two parts with two histories. The naming part was split on 2026-11-10 from the draft written 2026-10-30 that named the plugin and the orchestrator together; the plugin's half, the Gurita draft, was carried out by the plugin's 2.0.0 release and then removed from `ideas/`, its text standing in git history. The outline was merged in the same day from `ideas/karpathy.md`, the sketch of a multi-mission orchestrator kept until then under the working name Karpathy. The draft names that orchestrator **Kepala**, the head of the octopus whose arms are the plugin, Gurita, and the pair written as one word, **Kepalagurita**, names the whole. The orchestrator itself is still being worked out, so the naming part holds what is settled, why the image holds, which names it rules out, and what was checked for collisions and when, while the outline is a potential shape of the work, not a plan. The draft uses the plugin's words throughout, Gurita for the plugin and mission for the unit it works on, both renames having shipped as the plugin's 2.0.0 release before anything here.
 
 ## Why a name of its own
 
@@ -8,7 +8,7 @@ A draft of the orchestrator's name and of the work it might do, in two parts wit
 
 ## The image
 
-An octopus has about 500 million neurons and two thirds of them sit in the arms, grouped in ganglia along each arm. An arm senses and starts actions on its own; the central brain sets the goal and does not track each sucker. That is the design the outline below already states: the head runs the mission skills through the CLI, holds no mission context of its own, and reads each run only by the fixed first line it prints, while every mission resolves its own implementation-level questions, through the open-question loop, before its tasks are derived. The arms' side of the image, their working in parallel under the scope gate, is in `ideas/gurita.md`, with the two corrections that bear on the plugin's name: an octopus has arms, not tentacles, and Octopus Deploy owns the English vocabulary, its per-machine agent Tentacle being this same head-and-arms split, already named, in developer tooling.
+An octopus has about 500 million neurons and two thirds of them sit in the arms, grouped in ganglia along each arm. An arm senses and starts actions on its own; the central brain sets the goal and does not track each sucker. That is the design the outline below already states: the head runs the mission skills through the CLI, holds no mission context of its own, and reads each run only by the fixed first line it prints, while every mission resolves its own implementation-level questions, through the open-question loop, before its tasks are derived. The arms' side of the image is their working in parallel under the scope gate, and two corrections bear on the plugin's name: an octopus has arms, not tentacles, and Octopus Deploy owns the English vocabulary, its per-machine agent Tentacle being this same head-and-arms split, already named, in developer tooling.
 
 One correction bears on the head:
 
@@ -20,15 +20,15 @@ One correction bears on the head:
 
 **Kepalagurita** is the two written as one word. In Indonesian `kepala gurita` is simply the phrase "octopus head", so the merged form is a real compound rather than a portmanteau, read head first as cephalopod itself is built (head, then foot). It is long, twelve letters, and that is accepted: it names the whole and is typed rarely, as an organisation or umbrella name, while the two short names are the ones in daily use.
 
-The plugin's word for its unit of work, mission, is `ideas/gurita.md`'s. In Kepala's loop the word reads as it should: the head creates missions for the work still missing and hands each to the arms.
+The plugin's word for its unit of work is mission. In Kepala's loop the word reads as it should: the head creates missions for the work still missing and hands each to the arms.
 
-Kepala says nothing to most English speakers, as Gurita says nothing; the meaning is one sentence away on the landing page. It carries no cultural-use expectation of the kind that ruled out the Māori word `ideas/gurita.md` records.
+Kepala says nothing to most English speakers, as Gurita says nothing; the meaning is one sentence away on the landing page. It carries no cultural-use expectation of the kind that ruled out the Māori word Wheke for the plugin (see Checked and rejected).
 
 ### Collision check
 
 Checked on 2026-10-30 through web search of GitHub, npm, PyPI, and crates.io: no package, tool, or framework named `kepala` or `kepalagurita` was found. The check is a search, not a registry query, so it is repeated by looking each slug up on the registries directly and on GitHub before anything is published under either name.
 
-The one near use found for mission, Factory's Missions, sits at Kepala's level rather than the plugin's: a Factory Mission is the whole multi-day run, with an orchestrator, workers, and validators, which here is Kepala's loop. `ideas/gurita.md` records the check and its cost.
+The one near use found for mission, Factory's Missions, sits at Kepala's level rather than the plugin's: a Factory Mission is the whole multi-day run, with an orchestrator, workers, and validators, which here is Kepala's loop. It was found on 2026-11-10 through web search and in talk coverage only, not in the vendor's own documentation, and a reader arriving from Factory will first read the plugin's mission one level too high, a cost of the word, not a reason against it.
 
 ## How the names land
 
@@ -48,7 +48,15 @@ In prose the names are capitalised, Kepala and Kepalagurita; as slugs they are l
 | Mantle | Mantle Network and several libraries |
 | Rosh | Hebrew for head and chief; a ROS shell and a router shell carry it |
 
-The octopus words that were ruled out are in `ideas/gurita.md`.
+The octopus words ruled out for the plugin's name, before it became Gurita:
+
+| Name | Why not |
+|---|---|
+| Octopus, Octo | Octopus Deploy; GitHub's octo- prefix |
+| Tentacle | Octopus Deploy's agent |
+| Kraken, Hydra, Nautilus | saturated |
+| Tako | Japanese for octopus; three developer tools carry it, a deploy CLI, a CLI framework, and a Go framework |
+| Wheke | Māori for octopus, clean, but Māori words carry cultural-use expectations the project should not take on |
 
 ### Alternatives kept on record
 
@@ -173,7 +181,7 @@ Before any orchestrator exists, the idea document can be split by hand into seve
 
 ## What waits
 
-Nothing here is carried out yet, and nothing outside it is waited on. The plugin's rename landed first and on its own (`ideas/gurita.md`), shipped as 2.0.0, so Kepala is born under its name, never refers to the plugin as Cairn, and matches fixed console lines that already say mission. The outline above is where the orchestrator's design starts, and it is settled in the work itself, not in this draft.
+Nothing here is carried out yet, and nothing outside it is waited on. The plugin's rename landed first and on its own, shipped as 2.0.0, so Kepala is born under its name, never refers to the plugin as Cairn, and matches fixed console lines that already say mission. The outline above is where the orchestrator's design starts, and it is settled in the work itself, not in this draft.
 
 ## Open questions
 
@@ -186,3 +194,5 @@ Nothing here is carried out yet, and nothing outside it is waited on. The plugin
 - Octopus Deploy's Tentacle agent: https://docs.octopusdeploy.com
 - Capo collision: https://packages.ecosyste.ms/api/v1/registries/crates.io/packages/capo-cli/codemeta
 - Rosh collisions: https://pypi.org/project/rosh/ , https://index.ros.org/p/rosh_core/
+- Tako collisions: https://github.com/redentordev/tako-cli , https://jsr.io/@takojs/tako , https://pkg.go.dev/gettako.dev/tako
+- Factory's Missions, talk coverage only: https://sozai.app/transcript/multi-agent-architecture-luke-alvoeiro-factory/index.md , https://www.startuphub.ai/news/missions-ai-agents-that-ship-for-days
