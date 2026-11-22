@@ -1,8 +1,9 @@
 // The extension's own build step, run from the `vscode:prepublish` script so that every
 // `vsce package` runs it. It copies the plugin's missions tool and the shipped snippet file
 // verbatim into `bundled/`, and writes beside them `fixed_lines.tsv`: one line per row of the
-// `## Fixed console lines` table of docs/skill-reference.md, its kind, a tab, and its line.
-// Nothing it writes is tracked.
+// `## Fixed console lines` table of docs/skill-reference.md, its kind, a tab, and its line,
+// and `plugin_version.txt`: the repository's `VERSION`, the plugin version the package is
+// built from, as one line. Nothing it writes is tracked.
 'use strict';
 
 const fs = require('node:fs');
@@ -20,6 +21,8 @@ const REFERENCE = path.join(REPO_ROOT, 'docs', 'skill-reference.md');
 const SECTION = '## Fixed console lines';
 const KINDS = new Set(['success', 'no-op', 'stop', 'verdict']);
 const FIXED_LINES = 'fixed_lines.tsv';
+const VERSION_FILE = path.join(REPO_ROOT, 'VERSION');
+const PLUGIN_VERSION = 'plugin_version.txt';
 
 function fail(message) {
   process.stderr.write(`Error: ${message}\n`);
@@ -68,9 +71,19 @@ function fixedLineRows() {
   return rows;
 }
 
+function pluginVersion() {
+  const text = fs.readFileSync(VERSION_FILE, 'utf8').trim();
+  if (!/^\d+\.\d+\.\d+$/.test(text)) {
+    fail(`${VERSION_FILE} reads ${JSON.stringify(text)}, not MAJOR.MINOR.PATCH`);
+  }
+  return text;
+}
+
 const rows = fixedLineRows();
+const version = pluginVersion();
 fs.mkdirSync(BUNDLED, { recursive: true });
 for (const [source, name] of COPIES) {
   fs.copyFileSync(source, path.join(BUNDLED, name));
 }
 fs.writeFileSync(path.join(BUNDLED, FIXED_LINES), rows.map((row) => `${row}\n`).join(''), 'utf8');
+fs.writeFileSync(path.join(BUNDLED, PLUGIN_VERSION), `${version}\n`, 'utf8');

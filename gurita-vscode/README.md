@@ -48,8 +48,10 @@ Every Node command runs under Node 22 through nvm, in a subshell, from the repos
   compile, then `scripts/bundle.js`, the extension's own build step, which copies
   `core/tools/missions.py` and `snippets/GURITA_USAGE.md` verbatim into `bundled/` and writes
   `bundled/fixed_lines.tsv` from the `## Fixed console lines` table of
-  `docs/skill-reference.md`, one `kind<TAB>line` row per table line. Every package therefore
-  carries the missions tool, the recipes, and the fixed lines of the checkout it was built from.
+  `docs/skill-reference.md`, one `kind<TAB>line` row per table line, and
+  `bundled/plugin_version.txt`, the repository's `VERSION` as one line. Every package therefore
+  carries the missions tool, the recipes, the fixed lines, and the plugin version of the
+  checkout it was built from.
 
 The runner's own tests are pytest tests under `gurita-vscode/runner_tests/`, collected by the
 repository's ordinary pytest runs, run from the repository root:

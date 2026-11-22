@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Bundle the Packaged Plugin Version
-
-Have `gurita-vscode/scripts/bundle.js` record the plugin version the extension is packaged from: it reads the repository's `VERSION` and writes it into `bundled/` beside the files it already writes, because the package holds no record of that version and the harness check compares an installed Gurita copy's version against it. Verified by running the package script under Node 22 through nvm: the VSIX holds the record reading what `VERSION` reads, and nothing the step writes is tracked.
-
----
-
 ## Harness Check Script Beside the Runner
 
 Add a new stdlib Python script beside `gurita-vscode/runner.py` that runs the harness check for Claude Code, Antigravity, and Codex: it imports the runner as a module, as `runner_tests/conftest.py` already does, calls its `session_shell` for the shell, runs each harness's CLI lookup and its listing (`claude plugin list --json`, `agy plugin list --json`, `codex plugin list -m gurita --json`) in that one session, and prints one result saying for each harness whether its CLI was found and which version its installed Gurita copy reads, or that none is installed, `runner.py` itself unchanged. For Claude Code the installed copy is chosen among the `gurita@gurita` entries that apply to the project root the script is given (the `user`-scope entry and every `project`- or `local`-scope entry whose `projectPath` equals that root, other projects' entries and `synced` entries ignored, `local` winning over `project` over `user`, a disabled winning entry meaning not installed), and its version is `folderVersion` whenever the entry carries `readFromFolder` and `version` for every entry without it. Verified by pytest tests under `gurita-vscode/runner_tests/` over canned listings, starting no shell session and passing in both pytest runs, and by one run of the script on this machine.
