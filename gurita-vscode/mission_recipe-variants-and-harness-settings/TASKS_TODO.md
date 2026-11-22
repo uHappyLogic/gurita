@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Variant Dropdown With Remembered Selection
-
-Draw beside each recipe button on the mission page a dropdown that switches the recipe's variant, a person's own variants marked as theirs, the button's label and hover text following the selected variant and a click running it, with no dropdown beside any of the seven fixed-name buttons. The selection is remembered per recipe name on one mission, keyed by the mission's path as the pane lists it, in the project's `ExtensionContext.workspaceState` as a map from mission path and recipe name to variant name, nothing written into the project's tree. A remembered selection always wins over the recipe's default, a remembered variant that no longer exists is dropped so the button falls back to the current default, and the pane starts no variant its last posted list lacks; verified by the page and pane tests, with `gurita-vscode/README.md` describing the dropdown.
-
----
-
 ## Settings View Placement in the Pane
 
 Add the settings view to the pane: a control at the end of the tab row, beside Refresh, New mission, and Define mission and drawn in the failure state as they are, swaps the page beneath the row for the settings view, and a control on that view, or a click on any mission tab, swaps back to the mission page shown before. The mission tabs keep holding missions only, the extension contributes no command for the view, and the view holds buttons and dropdowns only, its harness and variant sections being added by the tasks that follow. Verified by page tests of the swap in both directions and in the failure state, with `gurita-vscode/README.md` saying how the view is opened.

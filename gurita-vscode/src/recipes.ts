@@ -23,8 +23,9 @@
 // variant of which is left out is dropped. A recipe's default is its picked variant, the store's
 // pick standing for it when it names a listed variant, a pick of a copied variant meaning the copy
 // standing in for it, and, while no picked default stands, its first variant in order, worked out
-// afresh at each read and never written: the mission page's button, the buttons that run a recipe
-// by its fixed name, and the looped run's named single-task lines take the default. Each variant is
+// afresh at each read and never written: the buttons that run a recipe by its fixed name and the
+// looped run's named single-task lines take the default, and the mission page's button takes it
+// while no dropdown selection is remembered for the recipe on its mission. Each variant is
 // classified by its content alone: whether it is a single-task line, whether it is the looped
 // recipe, and which known and unknown placeholders it holds. A recipe may also declare the one step
 // of the workflow diagram it belongs to, by one `Stage: <step name>` line standing outside any fence
@@ -509,13 +510,28 @@ export function ownRecipesFile(setting: string | undefined, home: string): strin
 /** The heading of the page's group of own recipes that replace no shipped recipe. */
 export const OWN_GROUP_HEADING = 'Your recipes';
 
-/** One entry of a mission page's recipe list, in the merged list's order. */
-export type PageRecipe =
+/** One variant a page recipe's dropdown offers: its name, and whether it is the person's own. */
+export interface PageVariantChoice {
+  name: string;
+  /** Set for a variant of the person's own recipe file or of the variant store, marked as theirs. */
+  own: boolean;
+}
+
+/** The dropdown beside a page recipe: the variants it offers, in the recipe's order, and the one selected. */
+export interface PageChoices {
+  /** The recipe's variants the page can draw, at least one. */
+  variants: PageVariantChoice[];
+  /** The index in `variants` of the variant selected, the one the entry's other fields describe. */
+  selected: number;
+}
+
+/** A recipe as one of its variants draws it on a mission page: its name and group, and that variant. */
+export type PageEntry =
   | {
       kind: 'runnable';
       name: string;
       group: RecipeGroup;
-      /** The recipe's lines as written, placeholders included. */
+      /** The variant's lines as written, placeholders included. */
       lines: string[];
       /** The harnesses, models, and efforts its lines carry, which its button shows with its name. */
       values: VariantValues;
@@ -524,7 +540,7 @@ export type PageRecipe =
       kind: 'looped';
       name: string;
       group: RecipeGroup;
-      /** The recipe's lines as written, the slot line last. */
+      /** The variant's lines as written, the slot line last. */
       lines: string[];
       /** The harnesses, models, and efforts its lines carry, which its button shows with its name. */
       values: VariantValues;
@@ -536,54 +552,98 @@ export type PageRecipe =
       lines: string[];
       /** The placeholder names the extension does not know, in order of first appearance. */
       placeholders: string[];
-      /** The file the recipe came from. */
+      /** The file the variant came from. */
       file: string;
     };
+
+/**
+ * One entry of a mission page's recipe list, in the merged list's order: the recipe as its selected
+ * variant draws it, the one its button shows and runs, with the dropdown of its variants.
+ */
+export type PageRecipe = PageEntry & PageChoices;
 
 /** The placeholders a looped run fills itself, from its mission and each task's heading. */
 export const LOOPED_PLACEHOLDERS: readonly string[] = ['path', 'Task Title'];
 
 /**
- * The recipes a mission page lists out of `recipes`, for a page the part of the merged list
- * `stageRecipes` keeps for its step, given the placeholder names the page holds a value for, each
- * entry drawn from the recipe's default variant, a button's entry carrying the distinct harnesses,
- * models, and efforts that variant's lines carry, as the line-value module reads them. A recipe whose variant holds a placeholder the
- * extension does not know is listed as a non-runnable entry naming it and its file. A looped
- * recipe is listed as its own kind, run through its preview rather than as a chain, when every
- * placeholder it holds is one a looped run fills itself. A recipe holding a known placeholder the
- * page has no value for is left off silently, staying reachable by name for the button or loop
- * that fills it, and so is a recipe with no line.
+ * The page entry the variant `runs` of `recipe` draws, for a page holding values for `fillable`,
+ * or undefined when the page leaves the variant off.
  */
-export function pageRecipes(recipes: Recipe[], fillable: readonly string[]): PageRecipe[] {
+function variantEntry(recipe: Recipe, runs: Variant, fillable: readonly string[]): PageEntry | undefined {
+  if (runs.unknownPlaceholders.length > 0) {
+    return {
+      kind: 'unknown',
+      name: recipe.name,
+      group: recipe.group,
+      lines: [...runs.lines],
+      placeholders: [...runs.unknownPlaceholders],
+      file: runs.file,
+    };
+  }
+  if (runs.looped) {
+    if (runs.knownPlaceholders.every((name) => LOOPED_PLACEHOLDERS.includes(name))) {
+      return { kind: 'looped', name: recipe.name, group: recipe.group, lines: [...runs.lines], values: variantValues(runs.lines) };
+    }
+    return undefined;
+  }
+  if (runs.lines.length === 0 || runs.knownPlaceholders.some((name) => !fillable.includes(name))) {
+    return undefined;
+  }
+  return { kind: 'runnable', name: recipe.name, group: recipe.group, lines: [...runs.lines], values: variantValues(runs.lines) };
+}
+
+/**
+ * The recipes a mission page lists out of `recipes`, for a page the part of the merged list
+ * `stageRecipes` keeps for its step, given the placeholder names the page holds a value for and the
+ * variant name `remembered` holds for each recipe, the dropdown selection remembered for the page's
+ * mission. Each variant is drawn by its content: one holding a placeholder the extension does not
+ * know as a non-runnable entry naming it and its file, a looped one as its own kind, run through
+ * its preview rather than as a chain, when every placeholder it holds is one a looped run fills
+ * itself, and every other one as a button, carrying the distinct harnesses, models, and efforts its
+ * lines carry, as the line-value module reads them; a variant holding a known placeholder the page
+ * has no value for, or no line, is left off silently, staying reachable by name for the button or
+ * loop that fills it. A recipe every variant of which is left off is not listed, and neither is a
+ * recipe one of the buttons outside the chains runs by its fixed name (`BUTTON_RECIPES`), whose
+ * variant is its default alone. Each entry offers the variants the page draws in its dropdown and
+ * describes the one selected: the first carrying the remembered name, a remembered selection always
+ * winning over the default, and otherwise the recipe's default when it is drawn, and otherwise its
+ * first variant drawn.
+ */
+export function pageRecipes(recipes: Recipe[], fillable: readonly string[], remembered: ReadonlyMap<string, string> = new Map()): PageRecipe[] {
+  const fixed: readonly string[] = Object.values(BUTTON_RECIPES);
   const listed: PageRecipe[] = [];
   for (const recipe of recipes) {
-    const runs = defaultVariant(recipe);
-    if (runs.unknownPlaceholders.length > 0) {
-      listed.push({
-        kind: 'unknown',
-        name: recipe.name,
-        group: recipe.group,
-        lines: [...runs.lines],
-        placeholders: [...runs.unknownPlaceholders],
-        file: runs.file,
-      });
+    if (fixed.includes(recipe.name)) {
       continue;
     }
-    if (runs.looped) {
-      if (runs.knownPlaceholders.every((name) => LOOPED_PLACEHOLDERS.includes(name))) {
-        listed.push({ kind: 'looped', name: recipe.name, group: recipe.group, lines: [...runs.lines], values: variantValues(runs.lines) });
+    const drawn: { variant: Variant; entry: PageEntry }[] = [];
+    for (const variant of recipe.variants) {
+      const entry = variantEntry(recipe, variant, fillable);
+      if (entry !== undefined) {
+        drawn.push({ variant, entry });
       }
+    }
+    if (drawn.length === 0) {
       continue;
     }
-    if (runs.lines.length === 0) {
-      continue;
+    const name = remembered.get(recipe.name);
+    let selected = name === undefined ? -1 : drawn.findIndex((each) => each.variant.name === name);
+    if (selected < 0) {
+      const fallback = defaultVariant(recipe);
+      selected = Math.max(0, drawn.findIndex((each) => each.variant === fallback));
     }
-    if (runs.knownPlaceholders.some((name) => !fillable.includes(name))) {
-      continue;
-    }
-    listed.push({ kind: 'runnable', name: recipe.name, group: recipe.group, lines: [...runs.lines], values: variantValues(runs.lines) });
+    listed.push({
+      ...drawn[selected].entry,
+      variants: drawn.map((each) => ({ name: each.variant.name, own: each.variant.own })),
+      selected,
+    });
   }
   return listed;
+}
+
+/** The variant a page entry describes, its dropdown's selected one. */
+export function selectedChoice(entry: PageRecipe): PageVariantChoice {
+  return entry.variants[entry.selected];
 }
 
 /**

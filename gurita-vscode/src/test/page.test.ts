@@ -79,6 +79,14 @@ class FakeElement {
     }
   }
 
+  /** Picks the option of `value` in a select, firing its change event as the browser does. */
+  change(value: string): void {
+    this.value = value;
+    for (const listener of this.listeners.get('change') ?? []) {
+      listener({});
+    }
+  }
+
   scrollIntoView(): void {}
 
   focus(): void {}
@@ -212,6 +220,8 @@ const RECIPES = {
       group: 'shipped',
       lines: ['claude "/gurita:review-mission-requirements --mission <path>"'],
       values: { harnesses: ['claude'], models: [], efforts: [] },
+      variants: [{ name: 'review', own: false }],
+      selected: 0,
     },
     {
       kind: 'looped',
@@ -219,6 +229,8 @@ const RECIPES = {
       group: 'shipped',
       lines: ['claude "/gurita:complete-task --mission <path> <Task Title>"'],
       values: { harnesses: ['claude'], models: [], efforts: [] },
+      variants: [{ name: 'complete', own: false }],
+      selected: 0,
     },
   ],
 };
@@ -346,7 +358,7 @@ test("another mission's page is unaffected by a run it does not hold", () => {
   named(page, 'Beta').click();
   assertIdle(page);
   named(page, 'review').click();
-  assert.deepStrictEqual(page.posted[page.posted.length - 1], { type: 'runRecipe', mission: BETA, recipe: 'review' });
+  assert.deepStrictEqual(page.posted[page.posted.length - 1], { type: 'runRecipe', mission: BETA, recipe: 'review', variant: 'review' });
 });
 
 /** The names of the recipe entries drawn on the page shown, buttons and non-runnable entries alike, in the order drawn. */
@@ -363,10 +375,26 @@ function recipeGroups(page: Page): string[] {
   return section.all().filter((each) => each.tagName === 'h4').map((each) => each.textContent);
 }
 
-/** A runnable page recipe as the extension posts it, its values read from its lines. */
-function runnable(name: string, group: string, lines: string[], values: [string[], string[], string[]]): unknown {
+/** One variant a recipe's dropdown offers, as the extension posts it. */
+interface Choice {
+  name: string;
+  own: boolean;
+}
+
+/**
+ * A runnable page recipe as the extension posts it, its values read from its lines, its dropdown
+ * offering `variants`, one variant named by the recipe unless given, and standing on `selected`.
+ */
+function runnable(
+  name: string,
+  group: string,
+  lines: string[],
+  values: [string[], string[], string[]],
+  variants: Choice[] = [{ name, own: group === 'own' }],
+  selected = 0,
+): unknown {
   const [harnesses, models, efforts] = values;
-  return { kind: 'runnable', name, group, lines, values: { harnesses, models, efforts } };
+  return { kind: 'runnable', name, group, lines, values: { harnesses, models, efforts }, variants, selected };
 }
 
 test("each mission's page draws its shipped recipes under no heading, then its own under Your recipes", () => {
@@ -383,7 +411,16 @@ test("each mission's page draws its shipped recipes under no heading, then its o
     state: 'read',
     recipes: [
       runnable('Finish mission', 'shipped', ['claude -p "/gurita:finish-mission --mission <path>"'], [['claude'], [], []]),
-      { kind: 'unknown', name: 'Odd follow up', group: 'own', lines: ['echo <odd>'], placeholders: ['odd'], file: '/home/someone/.gurita/recipes.md' },
+      {
+        kind: 'unknown',
+        name: 'Odd follow up',
+        group: 'own',
+        lines: ['echo <odd>'],
+        placeholders: ['odd'],
+        file: '/home/someone/.gurita/recipes.md',
+        variants: [{ name: 'Odd follow up', own: true }],
+        selected: 0,
+      },
     ],
   };
   const page = loadPage();
@@ -397,14 +434,14 @@ test("each mission's page draws its shipped recipes under no heading, then its o
   const section = page.root.all().find((each) => each.has('recipes')) as FakeElement;
   assert.deepStrictEqual(
     section.children.filter((child): child is FakeElement => child instanceof FakeElement).map((child) =>
-      child.has('recipe-list') ? child.children.map((entry) => shownName(entry as FakeElement)) : child.textContent,
+      child.has('recipe-list') ? child.children.map((entry) => shownName((entry as FakeElement).children[0] as FakeElement)) : child.textContent,
     ),
     ['Recipes', ['Requirements iteration', 'Prepare tasks', 'Prepare tasks (Antigravity)'], 'Your recipes', ['Mine everywhere']],
     'the shipped recipes stand directly under Recipes, in the order posted, and the own group below them',
   );
   assert.ok(!recipeGroups(page).includes('Claude Code') && !recipeGroups(page).includes('Antigravity'));
   named(page, 'Prepare tasks').click();
-  assert.deepStrictEqual(page.posted[page.posted.length - 1], { type: 'runRecipe', mission: ALPHA, recipe: 'Prepare tasks' });
+  assert.deepStrictEqual(page.posted[page.posted.length - 1], { type: 'runRecipe', mission: ALPHA, recipe: 'Prepare tasks', variant: 'Prepare tasks' });
   named(page, 'Beta').click();
   assert.deepStrictEqual(recipeNames(page), [
     'Finish mission',
@@ -412,7 +449,7 @@ test("each mission's page draws its shipped recipes under no heading, then its o
   ]);
   assert.deepStrictEqual(recipeGroups(page), ['Your recipes']);
   named(page, 'Finish mission').click();
-  assert.deepStrictEqual(page.posted[page.posted.length - 1], { type: 'runRecipe', mission: BETA, recipe: 'Finish mission' });
+  assert.deepStrictEqual(page.posted[page.posted.length - 1], { type: 'runRecipe', mission: BETA, recipe: 'Finish mission', variant: 'Finish mission' });
 });
 
 test("a page with no own recipe draws no Your recipes heading, and one with only own recipes no shipped list", () => {
@@ -456,7 +493,15 @@ test("each recipe button shows its name with its variant's distinct harnesses, m
             runnable('First run', 'shipped', firstRun, [['claude'], ['fable', 'opus'], ['xhigh', 'high']]),
             runnable('Mixed', 'shipped', mixed, [['agy', 'claude'], ['gemini-4-argon', 'opus', 'fable'], ['medium', 'high', 'xhigh']]),
             runnable('Partly read', 'own', ['agy -p "/gurita:finish-mission --mission <path>" --effort low;'], [['agy'], [], ['low']]),
-            { kind: 'looped', name: 'Execute tasks one at a time', group: 'shipped', lines: loop, values: { harnesses: [], models: [], efforts: [] } },
+            {
+              kind: 'looped',
+              name: 'Execute tasks one at a time',
+              group: 'shipped',
+              lines: loop,
+              values: { harnesses: [], models: [], efforts: [] },
+              variants: [{ name: 'Execute tasks one at a time', own: false }],
+              selected: 0,
+            },
           ],
         },
       }),
@@ -471,7 +516,157 @@ test("each recipe button shows its name with its variant's distinct harnesses, m
   assert.strictEqual(named(page, 'Mixed').title, mixed.join('\n'));
   assert.strictEqual(named(page, 'Execute tasks one at a time').title, loop.join('\n'));
   named(page, 'Execute tasks one at a time').click();
-  assert.deepStrictEqual(page.posted[page.posted.length - 1], { type: 'previewLoop', mission: ALPHA, recipe: 'Execute tasks one at a time' });
+  assert.deepStrictEqual(page.posted[page.posted.length - 1], { type: 'previewLoop', mission: ALPHA, recipe: 'Execute tasks one at a time', variant: 'Execute tasks one at a time' });
+});
+
+/** The recipe entries drawn on the page shown, each the entry's button or non-runnable entry with the dropdown beside it. */
+function recipeEntries(page: Page): { shown: FakeElement; dropdown: FakeElement | undefined }[] {
+  const section = page.root.all().find((each) => each.has('recipes'));
+  assert.ok(section !== undefined, 'no recipe section');
+  return section
+    .all()
+    .filter((each) => each.has('recipe-entry'))
+    .map((entry) => {
+      const children = entry.children.filter((child): child is FakeElement => child instanceof FakeElement);
+      return { shown: children[0], dropdown: children.find((child) => child.tagName === 'select') };
+    });
+}
+
+/** A dropdown's options, each as its text, value, and whether it is the one selected. */
+function options(dropdown: FakeElement): [string, string, boolean][] {
+  return dropdown.children
+    .filter((child): child is FakeElement => child instanceof FakeElement)
+    .map((option) => [option.textContent, option.value, option.selected]);
+}
+
+/** The Execute tasks recipe as the extension posts it, its dropdown standing on the variant at `selected`. */
+function executeTasks(selected: number): unknown {
+  const lines = [
+    ['claude -p "/gurita:complete-all-tasks --mission <path>" --model "opus" --effort high;'],
+    ['agy -p "/gurita:complete-all-tasks --mission <path>" --model "claude-opus-5-5" --effort high;'],
+    ['claude -p "/gurita:complete-all-tasks --mission <path>" --model "sonnet" --effort medium;'],
+  ][selected];
+  const values: [string[], string[], string[]][] = [
+    [['claude'], ['opus'], ['high']],
+    [['agy'], ['claude-opus-5-5'], ['high']],
+    [['claude'], ['sonnet'], ['medium']],
+  ];
+  const variants = [
+    { name: 'Claude Code', own: false },
+    { name: 'Antigravity', own: false },
+    { name: 'Mine', own: true },
+  ];
+  return runnable('Execute tasks', 'shipped', lines, values[selected], variants, selected);
+}
+
+test('every recipe entry has a dropdown beside it offering its variants in order, the own ones marked as yours, on the one selected', () => {
+  const page = loadPage();
+  page.send({
+    type: 'live',
+    missions: [
+      mission(ALPHA, 'Alpha', {
+        step: 'execute',
+        recipes: {
+          state: 'read',
+          recipes: [
+            executeTasks(1),
+            {
+              kind: 'looped',
+              name: 'Execute tasks one at a time',
+              group: 'shipped',
+              lines: ['<single-task line>'],
+              values: { harnesses: [], models: [], efforts: [] },
+              variants: [{ name: 'Execute tasks one at a time', own: false }],
+              selected: 0,
+            },
+            {
+              kind: 'unknown',
+              name: 'Odd',
+              group: 'own',
+              lines: ['echo <odd>'],
+              placeholders: ['odd'],
+              file: '/home/someone/.gurita/recipes.md',
+              variants: [
+                { name: 'Plain', own: true },
+                { name: 'Odd one', own: true },
+              ],
+              selected: 1,
+            },
+          ],
+        },
+      }),
+    ],
+    running: [],
+  });
+  const entries = recipeEntries(page);
+  assert.deepStrictEqual(entries.map((entry) => shownName(entry.shown)), [
+    'Execute tasks',
+    'Execute tasks one at a time',
+    'Odd: unknown placeholder <odd> in /home/someone/.gurita/recipes.md',
+  ]);
+  for (const entry of entries) {
+    assert.ok(entry.dropdown !== undefined, `a dropdown beside ${shownName(entry.shown)}`);
+  }
+  assert.deepStrictEqual(options(entries[0].dropdown as FakeElement), [
+    ['Claude Code', '0', false],
+    ['Antigravity', '1', true],
+    ['Mine (yours)', '2', false],
+  ]);
+  assert.deepStrictEqual(options(entries[1].dropdown as FakeElement), [['Execute tasks one at a time', '0', true]]);
+  assert.deepStrictEqual(options(entries[2].dropdown as FakeElement), [
+    ['Plain (yours)', '0', false],
+    ['Odd one (yours)', '1', true],
+  ]);
+  assert.strictEqual((entries[0].dropdown as FakeElement).getAttribute('aria-label'), 'The variant of Execute tasks');
+});
+
+test("the button's label and hover text follow the selected variant, and a click runs that variant", () => {
+  const page = loadPage();
+  const live = (selected: number) => ({
+    type: 'live',
+    missions: [mission(ALPHA, 'Alpha', { step: 'execute', recipes: { state: 'read', recipes: [executeTasks(selected)] } })],
+    running: [],
+  });
+  page.send(live(0));
+  assert.deepStrictEqual(recipeParts(named(page, 'Execute tasks')), ['Execute tasks', 'claude · opus · high']);
+  assert.strictEqual(named(page, 'Execute tasks').title, 'claude -p "/gurita:complete-all-tasks --mission <path>" --model "opus" --effort high;');
+  const before = page.posted.length;
+  (recipeEntries(page)[0].dropdown as FakeElement).change('2');
+  assert.deepStrictEqual(
+    page.posted.slice(before),
+    [{ type: 'selectVariant', mission: ALPHA, recipe: 'Execute tasks', variant: 'Mine' }],
+    'picking a variant posts its name for the recipe on this mission, and nothing runs',
+  );
+  page.send(live(2));
+  assert.deepStrictEqual(recipeParts(named(page, 'Execute tasks')), ['Execute tasks', 'claude · sonnet · medium']);
+  assert.strictEqual(named(page, 'Execute tasks').title, 'claude -p "/gurita:complete-all-tasks --mission <path>" --model "sonnet" --effort medium;');
+  assert.deepStrictEqual(options(recipeEntries(page)[0].dropdown as FakeElement).map(([, , picked]) => picked), [false, false, true]);
+  named(page, 'Execute tasks').click();
+  assert.deepStrictEqual(page.posted[page.posted.length - 1], { type: 'runRecipe', mission: ALPHA, recipe: 'Execute tasks', variant: 'Mine' });
+  page.send(live(1));
+  assert.deepStrictEqual(recipeParts(named(page, 'Execute tasks')), ['Execute tasks', 'agy · claude-opus-5-5 · high']);
+  named(page, 'Execute tasks').click();
+  assert.deepStrictEqual(page.posted[page.posted.length - 1], { type: 'runRecipe', mission: ALPHA, recipe: 'Execute tasks', variant: 'Antigravity' });
+});
+
+test('no dropdown stands beside any of the buttons outside the recipe list, and the dropdowns stay enabled while a run goes', () => {
+  const page = loadPage();
+  page.send(live([ALPHA]));
+  eachPane(page, () => {
+    const selects = page.root.all().filter((each) => each.tagName === 'select');
+    const section = page.root.all().find((each) => each.has('recipes')) as FakeElement;
+    const inRecipes = section.all().filter((each) => each.tagName === 'select');
+    assert.strictEqual(selects.length, 2, 'one dropdown per recipe entry, none elsewhere');
+    assert.deepStrictEqual(inRecipes, selects, 'every dropdown stands in the recipe list');
+    for (const select of selects) {
+      assert.strictEqual(select.disabled, false);
+    }
+    for (const text of ['Discuss', 'Answer', 'Answer with recommendation', 'Answer with this alternative', 'New task', 'New mission', 'Define mission']) {
+      if (buttons(page).some((each) => shownName(each) === text)) {
+        assert.ok(!section.all().includes(named(page, text)), `${text} stands outside the recipe list`);
+      }
+    }
+  });
 });
 
 test("a mission's page draws the recipe failure posted with its mission", () => {

@@ -41,8 +41,8 @@ Every Node command runs under Node 22 through nvm, in a subshell, from the repos
 - `npm test` compiles, then runs the unit tests of the recipe reader and the stage filter of a
   page's recipe list, the `open_questions.xml` parser, and the `TASKS_TODO.md` heading read,
   among others, with Node's built-in `node:test` over the compiled files under `out/test/`; the
-  run path, the pane's answer to a tab click, and the recipe list it posts are tested against a
-  stub of the `vscode` module,
+  run path, the pane's answer to a tab click, and the recipe list it posts, with the variant
+  selection it remembers, are tested against a stub of the `vscode` module,
   and the page script against a small stand-in for the DOM. Nothing runs inside an editor.
 - `npm run package` runs `vsce package`, which first runs the `vscode:prepublish` script: the
   compile, then `scripts/bundle.js`, the extension's own build step, which copies
@@ -97,7 +97,8 @@ from that root:
   path as a tooltip, and at its end the two mission-starting buttons, **New mission** (runs the
   `discuss-mission-goal` recipe) and **Define mission** (runs the `define-mission-goal` recipe).
 - Under the selected tab, the mission's page: the workflow diagram, the recipe buttons of the
-  recipes that fit the step its diagram fills (see The recipes a page lists), and two
+  recipes that fit the step its diagram fills, each with a dropdown of its variants beside it
+  (see The recipes a page lists), and two
   panes behind one row of two headers, **Open questions**, holding the question view parsed from
   `open_questions.xml`, and **Remaining tasks**, holding the remaining task headings of
   `TASKS_TODO.md` and the **New task** button. The two headers are of equal width and together
@@ -152,7 +153,7 @@ run at once in a terminal; every recipe button shows its lines, placeholders inc
 you click. While a run started for a mission is going, until you dismiss its terminal, that
 mission's page shows it: every action button on the page (the recipe buttons, the buttons on
 the question card and its alternatives, a preview's **Start run**, and **New task**) is
-disabled, and the workflow diagram's filled block pulses. The tabs, the **Open questions** and
+disabled, and the workflow diagram's filled block pulses. The recipe dropdowns, the tabs, the **Open questions** and
 **Remaining tasks** headers, **Refresh**, the question view's **Previous** and **Next**, the
 other missions' pages, and **New mission** and **Define mission** stay enabled, and the page is
 drawn this way again whenever it is redrawn, after the pane was hidden and shown included.
@@ -196,9 +197,10 @@ sub-headings are read, a block standing above the first sub-heading included in 
 sub-heading with no fence beneath it is a variant of no line, and of a variant name repeated
 within one recipe only the first is read. Headings inside a fence are lines, not headings. The
 pane lists recipes from two files, the shipped file and your own file, and reads both in this
-same form. Until a variant can be chosen, a recipe runs its first variant: the recipe button on a
-mission's page, the buttons that run a recipe by its fixed name, and the looped run's named
-single-task lines all take it.
+same form. A recipe's default is its first variant: the buttons that run a recipe by its fixed
+name and the looped run's named single-task lines run the default, and the recipe button on a
+mission's page runs the variant selected in the dropdown beside it, the default until you select
+another (see The recipes a page lists).
 
 ### The stage line
 
@@ -239,9 +241,9 @@ step to run next:
 
 A page whose diagram fills no block, because a document or the git read the choice needs did not
 read, lists every recipe. The page's other rules hold within that list as described below: the
-shipped recipes come first and your own under **Your recipes** below them, a recipe holding a
+shipped recipes come first and your own under **Your recipes** below them, a variant holding a
 placeholder the page cannot fill is left off, and one holding a placeholder the extension does not
-know is shown as a non-runnable entry. The list follows the step, so it changes
+know is shown as a non-runnable entry when selected. The list follows the step, so it changes
 whenever a run or a change to a mission document moves the diagram's filled block. The buttons
 that run a recipe by its fixed name (on the question card and its alternatives, **New task**,
 **New mission**, and **Define mission**) are offered whatever the step.
@@ -251,7 +253,7 @@ recipes, one button each in the shipped file's order, with no heading of their o
 carrying a shipped recipe's name joins that recipe's button rather than adding one. Then, under
 **Your recipes**, come your own recipes that carry no shipped recipe's name, in your file's order,
 the heading left out when there is none. Each button shows the recipe's name and, beneath it, what
-the lines of the variant it runs (its first) carry: its distinct harnesses, its distinct models,
+the lines of the variant it runs, the one selected in its dropdown, carry: its distinct harnesses, its distinct models,
 and its distinct efforts, each list in the order of first appearance and the three lists separated
 by `·`, so a `First run` whose lines run `fable` at `xhigh`, `opus` at `high`, and `fable` at
 `xhigh` on `claude` reads `claude · fable, opus · xhigh, high`. A line adds only the values its
@@ -261,6 +263,27 @@ text carries: its harness when its first word is `claude`, `agy`, or `codex`, an
 whose lines is readable, such as `Execute tasks one at a time`, shows its name alone. The label
 does not say which model runs at which effort; the button's hover text shows the variant's lines
 as written.
+
+Beside each recipe's button, or its non-runnable entry, stands a dropdown of the recipe's
+variants in the recipe's order, the shipped ones first, those of your own recipe file marked
+`(yours)`. It offers only the variants the page can draw: a variant holding a placeholder the page
+cannot fill, or no line, is left out of it, and a recipe none of whose variants the page can draw
+is not listed. The dropdown stands on the variant selected, and the button's label, its hover
+text, and a click all follow it: a click runs the variant the dropdown shows, and picking another
+variant starts nothing, so the dropdowns stay enabled while a run is going. The variant you select
+is remembered per recipe name on each mission, keyed by the mission's path as the pane lists it,
+in VS Code's storage for the open workspace (the extension's `workspaceState`), as a map from
+mission path and recipe name to variant name; nothing is written into the project's tree, and the
+selection lasts across closing the pane and the editor. A remembered selection always wins over
+the recipe's default. With nothing remembered, or with the remembered variant one the page cannot
+draw, the dropdown stands on the default, or on the first variant drawn when the page cannot draw
+the default. When the remembered variant is gone from the recipe, taken out of your own recipe
+file for instance, the selection is dropped and the button falls back to the recipe's current
+default. Of variants sharing one name, a selection stands on the first. A click on a variant the
+page's last list did not show selected starts nothing. The buttons that run a recipe by its fixed
+name (on the question card and its alternatives, **New task**, **New mission**, and **Define
+mission**) carry no dropdown and always run their recipe's default, and their recipes are never
+listed on the page.
 
 ### The shipped recipe file
 
@@ -355,9 +378,11 @@ The placeholders the extension knows are `<path>`, `<Task Title>`, `<Short Title
 `<note>`, the discussion note, is the one optional placeholder: when it is empty the line is
 built with it dropped, together with the `. ` written directly before it, so the line reads as if
 it held no note. A mission page fills `<path>`; a
-recipe holding any other known placeholder is left off the page's list and stays reachable by
-name for the button or loop that fills it. A recipe holding a placeholder name the extension does
-not know is shown as a non-runnable entry naming that placeholder and the file it came from.
+variant holding any other known placeholder is left off the page's list, a recipe every variant
+of which is left off is not listed, and the recipe stays reachable by name for the button or loop
+that fills it. A variant
+holding a placeholder name the extension does not know is shown, while selected, as a non-runnable
+entry naming that placeholder and the file it came from.
 
 Values never enter a line's text: each placeholder is written as a reference to a session
 variable set in the run's environment, named `GURITA_` followed by the placeholder upper-cased

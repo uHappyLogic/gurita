@@ -18,10 +18,18 @@
 // holding a placeholder the page cannot fill, each entry carrying the distinct harnesses, models,
 // and efforts its variant's lines carry, which its button shows with its name; or with the one
 // failure state the live read gives. The recipes are read with the per-user variant store laid over
-// them, and until a variant can be chosen every recipe button runs its recipe's default variant. The page redraws its question card in place from
+// them. Each entry offers the recipe's variants for the dropdown beside its button, a person's own
+// marked as theirs, and describes the one selected: the variant remembered for the recipe on that
+// mission, a remembered selection always winning over the default, and otherwise the recipe's
+// default. A selection the page posts is remembered per recipe name on one mission, keyed by the
+// mission's path as the pane lists it, in the project's `workspaceState` as a map from mission
+// path and recipe name to variant name, nothing written into the project's tree, and the pages are
+// posted again with it; a remembered variant its recipe no longer carries is dropped there at the
+// next answer, the button falling back to the current default. The page redraws its question card in place from
 // every such message, keeping the pane the person clicked while the mission stays shown.
-// A click on a recipe button starts that recipe's chain for the page's mission at once, and a
-// recipe the latest answer did not list on that mission's page starts nothing. The
+// A click on a recipe button starts the selected variant's chain for the page's mission at once,
+// and a recipe or variant the latest answer did not list, selected, on that mission's page starts
+// nothing. The
 // buttons outside the chains, untouched by the step, each run the default variant of the recipe of its fixed name, its shipped variants and those an own recipe of the same name adds, the variant store laid over them, read afresh at the click,
 // through the same run path: on a question's card the discuss, answer, and answer-with-
 // recommendation buttons, on an alternative on that card the answer-with-alternative button,
@@ -69,7 +77,8 @@ import * as vscode from 'vscode';
 import { MissionDocuments, readMissionDocuments } from './documents';
 import { LiveMission, LiveRead, projectRoot, readLive } from './live';
 import { PreviewRead, SingleTaskLine, loopArguments, ruleFile, runOverrides, runPreview, singleTaskLines } from './loop';
-import { BUTTON_RECIPES, PageRecipe, Recipe, buttonRecipe, ownRecipesFile, pageRecipes, readRecipes, stageRecipes } from './recipes';
+import { BUTTON_RECIPES, PageRecipe, Recipe, buttonRecipe, ownRecipesFile, pageRecipes, readRecipes, selectedChoice, stageRecipes } from './recipes';
+import { SELECTIONS_KEY, Selections, dropStaleSelections, missionSelections, readSelections, rememberSelection } from './selections';
 import { variantStoreFile } from './variantStore';
 import { FileEventKind, RefreshBatch, RefreshQueue, WATCHED_PATTERN, eventEffect } from './refresh';
 import { OPTIONAL_PLACEHOLDERS } from './placeholders';
@@ -93,12 +102,13 @@ type PageMessage =
   | { type: 'ready' }
   | { type: 'refresh' }
   | { type: 'missionTab'; mission: string }
-  | { type: 'runRecipe'; mission: string; recipe: string }
+  | { type: 'runRecipe'; mission: string; recipe: string; variant: string }
+  | { type: 'selectVariant'; mission: string; recipe: string; variant: string }
   | { type: 'questionButton'; button: QuestionButton; mission: string; question: string }
   | { type: 'alternativeButton'; mission: string; question: string; alternative: string }
   | { type: 'missionButton'; button: MissionButton }
   | { type: 'taskButton'; mission: string }
-  | { type: 'previewLoop'; mission: string; recipe: string }
+  | { type: 'previewLoop'; mission: string; recipe: string; variant: string }
   | { type: 'startLoop'; mission: string; recipe: string; overrides: Record<string, string> };
 
 /** The merged recipe list as read from the two recipe files, or the cause it could not be read. */
@@ -240,7 +250,9 @@ export function openMissionPane(context: vscode.ExtensionContext): void {
           showRun(message.mission);
         }
       } else if (message?.type === 'runRecipe') {
-        runRecipe(context, message.mission, message.recipe);
+        runRecipe(context, message.mission, message.recipe, message.variant);
+      } else if (message?.type === 'selectVariant') {
+        void selectVariant(context, created, message.mission, message.recipe, message.variant);
       } else if (message?.type === 'questionButton') {
         void runQuestionButton(context, message.button, message.mission, message.question);
       } else if (message?.type === 'alternativeButton') {
@@ -250,7 +262,7 @@ export function openMissionPane(context: vscode.ExtensionContext): void {
       } else if (message?.type === 'taskButton') {
         void runTaskButton(context, message.mission);
       } else if (message?.type === 'previewLoop') {
-        void previewLoop(context, created, message.mission, message.recipe);
+        void previewLoop(context, created, message.mission, message.recipe, message.variant);
       } else if (message?.type === 'startLoop') {
         runLoop(context, created, message.mission, message.recipe, message.overrides);
       }
@@ -360,7 +372,7 @@ async function flushEvents(context: vscode.ExtensionContext, target: vscode.Webv
     shown.documents.set(mission.path, documents);
     shown.workflows.set(mission.path, workflows[index]);
   });
-  await post(target, publish(shown));
+  await post(target, publish(context, shown));
 }
 
 /**
@@ -385,14 +397,43 @@ function readRecipeList(context: vscode.ExtensionContext): RecipeRead {
 /**
  * The recipe list the page of a mission whose diagram fills `step` shows, out of the merged list
  * `read`: the recipes `stageRecipes` keeps for that step, every recipe when `step` is undefined,
- * as `pageRecipes` lists them for a page holding its mission's path. A failed read is posted to the
- * page as it stands.
+ * as `pageRecipes` lists them for a page holding its mission's path, each recipe's dropdown on the
+ * variant `remembered` names for it. A failed read is posted to the page as it stands.
  */
-function missionRecipes(read: RecipeRead, step: WorkflowStep | undefined): RecipePart {
+function missionRecipes(read: RecipeRead, step: WorkflowStep | undefined, remembered: ReadonlyMap<string, string>): RecipePart {
   if (read.state === 'failed') {
     return read;
   }
-  return { state: 'read', recipes: pageRecipes(stageRecipes(read.recipes, step), PAGE_PLACEHOLDERS) };
+  return { state: 'read', recipes: pageRecipes(stageRecipes(read.recipes, step), PAGE_PLACEHOLDERS, remembered) };
+}
+
+/** The dropdown selections the project's `workspaceState` remembers, by mission path and recipe name. */
+function storedSelections(context: vscode.ExtensionContext): Selections {
+  return readSelections(context.workspaceState.get(SELECTIONS_KEY));
+}
+
+/**
+ * The selections remembered for the live missions `live`, every remembered variant its recipe in
+ * the merged list `read` no longer carries dropped from `workspaceState`, so its button falls back
+ * to the recipe's current default. A failed read drops nothing.
+ */
+function liveSelections(context: vscode.ExtensionContext, live: readonly LiveMission[], read: RecipeRead): Selections {
+  let selections = storedSelections(context);
+  if (read.state === 'failed') {
+    return selections;
+  }
+  let changed = false;
+  for (const mission of live) {
+    const kept = dropStaleSelections(selections, mission.path, read.recipes);
+    if (kept !== undefined) {
+      selections = kept;
+      changed = true;
+    }
+  }
+  if (changed) {
+    void context.workspaceState.update(SELECTIONS_KEY, selections);
+  }
+  return selections;
 }
 
 /**
@@ -425,7 +466,7 @@ async function answer(context: vscode.ExtensionContext, target: vscode.WebviewPa
       workflows: new Map(read.missions.map((mission, index) => [mission.path, workflows[index]])),
       recipes: readRecipeList(context),
     };
-    message = publish(current);
+    message = publish(context, current);
   } else {
     posted = undefined;
     current = undefined;
@@ -438,14 +479,15 @@ async function answer(context: vscode.ExtensionContext, target: vscode.WebviewPa
  * The page's message for what `shown` holds, each mission carrying the recipe list its page shows
  * for the step its diagram fills, noting what it lists as what the latest answer posted.
  */
-function publish(shown: Current): PaneMessage {
+function publish(context: vscode.ExtensionContext, shown: Current): PaneMessage {
+  const selections = liveSelections(context, shown.live, shown.recipes);
   const missions = shown.live.map((mission) => {
     const workflow = shown.workflows.get(mission.path) as MissionWorkflow;
     return {
       ...mission,
       ...(shown.documents.get(mission.path) as MissionDocuments),
       ...workflow,
-      recipes: missionRecipes(shown.recipes, workflow.step),
+      recipes: missionRecipes(shown.recipes, workflow.step, missionSelections(selections, mission.path)),
     };
   });
   const questions = new Map<string, Map<string, Set<string>>>();
@@ -472,16 +514,56 @@ function publish(shown: Current): PaneMessage {
 }
 
 /**
- * Starts the chain of the recipe named `recipe`, as the latest answer listed it on the page of the
- * live mission at `mission`, for that mission, its path its one value. A mission the latest answer
- * did not list, or a name it did not list on that mission's page, starts nothing.
+ * The entry of the recipe named `recipe` the latest answer listed on the page of the live mission
+ * at `mission`, when its dropdown stood on the variant named `variant`; undefined otherwise, so the
+ * pane starts no variant its last posted list lacks.
  */
-function runRecipe(context: vscode.ExtensionContext, mission: string, recipe: string): void {
-  const listed = posted?.recipes.get(mission)?.find((entry) => entry.name === recipe);
-  if (posted === undefined || !posted.missions.has(mission) || listed === undefined || listed.kind !== 'runnable') {
+function postedEntry(mission: string, recipe: string, variant: unknown): PageRecipe | undefined {
+  if (posted === undefined || !posted.missions.has(mission)) {
+    return undefined;
+  }
+  const listed = posted.recipes.get(mission)?.find((entry) => entry.name === recipe);
+  return listed !== undefined && selectedChoice(listed).name === variant ? listed : undefined;
+}
+
+/**
+ * Starts the chain of the variant named `variant` of the recipe named `recipe`, as the latest
+ * answer listed it, selected, on the page of the live mission at `mission`, for that mission, its
+ * path its one value. A mission the latest answer did not list, or a recipe or variant it did not
+ * list so on that mission's page, starts nothing.
+ */
+function runRecipe(context: vscode.ExtensionContext, mission: string, recipe: string, variant: unknown): void {
+  const listed = postedEntry(mission, recipe, variant);
+  if (posted === undefined || listed === undefined || listed.kind !== 'runnable') {
     return;
   }
   startChain(context, posted.root, mission, listed.name, listed.lines, { path: mission });
+}
+
+/**
+ * Remembers the variant named `variant` as the one selected in the dropdown of the recipe named
+ * `recipe` on the page of the live mission at `mission`, in the project's `workspaceState`, and
+ * posts the pages again with it selected. A mission, recipe, or variant the latest answer did not
+ * list on that mission's page remembers nothing.
+ */
+async function selectVariant(
+  context: vscode.ExtensionContext,
+  target: vscode.WebviewPanel,
+  mission: string,
+  recipe: string,
+  variant: unknown,
+): Promise<void> {
+  if (posted === undefined || !posted.missions.has(mission) || typeof variant !== 'string') {
+    return;
+  }
+  const listed = posted.recipes.get(mission)?.find((entry) => entry.name === recipe);
+  if (listed === undefined || !listed.variants.some((each) => each.name === variant)) {
+    return;
+  }
+  await context.workspaceState.update(SELECTIONS_KEY, rememberSelection(storedSelections(context), mission, recipe, variant));
+  if (current !== undefined && panel === target) {
+    await post(target, publish(context, current));
+  }
 }
 
 async function post(target: vscode.WebviewPanel, message: PaneMessage): Promise<void> {
@@ -493,16 +575,22 @@ async function post(target: vscode.WebviewPanel, message: PaneMessage): Promise<
 }
 
 /**
- * Shows the preview of the looped recipe named `recipe`, as the latest answer listed it on the
- * page of the live mission at `mission`, for that mission: the recipes read afresh, the named
- * single-task lines gathered from them, and the runner's `preview` run with those lines, the
- * mission, and the rule file, its print posted to the page. A mission the latest answer did not
- * list, a name it did not list on that mission's page, or a mission with a running chain, runs
- * nothing.
+ * Shows the preview of the variant named `variant` of the looped recipe named `recipe`, as the
+ * latest answer listed it, selected, on the page of the live mission at `mission`, for that
+ * mission: the recipes read afresh, the named single-task lines gathered from them, and the
+ * runner's `preview` run with those lines, the mission, and the rule file, its print posted to the
+ * page. A mission the latest answer did not list, a recipe or variant it did not list so on that
+ * mission's page, or a mission with a running chain, runs nothing.
  */
-async function previewLoop(context: vscode.ExtensionContext, target: vscode.WebviewPanel, mission: string, recipe: string): Promise<void> {
-  const listed = posted?.recipes.get(mission)?.find((entry) => entry.name === recipe);
-  if (posted === undefined || !posted.missions.has(mission) || listed === undefined || listed.kind !== 'looped') {
+async function previewLoop(
+  context: vscode.ExtensionContext,
+  target: vscode.WebviewPanel,
+  mission: string,
+  recipe: string,
+  variant: unknown,
+): Promise<void> {
+  const listed = postedEntry(mission, recipe, variant);
+  if (posted === undefined || listed === undefined || listed.kind !== 'looped') {
     return;
   }
   if (refuseWhileRunning(mission)) {
@@ -518,10 +606,12 @@ async function previewLoop(context: vscode.ExtensionContext, target: vscode.Webv
     await post(target, { type: 'preview', mission, recipe, lines: listed.lines, names: [], result: { state: 'failed', cause } });
     return;
   }
-  const looped = pageRecipes(recipes, PAGE_PLACEHOLDERS).find((entry) => entry.name === recipe && entry.kind === 'looped');
+  const looped = pageRecipes(recipes, PAGE_PLACEHOLDERS, new Map([[recipe, selectedChoice(listed).name]])).find(
+    (entry) => entry.name === recipe && entry.kind === 'looped' && selectedChoice(entry).name === selectedChoice(listed).name,
+  );
   if (looped === undefined) {
     previews.delete(mission);
-    const cause = `No looped recipe is named ${recipe}.`;
+    const cause = `No looped variant named ${selectedChoice(listed).name} of the recipe ${recipe} could be read.`;
     await post(target, { type: 'preview', mission, recipe, lines: listed.lines, names: [], result: { state: 'failed', cause } });
     return;
   }
@@ -854,6 +944,8 @@ function pageShell(webview: vscode.Webview, script: vscode.Uri): string {
   .pane { padding-top: 0.6em; }
   .recipes h4 { margin: 0.8em 0 0.3em; }
   .recipe-list { display: flex; flex-wrap: wrap; gap: 0.4em; }
+  .recipe-entry { display: inline-flex; align-items: stretch; gap: 0.2em; }
+  select.recipe-variant { background: var(--vscode-dropdown-background); color: var(--vscode-dropdown-foreground); border: 1px solid var(--vscode-dropdown-border); font: inherit; max-width: 14em; }
   button.recipe { background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; padding: 0.3em 0.9em; cursor: pointer; font: inherit; }
   button.recipe:hover:not(:disabled) { background: var(--vscode-button-hoverBackground); }
   button.recipe .recipe-values { display: block; font-size: 0.85em; opacity: 0.8; }

@@ -109,10 +109,21 @@ const pane = require('../pane') as typeof import('../pane');
 const runs = require('../runs') as typeof import('../runs');
 Module._load = load;
 
+/** The project's `workspaceState` as the stub's editor keeps it, by key. */
+const workspaceState = new Map<string, unknown>();
+
 const context = {
   subscriptions: [] as unknown[],
   extensionUri: { fsPath: '/extension' },
   asAbsolutePath: (file: string) => packaged.get(file) ?? `/extension/${file}`,
+  workspaceState: {
+    keys: () => [...workspaceState.keys()],
+    get: (key: string) => workspaceState.get(key),
+    update: (key: string, value: unknown) => {
+      workspaceState.set(key, JSON.parse(JSON.stringify(value)));
+      return Promise.resolve();
+    },
+  },
 } as unknown as import('vscode').ExtensionContext;
 
 const ALPHA = 'lib/mission_alpha/';
@@ -259,6 +270,12 @@ test("the pane posts each page's recipes in the shipped file's order, then its o
         'claude -p "/gurita:recommend-all-open-questions --mission <path>" --model "fable" --effort xhigh;',
       ],
       values: { harnesses: ['claude'], models: ['fable', 'opus'], efforts: ['xhigh', 'high'] },
+      variants: [
+        { name: 'Claude Code', own: false },
+        { name: 'Antigravity', own: false },
+        { name: 'First run', own: true },
+      ],
+      selected: 0,
     },
     {
       kind: 'looped',
@@ -266,6 +283,8 @@ test("the pane posts each page's recipes in the shipped file's order, then its o
       group: 'shipped',
       lines: ['<single-task line>'],
       values: { harnesses: [], models: [], efforts: [] },
+      variants: [{ name: 'Execute tasks one at a time', own: false }],
+      selected: 0,
     },
     {
       kind: 'runnable',
@@ -273,10 +292,130 @@ test("the pane posts each page's recipes in the shipped file's order, then its o
       group: 'shipped',
       lines: ['agy -p "/gurita:review-mission-requirements --mission <path>" --model "gemini-4-argon" --effort medium;'],
       values: { harnesses: ['agy'], models: ['gemini-4-argon'], efforts: ['medium'] },
+      variants: [{ name: 'Mixed review', own: false }],
+      selected: 0,
     },
-    { kind: 'runnable', name: 'Mine everywhere', group: 'own', lines: ['echo <path>'], values: { harnesses: [], models: [], efforts: [] } },
+    {
+      kind: 'runnable',
+      name: 'Mine everywhere',
+      group: 'own',
+      lines: ['echo <path>'],
+      values: { harnesses: [], models: [], efforts: [] },
+      variants: [{ name: 'Mine everywhere', own: true }],
+      selected: 0,
+    },
   ]);
   const count = created.length;
-  send({ type: 'runRecipe', mission: GAMMA, recipe: 'First run' });
+  send({ type: 'runRecipe', mission: GAMMA, recipe: 'First run', variant: 'Claude Code' });
   assert.deepStrictEqual(created.slice(count).map((terminal) => terminal.name), [`Gurita: First run (${GAMMA})`], 'a click runs the listed variant');
+});
+
+const DELTA = 'tools/mission_delta/';
+const EPSILON = 'mission_epsilon/';
+
+/** A fresh git project holding the live missions `missions`, each definition committed. */
+function project(...missions: string[]): string {
+  const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-')));
+  git(root, 'init', '-q');
+  for (const mission of missions) {
+    fs.mkdirSync(path.join(root, mission), { recursive: true });
+    fs.writeFileSync(path.join(root, mission, 'requirements.md'), '# A mission\n\n## Goal\n\nA goal.\n');
+    fs.writeFileSync(path.join(root, mission, 'open_questions.xml'), '<open-questions/>\n');
+    fs.writeFileSync(path.join(root, mission, 'TASKS_TODO.md'), '# TASKS TODO\n');
+    git(root, 'add', '.');
+    git(root, 'commit', '-q', '-m', `Mission-definition: ${mission}`);
+  }
+  return root;
+}
+
+interface PostedEntry {
+  name: string;
+  lines: string[];
+  variants: { name: string; own: boolean }[];
+  selected: number;
+}
+
+/** Sends `message` and returns the entry of the recipe `recipe` on the page of `mission` in the next live message posted. */
+async function entryAfter(message: unknown, mission: string, recipe: string): Promise<PostedEntry> {
+  const from = posted.length;
+  send(message);
+  const live = (await postedOf('live', from)) as { missions: { path: string; recipes: { recipes: PostedEntry[] } }[] };
+  const found = live.missions.find((each) => each.path === mission)?.recipes.recipes.find((each) => each.name === recipe);
+  assert.ok(found !== undefined, `no ${recipe} on ${mission}'s page`);
+  return found;
+}
+
+/** The variant an entry's dropdown stands on. */
+function selectedName(entry: PostedEntry): string {
+  return entry.variants[entry.selected].name;
+}
+
+test('a selected variant is remembered per recipe on one mission in workspaceState, wins over the default, and is dropped once gone', async () => {
+  const home = process.env.HOME;
+  const fakeHome = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-home-'));
+  process.env.HOME = fakeHome;
+  try {
+    const root = project(DELTA, EPSILON);
+    const files = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-recipes-'));
+    fs.writeFileSync(path.join(files, 'GURITA_USAGE.md'), SHIPPED_TEXT);
+    fs.writeFileSync(path.join(files, 'recipes.md'), OWN_TEXT);
+    fs.mkdirSync(path.join(fakeHome, '.gurita'));
+    // The settings view's pick of a default: Antigravity, the second shipped variant.
+    fs.writeFileSync(
+      path.join(fakeHome, '.gurita', 'variants.json'),
+      JSON.stringify({ defaults: [{ recipe: 'First run', name: 'Antigravity', origin: 'shipped' }] }),
+    );
+    packaged.set('bundled/missions.py', path.join(__dirname, '..', '..', '..', 'core', 'tools', 'missions.py'));
+    packaged.set('bundled/GURITA_USAGE.md', path.join(files, 'GURITA_USAGE.md'));
+    workspace.folders = [{ uri: { fsPath: root } }];
+    workspace.settings = { ownRecipesFile: path.join(files, 'recipes.md') };
+    workspaceState.clear();
+
+    let entry = await entryAfter({ type: 'ready' }, DELTA, 'First run');
+    assert.strictEqual(selectedName(entry), 'Antigravity', 'with nothing remembered the dropdown stands on the default');
+    assert.deepStrictEqual(entry.variants, [
+      { name: 'Claude Code', own: false },
+      { name: 'Antigravity', own: false },
+      { name: 'First run', own: true },
+    ]);
+
+    entry = await entryAfter({ type: 'selectVariant', mission: DELTA, recipe: 'First run', variant: 'First run' }, DELTA, 'First run');
+    assert.deepStrictEqual(workspaceState.get('gurita.variantSelections'), { [DELTA]: { 'First run': 'First run' } });
+    assert.strictEqual(selectedName(entry), 'First run', 'a remembered selection wins over the default');
+    assert.deepStrictEqual(entry.lines, ['claude -p "/gurita:review-mission-requirements --mission <path>" --model "sonnet";']);
+
+    entry = await entryAfter({ type: 'refresh' }, DELTA, 'First run');
+    assert.strictEqual(selectedName(entry), 'First run', 'the selection is remembered through a re-read');
+    entry = await entryAfter({ type: 'refresh' }, EPSILON, 'First run');
+    assert.strictEqual(selectedName(entry), 'Antigravity', "another mission's page keeps its own selection, here the default");
+
+    const count = created.length;
+    send({ type: 'runRecipe', mission: DELTA, recipe: 'First run', variant: 'Antigravity' });
+    send({ type: 'runRecipe', mission: DELTA, recipe: 'First run', variant: 'No such variant' });
+    send({ type: 'selectVariant', mission: DELTA, recipe: 'First run', variant: 'No such variant' });
+    send({ type: 'selectVariant', mission: 'other/mission_zeta/', recipe: 'First run', variant: 'Claude Code' });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    assert.strictEqual(created.length, count, 'a variant the last posted list does not show selected starts nothing');
+    assert.deepStrictEqual(workspaceState.get('gurita.variantSelections'), { [DELTA]: { 'First run': 'First run' } }, 'nor is remembered');
+    send({ type: 'runRecipe', mission: DELTA, recipe: 'First run', variant: 'First run' });
+    assert.deepStrictEqual(created.slice(count).map((terminal) => terminal.name), [`Gurita: First run (${DELTA})`], 'the selected variant runs');
+
+    // A default picked afresh leaves the remembered selection standing.
+    fs.writeFileSync(
+      path.join(fakeHome, '.gurita', 'variants.json'),
+      JSON.stringify({ defaults: [{ recipe: 'First run', name: 'Claude Code', origin: 'shipped' }] }),
+    );
+    entry = await entryAfter({ type: 'refresh' }, DELTA, 'First run');
+    assert.strictEqual(selectedName(entry), 'First run');
+
+    // The remembered variant goes from the own file: it is dropped and the button falls back to the current default.
+    fs.writeFileSync(path.join(files, 'recipes.md'), '### Mine everywhere\n```\necho <path>\n```\n');
+    entry = await entryAfter({ type: 'refresh' }, DELTA, 'First run');
+    assert.strictEqual(selectedName(entry), 'Claude Code');
+    assert.deepStrictEqual(workspaceState.get('gurita.variantSelections'), {}, 'the remembered variant is dropped');
+
+    assert.strictEqual(execFileSync('git', ['status', '--porcelain', '--ignored'], { cwd: root, encoding: 'utf8' }), '', "nothing is written into the project's tree");
+  } finally {
+    process.env.HOME = home;
+  }
 });

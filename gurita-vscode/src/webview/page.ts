@@ -41,11 +41,16 @@
 // when no block is filled, so each mission's page draws its own list; first the shipped recipes in
 // it, one button each in the order posted, the shipped file's, under no heading of their own, and
 // below them the own recipes that carry no shipped recipe's name under "Your recipes", in the own
-// file's order, each button showing its recipe's name with the distinct harnesses, models, and
-// efforts of the variant it runs, as the extension posts them, a variant none of whose lines is
-// readable showing its name alone, carrying that variant's lines as written in its hover text, and
-// starting that recipe's chain for the page's mission when clicked, and each recipe holding a
-// placeholder the extension does not know shown as a non-runnable entry naming it and its file.
+// file's order, each with a dropdown beside it offering the recipe's variants, a person's own
+// marked as theirs, and standing on the variant selected, as the extension posts it: the one
+// remembered for the recipe on this mission, else the recipe's default. Picking another variant
+// posts it to the extension, which remembers it and posts the page again with it selected. Each
+// button shows its recipe's name with the distinct harnesses, models, and efforts of the selected
+// variant, as the extension posts them, a variant none of whose lines is readable showing its name
+// alone, carries that variant's lines as written in its hover text, and starts that variant's
+// chain for the page's mission when clicked, and a selected variant holding a placeholder the
+// extension does not know is shown as a non-runnable entry naming it and its file. The buttons
+// outside the recipe list, which run a recipe by its fixed name, carry no dropdown.
 // A looped recipe's button asks the extension for its preview instead, drawn on the page beneath
 // the recipes: every remaining task with the line the rules give it or as unresolved, naming the
 // missing line, and above them what the runner said about a missing or unreadable rule file,
@@ -69,7 +74,7 @@
 // mission is running, as the extension posts when a run starts, when its terminal closes, and with
 // every redraw, that mission's page draws every action button on it disabled, its recipe buttons,
 // its question card's buttons, its preview's start button, and its New task button, and its
-// workflow diagram's filled block pulses; the tabs, the refresh control, the question view's
+// workflow diagram's filled block pulses; the recipe dropdowns, the tabs, the refresh control, the question view's
 // previous and next buttons and dependency links, the preview's close button, the other missions'
 // pages, the two pane headers, and the two mission-starting buttons stay enabled, and the left and
 // right arrow keys move the question view only while its pane is shown. Every value is drawn as
@@ -139,10 +144,24 @@ declare function acquireVsCodeApi(): VsCodeApi;
     efforts: string[];
   }
 
-  type PageRecipe =
-    | { kind: 'runnable'; name: string; group: RecipeGroup; lines: string[]; values: VariantValues }
-    | { kind: 'looped'; name: string; group: RecipeGroup; lines: string[]; values: VariantValues }
-    | { kind: 'unknown'; name: string; group: RecipeGroup; lines: string[]; placeholders: string[]; file: string };
+  /** One variant a recipe's dropdown offers: its name, and whether it is the person's own. */
+  interface PageVariantChoice {
+    name: string;
+    own: boolean;
+  }
+
+  /** The dropdown beside a recipe: the variants it offers and the index of the selected one, which the entry describes. */
+  interface PageChoices {
+    variants: PageVariantChoice[];
+    selected: number;
+  }
+
+  type PageRecipe = PageChoices &
+    (
+      | { kind: 'runnable'; name: string; group: RecipeGroup; lines: string[]; values: VariantValues }
+      | { kind: 'looped'; name: string; group: RecipeGroup; lines: string[]; values: VariantValues }
+      | { kind: 'unknown'; name: string; group: RecipeGroup; lines: string[]; placeholders: string[]; file: string }
+    );
 
   type RecipePart = { state: 'read'; recipes: PageRecipe[] } | { state: 'failed'; cause: string };
 
@@ -211,6 +230,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
   const OWN_GROUP_HEADING = 'Your recipes';
   /** The mark between a recipe button's lists of harnesses, models, and efforts. */
   const VALUES_SEPARATOR = ' · ';
+  /** The mark a recipe dropdown's option carries after the name of a variant of the person's own. */
+  const OWN_VARIANT_MARK = ' (yours)';
 
   const vscode = acquireVsCodeApi();
   const root = document.getElementById('root') as HTMLElement;
@@ -660,24 +681,52 @@ declare function acquireVsCodeApi(): VsCodeApi;
     return node;
   }
 
-  /** One run of a mission page's recipe entries, in the order given. */
+  /**
+   * The dropdown beside a recipe's entry: one option per variant offered, in order, a variant of the
+   * person's own marked as theirs, standing on the selected one. Picking another posts it to the
+   * extension, which remembers it for the recipe on this mission and posts the page again.
+   */
+  function variantDropdown(mission: Mission, recipe: PageRecipe): HTMLSelectElement {
+    const choice = element('select', undefined, 'recipe-variant');
+    choice.setAttribute('aria-label', `The variant of ${recipe.name}`);
+    choice.dataset.focus = `variant-${recipe.name}`;
+    recipe.variants.forEach((variant, index) => {
+      const option = element('option', variant.own ? `${variant.name}${OWN_VARIANT_MARK}` : variant.name);
+      option.value = String(index);
+      option.selected = index === recipe.selected;
+      choice.append(option);
+    });
+    choice.addEventListener('change', () => {
+      const variant = recipe.variants[Number(choice.value)];
+      if (variant !== undefined) {
+        vscode.postMessage({ type: 'selectVariant', mission: mission.path, recipe: recipe.name, variant: variant.name });
+      }
+    });
+    return choice;
+  }
+
+  /** One run of a mission page's recipe entries, in the order given, each with its variant dropdown beside it. */
   function recipeList(mission: Mission, entries: PageRecipe[], busy: boolean): HTMLElement {
     const list = element('div', undefined, 'recipe-list');
     for (const recipe of entries) {
+      const variant = recipe.variants[recipe.selected]?.name;
+      const item = element('span', undefined, 'recipe-entry');
       if (recipe.kind === 'runnable') {
-        list.append(
-          recipeButton(recipe, busy, () => vscode.postMessage({ type: 'runRecipe', mission: mission.path, recipe: recipe.name })),
+        item.append(
+          recipeButton(recipe, busy, () => vscode.postMessage({ type: 'runRecipe', mission: mission.path, recipe: recipe.name, variant })),
         );
       } else if (recipe.kind === 'looped') {
-        list.append(
-          recipeButton(recipe, busy, () => vscode.postMessage({ type: 'previewLoop', mission: mission.path, recipe: recipe.name })),
+        item.append(
+          recipeButton(recipe, busy, () => vscode.postMessage({ type: 'previewLoop', mission: mission.path, recipe: recipe.name, variant })),
         );
       } else {
         const named = recipe.placeholders.map((placeholder) => `<${placeholder}>`).join(', ');
         const entry = element('span', `${recipe.name}: ${recipe.placeholders.length === 1 ? 'unknown placeholder' : 'unknown placeholders'} ${named} in ${recipe.file}`, 'recipe-unknown');
         entry.title = recipe.lines.join('\n');
-        list.append(entry);
+        item.append(entry);
       }
+      item.append(variantDropdown(mission, recipe));
+      list.append(item);
     }
     return list;
   }

@@ -590,7 +590,7 @@ test('each step lists exactly the shipped chains that fit it, and no step chosen
   assert.strictEqual(at(undefined).length, 7);
 });
 
-test('a page lists the recipes it can fill, in the merged order, each by its first variant with the values its lines carry, and names each unknown placeholder and its file', () => {
+test('a page lists the recipes it can fill, in the merged order, each by its default variant with the values its lines carry and the variants its dropdown offers, and names each unknown placeholder and its file', () => {
   const listed = pageRecipes(mergeRecipes(shipped(), own()), ['path']);
   assert.deepStrictEqual(
     listed.map((entry) => [entry.kind, entry.group, entry.name]),
@@ -614,6 +614,11 @@ test('a page lists the recipes it can fill, in the merged order, each by its fir
       'claude "/gurita:recommend-all-open-questions --mission <path>" --model "fable"; # interactive',
     ],
     values: { harnesses: ['claude'], models: ['fable'], efforts: [] },
+    variants: [
+      { name: 'Chain', own: false },
+      { name: 'Chain', own: true },
+    ],
+    selected: 0,
   });
   assert.deepStrictEqual(listed[3], {
     kind: 'runnable',
@@ -621,6 +626,13 @@ test('a page lists the recipes it can fill, in the merged order, each by its fir
     group: 'shipped',
     lines: ['claude -p "/gurita:complete-all-tasks --mission <path>" --model "opus" --effort high;'],
     values: { harnesses: ['claude'], models: ['opus'], efforts: ['high'] },
+    variants: [
+      { name: 'On Claude Code', own: false },
+      { name: 'On Antigravity', own: false },
+      { name: 'On Claude Code', own: true },
+      { name: 'Own variant', own: true },
+    ],
+    selected: 0,
   });
   assert.deepStrictEqual(listed[7], {
     kind: 'runnable',
@@ -628,6 +640,8 @@ test('a page lists the recipes it can fill, in the merged order, each by its fir
     group: 'own',
     lines: ['echo first <path>'],
     values: { harnesses: [], models: [], efforts: [] },
+    variants: [{ name: 'First', own: true }],
+    selected: 0,
   });
   assert.deepStrictEqual(listed[1], {
     kind: 'looped',
@@ -635,6 +649,8 @@ test('a page lists the recipes it can fill, in the merged order, each by its fir
     group: 'shipped',
     lines: ['source .env_fixture', '<single-task line>'],
     values: { harnesses: [], models: [], efforts: [] },
+    variants: [{ name: 'Loop', own: false }],
+    selected: 0,
   });
   const fenced = listed[2];
   assert.ok(fenced.kind === 'unknown');
@@ -650,8 +666,47 @@ test('a recipe holding a placeholder the page cannot fill is left off, and liste
   const names = (fillable: string[]) => pageRecipes(shipped(), fillable).map((entry) => entry.name);
   assert.ok(!names(['path']).includes('answer-open-question'));
   assert.ok(!names(['path']).includes('Single task (Claude Code)'));
-  assert.ok(names(['path', 'Short Title', 'answer text']).includes('answer-open-question'));
+  assert.ok(names(['path', 'Task Title']).includes('Single task (Claude Code)'));
   assert.ok(names(['path']).includes('Loop'));
+});
+
+test("no recipe a button outside the chains runs by its fixed name is listed, whatever placeholders the page fills", () => {
+  const names = (recipes: Recipe[], fillable: string[]) => pageRecipes(recipes, fillable).map((entry) => entry.name);
+  assert.ok(!names(shipped(), ['path', 'Short Title', 'answer text']).includes('answer-open-question'));
+  const own = parseOwnRecipes('### answer-open-question\n```\necho <path>\n```\n', OWN);
+  const merged = mergeRecipes(shipped(), own);
+  assert.deepStrictEqual(byName(merged, 'answer-open-question').variants.length, 2, 'the own block joins the button recipe');
+  assert.ok(!names(merged, ['path']).includes('answer-open-question'), 'a variant the page could fill draws no dropdown for a button recipe');
+  assert.deepStrictEqual(names(own, ['path']), []);
+});
+
+test("a page entry's dropdown offers the variants the page can draw and stands on the remembered one, else the default, else the first drawn", () => {
+  const merged = mergeRecipes(shipped(), own());
+  const entry = (remembered: [string, string][], recipes: Recipe[] = merged) => {
+    const found = pageRecipes(recipes, ['path'], new Map(remembered)).find((each) => each.name === 'Variants');
+    assert.ok(found !== undefined && found.kind === 'runnable');
+    return { variant: found.variants[found.selected], lines: found.lines, values: found.values };
+  };
+  const antigravity = { name: 'On Antigravity', own: false };
+  assert.deepStrictEqual(entry([]).variant, { name: 'On Claude Code', own: false }, 'nothing remembered and no pick: the first variant');
+  assert.deepStrictEqual(entry([['Variants', 'Own variant']]), {
+    variant: { name: 'Own variant', own: true },
+    lines: ["codex exec '$gurita:complete-all-tasks --mission <path>';"],
+    values: { harnesses: ['codex'], models: [], efforts: [] },
+  });
+  assert.deepStrictEqual(entry([['Chain', 'Own variant']]).variant.name, 'On Claude Code', "another recipe's selection is not read");
+  const picked = merged.map((recipe) => (recipe.name === 'Variants' ? { ...recipe, picked: { name: 'On Antigravity', origin: 'shipped' as const } } : recipe));
+  assert.deepStrictEqual(entry([], picked).variant, antigravity, 'nothing remembered: the picked default');
+  assert.deepStrictEqual(entry([['Variants', 'Own variant']], picked).variant.name, 'Own variant', 'a remembered selection wins over the default');
+  assert.deepStrictEqual(entry([['Variants', 'Gone']], picked).variant, antigravity, 'a remembered variant the recipe lacks: the default');
+  assert.deepStrictEqual(entry([['Variants', 'Empty variant']], picked).variant, antigravity, 'a remembered variant the page cannot draw: the default');
+  const unfillable = merged.map((recipe) =>
+    recipe.name === 'My variant recipe' ? { ...recipe, picked: { name: 'Second', origin: 'own' as const } } : recipe,
+  );
+  const mine = pageRecipes(unfillable, ['path']).find((each) => each.name === 'My variant recipe');
+  assert.ok(mine !== undefined);
+  assert.deepStrictEqual(mine.variants, [{ name: 'First', own: true }], 'a variant the page cannot fill is left out of the dropdown');
+  assert.deepStrictEqual(mine.variants[mine.selected].name, 'First', 'a default the page cannot draw gives way to the first drawn');
 });
 
 test('a looped recipe is listed as its own kind only when a looped run fills every placeholder it holds', () => {
