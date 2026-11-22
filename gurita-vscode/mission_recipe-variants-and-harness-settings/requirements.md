@@ -88,5 +88,7 @@ No other live mission's scope overlaps `gurita-vscode/`, so nothing holds or sha
 
 - **Folder-read copy's version.** The check takes `folderVersion` as the copy's version whenever the entry carries `readFromFolder`, and `version` for every entry without it.
 
+- **Failed check.** A failed check is shown in the settings view alone, beside the harness it concerns, naming which of the three checks failed: CLI not found, Gurita plugin not installed, or installed version differing from the packaged one. The mission pages draw every variant, the seven fixed-name buttons, and the looped run exactly as they would with every check passing, and a click runs the lines as written.
+
 ## Out of Scope
 
