@@ -273,4 +273,10 @@
       <drawback>Two stores for one view, one of them invisible, so a person reading the file sees the lists but not which harnesses are enabled; the variant file still has to carry a second kind of content, with the same dependence on that file&apos;s choice and format (the Variant store file question).</drawback>
     </alternative>
   </open-question>
+  <open-question id="Default before any pick">
+    <question>A recipe&apos;s default variant is picked in the settings view, and it decides which variant the recipe&apos;s button runs while no dropdown selection is remembered; for the seven fixed-name buttons it is the only choice of variant there is. Which variant counts as a recipe&apos;s default whenever no picked default stands, either because the person never picked one for that recipe or because the variant they picked was deleted or renamed?</question>
+  </open-question>
+  <open-question id="Own recipes in settings view">
+    <question>The settings view duplicates, renames, deletes, and changes the model and effort of shipped variants and shipped single-task lines, never changing the shipped file: an edit writes a stored copy or a hiding record to the per-user store. A person&apos;s hand-written own recipe file (`~/.gurita/recipes.md` by default) also brings recipes, variants, and single-task lines into the merged list, and the extension has never written that file. Does the settings view list the recipes, variants, and single-task lines that come from the hand-written own recipe file, and which of its edits does it offer on them?</question>
+  </open-question>
 </open-questions>
