@@ -74,5 +74,7 @@ No other live mission's scope overlaps `gurita-vscode/`, so nothing holds or sha
 
 - **Remembered selection.** The variant selected in a recipe's dropdown is remembered per recipe name on one mission, keyed by the mission's path as the pane lists it. It is kept in the project's `ExtensionContext.workspaceState`, as a map from mission path and recipe name to variant name. Nothing is written into the project's tree.
 
+- **Button label.** A recipe button shows the selected variant's distinct harnesses once, its distinct models once, and its distinct efforts once, each as its own list in the order of first appearance and independent of the other two. `First run` reads claude · fable, opus · xhigh, high, and the mixed-agent chain reads agy, claude · gemini-4-argon, opus, fable · medium, high, xhigh. The label does not show which model runs at which effort; that stays readable in the lines as written.
+
 ## Out of Scope
 
