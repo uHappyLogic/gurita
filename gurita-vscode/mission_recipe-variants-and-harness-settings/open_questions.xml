@@ -719,6 +719,36 @@
   </open-question>
   <open-question id="Disabled harness reach">
     <question>The settings view enables or disables each harness, and the looped task run is to stay as it is. Does disabling a harness reach beyond the mission page&apos;s recipe list, to the seven fixed-name buttons, whose shipped lines all run on Claude Code, and to the named single-task lines the looped run&apos;s preview offers and its rules choose?</question>
+    <alternative id="Recipe list only">
+      Disabling a harness acts on the mission page&apos;s recipe list alone. The seven fixed-name buttons run their recipes as today whatever harness their lines name, and the looped run&apos;s single-task lines are untouched: the preview&apos;s override list offers every named single-task line, the rules choose among all of them, and every line is still passed to the runner as one `--line`.
+      <advantage>The two surfaces the goal keeps as they are, the looped run and the fixed-name buttons, which `pane.ts` resolves through `BUTTON_RECIPES` outside the list, need no change at all. The setting means one plain thing: which harnesses the recipe list offers.</advantage>
+      <drawback>A disabled harness still runs from seven buttons and from every looped task its rules or a person&apos;s override send to it. Disabling Claude Code, the harness every shipped button line and two of the three shipped single-task lines run on, would leave most of what the pane can start running on it, so the setting reads as broader than it is.</drawback>
+    </alternative>
+    <alternative id="List and buttons">
+      Disabling a harness acts on the recipe list and on the seven fixed-name buttons, each button treated by the harness its recipe&apos;s lines run on, the same way the list treats a variant. The looped run&apos;s single-task lines are untouched: the override list offers every one, the rules choose among all of them, and every line still reaches the runner.
+      <advantage>Every recipe a person starts by a click on the page follows the setting, while the looped run, its rule file, and the runner stay exactly as the goal keeps them, so no question arises about what a rule naming a disabled line should do.</advantage>
+      <drawback>With every shipped button line on Claude Code, disabling it changes all seven buttons at once unless an own recipe of the same name runs them elsewhere. How a button is treated depends on the sibling axes of whether button recipes carry variants and on what disabling does to a variant. A looped run still sends tasks to a disabled harness.</drawback>
+    </alternative>
+    <alternative id="List and override menu">
+      Disabling a harness acts on the recipe list and on the menu the looped run&apos;s preview offers: the override list&apos;s choice of named single-task lines treats a line on a disabled harness as the list treats a variant. The rules&apos; own choices are untouched, every single-task line is still passed to the runner, and a task the rules send to a disabled line still runs on it. The fixed-name buttons are untouched.
+      <advantage>What a person can choose follows the setting at both places where they choose a run&apos;s harness, while the rule file&apos;s assignments, `loop.ts`&apos;s `--line` set, and the runner behave exactly as today.</advantage>
+      <drawback>It is a half-reach: a run whose rules pick a disabled line still runs on that harness although the person could not choose it in the preview&apos;s menu, so the setting holds for overrides and not for the defaults beside them. The seven buttons still ignore it.</drawback>
+    </alternative>
+    <alternative id="List and looped lines">
+      Disabling a harness acts on the recipe list, on the preview&apos;s override list, and on the single-task lines the rules choose: the preview treats a task whose rule-chosen line runs on a disabled harness the way the list treats a variant, so the run cannot start, or shows that task marked, until the person overrides it to an enabled line, without a change to the rule file or the runner. The fixed-name buttons are untouched.
+      <advantage>No looped task can reach a disabled harness without the person seeing it, so the setting holds for every run of more than one task, the place where a wrong harness costs the most.</advantage>
+      <drawback>It changes how the looped run starts, which the goal keeps as it is, and leaving a line out of the `--line` set `loop.ts` passes would make a rule naming it fail in the runner, so the reach has to stop at the preview. The seven buttons still run on a disabled harness.</drawback>
+    </alternative>
+    <alternative id="Buttons and override menu">
+      Disabling a harness acts on the recipe list, the seven fixed-name buttons, and the preview&apos;s override list, each treated as the list treats a variant. The rules&apos; choices of single-task lines are untouched, and every line still reaches the runner.
+      <advantage>Every harness a person picks or starts by hand follows the setting, while the looped run&apos;s rule-driven behaviour, its rule file, and the runner stay as they are.</advantage>
+      <drawback>A rule-chosen line on a disabled harness still runs, so the setting holds everywhere except the looped run&apos;s defaults, a gap a person is not shown. The buttons&apos; treatment depends on the sibling axes of whether button recipes carry variants and what disabling does to a variant.</drawback>
+    </alternative>
+    <alternative id="Everywhere">
+      Disabling a harness acts on every place a line can be started from: the recipe list, the seven fixed-name buttons, the preview&apos;s override list, and the single-task lines the rules choose, the preview showing or holding a task whose rule-chosen line runs on a disabled harness until it is overridden. The rule file and the runner are unchanged.
+      <advantage>The setting means exactly what it says: nothing the pane starts reaches a disabled harness without the person being told, with no surface left out to explain.</advantage>
+      <drawback>It touches the most code and the looped run&apos;s start, which the goal keeps as it is, and with all shipped button lines and two of three shipped single-task lines on Claude Code, disabling it leaves little runnable until own recipes cover the gap. The buttons&apos; treatment depends on the sibling axes of button variants and of what disabling does to a variant.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Design draft revision">
     <question>The design draft `ideas/vscode_extension.md` records under Decided that the extension composes no line and holds no host flag, model name, or effort level, and that a variant of a shipped chain is a chain copied into a person&apos;s own recipe file. This mission has the extension read each line&apos;s harness, model, and effort, hold model and effort lists per harness, and rewrite a line&apos;s model and effort. Does the mission revise that draft and `ideas/vscode_extension_follow_up.md` to record the change, or leave both as written?</question>
