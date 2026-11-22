@@ -62,5 +62,9 @@ No other live mission's scope overlaps `gurita-vscode/`, so nothing holds or sha
 - **Shipped variants.** Every edit the settings view offers applies to a shipped variant as it does to a duplicate. Changing a line's model or effort, or renaming the variant, writes a stored copy to the per-user file. That copy stands in for the shipped variant and keeps its place in the recipe's dropdown. Deleting a shipped variant writes a record to the same file that hides it. The stored copy and the hiding record stay until the person resets the variant, and resetting removes them so the shipped variant shows again.
 - **Codex.** Codex is a third harness in the settings view, covered as Claude Code and Antigravity are. It is checked through `codex plugin list -m gurita --json`, it can be enabled and disabled, and it holds a model list, a Codex line's model being rewritten through `-m`. It holds no effort list. The mission also makes the print check that was never made: it runs a short headless `codex exec` line whose skill ends on a known fixed line and records what that line's plain print opens with. It brings the entry in `ideas/vscode_extension_follow_up.md` up to date with that outcome. The runner stays as it is.
 
+### Recipes and variants
+
+- **Mixed-agent chain.** `Mixed-agent requirements review (Gemini reviews, Claude annotates)` stays a recipe of its own, separate from `Requirements iteration`. It still declares the additional review round, its one shipped block is its only variant, and its lines stay as written. The additional review round's page therefore shows two buttons, `Requirements iteration` and the mixed-agent recipe.
+
 ## Out of Scope
 
