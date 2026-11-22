@@ -237,6 +237,20 @@ test('an own recipe carrying a shipped name joins it as further variants, the re
   assert.deepStrictEqual(runs(merged, 'Chain'), runs(shipped(), 'Chain'), 'the first variant stays the shipped one');
 });
 
+test("the merged list keeps the shipped file's order, whichever host heading comes first", () => {
+  const text = '## Antigravity\n\n### B\n```\necho b\n```\n\n## Claude Code\n\n### A\n```\necho a\n```\n\n## Antigravity\n\n### C\n```\necho c\n```\n';
+  const merged = mergeRecipes(parseShippedRecipes(text, SHIPPED), parseOwnRecipes('### Mine\n```\necho mine\n```\n', OWN));
+  assert.deepStrictEqual(
+    merged.map((recipe) => [recipe.group, recipe.name]),
+    [
+      ['Antigravity', 'B'],
+      ['Claude Code', 'A'],
+      ['Antigravity', 'C'],
+      ['own', 'Mine'],
+    ],
+  );
+});
+
 test('readRecipes reads both files and treats a missing own file as holding no recipe', () => {
   assert.deepStrictEqual(readRecipes(SHIPPED, OWN), mergeRecipes(shipped(), own()));
   assert.deepStrictEqual(readRecipes(SHIPPED), shipped());
@@ -533,7 +547,7 @@ test('each step lists exactly the shipped chains that fit it, and no step chosen
   assert.strictEqual(at(undefined).length, 14);
 });
 
-test('a page lists the recipes it can fill, in the merged order, each by its first variant, and names each unknown placeholder and its file', () => {
+test('a page lists the recipes it can fill, in the merged order, each by its first variant with the values its lines carry, and names each unknown placeholder and its file', () => {
   const listed = pageRecipes(mergeRecipes(shipped(), own()), ['path']);
   assert.deepStrictEqual(
     listed.map((entry) => [entry.kind, entry.group, entry.name]),
@@ -556,19 +570,28 @@ test('a page lists the recipes it can fill, in the merged order, each by its fir
       'claude -p "/gurita:review-mission-requirements --mission <path>" --model "fable";',
       'claude "/gurita:recommend-all-open-questions --mission <path>" --model "fable"; # interactive',
     ],
+    values: { harnesses: ['claude'], models: ['fable'], efforts: [] },
   });
   assert.deepStrictEqual(listed[3], {
     kind: 'runnable',
     name: 'Variants',
     group: 'Claude Code',
     lines: ['claude -p "/gurita:complete-all-tasks --mission <path>" --model "opus" --effort high;'],
+    values: { harnesses: ['claude'], models: ['opus'], efforts: ['high'] },
   });
-  assert.deepStrictEqual(listed[7], { kind: 'runnable', name: 'My variant recipe', group: 'own', lines: ['echo first <path>'] });
+  assert.deepStrictEqual(listed[7], {
+    kind: 'runnable',
+    name: 'My variant recipe',
+    group: 'own',
+    lines: ['echo first <path>'],
+    values: { harnesses: [], models: [], efforts: [] },
+  });
   assert.deepStrictEqual(listed[1], {
     kind: 'looped',
     name: 'Loop',
     group: 'Claude Code',
     lines: ['source .env_fixture', '<single-task line>'],
+    values: { harnesses: [], models: [], efforts: [] },
   });
   const fenced = listed[2];
   assert.ok(fenced.kind === 'unknown');

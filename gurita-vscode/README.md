@@ -41,7 +41,8 @@ Every Node command runs under Node 22 through nvm, in a subshell, from the repos
 - `npm test` compiles, then runs the unit tests of the recipe reader and the stage filter of a
   page's recipe list, the `open_questions.xml` parser, and the `TASKS_TODO.md` heading read,
   among others, with Node's built-in `node:test` over the compiled files under `out/test/`; the
-  run path and the pane's answer to a tab click are tested against a stub of the `vscode` module,
+  run path, the pane's answer to a tab click, and the recipe list it posts are tested against a
+  stub of the `vscode` module,
   and the page script against a small stand-in for the DOM. Nothing runs inside an editor.
 - `npm run package` runs `vsce package`, which first runs the `vscode:prepublish` script: the
   compile, then `scripts/bundle.js`, the extension's own build step, which copies
@@ -238,18 +239,35 @@ step to run next:
 
 A page whose diagram fills no block, because a document or the git read the choice needs did not
 read, lists every recipe. The page's other rules hold within that list as described below: the
-recipes stay grouped under Claude Code and Antigravity with your own under **Your recipes**, a
-recipe holding a placeholder the page cannot fill is left off, and one holding a placeholder the
-extension does not know is shown as a non-runnable entry. The list follows the step, so it changes
+shipped recipes come first and your own under **Your recipes** below them, a recipe holding a
+placeholder the page cannot fill is left off, and one holding a placeholder the extension does not
+know is shown as a non-runnable entry. The list follows the step, so it changes
 whenever a run or a change to a mission document moves the diagram's filled block. The buttons
 that run a recipe by its fixed name (on the question card and its alternatives, **New task**,
 **New mission**, and **Define mission**) are offered whatever the step.
 
+Under the page's **Recipes** heading the list is drawn in two parts. First come the shipped
+recipes, one button each in the shipped file's order, with no heading of their own; an own recipe
+carrying a shipped recipe's name joins that recipe's button rather than adding one. Then, under
+**Your recipes**, come your own recipes that carry no shipped recipe's name, in your file's order,
+the heading left out when there is none. Each button shows the recipe's name and, beneath it, what
+the lines of the variant it runs (its first) carry: its distinct harnesses, its distinct models,
+and its distinct efforts, each list in the order of first appearance and the three lists separated
+by `·`, so a `First run` whose lines run `fable` at `xhigh`, `opus` at `high`, and `fable` at
+`xhigh` on `claude` reads `claude · fable, opus · xhigh, high`. A line adds only the values its
+text carries: its harness when its first word is `claude`, `agy`, or `codex`, and the values of
+`--model` and `--effort`, or of `-m` on a Codex line. A shell step, the slot line
+`<single-task line>`, and a command the extension does not know add nothing, so a variant none of
+whose lines is readable, such as `Execute tasks one at a time`, shows its name alone. The label
+does not say which model runs at which effort; the button's hover text shows the variant's lines
+as written.
+
 ### The shipped recipe file
 
 The package ships `snippets/GURITA_USAGE.md` as `bundled/GURITA_USAGE.md`, read at run time. Only
-the `###` blocks under its `## Claude Code` and `## Antigravity` headings are recipes, each
-listed in that host's group; the blocks under `## Manual use` are for reading only. Each shipped
+the `###` blocks under its `## Claude Code` and `## Antigravity` headings are recipes, listed in
+the file's order with no heading of their own on the page; the blocks under `## Manual use` are
+for reading only. Each shipped
 recipe is written as one fenced block with no `####` sub-heading, so each is a recipe of one
 variant named by its heading.
 
@@ -300,8 +318,8 @@ of its variants when it writes several, joins the shipped recipe as one more var
 the shipped variants under its own variant name (a one-block own recipe's being the recipe's
 name) and marked as your own. An own variant carrying a shipped variant's name is kept as a second
 entry beside it, so every shipped variant stays, and the shipped variant stays the one the recipe
-runs first. Every other own recipe is listed below the Claude Code and Antigravity groups under
-**Your recipes**, in the order your file lists them.
+runs first. Every other own recipe is listed below the shipped recipes under **Your recipes**,
+in the order your file lists them.
 An own recipe may declare its step by a `Stage:` line, as a shipped one does (see the stage line
 above), and is then listed only on the pages that step fits; an undeclared one is listed on every
 page. For example:

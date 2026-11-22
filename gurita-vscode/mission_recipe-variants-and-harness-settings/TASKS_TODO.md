@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Recipe List Layout and Button Labels
-
-Redraw the mission page's recipe list under its Recipes heading in two parts: first one button per shipped recipe, in the shipped file's order and with no heading of their own, then the group headed Your recipes holding the own recipes that carry no shipped recipe's name, in the own file's order, so that only the Claude Code and Antigravity headings go. Each button shows, with its recipe's name, the distinct harnesses, models, and efforts of the variant it runs, as the line-value module reads them, a variant none of whose lines is readable showing its name alone, and keeps that variant's lines as written in its hover text. Verified by the page and pane tests under `gurita-vscode/src/test/`, with `gurita-vscode/README.md` describing the list as drawn.
-
----
-
 ## Shipped Recipe File in Variant Form
 
 Rewrite the recipes of `snippets/GURITA_USAGE.md` into the variant form the reader now takes: the `## Claude Code` and `## Antigravity` recipe sections become one recipe section, which the reader reads in their place, each chain one `###` recipe with its `Stage:` line once and one `####` variant per copy, the `(Antigravity)` suffixes of the chain headings gone and the Antigravity notes kept there as prose. `Execute tasks of normal difficulty` and `Execute tasks (critical tasks)` become one execution recipe under a single name that replaces both, its variants Claude Code at `high` (`opus`), Antigravity at `high` (`claude-opus-5-5`), and Claude Code at `xhigh` (`opus`), the Antigravity critical copy dropped, while `Execute tasks one at a time`, the mixed-agent recipe with its additional review round stage, the seven button recipes, and the three single-task lines stay recipes of one block under their present `###` headings, every line as written. Verified by the tests in `gurita-vscode/src/test/recipes.test.ts` that read this file, the additional review round listing `Requirements iteration` and the mixed-agent recipe as its two chains, by `task_line_rules.txt` still naming shipped headings unchanged, and by `gurita-vscode/README.md` describing the file as it stands.

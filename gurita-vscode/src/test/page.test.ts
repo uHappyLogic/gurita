@@ -206,8 +206,20 @@ function mission(missionPath: string, title: string, workflow: Record<string, un
 const RECIPES = {
   state: 'read',
   recipes: [
-    { kind: 'runnable', name: 'review', group: 'Claude Code', lines: ['claude "/gurita:review-mission-requirements --mission <path>"'] },
-    { kind: 'looped', name: 'complete', group: 'Claude Code', lines: ['claude "/gurita:complete-task --mission <path> <Task Title>"'] },
+    {
+      kind: 'runnable',
+      name: 'review',
+      group: 'Claude Code',
+      lines: ['claude "/gurita:review-mission-requirements --mission <path>"'],
+      values: { harnesses: ['claude'], models: [], efforts: [] },
+    },
+    {
+      kind: 'looped',
+      name: 'complete',
+      group: 'Claude Code',
+      lines: ['claude "/gurita:complete-task --mission <path> <Task Title>"'],
+      values: { harnesses: ['claude'], models: [], efforts: [] },
+    },
   ],
 };
 
@@ -219,8 +231,19 @@ function buttons(page: Page): FakeElement[] {
   return page.root.all().filter((each) => each.tagName === 'button');
 }
 
+/** The spans a recipe button draws, its name and, when its variant carries any, its values, in order. */
+function recipeParts(each: FakeElement): string[] {
+  return each.children.filter((child): child is FakeElement => child instanceof FakeElement).map((child) => child.textContent);
+}
+
+/** The name a button shows: its own text, or a recipe button's name span. */
+function shownName(each: FakeElement): string {
+  const name = each.children.find((child): child is FakeElement => child instanceof FakeElement && child.has('recipe-name'));
+  return name?.textContent ?? each.textContent;
+}
+
 function named(page: Page, text: string): FakeElement {
-  const found = buttons(page).find((each) => each.textContent === text);
+  const found = buttons(page).find((each) => shownName(each) === text);
   assert.ok(found !== undefined, `no button ${text}`);
   return found;
 }
@@ -330,7 +353,7 @@ test("another mission's page is unaffected by a run it does not hold", () => {
 function recipeNames(page: Page): string[] {
   const section = page.root.all().find((each) => each.has('recipes'));
   assert.ok(section !== undefined, 'no recipe section');
-  return section.all().filter((each) => each.has('recipe') || each.has('recipe-unknown')).map((each) => each.textContent);
+  return section.all().filter((each) => each.has('recipe') || each.has('recipe-unknown')).map(shownName);
 }
 
 /** The group headings drawn above the recipes on the page shown, in the order drawn. */
@@ -340,20 +363,26 @@ function recipeGroups(page: Page): string[] {
   return section.all().filter((each) => each.tagName === 'h4').map((each) => each.textContent);
 }
 
-test("each mission's page draws the recipe list posted with its mission, grouped as before", () => {
+/** A runnable page recipe as the extension posts it, its values read from its lines. */
+function runnable(name: string, group: string, lines: string[], values: [string[], string[], string[]]): unknown {
+  const [harnesses, models, efforts] = values;
+  return { kind: 'runnable', name, group, lines, values: { harnesses, models, efforts } };
+}
+
+test("each mission's page draws its shipped recipes under no heading, then its own under Your recipes", () => {
   const derive = {
     state: 'read',
     recipes: [
-      { kind: 'runnable', name: 'Requirements iteration', group: 'Claude Code', lines: ['claude -p "/gurita:review-mission-requirements --mission <path>"'] },
-      { kind: 'runnable', name: 'Prepare tasks', group: 'Claude Code', lines: ['claude -p "/gurita:derive-tasks --mission <path>"'] },
-      { kind: 'runnable', name: 'Prepare tasks (Antigravity)', group: 'Antigravity', lines: ['agy -p "/gurita:derive-tasks --mission <path>"'] },
-      { kind: 'runnable', name: 'Mine everywhere', group: 'own', lines: ['echo <path>'] },
+      runnable('Requirements iteration', 'Claude Code', ['claude -p "/gurita:review-mission-requirements --mission <path>"'], [['claude'], [], []]),
+      runnable('Prepare tasks', 'Claude Code', ['claude -p "/gurita:derive-tasks --mission <path>"'], [['claude'], [], []]),
+      runnable('Prepare tasks (Antigravity)', 'Antigravity', ['agy -p "/gurita:derive-tasks --mission <path>"'], [['agy'], [], []]),
+      runnable('Mine everywhere', 'own', ['echo <path>'], [[], [], []]),
     ],
   };
   const finish = {
     state: 'read',
     recipes: [
-      { kind: 'runnable', name: 'Finish mission', group: 'Claude Code', lines: ['claude -p "/gurita:finish-mission --mission <path>"'] },
+      runnable('Finish mission', 'Claude Code', ['claude -p "/gurita:finish-mission --mission <path>"'], [['claude'], [], []]),
       { kind: 'unknown', name: 'Odd follow up', group: 'own', lines: ['echo <odd>'], placeholders: ['odd'], file: '/home/someone/.gurita/recipes.md' },
     ],
   };
@@ -364,7 +393,16 @@ test("each mission's page draws the recipe list posted with its mission, grouped
     running: [],
   });
   assert.deepStrictEqual(recipeNames(page), ['Requirements iteration', 'Prepare tasks', 'Prepare tasks (Antigravity)', 'Mine everywhere']);
-  assert.deepStrictEqual(recipeGroups(page), ['Claude Code', 'Antigravity', 'Your recipes']);
+  assert.deepStrictEqual(recipeGroups(page), ['Your recipes']);
+  const section = page.root.all().find((each) => each.has('recipes')) as FakeElement;
+  assert.deepStrictEqual(
+    section.children.filter((child): child is FakeElement => child instanceof FakeElement).map((child) =>
+      child.has('recipe-list') ? child.children.map((entry) => shownName(entry as FakeElement)) : child.textContent,
+    ),
+    ['Recipes', ['Requirements iteration', 'Prepare tasks', 'Prepare tasks (Antigravity)'], 'Your recipes', ['Mine everywhere']],
+    'the shipped recipes stand directly under Recipes, in the order posted, and the own group below them',
+  );
+  assert.ok(!recipeGroups(page).includes('Claude Code') && !recipeGroups(page).includes('Antigravity'));
   named(page, 'Prepare tasks').click();
   assert.deepStrictEqual(page.posted[page.posted.length - 1], { type: 'runRecipe', mission: ALPHA, recipe: 'Prepare tasks' });
   named(page, 'Beta').click();
@@ -372,9 +410,68 @@ test("each mission's page draws the recipe list posted with its mission, grouped
     'Finish mission',
     'Odd follow up: unknown placeholder <odd> in /home/someone/.gurita/recipes.md',
   ]);
-  assert.deepStrictEqual(recipeGroups(page), ['Claude Code', 'Your recipes']);
+  assert.deepStrictEqual(recipeGroups(page), ['Your recipes']);
   named(page, 'Finish mission').click();
   assert.deepStrictEqual(page.posted[page.posted.length - 1], { type: 'runRecipe', mission: BETA, recipe: 'Finish mission' });
+});
+
+test("a page with no own recipe draws no Your recipes heading, and one with only own recipes no shipped list", () => {
+  const page = loadPage();
+  page.send({
+    type: 'live',
+    missions: [
+      mission(ALPHA, 'Alpha', { step: 'derive', recipes: { state: 'read', recipes: [runnable('Prepare tasks', 'Claude Code', ['echo <path>'], [[], [], []])] } }),
+      mission(BETA, 'Beta', { step: 'derive', recipes: { state: 'read', recipes: [runnable('Mine', 'own', ['echo <path>'], [[], [], []])] } }),
+    ],
+    running: [],
+  });
+  assert.deepStrictEqual(recipeGroups(page), []);
+  assert.deepStrictEqual(recipeNames(page), ['Prepare tasks']);
+  named(page, 'Beta').click();
+  assert.deepStrictEqual(recipeGroups(page), ['Your recipes']);
+  assert.deepStrictEqual(recipeNames(page), ['Mine']);
+});
+
+test("each recipe button shows its name with its variant's distinct harnesses, models, and efforts, and its lines in its hover text", () => {
+  const firstRun = [
+    'claude -p "/gurita:review-mission-requirements --mission <path>" --model "fable" --effort xhigh;',
+    'claude -p "/gurita:provide-alternatives-to-all-open-questions --mission <path>" --model "opus" --effort high;',
+    'claude -p "/gurita:recommend-all-open-questions --mission <path>" --model "fable" --effort xhigh;',
+  ];
+  const mixed = [
+    'agy -p "/gurita:review-mission-requirements --mission <path>" --model "gemini-4-argon" --effort medium;',
+    'claude -p "/gurita:provide-alternatives-to-all-open-questions --mission <path>" --model "opus" --effort high;',
+    'claude -p "/gurita:recommend-all-open-questions --mission <path>" --model "fable" --effort xhigh;',
+  ];
+  const loop = ['<single-task line>'];
+  const page = loadPage();
+  page.send({
+    type: 'live',
+    missions: [
+      mission(ALPHA, 'Alpha', {
+        step: 'first-review',
+        recipes: {
+          state: 'read',
+          recipes: [
+            runnable('First run', 'Claude Code', firstRun, [['claude'], ['fable', 'opus'], ['xhigh', 'high']]),
+            runnable('Mixed', 'Claude Code', mixed, [['agy', 'claude'], ['gemini-4-argon', 'opus', 'fable'], ['medium', 'high', 'xhigh']]),
+            runnable('Partly read', 'own', ['agy -p "/gurita:finish-mission --mission <path>" --effort low;'], [['agy'], [], ['low']]),
+            { kind: 'looped', name: 'Execute tasks one at a time', group: 'Claude Code', lines: loop, values: { harnesses: [], models: [], efforts: [] } },
+          ],
+        },
+      }),
+    ],
+    running: [],
+  });
+  assert.deepStrictEqual(recipeParts(named(page, 'First run')), ['First run', 'claude · fable, opus · xhigh, high']);
+  assert.deepStrictEqual(recipeParts(named(page, 'Mixed')), ['Mixed', 'agy, claude · gemini-4-argon, opus, fable · medium, high, xhigh']);
+  assert.deepStrictEqual(recipeParts(named(page, 'Partly read')), ['Partly read', 'agy · low']);
+  assert.deepStrictEqual(recipeParts(named(page, 'Execute tasks one at a time')), ['Execute tasks one at a time'], 'a variant of no readable line shows its name alone');
+  assert.strictEqual(named(page, 'First run').title, firstRun.join('\n'));
+  assert.strictEqual(named(page, 'Mixed').title, mixed.join('\n'));
+  assert.strictEqual(named(page, 'Execute tasks one at a time').title, loop.join('\n'));
+  named(page, 'Execute tasks one at a time').click();
+  assert.deepStrictEqual(page.posted[page.posted.length - 1], { type: 'previewLoop', mission: ALPHA, recipe: 'Execute tasks one at a time' });
 });
 
 test("a mission's page draws the recipe failure posted with its mission", () => {

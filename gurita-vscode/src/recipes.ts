@@ -10,7 +10,8 @@
 // recipe carrying a shipped recipe's name replaces neither that recipe nor any of its variants:
 // its variants join the shipped recipe, listed after the shipped variants under their own names and
 // marked as the person's own, an own variant carrying a shipped variant's name kept as a second
-// entry beside it; every other own recipe is listed after the host groups, in the file's order.
+// entry beside it; every other own recipe is listed after the shipped recipes, which keep the
+// shipped file's order, in the own file's order.
 // Until a variant can be chosen, the mission page, the buttons that run a recipe by its fixed name,
 // and the looped run's named single-task lines take a recipe's first variant. Each variant is
 // classified by its content alone: whether it is a single-task line, whether it is the looped
@@ -25,13 +26,14 @@
 // lists only the recipes that fit the step its diagram fills: those declaring that step, beside them
 // the additional review round's when derive tasks is filled and follow up tasks' when finish is, and
 // every undeclared recipe whatever the step, while a page whose step could not be chosen lists every
-// recipe; the page's other rules, its host groups and own group and the placeholders it cannot
-// fill, hold within that list, and the buttons that run a recipe by its fixed name are untouched by
+// recipe; the page's other rules, the shipped recipes before the own group and the placeholders it
+// cannot fill, hold within that list, and the buttons that run a recipe by its fixed name are untouched by
 // it. In the shipped file every chain declares its one step and spans no other, each execution chain
 // holding its `complete-all-tasks` line alone, while the button recipes and the single-task lines
 // declare nothing. This module imports nothing from `vscode`.
 
 import * as fs from 'node:fs';
+import { VariantValues, variantValues } from './lineValues';
 import type { WorkflowStep } from './workflow';
 
 /** The two host headings of the shipped snippet file whose `###` blocks are recipes. */
@@ -311,19 +313,17 @@ export function parseOwnRecipes(text: string, file: string): Recipe[] {
 }
 
 /**
- * Merges the two lists: an own recipe carrying a shipped recipe's name joins that recipe in its
- * host group, its variants listed after the shipped variants and kept beside any shipped variant
- * of the same name, the shipped recipe keeping its name, group, and stage; every other own recipe
- * follows the host groups, in the own file's order.
+ * Merges the two lists: the shipped recipes in the shipped file's order, an own recipe carrying a
+ * shipped recipe's name joining that recipe, its variants listed after the shipped variants and
+ * kept beside any shipped variant of the same name, the shipped recipe keeping its name, group,
+ * and stage; every other own recipe follows the shipped recipes, in the own file's order.
  */
 export function mergeRecipes(shipped: Recipe[], own: Recipe[]): Recipe[] {
   const ownByName = new Map(own.map((recipe) => [recipe.name, recipe]));
   const merged: Recipe[] = [];
-  for (const host of HOST_GROUPS) {
-    for (const recipe of shipped.filter((each) => each.group === host)) {
-      const joining = ownByName.get(recipe.name);
-      merged.push(joining ? { ...recipe, variants: [...recipe.variants, ...joining.variants] } : recipe);
-    }
+  for (const recipe of shipped) {
+    const joining = ownByName.get(recipe.name);
+    merged.push(joining ? { ...recipe, variants: [...recipe.variants, ...joining.variants] } : recipe);
   }
   const shippedNames = new Set(shipped.map((recipe) => recipe.name));
   merged.push(...own.filter((recipe) => !shippedNames.has(recipe.name)));
@@ -391,6 +391,8 @@ export type PageRecipe =
       group: RecipeGroup;
       /** The recipe's lines as written, placeholders included. */
       lines: string[];
+      /** The harnesses, models, and efforts its lines carry, which its button shows with its name. */
+      values: VariantValues;
     }
   | {
       kind: 'looped';
@@ -398,6 +400,8 @@ export type PageRecipe =
       group: RecipeGroup;
       /** The recipe's lines as written, the slot line last. */
       lines: string[];
+      /** The harnesses, models, and efforts its lines carry, which its button shows with its name. */
+      values: VariantValues;
     }
   | {
       kind: 'unknown';
@@ -416,7 +420,8 @@ export const LOOPED_PLACEHOLDERS: readonly string[] = ['path', 'Task Title'];
 /**
  * The recipes a mission page lists out of `recipes`, for a page the part of the merged list
  * `stageRecipes` keeps for its step, given the placeholder names the page holds a value for, each
- * entry drawn from the recipe's first variant. A recipe whose variant holds a placeholder the
+ * entry drawn from the recipe's first variant, a button's entry carrying the distinct harnesses,
+ * models, and efforts that variant's lines carry, as the line-value module reads them. A recipe whose variant holds a placeholder the
  * extension does not know is listed as a non-runnable entry naming it and its file. A looped
  * recipe is listed as its own kind, run through its preview rather than as a chain, when every
  * placeholder it holds is one a looped run fills itself. A recipe holding a known placeholder the
@@ -440,7 +445,7 @@ export function pageRecipes(recipes: Recipe[], fillable: readonly string[]): Pag
     }
     if (runs.looped) {
       if (runs.knownPlaceholders.every((name) => LOOPED_PLACEHOLDERS.includes(name))) {
-        listed.push({ kind: 'looped', name: recipe.name, group: recipe.group, lines: [...runs.lines] });
+        listed.push({ kind: 'looped', name: recipe.name, group: recipe.group, lines: [...runs.lines], values: variantValues(runs.lines) });
       }
       continue;
     }
@@ -450,7 +455,7 @@ export function pageRecipes(recipes: Recipe[], fillable: readonly string[]): Pag
     if (runs.knownPlaceholders.some((name) => !fillable.includes(name))) {
       continue;
     }
-    listed.push({ kind: 'runnable', name: recipe.name, group: recipe.group, lines: [...runs.lines] });
+    listed.push({ kind: 'runnable', name: recipe.name, group: recipe.group, lines: [...runs.lines], values: variantValues(runs.lines) });
   }
   return listed;
 }

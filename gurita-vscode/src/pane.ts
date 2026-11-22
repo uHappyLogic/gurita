@@ -13,10 +13,12 @@
 // read afresh from the shipped snippet file and the person's own recipe file: only those whose
 // declared stage is the step its diagram fills, beside them the additional review round's when
 // derive tasks is filled and follow up tasks' when finish is, and every undeclared recipe, or every
-// recipe when no step is chosen, laid out within that by the page's other rules, its host groups,
-// its own group, and the leaving off of a recipe holding a placeholder the page cannot fill; or
-// with the one failure state the live read gives. Until a variant can be chosen, every recipe
-// button runs its recipe's first variant. The page redraws its question card in place from
+// recipe when no step is chosen, laid out within that by the page's other rules, the shipped
+// recipes in the shipped file's order followed by its own group, and the leaving off of a recipe
+// holding a placeholder the page cannot fill, each entry carrying the distinct harnesses, models,
+// and efforts its variant's lines carry, which its button shows with its name; or with the one
+// failure state the live read gives. Until a variant can be chosen, every recipe button runs its
+// recipe's first variant. The page redraws its question card in place from
 // every such message, keeping the pane the person clicked while the mission stays shown.
 // A click on a recipe button starts that recipe's chain for the page's mission at once, and a
 // recipe the latest answer did not list on that mission's page starts nothing. The
@@ -849,6 +851,7 @@ function pageShell(webview: vscode.Webview, script: vscode.Uri): string {
   .recipe-list { display: flex; flex-wrap: wrap; gap: 0.4em; }
   button.recipe { background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; padding: 0.3em 0.9em; cursor: pointer; font: inherit; }
   button.recipe:hover:not(:disabled) { background: var(--vscode-button-hoverBackground); }
+  button.recipe .recipe-values { display: block; font-size: 0.85em; opacity: 0.8; }
   .recipe-unknown { border: 1px dashed var(--vscode-inputValidation-warningBorder); padding: 0.3em 0.9em; opacity: 0.85; }
   .preview { border-top: 1px solid var(--vscode-panel-border); margin-top: 1em; }
   .preview-tasks { border-collapse: collapse; margin: 0.5em 0; width: 100%; }

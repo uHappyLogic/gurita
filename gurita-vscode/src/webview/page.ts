@@ -38,9 +38,12 @@
 // holding only the recipes that fit the step its diagram fills, those declaring that step, beside
 // them those declaring the additional review round when derive tasks is filled and follow up tasks
 // when finish is, and every recipe declaring no step, whichever block is filled, or every recipe
-// when no block is filled, so each mission's page draws its own list; the shipped recipes in it grouped
-// under Claude Code and Antigravity and, below them, the own recipes that replace none under
-// "Your recipes", each button carrying its recipe's lines as written in its hover text and
+// when no block is filled, so each mission's page draws its own list; first the shipped recipes in
+// it, one button each in the order posted, the shipped file's, under no heading of their own, and
+// below them the own recipes that carry no shipped recipe's name under "Your recipes", in the own
+// file's order, each button showing its recipe's name with the distinct harnesses, models, and
+// efforts of the variant it runs, as the extension posts them, a variant none of whose lines is
+// readable showing its name alone, carrying that variant's lines as written in its hover text, and
 // starting that recipe's chain for the page's mission when clicked, and each recipe holding a
 // placeholder the extension does not know shown as a non-runnable entry naming it and its file.
 // A looped recipe's button asks the extension for its preview instead, drawn on the page beneath
@@ -129,9 +132,16 @@ declare function acquireVsCodeApi(): VsCodeApi;
 
   type RecipeGroup = 'Claude Code' | 'Antigravity' | 'own';
 
+  /** The distinct harnesses, models, and efforts a variant's lines carry, each in first-appearance order. */
+  interface VariantValues {
+    harnesses: string[];
+    models: string[];
+    efforts: string[];
+  }
+
   type PageRecipe =
-    | { kind: 'runnable'; name: string; group: RecipeGroup; lines: string[] }
-    | { kind: 'looped'; name: string; group: RecipeGroup; lines: string[] }
+    | { kind: 'runnable'; name: string; group: RecipeGroup; lines: string[]; values: VariantValues }
+    | { kind: 'looped'; name: string; group: RecipeGroup; lines: string[]; values: VariantValues }
     | { kind: 'unknown'; name: string; group: RecipeGroup; lines: string[]; placeholders: string[]; file: string };
 
   type RecipePart = { state: 'read'; recipes: PageRecipe[] } | { state: 'failed'; cause: string };
@@ -197,12 +207,10 @@ declare function acquireVsCodeApi(): VsCodeApi;
     ['questions', 'Open questions'],
     ['tasks', 'Remaining tasks'],
   ];
-  /** The page's recipe groups in the order drawn, each with its heading. */
-  const RECIPE_GROUPS: [RecipeGroup, string][] = [
-    ['Claude Code', 'Claude Code'],
-    ['Antigravity', 'Antigravity'],
-    ['own', 'Your recipes'],
-  ];
+  /** The heading of the page's group of own recipes, drawn below the shipped recipes, which have none. */
+  const OWN_GROUP_HEADING = 'Your recipes';
+  /** The mark between a recipe button's lists of harnesses, models, and efforts. */
+  const VALUES_SEPARATOR = ' · ';
 
   const vscode = acquireVsCodeApi();
   const root = document.getElementById('root') as HTMLElement;
@@ -614,36 +622,64 @@ declare function acquireVsCodeApi(): VsCodeApi;
       view.append(box);
       return view;
     }
-    for (const [group, heading] of RECIPE_GROUPS) {
-      const entries = recipes.recipes.filter((recipe) => recipe.group === group);
-      if (entries.length === 0) {
-        continue;
-      }
-      view.append(element('h4', heading));
-      const list = element('div', undefined, 'recipe-list');
-      for (const recipe of entries) {
-        if (recipe.kind === 'runnable') {
-          const run = action(recipe.name, 'recipe', busy, () =>
-            vscode.postMessage({ type: 'runRecipe', mission: mission.path, recipe: recipe.name }),
-          );
-          run.title = recipe.lines.join('\n');
-          list.append(run);
-        } else if (recipe.kind === 'looped') {
-          const preview = action(recipe.name, 'recipe', busy, () =>
-            vscode.postMessage({ type: 'previewLoop', mission: mission.path, recipe: recipe.name }),
-          );
-          preview.title = recipe.lines.join('\n');
-          list.append(preview);
-        } else {
-          const named = recipe.placeholders.map((placeholder) => `<${placeholder}>`).join(', ');
-          const entry = element('span', `${recipe.name}: ${recipe.placeholders.length === 1 ? 'unknown placeholder' : 'unknown placeholders'} ${named} in ${recipe.file}`, 'recipe-unknown');
-          entry.title = recipe.lines.join('\n');
-          list.append(entry);
-        }
-      }
-      view.append(list);
+    const shipped = recipes.recipes.filter((recipe) => recipe.group !== 'own');
+    const own = recipes.recipes.filter((recipe) => recipe.group === 'own');
+    if (shipped.length > 0) {
+      view.append(recipeList(mission, shipped, busy));
+    }
+    if (own.length > 0) {
+      view.append(element('h4', OWN_GROUP_HEADING), recipeList(mission, own, busy));
     }
     return view;
+  }
+
+  /**
+   * The values a recipe button shows beside its name: the variant's distinct harnesses, models, and
+   * efforts, each list joined in its order, the lists that hold a value joined in turn, and nothing
+   * for a variant none of whose lines is readable.
+   */
+  function valuesLabel(values: VariantValues): string {
+    return [values.harnesses, values.models, values.efforts]
+      .filter((list) => list.length > 0)
+      .map((list) => list.join(', '))
+      .join(VALUES_SEPARATOR);
+  }
+
+  /**
+   * A recipe's button: its name, then the values its variant's lines carry, when any is readable,
+   * with the variant's lines as written in its hover text.
+   */
+  function recipeButton(recipe: Extract<PageRecipe, { kind: 'runnable' | 'looped' }>, busy: boolean, onClick: () => void): HTMLButtonElement {
+    const node = action('', 'recipe', busy, onClick);
+    node.append(element('span', recipe.name, 'recipe-name'));
+    const label = valuesLabel(recipe.values);
+    if (label !== '') {
+      node.append(element('span', label, 'recipe-values'));
+    }
+    node.title = recipe.lines.join('\n');
+    return node;
+  }
+
+  /** One run of a mission page's recipe entries, in the order given. */
+  function recipeList(mission: Mission, entries: PageRecipe[], busy: boolean): HTMLElement {
+    const list = element('div', undefined, 'recipe-list');
+    for (const recipe of entries) {
+      if (recipe.kind === 'runnable') {
+        list.append(
+          recipeButton(recipe, busy, () => vscode.postMessage({ type: 'runRecipe', mission: mission.path, recipe: recipe.name })),
+        );
+      } else if (recipe.kind === 'looped') {
+        list.append(
+          recipeButton(recipe, busy, () => vscode.postMessage({ type: 'previewLoop', mission: mission.path, recipe: recipe.name })),
+        );
+      } else {
+        const named = recipe.placeholders.map((placeholder) => `<${placeholder}>`).join(', ');
+        const entry = element('span', `${recipe.name}: ${recipe.placeholders.length === 1 ? 'unknown placeholder' : 'unknown placeholders'} ${named} in ${recipe.file}`, 'recipe-unknown');
+        entry.title = recipe.lines.join('\n');
+        list.append(entry);
+      }
+    }
+    return list;
   }
 
   /** What the rules give a task, as the preview printed it. */
