@@ -110,5 +110,9 @@ No other live mission's scope overlaps `gurita-vscode/`, so nothing holds or sha
 
 - **Status notes.** The mission revises the status sentences of both drafts and nothing else in them. The opening paragraph of `ideas/vscode_extension.md` records that this mission replaced the decisions that the extension composes no line, holds no host flag, model, or effort, and makes a variant a copied chain, and it names the mission. Decided, the Recipes part, and Considered and dropped stay as written. The opening of `ideas/vscode_extension_follow_up.md` and the items the change bears on are revised to match.
 
+### Model and effort lists
+
+- **Source.** Each harness's model and effort lists are read from the `--model` and `--effort` values carried by the lines of the shipped recipes, the own recipes, and the stored variants. The extension ships no list of its own and queries no harness. Codex's model list starts from the Codex lines a person has, since no Codex line is shipped. The person can add entries no line uses yet and remove derived entries from the offer, and those additions and removals are stored per user as an overlay on the derived lists.
+
 ## Out of Scope
 
