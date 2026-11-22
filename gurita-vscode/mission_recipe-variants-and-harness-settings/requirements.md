@@ -66,5 +66,7 @@ No other live mission's scope overlaps `gurita-vscode/`, so nothing holds or sha
 
 - **Mixed-agent chain.** `Mixed-agent requirements review (Gemini reviews, Claude annotates)` stays a recipe of its own, separate from `Requirements iteration`. It still declares the additional review round, its one shipped block is its only variant, and its lines stay as written. The additional review round's page therefore shows two buttons, `Requirements iteration` and the mixed-agent recipe.
 
+- **Fixed-name button recipes.** The seven recipes the fixed-name buttons run carry variants as the listed recipes do, and the settings view lists them for duplicating, renaming, deleting, and model and effort editing. The variant a button runs is chosen only in the settings view, as that recipe's default, and the page draws no dropdown beside any of the seven buttons. The shipped file adds no variant for them, so each recipe ships as its one Claude Code variant and any further variant is a duplicate or an own recipe.
+
 ## Out of Scope
 
