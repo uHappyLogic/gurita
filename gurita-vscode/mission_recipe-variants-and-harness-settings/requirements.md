@@ -98,6 +98,8 @@ No other live mission's scope overlaps `gurita-vscode/`, so nothing holds or sha
 
 - **Initial state.** Every harness the settings view covers starts enabled, whatever its check reports and whatever recipes run on it. A harness stays enabled until the person disables it, harness by harness, and the check result never changes the enabled state.
 
+- **Disabled harness.** A variant with at least one line on a disabled harness is left out of its recipe's dropdown, mixed variants included. The pane leaves it out of the list it posts, so a click on it is refused as a click on any name the posted list lacks is refused. A recipe whose every variant is left out loses its button. Where the default or the remembered variant is left out, the button runs the default if that variant is still listed and otherwise the first listed variant. The remembered selection is kept and comes back once the harness is enabled again.
+
 ### Design drafts
 
 - **Status notes.** The mission revises the status sentences of both drafts and nothing else in them. The opening paragraph of `ideas/vscode_extension.md` records that this mission replaced the decisions that the extension composes no line, holds no host flag, model, or effort, and makes a variant a copied chain, and it names the mission. Decided, the Recipes part, and Considered and dropped stay as written. The opening of `ideas/vscode_extension_follow_up.md` and the items the change bears on are revised to match.
