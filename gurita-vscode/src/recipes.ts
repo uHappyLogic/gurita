@@ -5,8 +5,9 @@
 // first fenced block beneath the `###` heading. Once a recipe holds a `####` sub-heading only the
 // blocks beneath its sub-headings are read, and of a variant name repeated within one recipe the
 // first is kept. The same form is read in the shipped file and in a person's own file. The shipped
-// snippet file yields only the recipes under its `## Claude Code` and `## Antigravity` headings,
-// each in that host's group; a person's own recipe file is a flat list of `###` recipes. An own
+// snippet file yields only the recipes under its one recipe section, its `## Recipes` heading, each
+// in the shipped group, a chain run on several harnesses being one recipe with one variant per
+// copy; a person's own recipe file is a flat list of `###` recipes. An own
 // recipe carrying a shipped recipe's name replaces neither that recipe nor any of its variants:
 // its variants join the shipped recipe, listed after the shipped variants under their own names and
 // marked as the person's own, an own variant carrying a shipped variant's name kept as a second
@@ -28,19 +29,19 @@
 // every undeclared recipe whatever the step, while a page whose step could not be chosen lists every
 // recipe; the page's other rules, the shipped recipes before the own group and the placeholders it
 // cannot fill, hold within that list, and the buttons that run a recipe by its fixed name are untouched by
-// it. In the shipped file every chain declares its one step and spans no other, each execution chain
-// holding its `complete-all-tasks` line alone, while the button recipes and the single-task lines
-// declare nothing. This module imports nothing from `vscode`.
+// it. In the shipped file every chain declares its one step and spans no other, each variant of an
+// execution chain holding its `complete-all-tasks` line alone, while the button recipes and the
+// single-task lines declare nothing. This module imports nothing from `vscode`.
 
 import * as fs from 'node:fs';
 import { VariantValues, variantValues } from './lineValues';
 import type { WorkflowStep } from './workflow';
 
-/** The two host headings of the shipped snippet file whose `###` blocks are recipes. */
-export const HOST_GROUPS = ['Claude Code', 'Antigravity'] as const;
+/** The one heading of the shipped snippet file whose `###` blocks are recipes. */
+export const RECIPE_SECTION = 'Recipes';
 
-/** A shipped host group, or `own` for an own recipe that replaces no shipped one. */
-export type RecipeGroup = (typeof HOST_GROUPS)[number] | 'own';
+/** `shipped` for a recipe of the shipped file, or `own` for an own recipe that joins no shipped one. */
+export type RecipeGroup = 'shipped' | 'own';
 
 /** The placeholders the extension knows, each written `<name>` in a line. */
 export const KNOWN_PLACEHOLDERS: readonly string[] = [
@@ -97,7 +98,7 @@ export interface Variant {
 export interface Recipe {
   /** The `###` heading's text, the recipe's name. */
   name: string;
-  /** The host group the recipe is listed under, or `own`. */
+  /** `shipped`, or `own` for an own recipe that carries no shipped recipe's name. */
   group: RecipeGroup;
   /**
    * Its variants, at least one: the shipped ones in the shipped file's order, then the ones an own
@@ -283,17 +284,16 @@ function classify(block: Block, group: RecipeGroup, own: boolean, file: string):
   };
 }
 
-/** Reads the shipped snippet file's text: the `###` blocks under the two host headings only. */
+/** Reads the shipped snippet file's text: the `###` blocks under its recipe section only, the first of a repeated name kept. */
 export function parseShippedRecipes(text: string, file: string): Recipe[] {
   const recipes: Recipe[] = [];
   const seen = new Set<string>();
   for (const block of blocks(text)) {
-    const group = HOST_GROUPS.find((host) => host === block.section);
-    if (group === undefined || seen.has(block.name)) {
+    if (block.section !== RECIPE_SECTION || seen.has(block.name)) {
       continue;
     }
     seen.add(block.name);
-    recipes.push(classify(block, group, false, file));
+    recipes.push(classify(block, 'shipped', false, file));
   }
   return recipes;
 }

@@ -2,12 +2,12 @@
 
 `<path>` is the mission's path.
 
-### Above every host heading
+### Above the recipe section
 ```
 claude -p "/gurita:finish-mission --mission <path>";
 ```
 
-## Claude Code
+## Recipes
 
 ### Chain
 Stage: additional review round
@@ -73,9 +73,7 @@ echo a second fence under a variant is not read
 echo a repeated variant name is not read
 ```
 
-## Antigravity
-
-Prose between the host heading and its first block.
+Prose between two recipes, under no heading of its own.
 
 ### Single task (Antigravity)
 
@@ -101,6 +99,13 @@ echo a block above the first variant is not read
 #### Only variant
 ```
 agy -p "/gurita:finish-mission --mission <path>";
+```
+
+## Claude Code
+
+### Under a retired host heading
+```
+claude -p "/gurita:derive-tasks --mission <path>";
 ```
 
 ## Manual use

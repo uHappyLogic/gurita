@@ -209,14 +209,14 @@ const RECIPES = {
     {
       kind: 'runnable',
       name: 'review',
-      group: 'Claude Code',
+      group: 'shipped',
       lines: ['claude "/gurita:review-mission-requirements --mission <path>"'],
       values: { harnesses: ['claude'], models: [], efforts: [] },
     },
     {
       kind: 'looped',
       name: 'complete',
-      group: 'Claude Code',
+      group: 'shipped',
       lines: ['claude "/gurita:complete-task --mission <path> <Task Title>"'],
       values: { harnesses: ['claude'], models: [], efforts: [] },
     },
@@ -373,16 +373,16 @@ test("each mission's page draws its shipped recipes under no heading, then its o
   const derive = {
     state: 'read',
     recipes: [
-      runnable('Requirements iteration', 'Claude Code', ['claude -p "/gurita:review-mission-requirements --mission <path>"'], [['claude'], [], []]),
-      runnable('Prepare tasks', 'Claude Code', ['claude -p "/gurita:derive-tasks --mission <path>"'], [['claude'], [], []]),
-      runnable('Prepare tasks (Antigravity)', 'Antigravity', ['agy -p "/gurita:derive-tasks --mission <path>"'], [['agy'], [], []]),
+      runnable('Requirements iteration', 'shipped', ['claude -p "/gurita:review-mission-requirements --mission <path>"'], [['claude'], [], []]),
+      runnable('Prepare tasks', 'shipped', ['claude -p "/gurita:derive-tasks --mission <path>"'], [['claude'], [], []]),
+      runnable('Prepare tasks (Antigravity)', 'shipped', ['agy -p "/gurita:derive-tasks --mission <path>"'], [['agy'], [], []]),
       runnable('Mine everywhere', 'own', ['echo <path>'], [[], [], []]),
     ],
   };
   const finish = {
     state: 'read',
     recipes: [
-      runnable('Finish mission', 'Claude Code', ['claude -p "/gurita:finish-mission --mission <path>"'], [['claude'], [], []]),
+      runnable('Finish mission', 'shipped', ['claude -p "/gurita:finish-mission --mission <path>"'], [['claude'], [], []]),
       { kind: 'unknown', name: 'Odd follow up', group: 'own', lines: ['echo <odd>'], placeholders: ['odd'], file: '/home/someone/.gurita/recipes.md' },
     ],
   };
@@ -420,7 +420,7 @@ test("a page with no own recipe draws no Your recipes heading, and one with only
   page.send({
     type: 'live',
     missions: [
-      mission(ALPHA, 'Alpha', { step: 'derive', recipes: { state: 'read', recipes: [runnable('Prepare tasks', 'Claude Code', ['echo <path>'], [[], [], []])] } }),
+      mission(ALPHA, 'Alpha', { step: 'derive', recipes: { state: 'read', recipes: [runnable('Prepare tasks', 'shipped', ['echo <path>'], [[], [], []])] } }),
       mission(BETA, 'Beta', { step: 'derive', recipes: { state: 'read', recipes: [runnable('Mine', 'own', ['echo <path>'], [[], [], []])] } }),
     ],
     running: [],
@@ -453,10 +453,10 @@ test("each recipe button shows its name with its variant's distinct harnesses, m
         recipes: {
           state: 'read',
           recipes: [
-            runnable('First run', 'Claude Code', firstRun, [['claude'], ['fable', 'opus'], ['xhigh', 'high']]),
-            runnable('Mixed', 'Claude Code', mixed, [['agy', 'claude'], ['gemini-4-argon', 'opus', 'fable'], ['medium', 'high', 'xhigh']]),
+            runnable('First run', 'shipped', firstRun, [['claude'], ['fable', 'opus'], ['xhigh', 'high']]),
+            runnable('Mixed', 'shipped', mixed, [['agy', 'claude'], ['gemini-4-argon', 'opus', 'fable'], ['medium', 'high', 'xhigh']]),
             runnable('Partly read', 'own', ['agy -p "/gurita:finish-mission --mission <path>" --effort low;'], [['agy'], [], ['low']]),
-            { kind: 'looped', name: 'Execute tasks one at a time', group: 'Claude Code', lines: loop, values: { harnesses: [], models: [], efforts: [] } },
+            { kind: 'looped', name: 'Execute tasks one at a time', group: 'shipped', lines: loop, values: { harnesses: [], models: [], efforts: [] } },
           ],
         },
       }),

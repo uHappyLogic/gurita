@@ -130,7 +130,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
     recipes: RecipePart;
   }
 
-  type RecipeGroup = 'Claude Code' | 'Antigravity' | 'own';
+  type RecipeGroup = 'shipped' | 'own';
 
   /** The distinct harnesses, models, and efforts a variant's lines carry, each in first-appearance order. */
   interface VariantValues {

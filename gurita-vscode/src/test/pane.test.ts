@@ -172,16 +172,23 @@ function git(cwd: string, ...args: string[]): void {
 
 const GAMMA = 'pkg/mission_gamma/';
 
-/** The shipped file the pane reads in the recipe-list test: two host sections, as the reader takes them. */
+/** The shipped file the pane reads in the recipe-list test: one recipe section, as the reader takes it. */
 const SHIPPED_TEXT = `# Snippets
 
-## Claude Code
+## Recipes
 
 ### First run
+
+#### Claude Code
 \`\`\`
 claude -p "/gurita:review-mission-requirements --mission <path>" --model "fable" --effort xhigh;
 claude -p "/gurita:provide-alternatives-to-all-open-questions --mission <path>" --model "opus" --effort high;
 claude -p "/gurita:recommend-all-open-questions --mission <path>" --model "fable" --effort xhigh;
+\`\`\`
+
+#### Antigravity
+\`\`\`
+agy -p "/gurita:review-mission-requirements --mission <path>" --model "gemini-4-argon" --effort medium;
 \`\`\`
 
 ### Execute tasks one at a time
@@ -189,9 +196,7 @@ claude -p "/gurita:recommend-all-open-questions --mission <path>" --model "fable
 <single-task line>
 \`\`\`
 
-## Antigravity
-
-### First run (Antigravity)
+### Mixed review
 \`\`\`
 agy -p "/gurita:review-mission-requirements --mission <path>" --model "gemini-4-argon" --effort medium;
 \`\`\`
@@ -247,7 +252,7 @@ test("the pane posts each page's recipes in the shipped file's order, then its o
     {
       kind: 'runnable',
       name: 'First run',
-      group: 'Claude Code',
+      group: 'shipped',
       lines: [
         'claude -p "/gurita:review-mission-requirements --mission <path>" --model "fable" --effort xhigh;',
         'claude -p "/gurita:provide-alternatives-to-all-open-questions --mission <path>" --model "opus" --effort high;',
@@ -258,14 +263,14 @@ test("the pane posts each page's recipes in the shipped file's order, then its o
     {
       kind: 'looped',
       name: 'Execute tasks one at a time',
-      group: 'Claude Code',
+      group: 'shipped',
       lines: ['<single-task line>'],
       values: { harnesses: [], models: [], efforts: [] },
     },
     {
       kind: 'runnable',
-      name: 'First run (Antigravity)',
-      group: 'Antigravity',
+      name: 'Mixed review',
+      group: 'shipped',
       lines: ['agy -p "/gurita:review-mission-requirements --mission <path>" --model "gemini-4-argon" --effort medium;'],
       values: { harnesses: ['agy'], models: ['gemini-4-argon'], efforts: ['medium'] },
     },

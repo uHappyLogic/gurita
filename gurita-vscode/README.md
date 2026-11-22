@@ -18,7 +18,7 @@ not published to any marketplace: it is built from this repository and installed
 - `python3`, 3.9 or later, on `PATH`: the extension runs the bundled missions tool and its own
   runner with it.
 - `git`: the project root is the top level of a git work tree.
-- `claude` and, for the Antigravity recipes, `agy`, each with the Gurita plugin installed, on the
+- `claude` and, for the Antigravity variants, `agy`, each with the Gurita plugin installed, on the
   `PATH` of the shell the runner starts.
 - macOS or Linux. On Windows only through Remote-WSL, where the extension runs on the Linux side.
 
@@ -179,12 +179,12 @@ first fenced block beneath the sub-heading:
 ### Execute tasks
 Stage: execute tasks
 
-#### Claude Code at high
+#### Claude Code
 ```
 claude "/gurita:complete-all-tasks --mission <path>" --dangerously-skip-permissions --model "opus" --effort high; # interactive
 ```
 
-#### Claude Code at xhigh
+#### Claude Code (critical tasks)
 ```
 claude "/gurita:complete-all-tasks --mission <path>" --dangerously-skip-permissions --model "opus" --effort xhigh; # interactive
 ```
@@ -265,33 +265,38 @@ as written.
 ### The shipped recipe file
 
 The package ships `snippets/GURITA_USAGE.md` as `bundled/GURITA_USAGE.md`, read at run time. Only
-the `###` blocks under its `## Claude Code` and `## Antigravity` headings are recipes, listed in
+the `###` blocks under its one recipe section, the `## Recipes` heading, are recipes, listed in
 the file's order with no heading of their own on the page; the blocks under `## Manual use` are
-for reading only. Each shipped
-recipe is written as one fenced block with no `####` sub-heading, so each is a recipe of one
-variant named by its heading.
+for reading only, and the notes on running the `agy` lines stand as prose at the top of the
+recipe section. A chain shipped for both harnesses is one recipe with one `####` variant per
+copy, `Claude Code` first and `Antigravity` second, so its button runs the Claude Code copy until
+a variant can be chosen; every other shipped recipe is one fenced block with no `####`
+sub-heading, a recipe of one variant named by its heading.
 
-Every chain in the file declares the one step it runs and spans no other:
+Every chain in the file declares the one step it runs, once for the whole recipe, and spans no
+other:
 
-- **first review round**: `First run` and `First run (Antigravity)`.
-- **additional review round**: `Requirements iteration`, `Requirements iteration (Antigravity)`,
-  and `Mixed-agent requirements review (Gemini reviews, Claude annotates)`.
-- **derive tasks**: `Prepare tasks` and `Prepare tasks (Antigravity)`, the answer sweep and
-  `derive-tasks`.
-- **execute tasks**: under each host, `Execute tasks of normal difficulty` and
-  `Execute tasks (critical tasks)` (with `(Antigravity)` at the end of the Antigravity copies),
-  each holding its `complete-all-tasks` line alone, and under Claude Code the looped recipe,
-  `Execute tasks one at a time`, whose only line is the slot line `<single-task line>` (see the
-  looped task run below). No execution chain holds an answer sweep or a `derive-tasks` line: a
-  mission's tasks are derived by `Prepare tasks` before an execution chain completes them.
-- **finish**: `Finish mission` and `Finish mission (Antigravity)`.
+- **first review round**: `First run`, with a Claude Code and an Antigravity variant.
+- **additional review round**: `Requirements iteration`, with a Claude Code and an Antigravity
+  variant, and `Mixed-agent requirements review (Gemini reviews, Claude annotates)`, one block
+  mixing `agy` and `claude` lines.
+- **derive tasks**: `Prepare tasks`, the answer sweep and `derive-tasks`, with a Claude Code and
+  an Antigravity variant.
+- **execute tasks**: `Execute tasks`, whose three variants each hold one `complete-all-tasks` line
+  alone: `Claude Code` (`opus` at `high`), `Antigravity` (`claude-opus-5-5` at `high`), and
+  `Claude Code (critical tasks)` (`opus` at `xhigh`, since `high` is the ceiling on `agy`); and
+  the looped recipe, `Execute tasks one at a time`, whose only line is the slot line
+  `<single-task line>` (see the looped task run below). No execution chain holds an answer sweep
+  or a `derive-tasks` line: a mission's tasks are derived by `Prepare tasks` before an execution
+  chain completes them.
+- **finish**: `Finish mission`, with a Claude Code and an Antigravity variant.
 
-A page filling **derive tasks** thus lists the two `Prepare tasks` chains beside the three
-additional review round chains, and one filling **execute tasks** the four `complete-all-tasks`
-chains and `Execute tasks one at a time`. No shipped recipe declares **follow up tasks**. Besides
-the chains, the file carries the following, none of which declares a step:
+A page filling **derive tasks** thus lists `Prepare tasks` beside the two additional review round
+chains, and one filling **execute tasks** `Execute tasks` and `Execute tasks one at a time`. No
+shipped recipe declares **follow up tasks**. Besides the chains, the file carries the following,
+none of which declares a step and each of which is one block:
 
-- The seven button recipes, under `## Claude Code`, each named by the skill its one line invokes:
+- The seven button recipes, each one `claude` line named by the skill it invokes:
   `discuss-open-question`, `discuss-mission-goal`, `discuss-new-task`, `answer-open-question`,
   `answer-open-question-with-recommendation`, `answer-open-question-with-alternative`, and
   `define-mission-goal`. The buttons run the recipe of these fixed names; `discuss-new-task`'s

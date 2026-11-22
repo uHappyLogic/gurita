@@ -53,25 +53,26 @@ function outline(recipes: Recipe[]): [string, string, [string, boolean][]][] {
   return recipes.map((recipe) => [recipe.group, recipe.name, recipe.variants.map((variant): [string, boolean] => [variant.name, variant.own])]);
 }
 
-test('the shipped file yields only the blocks under the two host headings, each with its group', () => {
+test('the shipped file yields only the blocks under its recipe section, each in the shipped group', () => {
   const names = shipped().map((recipe) => [recipe.group, recipe.name]);
   assert.deepStrictEqual(names, [
-    ['Claude Code', 'Chain'],
-    ['Claude Code', 'Loop'],
-    ['Claude Code', 'Single task (Claude Code)'],
-    ['Claude Code', 'Interactive task line'],
-    ['Claude Code', 'answer-open-question'],
-    ['Claude Code', 'Fenced heading'],
-    ['Claude Code', 'Variants'],
-    ['Antigravity', 'Single task (Antigravity)'],
-    ['Antigravity', 'Two fences'],
-    ['Antigravity', 'Block before variants'],
+    ['shipped', 'Chain'],
+    ['shipped', 'Loop'],
+    ['shipped', 'Single task (Claude Code)'],
+    ['shipped', 'Interactive task line'],
+    ['shipped', 'answer-open-question'],
+    ['shipped', 'Fenced heading'],
+    ['shipped', 'Variants'],
+    ['shipped', 'Single task (Antigravity)'],
+    ['shipped', 'Two fences'],
+    ['shipped', 'Block before variants'],
   ]);
+  assert.ok(!shipped().some((recipe) => recipe.name === 'Under a retired host heading'), 'a retired host heading is not read');
 });
 
 test('a recipe of one block and no #### holds its first fenced block, as written, as its one variant', () => {
   const recipes = shipped();
-  assert.deepStrictEqual(outline([byName(recipes, 'Chain')]), [['Claude Code', 'Chain', [['Chain', false]]]]);
+  assert.deepStrictEqual(outline([byName(recipes, 'Chain')]), [['shipped', 'Chain', [['Chain', false]]]]);
   assert.deepStrictEqual(runs(recipes, 'Chain').lines, [
     'claude -p "/gurita:review-mission-requirements --mission <path>" --model "fable";',
     'claude "/gurita:recommend-all-open-questions --mission <path>" --model "fable"; # interactive',
@@ -88,7 +89,7 @@ test('a recipe of one block and no #### holds its first fenced block, as written
 test('a recipe holds one variant per #### sub-heading, each its first fenced block, the first of a repeated name kept', () => {
   const recipe = byName(shipped(), 'Variants');
   assert.deepStrictEqual(outline([recipe]), [
-    ['Claude Code', 'Variants', [['On Claude Code', false], ['On Antigravity', false], ['Empty variant', false]]],
+    ['shipped', 'Variants', [['On Claude Code', false], ['On Antigravity', false], ['Empty variant', false]]],
   ]);
   assert.deepStrictEqual(
     recipe.variants.map((variant) => variant.lines),
@@ -109,7 +110,7 @@ test('a recipe holds one variant per #### sub-heading, each its first fenced blo
 
 test('once a recipe holds a #### sub-heading, a block above its first sub-heading is not read', () => {
   const recipe = byName(shipped(), 'Block before variants');
-  assert.deepStrictEqual(outline([recipe]), [['Antigravity', 'Block before variants', [['Only variant', false]]]]);
+  assert.deepStrictEqual(outline([recipe]), [['shipped', 'Block before variants', [['Only variant', false]]]]);
   assert.deepStrictEqual(firstVariant(recipe).lines, ['agy -p "/gurita:finish-mission --mission <path>";']);
 });
 
@@ -200,20 +201,20 @@ test('the own file is a flat list of ### recipes in the same variant form, the f
 test('an own recipe carrying a shipped name joins it as further variants, the rest following in file order', () => {
   const merged = mergeRecipes(shipped(), own());
   assert.deepStrictEqual(outline(merged), [
-    ['Claude Code', 'Chain', [['Chain', false], ['Chain', true]]],
-    ['Claude Code', 'Loop', [['Loop', false]]],
-    ['Claude Code', 'Single task (Claude Code)', [['Single task (Claude Code)', false]]],
-    ['Claude Code', 'Interactive task line', [['Interactive task line', false]]],
-    ['Claude Code', 'answer-open-question', [['answer-open-question', false]]],
-    ['Claude Code', 'Fenced heading', [['Fenced heading', false]]],
+    ['shipped', 'Chain', [['Chain', false], ['Chain', true]]],
+    ['shipped', 'Loop', [['Loop', false]]],
+    ['shipped', 'Single task (Claude Code)', [['Single task (Claude Code)', false]]],
+    ['shipped', 'Interactive task line', [['Interactive task line', false]]],
+    ['shipped', 'answer-open-question', [['answer-open-question', false]]],
+    ['shipped', 'Fenced heading', [['Fenced heading', false]]],
     [
-      'Claude Code',
+      'shipped',
       'Variants',
       [['On Claude Code', false], ['On Antigravity', false], ['Empty variant', false], ['On Claude Code', true], ['Own variant', true]],
     ],
-    ['Antigravity', 'Single task (Antigravity)', [['Single task (Antigravity)', false], ['Single task (Antigravity)', true]]],
-    ['Antigravity', 'Two fences', [['Two fences', false]]],
-    ['Antigravity', 'Block before variants', [['Only variant', false]]],
+    ['shipped', 'Single task (Antigravity)', [['Single task (Antigravity)', false], ['Single task (Antigravity)', true]]],
+    ['shipped', 'Two fences', [['Two fences', false]]],
+    ['shipped', 'Block before variants', [['Only variant', false]]],
     ['own', 'My first own recipe', [['My first own recipe', true]]],
     ['own', 'My second own recipe', [['My second own recipe', true]]],
     ['own', 'My variant recipe', [['First', true], ['Second', true]]],
@@ -237,15 +238,15 @@ test('an own recipe carrying a shipped name joins it as further variants, the re
   assert.deepStrictEqual(runs(merged, 'Chain'), runs(shipped(), 'Chain'), 'the first variant stays the shipped one');
 });
 
-test("the merged list keeps the shipped file's order, whichever host heading comes first", () => {
-  const text = '## Antigravity\n\n### B\n```\necho b\n```\n\n## Claude Code\n\n### A\n```\necho a\n```\n\n## Antigravity\n\n### C\n```\necho c\n```\n';
+test("the merged list keeps the shipped file's order, and no recipe under any other heading is read", () => {
+  const text =
+    '## Recipes\n\n### B\n```\necho b\n```\n\n## Claude Code\n\n### A\n```\necho a\n```\n\n## Recipes\n\n### C\n```\necho c\n```\n\n## Antigravity\n\n### D\n```\necho d\n```\n';
   const merged = mergeRecipes(parseShippedRecipes(text, SHIPPED), parseOwnRecipes('### Mine\n```\necho mine\n```\n', OWN));
   assert.deepStrictEqual(
     merged.map((recipe) => [recipe.group, recipe.name]),
     [
-      ['Antigravity', 'B'],
-      ['Claude Code', 'A'],
-      ['Antigravity', 'C'],
+      ['shipped', 'B'],
+      ['shipped', 'C'],
       ['own', 'Mine'],
     ],
   );
@@ -335,7 +336,7 @@ test('an own recipe declares its stage the same way, and one joining a shipped r
   assert.strictEqual(byName(readRecipes(SHIPPED, OWN), 'My first own recipe').stage, 'execute');
 });
 
-/** Every `###` block of a Markdown text that stands under a host heading, with its stage lines' count. */
+/** Every `###` block of a Markdown text that stands under its recipe section, with its stage lines' count. */
 function stageLineCounts(text: string): Map<string, number> {
   const counts = new Map<string, number>();
   let section: string | undefined;
@@ -349,7 +350,7 @@ function stageLineCounts(text: string): Map<string, number> {
     } else if (inFence) {
       continue;
     } else if (line.startsWith('### ')) {
-      name = section === 'Claude Code' || section === 'Antigravity' ? line.slice(4).trim() : undefined;
+      name = section === 'Recipes' ? line.slice(4).trim() : undefined;
       fenceRead = false;
       if (name !== undefined) {
         counts.set(name, 0);
@@ -372,20 +373,13 @@ test('every shipped chain declares exactly one step, and no shipped recipe decla
   assert.deepStrictEqual(
     chains.map((recipe) => [recipe.group, recipe.name, recipe.stage]),
     [
-      ['Claude Code', 'First run', 'first-review'],
-      ['Claude Code', 'Requirements iteration', 'additional-review'],
-      ['Claude Code', 'Prepare tasks', 'derive'],
-      ['Claude Code', 'Execute tasks of normal difficulty', 'execute'],
-      ['Claude Code', 'Execute tasks (critical tasks)', 'execute'],
-      ['Claude Code', 'Execute tasks one at a time', 'execute'],
-      ['Claude Code', 'Finish mission', 'finish'],
-      ['Antigravity', 'First run (Antigravity)', 'first-review'],
-      ['Antigravity', 'Requirements iteration (Antigravity)', 'additional-review'],
-      ['Antigravity', 'Prepare tasks (Antigravity)', 'derive'],
-      ['Antigravity', 'Execute tasks of normal difficulty (Antigravity)', 'execute'],
-      ['Antigravity', 'Execute tasks (critical tasks) (Antigravity)', 'execute'],
-      ['Antigravity', 'Mixed-agent requirements review (Gemini reviews, Claude annotates)', 'additional-review'],
-      ['Antigravity', 'Finish mission (Antigravity)', 'finish'],
+      ['shipped', 'First run', 'first-review'],
+      ['shipped', 'Requirements iteration', 'additional-review'],
+      ['shipped', 'Mixed-agent requirements review (Gemini reviews, Claude annotates)', 'additional-review'],
+      ['shipped', 'Prepare tasks', 'derive'],
+      ['shipped', 'Execute tasks', 'execute'],
+      ['shipped', 'Execute tasks one at a time', 'execute'],
+      ['shipped', 'Finish mission', 'finish'],
     ],
   );
   const counts = stageLineCounts(fs.readFileSync(SNIPPETS, 'utf8'));
@@ -401,29 +395,90 @@ test('every shipped chain declares exactly one step, and no shipped recipe decla
   assert.ok(!recipes.some((recipe) => /extra requirement surface stretch/i.test(recipe.name)));
 });
 
-test('no shipped execute recipe holds a derive-tasks line, each holding its complete-all-tasks line alone or the slot line', () => {
+test('no shipped execute variant holds a derive-tasks line, each holding its complete-all-tasks line alone or the slot line', () => {
   const recipes = parseShippedRecipes(fs.readFileSync(SNIPPETS, 'utf8'), SNIPPETS);
   const execute = recipes.filter((recipe) => recipe.stage === 'execute');
-  assert.strictEqual(execute.length, 5);
+  assert.deepStrictEqual(execute.map((recipe) => recipe.name), ['Execute tasks', 'Execute tasks one at a time']);
   for (const recipe of execute) {
-    const lines = firstVariant(recipe).lines;
-    assert.ok(!lines.some((line) => line.includes('gurita:derive-tasks')), recipe.name);
-    assert.strictEqual(lines.length, 1, recipe.name);
-    assert.ok(lines[0] === SLOT_LINE || lines[0].includes('/gurita:complete-all-tasks --mission <path>"'), recipe.name);
+    for (const variant of recipe.variants) {
+      const lines = variant.lines;
+      assert.ok(!lines.some((line) => line.includes('gurita:derive-tasks')), `${recipe.name} / ${variant.name}`);
+      assert.strictEqual(lines.length, 1, `${recipe.name} / ${variant.name}`);
+      assert.ok(lines[0] === SLOT_LINE || lines[0].includes('/gurita:complete-all-tasks --mission <path>"'), `${recipe.name} / ${variant.name}`);
+    }
   }
-  assert.deepStrictEqual(runs(recipes, 'Execute tasks of normal difficulty').lines, [
-    'claude "/gurita:complete-all-tasks --mission <path>" --dangerously-skip-permissions --model "opus" --effort high; # interactive',
+  assert.deepStrictEqual(
+    byName(recipes, 'Execute tasks').variants.map((variant) => [variant.name, variant.lines]),
+    [
+      ['Claude Code', ['claude "/gurita:complete-all-tasks --mission <path>" --dangerously-skip-permissions --model "opus" --effort high; # interactive']],
+      ['Antigravity', ['agy -i "/gurita:complete-all-tasks --mission <path>" --dangerously-skip-permissions --model "claude-opus-5-5" --effort high; # interactive']],
+      [
+        'Claude Code (critical tasks)',
+        ['claude "/gurita:complete-all-tasks --mission <path>" --dangerously-skip-permissions --model "opus" --effort xhigh; # interactive'],
+      ],
+    ],
+    'one execution recipe, its variants Claude Code at high, Antigravity at high, and Claude Code at xhigh',
+  );
+  for (const retired of ['Execute tasks of normal difficulty', 'Execute tasks (critical tasks)']) {
+    assert.ok(!recipes.some((recipe) => recipe.name.startsWith(retired)), retired);
+  }
+  assert.deepStrictEqual(byName(recipes, 'Execute tasks one at a time').variants.map((variant) => [variant.name, variant.lines]), [
+    ['Execute tasks one at a time', [SLOT_LINE]],
   ]);
-  assert.deepStrictEqual(runs(recipes, 'Execute tasks (critical tasks)').lines, [
-    'claude "/gurita:complete-all-tasks --mission <path>" --dangerously-skip-permissions --model "opus" --effort xhigh; # interactive',
+});
+
+test('each shipped chain run on two harnesses is one recipe with a Claude Code and an Antigravity variant, no chain heading naming a harness', () => {
+  const recipes = parseShippedRecipes(fs.readFileSync(SNIPPETS, 'utf8'), SNIPPETS);
+  const variants = (name: string) =>
+    byName(recipes, name).variants.map((variant) => [variant.name, variant.lines.map((line) => line.split(' ')[0])]);
+  assert.deepStrictEqual(variants('First run'), [
+    ['Claude Code', ['claude', 'claude', 'claude', 'claude']],
+    ['Antigravity', ['agy', 'agy', 'agy', 'agy']],
   ]);
-  assert.deepStrictEqual(runs(recipes, 'Execute tasks of normal difficulty (Antigravity)').lines, [
-    'agy -i "/gurita:complete-all-tasks --mission <path>" --dangerously-skip-permissions --model "claude-opus-5-5" --effort high; # interactive',
+  assert.deepStrictEqual(variants('Requirements iteration'), [
+    ['Claude Code', ['claude', 'claude', 'claude', 'claude']],
+    ['Antigravity', ['agy', 'agy', 'agy', 'agy']],
   ]);
-  assert.deepStrictEqual(runs(recipes, 'Execute tasks (critical tasks) (Antigravity)').lines, [
-    'claude "/gurita:complete-all-tasks --mission <path>" --dangerously-skip-permissions --model "opus" --effort xhigh; # interactive',
+  assert.deepStrictEqual(variants('Prepare tasks'), [
+    ['Claude Code', ['claude', 'claude']],
+    ['Antigravity', ['agy', 'agy']],
   ]);
-  assert.deepStrictEqual(runs(recipes, 'Execute tasks one at a time').lines, [SLOT_LINE]);
+  assert.deepStrictEqual(variants('Finish mission'), [
+    ['Claude Code', ['claude']],
+    ['Antigravity', ['agy']],
+  ]);
+  assert.deepStrictEqual(variants('Mixed-agent requirements review (Gemini reviews, Claude annotates)'), [
+    ['Mixed-agent requirements review (Gemini reviews, Claude annotates)', ['agy', 'claude', 'claude', 'claude']],
+  ]);
+  const single = recipes.filter((recipe) => firstVariant(recipe).singleTask);
+  assert.deepStrictEqual(
+    single.map((recipe) => [recipe.name, recipe.variants.length]),
+    [
+      ['Single task with Opus xHigh (Claude Code)', 1],
+      ['Single task with Opus High (Claude Code)', 1],
+      ['Single task with Opus High (Antigravity)', 1],
+    ],
+  );
+  const named = recipes.filter((recipe) => /\((Claude Code|Antigravity)\)$/.test(recipe.name)).map((recipe) => recipe.name);
+  assert.deepStrictEqual(named, single.map((recipe) => recipe.name), 'only the single-task lines name their harness in the heading');
+  for (const name of Object.values(BUTTON_RECIPES)) {
+    assert.deepStrictEqual(byName(recipes, name).variants.map((variant) => variant.name), [name], name);
+  }
+});
+
+test("every single-task line this repository's rule file names is a shipped single-task heading", () => {
+  const recipes = parseShippedRecipes(fs.readFileSync(SNIPPETS, 'utf8'), SNIPPETS);
+  const rules = fs.readFileSync(path.join(__dirname, '..', '..', '..', 'task_line_rules.txt'), 'utf8');
+  const named = new Set(
+    rules
+      .split('\n')
+      .filter((line) => line.trim() !== '' && !line.startsWith('#') && line.includes(' -> '))
+      .map((line) => line.slice(line.lastIndexOf(' -> ') + 4).trim()),
+  );
+  assert.deepStrictEqual([...named], ['Single task with Opus xHigh (Claude Code)', 'Single task with Opus High (Claude Code)']);
+  for (const name of named) {
+    assert.strictEqual(firstVariant(byName(recipes, name)).singleTask, true, name);
+  }
 });
 
 /**
@@ -486,17 +541,17 @@ test('an undeclared recipe is listed whatever the step, and a page with no step 
   assert.deepStrictEqual(stageRecipes([], 'execute'), []);
 });
 
-test('the stage filter holds the host groups, the own group, and the unfillable-placeholder rule within it', () => {
+test('the stage filter holds the shipped recipes, the own group, and the unfillable-placeholder rule within it', () => {
   const merged = mergeRecipes(shipped(), own());
   const at = (step: WorkflowStep | undefined) =>
     pageRecipes(stageRecipes(merged, step), ['path']).map((entry) => [entry.kind, entry.group, entry.name]);
   const every = [
-    ['runnable', 'Claude Code', 'Chain'],
-    ['looped', 'Claude Code', 'Loop'],
-    ['unknown', 'Claude Code', 'Fenced heading'],
-    ['runnable', 'Claude Code', 'Variants'],
-    ['runnable', 'Antigravity', 'Two fences'],
-    ['runnable', 'Antigravity', 'Block before variants'],
+    ['runnable', 'shipped', 'Chain'],
+    ['looped', 'shipped', 'Loop'],
+    ['unknown', 'shipped', 'Fenced heading'],
+    ['runnable', 'shipped', 'Variants'],
+    ['runnable', 'shipped', 'Two fences'],
+    ['runnable', 'shipped', 'Block before variants'],
     ['unknown', 'own', 'My second own recipe'],
     ['runnable', 'own', 'My variant recipe'],
   ];
@@ -516,35 +571,23 @@ test('each step lists exactly the shipped chains that fit it, and no step chosen
   const at = (step: WorkflowStep | undefined) =>
     pageRecipes(stageRecipes(recipes, step), ['path']).map((entry) => [entry.group, entry.name]);
   const review = [
-    ['Claude Code', 'Requirements iteration'],
-    ['Antigravity', 'Requirements iteration (Antigravity)'],
-    ['Antigravity', 'Mixed-agent requirements review (Gemini reviews, Claude annotates)'],
+    ['shipped', 'Requirements iteration'],
+    ['shipped', 'Mixed-agent requirements review (Gemini reviews, Claude annotates)'],
   ];
-  assert.deepStrictEqual(at('first-review'), [
-    ['Claude Code', 'First run'],
-    ['Antigravity', 'First run (Antigravity)'],
-  ]);
-  assert.deepStrictEqual(at('additional-review'), review);
+  assert.deepStrictEqual(at('first-review'), [['shipped', 'First run']]);
+  assert.deepStrictEqual(at('additional-review'), review, 'the additional review round lists Requirements iteration and the mixed-agent recipe');
   assert.deepStrictEqual(at('derive'), [
-    ['Claude Code', 'Requirements iteration'],
-    ['Claude Code', 'Prepare tasks'],
-    ['Antigravity', 'Requirements iteration (Antigravity)'],
-    ['Antigravity', 'Prepare tasks (Antigravity)'],
-    ['Antigravity', 'Mixed-agent requirements review (Gemini reviews, Claude annotates)'],
+    ['shipped', 'Requirements iteration'],
+    ['shipped', 'Mixed-agent requirements review (Gemini reviews, Claude annotates)'],
+    ['shipped', 'Prepare tasks'],
   ]);
   assert.deepStrictEqual(at('execute'), [
-    ['Claude Code', 'Execute tasks of normal difficulty'],
-    ['Claude Code', 'Execute tasks (critical tasks)'],
-    ['Claude Code', 'Execute tasks one at a time'],
-    ['Antigravity', 'Execute tasks of normal difficulty (Antigravity)'],
-    ['Antigravity', 'Execute tasks (critical tasks) (Antigravity)'],
+    ['shipped', 'Execute tasks'],
+    ['shipped', 'Execute tasks one at a time'],
   ]);
-  assert.deepStrictEqual(at('finish'), [
-    ['Claude Code', 'Finish mission'],
-    ['Antigravity', 'Finish mission (Antigravity)'],
-  ]);
+  assert.deepStrictEqual(at('finish'), [['shipped', 'Finish mission']]);
   assert.deepStrictEqual(at(undefined), pageRecipes(recipes, ['path']).map((entry) => [entry.group, entry.name]));
-  assert.strictEqual(at(undefined).length, 14);
+  assert.strictEqual(at(undefined).length, 7);
 });
 
 test('a page lists the recipes it can fill, in the merged order, each by its first variant with the values its lines carry, and names each unknown placeholder and its file', () => {
@@ -552,12 +595,12 @@ test('a page lists the recipes it can fill, in the merged order, each by its fir
   assert.deepStrictEqual(
     listed.map((entry) => [entry.kind, entry.group, entry.name]),
     [
-      ['runnable', 'Claude Code', 'Chain'],
-      ['looped', 'Claude Code', 'Loop'],
-      ['unknown', 'Claude Code', 'Fenced heading'],
-      ['runnable', 'Claude Code', 'Variants'],
-      ['runnable', 'Antigravity', 'Two fences'],
-      ['runnable', 'Antigravity', 'Block before variants'],
+      ['runnable', 'shipped', 'Chain'],
+      ['looped', 'shipped', 'Loop'],
+      ['unknown', 'shipped', 'Fenced heading'],
+      ['runnable', 'shipped', 'Variants'],
+      ['runnable', 'shipped', 'Two fences'],
+      ['runnable', 'shipped', 'Block before variants'],
       ['unknown', 'own', 'My second own recipe'],
       ['runnable', 'own', 'My variant recipe'],
     ],
@@ -565,7 +608,7 @@ test('a page lists the recipes it can fill, in the merged order, each by its fir
   assert.deepStrictEqual(listed[0], {
     kind: 'runnable',
     name: 'Chain',
-    group: 'Claude Code',
+    group: 'shipped',
     lines: [
       'claude -p "/gurita:review-mission-requirements --mission <path>" --model "fable";',
       'claude "/gurita:recommend-all-open-questions --mission <path>" --model "fable"; # interactive',
@@ -575,7 +618,7 @@ test('a page lists the recipes it can fill, in the merged order, each by its fir
   assert.deepStrictEqual(listed[3], {
     kind: 'runnable',
     name: 'Variants',
-    group: 'Claude Code',
+    group: 'shipped',
     lines: ['claude -p "/gurita:complete-all-tasks --mission <path>" --model "opus" --effort high;'],
     values: { harnesses: ['claude'], models: ['opus'], efforts: ['high'] },
   });
@@ -589,7 +632,7 @@ test('a page lists the recipes it can fill, in the merged order, each by its fir
   assert.deepStrictEqual(listed[1], {
     kind: 'looped',
     name: 'Loop',
-    group: 'Claude Code',
+    group: 'shipped',
     lines: ['source .env_fixture', '<single-task line>'],
     values: { harnesses: [], models: [], efforts: [] },
   });
@@ -641,7 +684,7 @@ test('the button recipes carry the seven fixed names, each the bare name of its 
 
 test('a discuss-new-task recipe holds the issue description as a known placeholder and runs from the new-task button only', () => {
   const recipes = parseShippedRecipes(
-    '## Claude Code\n\n### discuss-new-task\n```\nclaude "/gurita:discuss-new-task --mission <path> <issue description>" --model "fable"; # interactive\n```\n',
+    '## Recipes\n\n### discuss-new-task\n```\nclaude "/gurita:discuss-new-task --mission <path> <issue description>" --model "fable"; # interactive\n```\n',
     SHIPPED,
   );
   const recipe = runs(recipes, BUTTON_RECIPES.discussTask);
@@ -656,11 +699,13 @@ test('a discuss-new-task recipe holds the issue description as a known placehold
   assert.match(short.cause, /has no value for: <issue description>\./);
 });
 
-test('the shipped snippet file carries every button recipe under Claude Code, discuss-new-task its one interactive line', () => {
+test('the shipped snippet file carries every button recipe as one Claude Code block, discuss-new-task its one interactive line', () => {
   const file = path.join(__dirname, '..', '..', '..', 'snippets', 'GURITA_USAGE.md');
   const recipes = parseShippedRecipes(fs.readFileSync(file, 'utf8'), file);
   for (const name of Object.values(BUTTON_RECIPES)) {
-    assert.strictEqual(byName(recipes, name).group, 'Claude Code');
+    assert.strictEqual(byName(recipes, name).group, 'shipped');
+    assert.strictEqual(byName(recipes, name).variants.length, 1, name);
+    assert.ok(runs(recipes, name).lines.every((line) => line.startsWith('claude ')), name);
   }
   const recipe = runs(recipes, BUTTON_RECIPES.discussTask);
   assert.deepStrictEqual(recipe.lines, [
@@ -703,7 +748,7 @@ test('a button finds its recipe by fixed name and runs its first variant, an own
   ]);
   assert.ok(replaced.state === 'found');
   assert.strictEqual(replaced.variant.file, SHIPPED, 'the shipped variant stays first');
-  assert.strictEqual(replaced.recipe.group, 'Claude Code');
+  assert.strictEqual(replaced.recipe.group, 'shipped');
   assert.deepStrictEqual(replaced.recipe.variants.map((variant) => [variant.name, variant.own]), [
     ['answer-open-question', false],
     ['answer-open-question', true],
