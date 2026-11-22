@@ -72,5 +72,7 @@ No other live mission's scope overlaps `gurita-vscode/`, so nothing holds or sha
 
 - **Recipe list layout.** The list keeps two parts under the page's Recipes heading. First comes one button per shipped recipe, in the shipped file's order and with no heading of their own, an own recipe carrying a shipped name standing in that recipe's place. Then comes a group headed Your recipes, holding the own recipes that replace no shipped one, in the own file's order. Only the Claude Code and Antigravity headings go; the own group's heading, position, and order stay as they are.
 
+- **Remembered selection.** The variant selected in a recipe's dropdown is remembered per recipe name on one mission, keyed by the mission's path as the pane lists it. It is kept in the project's `ExtensionContext.workspaceState`, as a map from mission path and recipe name to variant name. Nothing is written into the project's tree.
+
 ## Out of Scope
 
