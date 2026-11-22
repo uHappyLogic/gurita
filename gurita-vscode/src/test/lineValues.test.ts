@@ -1,0 +1,138 @@
+import { test } from 'node:test';
+import * as assert from 'node:assert';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import { readLine, replaceEffort, replaceModel, variantValues } from '../lineValues';
+import { Recipe, SLOT_LINE, parseShippedRecipes } from '../recipes';
+
+const SNIPPETS = path.join(__dirname, '..', '..', '..', 'snippets', 'GURITA_USAGE.md');
+
+function shippedRecipe(name: string): Recipe {
+  const recipes = parseShippedRecipes(fs.readFileSync(SNIPPETS, 'utf8'), SNIPPETS);
+  const found = recipes.find((recipe) => recipe.name === name);
+  assert.ok(found, `no shipped recipe named ${name}`);
+  return found;
+}
+
+const CLAUDE_LINE =
+  'claude -p "/gurita:review-mission-requirements --mission <path>" --dangerously-skip-permissions --model "fable" --effort xhigh;';
+const AGY_LINE =
+  'agy -p "/gurita:review-mission-requirements --mission <path>" --dangerously-skip-permissions --model "gemini-4-argon" --effort medium;';
+const CODEX_LINE = 'codex exec "/gurita:review-mission-requirements --mission <path>" -m gpt-5.5;';
+
+test('a claude, agy, or codex line yields its harness, model, and effort', () => {
+  assert.deepStrictEqual(readLine(CLAUDE_LINE), { harness: 'claude', model: 'fable', effort: 'xhigh' });
+  assert.deepStrictEqual(readLine(AGY_LINE), { harness: 'agy', model: 'gemini-4-argon', effort: 'medium' });
+  assert.deepStrictEqual(readLine(CODEX_LINE), { harness: 'codex', model: 'gpt-5.5' });
+});
+
+test('a Codex line takes its model from -m and reads no effort', () => {
+  assert.deepStrictEqual(readLine('codex exec "/gurita:finish-mission" --model gpt-5.5 --effort high;'), { harness: 'codex' });
+  assert.deepStrictEqual(readLine('codex -m "gpt-5.5" "/gurita:finish-mission"'), { harness: 'codex', model: 'gpt-5.5' });
+});
+
+test('claude and agy take no model from -m', () => {
+  assert.deepStrictEqual(readLine('claude -p "/gurita:finish-mission" -m opus --effort high;'), { harness: 'claude', effort: 'high' });
+});
+
+test('a line without --model or --effort yields its harness and whichever flag it holds', () => {
+  assert.deepStrictEqual(readLine('claude -p "/gurita:finish-mission --mission <path>";'), { harness: 'claude' });
+  assert.deepStrictEqual(readLine('agy -p "/gurita:finish-mission" --effort high;'), { harness: 'agy', effort: 'high' });
+  assert.deepStrictEqual(readLine('claude "/gurita:discuss-mission-goal" --model opus; # interactive'), { harness: 'claude', model: 'opus' });
+});
+
+test('a shell step, the slot line, and an unknown command carry no value', () => {
+  assert.strictEqual(readLine('git pull --rebase;'), undefined);
+  assert.strictEqual(readLine(SLOT_LINE), undefined);
+  assert.strictEqual(readLine('gemini -p "/review" --model "gemini-4-argon" --effort high;'), undefined);
+  assert.strictEqual(readLine('echo claude --model fable;'), undefined);
+  assert.strictEqual(readLine(''), undefined);
+});
+
+test('flags inside the quoted prompt or after the closing ; are never read', () => {
+  assert.deepStrictEqual(readLine('claude -p "/gurita:x --model opus --effort max" --model fable;'), { harness: 'claude', model: 'fable' });
+  assert.deepStrictEqual(readLine("claude -p '--effort low' --effort high; # --model opus"), { harness: 'claude', effort: 'high' });
+  assert.deepStrictEqual(readLine('claude -p "/x"; agy --model gemini-4-argon --effort medium;'), { harness: 'claude' });
+});
+
+test('the --flag=value form is read, an empty or missing value carries nothing, and the last flag wins', () => {
+  assert.deepStrictEqual(readLine('claude -p "/x" --model=opus --effort="high";'), { harness: 'claude', model: 'opus', effort: 'high' });
+  assert.deepStrictEqual(readLine('claude -p "/x" --model "" --effort'), { harness: 'claude' });
+  assert.deepStrictEqual(readLine('claude -p "/x" --model fable --model opus;'), { harness: 'claude', model: 'opus' });
+});
+
+test('replacing a model or effort keeps the rest of the line as written and the value quoted as before', () => {
+  assert.strictEqual(
+    replaceModel(CLAUDE_LINE, 'opus'),
+    'claude -p "/gurita:review-mission-requirements --mission <path>" --dangerously-skip-permissions --model "opus" --effort xhigh;',
+  );
+  assert.strictEqual(
+    replaceEffort(CLAUDE_LINE, 'high'),
+    'claude -p "/gurita:review-mission-requirements --mission <path>" --dangerously-skip-permissions --model "fable" --effort high;',
+  );
+  assert.strictEqual(
+    replaceModel(AGY_LINE, 'claude-opus-5-5'),
+    'agy -p "/gurita:review-mission-requirements --mission <path>" --dangerously-skip-permissions --model "claude-opus-5-5" --effort medium;',
+  );
+  assert.strictEqual(replaceModel(CODEX_LINE, 'gpt-5.5-mini'), 'codex exec "/gurita:review-mission-requirements --mission <path>" -m gpt-5.5-mini;');
+  assert.strictEqual(replaceModel("claude -p '/x' --model 'fable';", 'opus'), "claude -p '/x' --model 'opus';");
+  assert.strictEqual(replaceEffort('claude -p "/x" --effort=high;', 'max'), 'claude -p "/x" --effort=max;');
+  assert.strictEqual(replaceModel('claude -p "/x" --model fable;', 'my model'), 'claude -p "/x" --model "my model";');
+  assert.strictEqual(
+    replaceModel('claude "/gurita:x" --model "fable" --effort xhigh; # interactive', 'sonnet'),
+    'claude "/gurita:x" --model "sonnet" --effort xhigh; # interactive',
+  );
+});
+
+test('a value the line does not carry is never inserted', () => {
+  assert.strictEqual(replaceModel('claude -p "/x" --effort high;', 'opus'), undefined);
+  assert.strictEqual(replaceEffort('claude -p "/x" --model opus;', 'high'), undefined);
+  assert.strictEqual(replaceEffort(CODEX_LINE, 'high'), undefined);
+  assert.strictEqual(replaceModel('claude -p "/x --model opus";', 'fable'), undefined);
+  assert.strictEqual(replaceModel(SLOT_LINE, 'opus'), undefined);
+  assert.strictEqual(replaceModel('git pull --model x;', 'opus'), undefined);
+});
+
+test('an empty replacement value is refused', () => {
+  assert.throws(() => replaceModel(CLAUDE_LINE, ''));
+  assert.throws(() => replaceEffort(CLAUDE_LINE, ''));
+});
+
+test('the shipped First run reads claude · fable, opus · xhigh, high', () => {
+  const recipe = shippedRecipe('First run');
+  assert.deepStrictEqual(variantValues(recipe.variants[0].lines), {
+    harnesses: ['claude'],
+    models: ['fable', 'opus'],
+    efforts: ['xhigh', 'high'],
+  });
+});
+
+test('the mixed-agent chain reads agy, claude · gemini-4-argon, opus, fable · medium, high, xhigh', () => {
+  const recipe = shippedRecipe('Mixed-agent requirements review (Gemini reviews, Claude annotates)');
+  assert.deepStrictEqual(variantValues(recipe.variants[0].lines), {
+    harnesses: ['agy', 'claude'],
+    models: ['gemini-4-argon', 'opus', 'fable'],
+    efforts: ['medium', 'high', 'xhigh'],
+  });
+});
+
+test('the three lists are independent, and unreadable lines add nothing', () => {
+  assert.deepStrictEqual(
+    variantValues([
+      'git pull;',
+      'claude -p "/a" --effort high;',
+      SLOT_LINE,
+      'codex exec "/b" -m gpt-5.5;',
+      'make test;',
+      'agy -p "/c" --model gemini-4-argon;',
+    ]),
+    { harnesses: ['claude', 'codex', 'agy'], models: ['gpt-5.5', 'gemini-4-argon'], efforts: ['high'] },
+  );
+});
+
+test('a variant none of whose lines is readable yields three empty lists', () => {
+  assert.deepStrictEqual(variantValues([SLOT_LINE]), { harnesses: [], models: [], efforts: [] });
+  assert.deepStrictEqual(shippedRecipe('Execute tasks one at a time').variants.map((variant) => variantValues(variant.lines)), [
+    { harnesses: [], models: [], efforts: [] },
+  ]);
+});

@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Read and Replace Line Harness Values
-
-Add a module importing nothing from `vscode` that reads from a recipe line's text the harness it runs on (`claude`, `agy`, or `codex`), its `--model` value, and its `--effort` value, a Codex line's model read from `-m`, and that replaces a model or effort value the line already carries, never inserting text into a line. From a variant's lines it gives the three lists a recipe button shows: the distinct harnesses, the distinct models, and the distinct efforts, each in the order of first appearance and independent of the other two, a line adding only the values its text carries and a shell step, the slot line `<single-task line>`, and a line of a command the extension does not know adding nothing. Verified by `node:test` unit tests, among them the shipped `First run` reading claude · fable, opus · xhigh, high and the mixed-agent chain reading agy, claude · gemini-4-argon, opus, fable · medium, high, xhigh.
-
----
-
 ## Recipe List Layout and Button Labels
 
 Redraw the mission page's recipe list under its Recipes heading in two parts: first one button per shipped recipe, in the shipped file's order and with no heading of their own, then the group headed Your recipes holding the own recipes that carry no shipped recipe's name, in the own file's order, so that only the Claude Code and Antigravity headings go. Each button shows, with its recipe's name, the distinct harnesses, models, and efforts of the variant it runs, as the line-value module reads them, a variant none of whose lines is readable showing its name alone, and keeps that variant's lines as written in its hover text. Verified by the page and pane tests under `gurita-vscode/src/test/`, with `gurita-vscode/README.md` describing the list as drawn.
