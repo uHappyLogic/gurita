@@ -570,6 +570,41 @@
   </open-question>
   <open-question id="Settings view placement">
     <question>The pane today is a row of mission tabs ending in Refresh, New mission, and Define mission, with the selected mission&apos;s page beneath, and it holds no view that belongs to no mission. Where does the settings view stand in the pane and how is it opened: as a tab of its own in that row, behind a button that swaps the page for it, or as a part of every mission&apos;s page?</question>
+    <alternative id="Settings tab in the row">
+      The settings view is a tab of its own in the pane&apos;s row, drawn beside the mission tabs and before Refresh, New mission, and Define mission, and selected the way a mission tab is: clicking it draws the settings view where the selected mission&apos;s page stands, and clicking a mission tab draws that mission&apos;s page again. The tab is drawn in every state of the pane, with no live mission and in the failure state included, and the row is the only way in: the extension contributes no command for it.
+      <advantage>It uses the pane&apos;s one existing navigation pattern, so the settings view is reached and left the way every page is, and its selection can be kept through redraws and reloads with the same `setState` that already keeps the selected mission.</advantage>
+      <drawback>The row&apos;s tablist, today one tab per live mission in `missions.py live` order, mixes in an entry that is no mission, so the page script&apos;s selection logic (the fallback to the first mission when the selected one is no longer live, the per-mission terminal focus a tab click posts) needs a case for a selection that is no mission, and the settings view cannot be reached without the pane open.</drawback>
+    </alternative>
+    <alternative id="Swap control at row end">
+      The settings view is opened by a control at the row&apos;s end, beside Refresh, New mission, and Define mission, the group that already belongs to no mission and stays drawn in the failure state. A click swaps the page beneath the row for the settings view, and a control on that view, or a click on any mission tab, swaps back to the mission page shown before. The mission tabs keep holding missions only, and the extension contributes no command for it.
+      <advantage>The settings view joins the controls that belong to no mission, where the pane already groups them, so the mission tabs stay one per live mission and the view is reachable with no live mission and in the failure state, before any harness line has run.</advantage>
+      <drawback>It adds a second kind of page switch beside the tabs, a mode the page script must hold and leave (whether it survives a redraw, a reload, and a run&apos;s ending), and the view is still reachable only with the pane open.</drawback>
+    </alternative>
+    <alternative id="Section of every mission page">
+      The settings view is a part of each mission&apos;s page, a block drawn on the page beside the workflow diagram, recipe buttons, and the two panes (collapsed until opened, or drawn whole), the same view on every mission&apos;s page. The row gains no entry, no page swap is added, and the extension contributes no command for it.
+      <advantage>The harness state and variants stand right beside the recipe buttons they govern, so a person changes a variant&apos;s model or effort and sees the button&apos;s label change on the same page, with no navigation added to the pane.</advantage>
+      <drawback>A view that belongs to no mission is drawn inside every mission&apos;s page, so it is absent when no mission is live and in the failure state, exactly when a person defining a first mission would check that a harness is found and its Gurita copy current, and it lengthens every page the page script redraws whole on each message.</drawback>
+    </alternative>
+    <alternative id="Command only">
+      The settings view is opened by a command the extension contributes (such as Gurita: Open Settings), offered in the command palette and as an action in the pane&apos;s editor title bar, which reveals the pane and swaps its page for the settings view, with a control on the view to return to the mission page shown before. The pane&apos;s row and pages gain no entry for it.
+      <advantage>The pane&apos;s row and mission pages stay exactly as they are, and the view is reachable from anywhere in the editor, with the pane closed or in any state, through VS Code&apos;s own entry points.</advantage>
+      <drawback>Nothing on the page shows that a settings view exists, so a person who works from the pane alone never finds it unless the editor title action is noticed, and the extension gains its first editor-title menu contribution and a message telling the page to swap.</drawback>
+    </alternative>
+    <alternative id="Settings tab plus command">
+      The settings view is a tab of its own in the row, as in the settings-tab option, drawn in every state of the pane, and the extension also contributes a command, in the command palette and the pane&apos;s editor title bar, that reveals the pane and selects that tab.
+      <advantage>The view is reached through the pane&apos;s own tab pattern by a person working on the page and from anywhere in the editor by one who is not, with the pane closed included.</advantage>
+      <drawback>It carries the settings tab&apos;s cost, a non-mission entry in the mission tablist and a selection case that is no mission, and adds a command and editor-title contribution with its own reveal-and-select message on top.</drawback>
+    </alternative>
+    <alternative id="Swap control plus command">
+      The settings view is opened by a control at the row&apos;s end beside Refresh, New mission, and Define mission, swapping the page beneath the row for it with a way back to the mission page shown before, as in the swap-control option, and the extension also contributes a command, in the command palette and the pane&apos;s editor title bar, that reveals the pane and swaps it to the settings view.
+      <advantage>The mission tabs stay one per live mission, the view is reachable from the page in every state of the pane, and also from anywhere in the editor with the pane closed.</advantage>
+      <drawback>It carries the swap control&apos;s page mode the script must hold and leave, plus a command and editor-title contribution and a second message that triggers the same swap, the most new surface of the in-pane options.</drawback>
+    </alternative>
+    <alternative id="Separate settings panel">
+      The settings view stands outside the mission pane, in a webview panel of its own opened by a contributed command and by a control at the mission pane&apos;s row end, with its own page script and messages; the mission pane&apos;s row, tabs, and pages are otherwise unchanged. The goal&apos;s wording, which adds the settings view to the pane, would be revised to match.
+      <advantage>The mission pane&apos;s one page script, which redraws whole from each message, gains no second view or mode, and the settings view can stand open beside a mission page in its own editor group.</advantage>
+      <drawback>It departs from the goal as written and needs a goal revision, and the extension&apos;s one-panel model grows a second webview panel with its own shell, stylesheet, message types, and tests, and the two panels must keep each other current when a variant or harness changes.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Harness check timing">
     <question>The settings view checks each harness by finding its CLI through a shell and reading its installed plugins from the harness&apos;s own `plugin list` command, so every check starts an interactive shell and a harness process. When does the check run: each time the settings view is opened, with every re-read of the pane, or only when the person asks for it?</question>
