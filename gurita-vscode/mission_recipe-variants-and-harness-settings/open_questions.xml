@@ -164,6 +164,36 @@
   </open-question>
   <open-question id="Button label content">
     <question>A recipe button is to show the harness, models, and efforts of the selected variant, read from its lines. A variant may hold several lines that differ in model and effort (the shipped `First run` runs `fable` at `xhigh` and `opus` at `high`), and one shipped chain mixes `agy` and `claude` lines. What does the button show for such a variant: every line&apos;s values in line order, or each distinct harness, model, and effort once?</question>
+    <alternative id="Every line in order">
+      The label lists one entry per line of the variant, in line order, each entry that line&apos;s harness, model, and effort, repeats included: the shipped `First run` reads claude fable xhigh, claude fable xhigh, claude opus high, claude fable xhigh, and the mixed-agent chain opens with its `agy` entry ahead of its three `claude` entries. Nothing is merged or counted.
+      <advantage>The label is a faithful, position-for-position reading of the lines, so a person sees exactly which step of the chain runs on which harness, model, and effort without opening the hover, and the reading needs no merging rule to test or explain.</advantage>
+      <drawback>The label grows with the chain and repeats itself: the four-line shipped chains give four near-identical entries, which makes the buttons long and hard to compare at a glance in a list that today shows only a name per button, while the hover already carries the lines as written.</drawback>
+    </alternative>
+    <alternative id="Line order, adjacent repeats merged">
+      The label keeps line order but merges consecutive lines whose harness, model, and effort are all equal into one entry; a combination that recurs after a different one is listed again. `First run` reads claude fable xhigh, claude opus high, claude fable xhigh; `Prepare tasks` reads claude fable high, claude fable xhigh.
+      <advantage>It still shows the order in which the chain switches harness, model, or effort, the one thing a set-based label loses, while removing the run of identical entries that makes a per-line label long.</advantage>
+      <drawback>A combination that alternates with another is still listed more than once, so the label&apos;s length depends on how the chain happens to be ordered rather than on how many distinct settings it uses, and the merging is a rule a reader of the label has to infer.</drawback>
+    </alternative>
+    <alternative id="Distinct combinations once">
+      The label lists each distinct combination of harness, model, and effort once, in the order of its first appearance in the lines, with no count or position: `First run` reads claude fable xhigh, claude opus high, and the mixed-agent chain reads agy gemini-4-argon medium, claude opus high, claude fable xhigh, claude fable high.
+      <advantage>Every combination that actually runs is shown with its pairing intact, so a person can tell which model runs at which effort on which harness, at a length bounded by the number of distinct settings rather than the number of lines.</advantage>
+      <drawback>The label no longer says which step uses which combination or how many steps use each, so a variant whose only change is moving one step to another model may read the same as before, and a chain with many distinct settings still yields a long label.</drawback>
+    </alternative>
+    <alternative id="Distinct values per field">
+      The label shows the distinct harnesses once, the distinct models once, and the distinct efforts once, each as its own list in the order of first appearance and independent of the others: `First run` reads claude · fable, opus · xhigh, high, and the mixed-agent chain reads agy, claude · gemini-4-argon, opus, fable · medium, high, xhigh.
+      <advantage>It is the shortest label that still names every value the variant uses, with a fixed three-part shape that is easy to scan and compare across buttons, and on the common single-harness, single-setting variant it collapses to one harness, one model, and one effort.</advantage>
+      <drawback>It drops the pairings: a reader cannot tell which model runs at which effort, and on a mixed chain which model belongs to which harness, so two variants with swapped pairings show the same label.</drawback>
+    </alternative>
+    <alternative id="Per harness, its distinct models and efforts">
+      The label names each distinct harness once, in order of first appearance, and after each the distinct models and the distinct efforts of that harness&apos;s lines: the mixed-agent chain reads agy: gemini-4-argon / medium; claude: opus, fable / high, xhigh, and a single-harness variant reads like the per-field form.
+      <advantage>It keeps the binding that matters most on a mixed chain, which models run on which harness, at nearly the length of the per-field label, and it reads naturally beside a settings view that holds model and effort lists per harness.</advantage>
+      <drawback>Model and effort are still unpaired within a harness, so on `First run` it cannot say that fable runs at xhigh and opus at high, and the grouped form is longer and more nested than a flat label on a button.</drawback>
+    </alternative>
+    <alternative id="Compact summary, detail in hover">
+      The label shows a field&apos;s value only when every line shares it and otherwise a short count or mark in its place (for example claude · 2 models · 2 efforts for `First run`, 2 harnesses · 3 models · 3 efforts for the mixed-agent chain), the full per-line values left to the button&apos;s hover text, which already carries the lines as written.
+      <advantage>Every button stays short and of one shape whatever the chain&apos;s length, and a single-setting variant still reads its exact harness, model, and effort, so the list stays scannable while nothing is hidden beyond one hover.</advantage>
+      <drawback>For exactly the multi-line variants the question is about, the label stops showing the models and efforts the goal asks it to show, and two variants differing only in which models they use read identically until hovered.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Unreadable lines">
     <question>The extension is to read each line&apos;s harness, model, and effort from the line&apos;s own text. A variant may hold a line that carries none of them or not all: a shell step of the person&apos;s own, the looped recipe&apos;s slot line `&lt;single-task line&gt;`, a command of a harness the extension does not know, or a harness line written without `--model` or `--effort`. How is such a line treated on the recipe button and in the settings view&apos;s line editor?</question>
