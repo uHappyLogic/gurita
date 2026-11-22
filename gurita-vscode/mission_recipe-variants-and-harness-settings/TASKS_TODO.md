@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Variant Editing in the Settings View
-
-List in the settings view every recipe with its variants (the chains, the seven fixed-name button recipes, and the recipes and variants that come from the hand-written own recipe file) and offer on each variant duplicate, rename, delete, pick as the recipe's default, and, where a stored copy or a hiding record stands, reset, each carried out through the variant store's edits. A duplicate's name and a rename are asked for in VS Code's own input box, one box per value as `askValues` in `src/pane.ts` asks, a rename opening with the current name filled in and the box's own validation refusing an empty name and one the recipe already uses. Verified by pane tests against the `vscode` stub and page tests of the controls, an edit reaching the mission page's dropdown and the fixed-name buttons at the next re-read, with `gurita-vscode/README.md` describing the edits.
-
----
-
 ## Line Editor for Model and Effort
 
 Add the line editor to each variant in the settings view: every line is shown as its text, and only a line of a known harness carrying both `--model` and `--effort` gets model and effort dropdowns, a Codex line carrying `-m` getting its model dropdown alone and every other line staying read-only. The dropdowns offer the harness's model list and its whole effort list, whatever the line's model, and a pick replaces the value the line already carries, never inserting text into the line, and is written through the store's edit as the variant's stored copy. Verified by pane and page tests: a pick on a shipped variant's line leaves a stored copy holding the changed line in that variant's place, and a line without both flags draws no control.

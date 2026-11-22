@@ -16,10 +16,13 @@
 // pick as the variant the copy stands in for; renaming the picked default carries the pick to the
 // new name, and only deleting the picked default drops the pick, the recipe then falling back to
 // its first listed variant. An edit that cannot be made is refused with a `VariantEditError`,
-// nothing written. This module imports nothing from `vscode`.
+// nothing written. The list the settings view draws its variant edits from is
+// `settingsRecipes`'s: every recipe but the named single-task lines, each with its listed
+// variants, its default marked, and the variants a hiding record hides. This module imports
+// nothing from `vscode`.
 
 import { LineValues, replaceEffort, replaceModel } from './lineValues';
-import { Recipe, Variant, overlayVariantStore, pickedVariant, sameCopies, variantOrigin } from './recipes';
+import { Recipe, Variant, defaultVariant, overlayVariantStore, pickedVariant, sameCopies, variantOrigin } from './recipes';
 import { ReadVariantRef, StoredVariant, VariantOrigin, VariantRef, VariantStore, readVariantStore, writeVariantStore } from './variantStore';
 
 /** A variant as the recipe list shows it: its name, where it comes from, and, for a stored copy, the variant it stands in for. */
@@ -68,6 +71,62 @@ export function resettableVariants(store: VariantStore, recipe: string): ReadVar
     }
   }
   return found;
+}
+
+/** One variant as the settings view lists it, with what it may be reset to. */
+export interface SettingsVariant extends VariantTarget {
+  /** The variant's lines as written. */
+  lines: string[];
+  /** Whether it is its recipe's default, picked or, while no pick stands, its first listed variant. */
+  isDefault: boolean;
+}
+
+/** One recipe as the settings view lists it: its variants in order and the variants a hiding record hides. */
+export interface SettingsRecipe {
+  name: string;
+  group: Recipe['group'];
+  /** Whether one of the buttons outside the chains runs it by its fixed name, its default the variant the button runs. */
+  fixed: boolean;
+  /** Its listed variants, in the recipe's order, the store laid over them. */
+  variants: SettingsVariant[];
+  /** The shipped and own variants a hiding record hides and no stored copy stands in for, each a reset shows again. */
+  hidden: ReadVariantRef[];
+}
+
+/**
+ * The recipes the settings view lists, out of `base`, the list the two Markdown files yield, with
+ * the store `store`, read from `file`, laid over it: every recipe in the merged order, the ones only
+ * the store holds after them, each with its listed variants, its default marked, and the variants
+ * hidden by a record. A recipe every variant of which is hidden stays listed, so its variants can
+ * be reset. The named single-task lines, whose default holds one headless `<Task Title>` line, are
+ * left out, and so is no recipe for its stage or for a disabled harness. `fixed` names the recipes
+ * the fixed-name buttons run.
+ */
+export function settingsRecipes(base: readonly Recipe[], store: VariantStore, file: string, fixed: readonly string[]): SettingsRecipe[] {
+  const overlaid = overlayVariantStore(base, store, file);
+  const names = [...base.map((recipe) => recipe.name), ...overlaid.map((recipe) => recipe.name)].filter(
+    (name, index, all) => all.indexOf(name) === index,
+  );
+  const listed: SettingsRecipe[] = [];
+  for (const name of names) {
+    const recipe = overlaid.find((each) => each.name === name);
+    const original = base.find((each) => each.name === name);
+    const shown = recipe ?? original;
+    if (shown === undefined || defaultVariant(shown).singleTask) {
+      continue;
+    }
+    const standing = recipe === undefined ? undefined : defaultVariant(recipe);
+    const variants = (recipe?.variants ?? []).map((variant) => ({
+      ...variantTarget(variant),
+      lines: [...variant.lines],
+      isDefault: variant === standing,
+    }));
+    const hidden = resettableVariants(store, name).filter(
+      (ref) => !variants.some((variant) => variant.copies !== undefined && sameCopies(variant.copies, ref)),
+    );
+    listed.push({ name, group: shown.group, fixed: fixed.includes(name), variants, hidden });
+  }
+  return listed;
 }
 
 /** The store and the recipe list it gives, read afresh, with the one recipe an edit names. */

@@ -70,7 +70,19 @@
 // person's overlay from the harness part of the variant store file laid over them. A click of a
 // list's add control asks for the entry in VS Code's own input box, whose validation refuses an
 // empty entry and one the list already offers, and a click of an entry's remove control takes it
-// out of the offer; either is written to the overlay and the lists posted again. The
+// out of the offer; either is written to the overlay and the lists posted again. The view also
+// edits variants: every opening posts every recipe but the named single-task lines, the chains,
+// the seven fixed-name button recipes, and the recipes and variants of the own recipe file alike,
+// each with its variants as the variant store lays them over the two Markdown files, its default
+// marked, and the variants a hiding record hides. A click of a variant's duplicate, rename,
+// delete, or default control, or of a reset control where a stored copy or a hiding record
+// stands, is carried out through the variant store's edits (`variantEdits.ts`); a duplicate's name
+// and a rename are asked for in VS Code's own input box, one box per value as `askValues` asks, a
+// rename's box opening on the current name, and the box's validation refusing an empty name and
+// one the recipe's other variants carry. Every edit posts the variant list and the harness lists
+// again, and the pages with their recipes re-read, so the mission pages' dropdowns show it at
+// once and the fixed-name buttons, which read their recipe afresh at each click, at the next
+// click. The
 // extension posts the
 // paths of the missions with a running runner to the page when a run starts and when its terminal closes, and
 // with every redraw, so a hidden pane shown again draws them too; a click that still reaches the
@@ -106,7 +118,17 @@ import { LiveMission, LiveRead, projectRoot, readLive } from './live';
 import { PreviewRead, SingleTaskLine, loopArguments, ruleFile, runOverrides, runPreview, singleTaskLines } from './loop';
 import { BUTTON_RECIPES, PageRecipe, Recipe, buttonRecipe, ownRecipesFile, pageRecipes, readRecipes, selectedChoice, stageRecipes } from './recipes';
 import { SELECTIONS_KEY, Selections, dropStaleSelections, missionSelections, readSelections, rememberSelection } from './selections';
-import { variantStoreFile } from './variantStore';
+import { ReadVariantRef, readVariantStore, variantStoreFile } from './variantStore';
+import {
+  SettingsRecipe,
+  VariantTarget,
+  deleteVariant,
+  duplicateVariant,
+  pickDefault,
+  renameVariant,
+  resetVariant,
+  settingsRecipes,
+} from './variantEdits';
 import {
   HarnessKey,
   HarnessLists,
@@ -157,7 +179,12 @@ type PageMessage =
   | { type: 'checkHarnesses' }
   | { type: 'setHarnessEnabled'; harness: string; enabled: boolean }
   | { type: 'addHarnessValue'; harness: string; kind: string }
-  | { type: 'removeHarnessValue'; harness: string; kind: string; value: string };
+  | { type: 'removeHarnessValue'; harness: string; kind: string; value: string }
+  | { type: 'duplicateVariant'; recipe: string; variant: VariantTarget }
+  | { type: 'renameVariant'; recipe: string; variant: VariantTarget }
+  | { type: 'deleteVariant'; recipe: string; variant: VariantTarget }
+  | { type: 'pickDefault'; recipe: string; variant: VariantTarget }
+  | { type: 'resetVariant'; recipe: string; original: ReadVariantRef };
 
 /** The harness check as the settings view shows it: running, or what it gave. */
 type HarnessCheck = { state: 'running' } | CheckResult;
@@ -173,6 +200,9 @@ type HarnessSettings = { state: 'read'; enabled: HarnessStates } | { state: 'fai
 
 /** Each harness's model and effort lists, the overlay laid over them, or the cause they could not be read. */
 type HarnessListsRead = { state: 'read'; lists: HarnessLists } | { state: 'failed'; cause: string };
+
+/** The recipes and variants the settings view lists for editing, or the cause they could not be read. */
+type VariantsRead = { state: 'read'; recipes: SettingsRecipe[] } | { state: 'failed'; cause: string };
 
 /** The recipe list one mission's page shows, or the cause the recipes could not be read. */
 type RecipePart = { state: 'read'; recipes: PageRecipe[] } | { state: 'failed'; cause: string };
@@ -209,7 +239,8 @@ type PaneMessage =
   | { type: 'loopStarted'; mission: string }
   | { type: 'harnessCheck'; check: HarnessCheck }
   | { type: 'harnessSettings'; settings: HarnessSettings }
-  | { type: 'harnessLists'; lists: HarnessListsRead };
+  | { type: 'harnessLists'; lists: HarnessListsRead }
+  | { type: 'variants'; variants: VariantsRead };
 
 /** What a mission's latest preview ran with, which starting its run passes on unchanged. */
 interface HeldPreview {
@@ -344,6 +375,15 @@ export function openMissionPane(context: vscode.ExtensionContext): void {
         void addHarnessValue(context, created, message.harness, message.kind);
       } else if (message?.type === 'removeHarnessValue') {
         void removeHarnessValue(context, created, message.harness, message.kind, message.value);
+      } else if (
+        message?.type === 'duplicateVariant' ||
+        message?.type === 'renameVariant' ||
+        message?.type === 'deleteVariant' ||
+        message?.type === 'pickDefault'
+      ) {
+        void editVariant(context, created, message.type, message.recipe, message.variant);
+      } else if (message?.type === 'resetVariant') {
+        void resetStoredVariant(context, created, message.recipe, message.original);
       }
     },
     undefined,
@@ -679,6 +719,7 @@ function readHarnessSettings(): HarnessSettings {
 function settingsOpened(context: vscode.ExtensionContext, target: vscode.WebviewPanel): void {
   void post(target, { type: 'harnessSettings', settings: readHarnessSettings() });
   void post(target, { type: 'harnessLists', lists: readListsOf(context) });
+  void post(target, { type: 'variants', variants: readVariantList(context) });
   if (harnessCheck === undefined) {
     void checkHarnesses(context, target);
     return;
@@ -817,6 +858,199 @@ function editList(
     );
   }
   void post(target, { type: 'harnessLists', lists: readListsOf(context) });
+}
+
+/**
+ * The recipes and variants the settings view lists, read afresh: the shipped snippet file and the
+ * person's own recipe file merged, the variant store laid over them, as `settingsRecipes` lists
+ * them, or the cause they could not be read.
+ */
+function readVariantList(context: vscode.ExtensionContext): VariantsRead {
+  try {
+    const files = recipeFiles(context);
+    const base = readRecipes(files.shipped, files.own);
+    return { state: 'read', recipes: settingsRecipes(base, readVariantStore(files.store), files.store, Object.values(BUTTON_RECIPES)) };
+  } catch (error) {
+    return { state: 'failed', cause: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+function isOrigin(value: unknown, allowed: readonly string[]): boolean {
+  return typeof value === 'string' && allowed.includes(value);
+}
+
+/** The variant a page message names, or undefined when it names none in the form a target takes. */
+function variantTargetOf(value: unknown): VariantTarget | undefined {
+  if (typeof value !== 'object' || value === null) {
+    return undefined;
+  }
+  const { name, origin, copies } = value as Record<string, unknown>;
+  if (typeof name !== 'string' || !isOrigin(origin, ['shipped', 'own', 'stored'])) {
+    return undefined;
+  }
+  if (copies === undefined) {
+    return { name, origin: origin as VariantTarget['origin'] };
+  }
+  const original = readVariantRefOf(copies);
+  return original === undefined ? undefined : { name, origin: origin as VariantTarget['origin'], copies: original };
+}
+
+/** The shipped or own variant a page message names, or undefined when it names none. */
+function readVariantRefOf(value: unknown): ReadVariantRef | undefined {
+  if (typeof value !== 'object' || value === null) {
+    return undefined;
+  }
+  const { name, origin } = value as Record<string, unknown>;
+  return typeof name === 'string' && isOrigin(origin, ['shipped', 'own']) ? { name, origin: origin as ReadVariantRef['origin'] } : undefined;
+}
+
+/** Whether a listed variant is the one `target` names. */
+function isTarget(variant: VariantTarget, target: VariantTarget): boolean {
+  return (
+    variant.name === target.name &&
+    variant.origin === target.origin &&
+    (variant.copies === undefined || target.copies === undefined
+      ? variant.copies === target.copies
+      : variant.copies.name === target.copies.name && variant.copies.origin === target.copies.origin)
+  );
+}
+
+/**
+ * Asks for a variant's name in VS Code's own input box, one box for the one value, as `askValues`
+ * asks for a page's values: the box opens on `value` when given, and its validation refuses an
+ * empty name and one of `taken`, the names the recipe's other variants carry. The name is returned
+ * with its outer spaces trimmed, or undefined when the box is dismissed.
+ */
+async function askVariantName(prompt: string, taken: readonly string[], value?: string): Promise<string | undefined> {
+  const typed = await vscode.window.showInputBox({
+    prompt,
+    ...(value === undefined ? {} : { value }),
+    ignoreFocusOut: true,
+    validateInput: (text) =>
+      text.trim() === ''
+        ? 'Type a name, or press Escape to change nothing.'
+        : taken.includes(text.trim())
+          ? `The recipe already has a variant named ${text.trim()}.`
+          : undefined,
+  });
+  if (typed === undefined || typed.trim() === '' || taken.includes(typed.trim())) {
+    return undefined;
+  }
+  return typed.trim();
+}
+
+/** The word a notification gives each variant edit. */
+const EDIT_VERBS: Record<'duplicateVariant' | 'renameVariant' | 'deleteVariant' | 'pickDefault' | 'resetVariant', string> = {
+  duplicateVariant: 'duplicated',
+  renameVariant: 'renamed',
+  deleteVariant: 'deleted',
+  pickDefault: 'picked as the default',
+  resetVariant: 'reset',
+};
+
+/**
+ * Makes one edit of the settings view on the variant `variant` of the recipe `recipe`, as the
+ * variant list read afresh lists it, through the variant store's edits: a duplicate under a name
+ * and a rename to one, each asked for in VS Code's own input box, a rename's box opening on the
+ * current name, a delete, or the pick of the variant as its recipe's default. A recipe or variant
+ * the list does not hold, or a dismissed box, writes nothing; an edit the store refuses, or a store
+ * that cannot be read or written, is told in an error notification. Every edit made posts the
+ * variant list, the harness lists, and the pages again, their recipes re-read.
+ */
+async function editVariant(
+  context: vscode.ExtensionContext,
+  target: vscode.WebviewPanel,
+  edit: 'duplicateVariant' | 'renameVariant' | 'deleteVariant' | 'pickDefault',
+  recipe: unknown,
+  variant: unknown,
+): Promise<void> {
+  const named = variantTargetOf(variant);
+  if (panel !== target || typeof recipe !== 'string' || named === undefined) {
+    return;
+  }
+  const read = readVariantList(context);
+  if (read.state === 'failed') {
+    void vscode.window.showErrorMessage(`The variants could not be read: ${read.cause}`);
+    return;
+  }
+  const listed = read.recipes.find((each) => each.name === recipe);
+  const index = listed?.variants.findIndex((each) => isTarget(each, named)) ?? -1;
+  if (listed === undefined || index < 0) {
+    return;
+  }
+  const others = listed.variants.filter((_, each) => each !== index).map((each) => each.name);
+  let name: string | undefined;
+  if (edit === 'duplicateVariant') {
+    name = await askVariantName(`The name of the duplicate of ${named.name} in ${recipe}`, listed.variants.map((each) => each.name));
+  } else if (edit === 'renameVariant') {
+    name = await askVariantName(`The new name of ${named.name} in ${recipe}`, others, named.name);
+  }
+  if ((edit === 'duplicateVariant' || edit === 'renameVariant') && name === undefined) {
+    return;
+  }
+  if (panel !== target) {
+    return;
+  }
+  try {
+    const files = recipeFiles(context);
+    const base = readRecipes(files.shipped, files.own);
+    if (edit === 'duplicateVariant') {
+      duplicateVariant(files.store, base, recipe, named, name as string);
+    } else if (edit === 'renameVariant') {
+      renameVariant(files.store, base, recipe, named, name as string);
+    } else if (edit === 'deleteVariant') {
+      deleteVariant(files.store, base, recipe, named);
+    } else {
+      pickDefault(files.store, base, recipe, named);
+    }
+  } catch (error) {
+    void vscode.window.showErrorMessage(
+      `The variant could not be ${EDIT_VERBS[edit]}: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+  await postVariantEdit(context, target);
+}
+
+/**
+ * Resets the shipped or own variant `original` of the recipe `recipe`, removing the stored copy and
+ * the hiding record standing for it, so it shows again as its file holds it, then posts the variant
+ * list, the harness lists, and the pages again. A variant the list read afresh offers no reset for
+ * writes nothing; a store that cannot be read or written is told in an error notification.
+ */
+async function resetStoredVariant(context: vscode.ExtensionContext, target: vscode.WebviewPanel, recipe: unknown, original: unknown): Promise<void> {
+  const ref = readVariantRefOf(original);
+  if (panel !== target || typeof recipe !== 'string' || ref === undefined) {
+    return;
+  }
+  const read = readVariantList(context);
+  if (read.state === 'failed') {
+    void vscode.window.showErrorMessage(`The variants could not be read: ${read.cause}`);
+    return;
+  }
+  const listed = read.recipes.find((each) => each.name === recipe);
+  const offered = [...(listed?.variants.flatMap((each) => (each.copies === undefined ? [] : [each.copies])) ?? []), ...(listed?.hidden ?? [])];
+  if (!offered.some((each) => each.name === ref.name && each.origin === ref.origin)) {
+    return;
+  }
+  try {
+    resetVariant(recipeFiles(context).store, recipe, ref);
+  } catch (error) {
+    void vscode.window.showErrorMessage(`The variant could not be ${EDIT_VERBS.resetVariant}: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  await postVariantEdit(context, target);
+}
+
+/** Posts the variant list and the harness lists, read afresh, and the pages again, their recipes re-read. */
+async function postVariantEdit(context: vscode.ExtensionContext, target: vscode.WebviewPanel): Promise<void> {
+  if (panel !== target) {
+    return;
+  }
+  await post(target, { type: 'variants', variants: readVariantList(context) });
+  await post(target, { type: 'harnessLists', lists: readListsOf(context) });
+  if (current !== undefined && panel === target) {
+    current.recipes = readRecipeList(context);
+    await post(target, publish(context, current));
+  }
 }
 
 async function post(target: vscode.WebviewPanel, message: PaneMessage): Promise<void> {
@@ -1187,6 +1421,14 @@ function pageShell(webview: vscode.Webview, script: vscode.Uri): string {
   .value-list ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.4em; }
   .value-list li.value { display: inline-flex; align-items: center; gap: 0.3em; border: 1px solid var(--vscode-panel-border); padding: 0 0 0 0.4em; }
   .value-list li.value-empty { opacity: 0.7; }
+  .variant-recipe h5 { margin: 0.6em 0 0.2em; font-size: 1em; }
+  .variant-recipe .variant-note { margin: 0 0 0.2em; opacity: 0.8; }
+  .variant-list { list-style: none; margin: 0; padding: 0; }
+  .variant-list li.variant { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0.6em; padding: 0.15em 0; }
+  .variant-list .variant-origin { opacity: 0.8; }
+  .variant-list .variant-default { font-weight: 600; }
+  .variant-list li.deleted .variant-name { text-decoration: line-through; opacity: 0.7; }
+  .variant-list .variant-actions { margin-left: auto; display: flex; gap: 0.3em; }
   button.action { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: none; padding: 0.15em 0.6em; cursor: pointer; font: inherit; white-space: nowrap; }
   button.action:hover:not(:disabled) { background: var(--vscode-button-secondaryHoverBackground); }
   button.action:disabled, button.recipe:disabled { opacity: 0.5; cursor: default; }

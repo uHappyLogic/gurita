@@ -23,9 +23,11 @@ const created: StubTerminal[] = [];
 const notifications: string[] = [];
 /** The values the stub's input boxes answer with, one per box in order; an empty queue dismisses the box. */
 const typedValues: string[] = [];
-/** The options of a box the stub's editor showed: its prompt and its validation. */
+/** The options of a box the stub's editor showed: its prompt, the text it opens with, and its validation. */
 interface InputBoxOptions {
   prompt?: string;
+  /** The text the box opens with. */
+  value?: string;
   validateInput?: (value: string) => string | undefined;
 }
 /** The options of every input box the stub's editor showed, in order. */
@@ -797,6 +799,182 @@ codex exec "/gurita:finish-mission --mission <path>" -m gpt-5.5;
     assert.strictEqual(inputBoxes.length, boxes + 1, 'only the effort of a harness holding an effort list is asked for');
     assert.deepStrictEqual(posted.slice(from), [], 'no list the harness holds, no entry offered, or a dismissed box writes and posts nothing');
     assert.strictEqual(fs.readFileSync(store, 'utf8'), before);
+  } finally {
+    process.env.HOME = home;
+  }
+});
+
+/** A mission no earlier test holds a run for. */
+const IOTA = 'pkg/mission_iota/';
+
+/** The own file of the variant-edit test: a variant joining a shipped chain, one joining a button recipe, and a recipe of its own. */
+const VARIANT_OWN_TEXT = `${OWN_TEXT}
+### discuss-mission-goal
+\`\`\`
+claude "/gurita:discuss-mission-goal <goal>" --model "opus"; # interactive
+\`\`\`
+`;
+
+interface ListedVariant {
+  name: string;
+  origin: string;
+  copies?: { name: string; origin: string };
+  lines: string[];
+  isDefault: boolean;
+}
+
+interface ListedRecipe {
+  name: string;
+  group: string;
+  fixed: boolean;
+  variants: ListedVariant[];
+  hidden: { name: string; origin: string }[];
+}
+
+/** Waits until the extension has posted the variant list beyond the first `from`, and returns its recipes as read. */
+async function postedVariants(from: number): Promise<ListedRecipe[]> {
+  const message = (await postedOf('variants', from)) as { variants: { state: string; recipes?: ListedRecipe[] } };
+  assert.strictEqual(message.variants.state, 'read', JSON.stringify(message.variants));
+  return message.variants.recipes as ListedRecipe[];
+}
+
+/** Each listed recipe by its name, fixed mark, variants (name, origin, default), and hidden variants. */
+function variantRows(recipes: ListedRecipe[]): [string, boolean, string[], string[]][] {
+  return recipes.map((recipe): [string, boolean, string[], string[]] => [
+    recipe.name,
+    recipe.fixed,
+    recipe.variants.map((each) => `${each.name} (${each.origin}${each.copies ? ` of ${each.copies.name}` : ''})${each.isDefault ? ' *' : ''}`),
+    recipe.hidden.map((each) => `${each.name} (${each.origin})`),
+  ]);
+}
+
+test('the settings view lists every recipe with its variants and carries out each variant edit through the store, the pages and buttons following', async () => {
+  const home = process.env.HOME;
+  const fakeHome = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-home-'));
+  process.env.HOME = fakeHome;
+  try {
+    const root = project(IOTA);
+    const files = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-recipes-'));
+    fs.writeFileSync(path.join(files, 'GURITA_USAGE.md'), HARNESS_SHIPPED_TEXT);
+    fs.writeFileSync(path.join(files, 'recipes.md'), VARIANT_OWN_TEXT);
+    packaged.set('bundled/missions.py', path.join(__dirname, '..', '..', '..', 'core', 'tools', 'missions.py'));
+    packaged.set('bundled/GURITA_USAGE.md', path.join(files, 'GURITA_USAGE.md'));
+    packaged.set('runner.py', path.join(__dirname, '..', '..', 'runner.py'));
+    workspace.folders = [{ uri: { fsPath: root } }];
+    workspace.settings = { ownRecipesFile: path.join(files, 'recipes.md') };
+    workspaceState.clear();
+    inputBoxes.length = 0;
+    typedValues.length = 0;
+    const store = path.join(fakeHome, '.gurita', 'variants.json');
+    const stored = () => JSON.parse(fs.readFileSync(store, 'utf8'));
+    /** Sends `message` and returns the variant list and the First run dropdown on IOTA's page posted after it. */
+    const edit = async (message: unknown) => {
+      const from = posted.length;
+      send(message);
+      const recipes = await postedVariants(from);
+      const live = (await postedOf('live', from)) as { missions: { path: string; recipes: { recipes: PostedEntry[] } }[] };
+      const firstRun = live.missions.find((each) => each.path === IOTA)?.recipes.recipes.find((each) => each.name === 'First run');
+      assert.ok(firstRun !== undefined);
+      return { recipes, dropdown: firstRun.variants.map((each) => each.name), selected: selectedName(firstRun) };
+    };
+    /** Runs the discuss-mission-goal button with a typed goal and returns the runner's arguments. */
+    const discussGoal = async () => {
+      const count = created.length;
+      typedValues.push('A goal');
+      send({ type: 'missionButton', button: 'discussGoal' });
+      for (let attempt = 0; attempt < 200 && created.length === count; attempt++) {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      assert.strictEqual(created.length, count + 1);
+      return created[created.length - 1].args.join(' ');
+    };
+
+    await entryAfter({ type: 'ready' }, IOTA, 'First run');
+    let from = posted.length;
+    send({ type: 'settingsOpened' });
+    let recipes = await postedVariants(from);
+    assert.deepStrictEqual(variantRows(recipes), [
+      ['First run', false, ['Claude Code (shipped) *', 'Antigravity (shipped)', 'First run (own)'], []],
+      ['Execute tasks one at a time', false, ['Execute tasks one at a time (shipped) *'], []],
+      ['Mixed review', false, ['Mixed review (shipped) *'], []],
+      ['discuss-mission-goal', true, ['discuss-mission-goal (shipped) *', 'discuss-mission-goal (own)'], []],
+      ['Mine everywhere', false, ['Mine everywhere (own) *'], []],
+    ], 'the chains, the fixed-name button recipe, and the own items, the single-task lines left out');
+    assert.ok(!fs.existsSync(store), 'opening the view writes nothing');
+
+    // Duplicate: the name is asked for in one input box, which refuses an empty name and one the recipe uses.
+    typedValues.push(' Fast ');
+    let shown = await edit({ type: 'duplicateVariant', recipe: 'First run', variant: { name: 'Claude Code', origin: 'shipped' } });
+    assert.strictEqual(inputBoxes.length, 1, 'one input box asks for the name');
+    let box = inputBoxes[0];
+    assert.strictEqual(box.value, undefined, "a duplicate's box opens empty");
+    assert.ok(box.validateInput !== undefined);
+    assert.ok(box.validateInput('') !== undefined && box.validateInput('  ') !== undefined, 'an empty name is refused');
+    assert.ok(box.validateInput('Antigravity') !== undefined && box.validateInput(' First run') !== undefined, 'a name the recipe uses is refused');
+    assert.strictEqual(box.validateInput('Fast'), undefined);
+    assert.deepStrictEqual(stored().variants, [{ recipe: 'First run', name: 'Fast', lines: recipes[0].variants[0].lines }]);
+    assert.deepStrictEqual(variantRows(shown.recipes)[0], ['First run', false, ['Claude Code (shipped) *', 'Antigravity (shipped)', 'First run (own)', 'Fast (stored)'], []]);
+    assert.deepStrictEqual(shown.dropdown, ['Claude Code', 'Antigravity', 'First run', 'Fast'], "the duplicate reaches the mission page's dropdown");
+
+    // Rename: the box opens on the current name; a shipped variant gets a stored copy in its place.
+    typedValues.push('Gemini');
+    shown = await edit({ type: 'renameVariant', recipe: 'First run', variant: { name: 'Antigravity', origin: 'shipped' } });
+    box = inputBoxes[1];
+    assert.strictEqual(box.value, 'Antigravity', 'a rename opens with the current name filled in');
+    assert.ok(box.validateInput !== undefined);
+    assert.ok(box.validateInput('') !== undefined, 'an empty name is refused');
+    assert.ok(box.validateInput('Claude Code') !== undefined && box.validateInput('Fast') !== undefined, 'a name the recipe uses is refused');
+    assert.strictEqual(box.validateInput('Antigravity'), undefined, 'the current name is no other variant');
+    assert.deepStrictEqual(variantRows(shown.recipes)[0][2], ['Claude Code (shipped) *', 'Gemini (stored of Antigravity)', 'First run (own)', 'Fast (stored)']);
+    assert.deepStrictEqual(shown.dropdown, ['Claude Code', 'Gemini', 'First run', 'Fast'], 'the renamed variant keeps its place');
+
+    // Default: a pick on the stored copy; with nothing remembered the page's dropdown stands on it.
+    shown = await edit({ type: 'pickDefault', recipe: 'First run', variant: { name: 'Gemini', origin: 'stored', copies: { name: 'Antigravity', origin: 'shipped' } } });
+    assert.deepStrictEqual(stored().defaults, [{ recipe: 'First run', name: 'Antigravity', origin: 'shipped' }]);
+    assert.deepStrictEqual(variantRows(shown.recipes)[0][2], ['Claude Code (shipped)', 'Gemini (stored of Antigravity) *', 'First run (own)', 'Fast (stored)']);
+    assert.strictEqual(shown.selected, 'Gemini');
+
+    // Reset: the stored copy goes and the shipped variant shows again, the pick still on it.
+    shown = await edit({ type: 'resetVariant', recipe: 'First run', original: { name: 'Antigravity', origin: 'shipped' } });
+    assert.deepStrictEqual(variantRows(shown.recipes)[0][2], ['Claude Code (shipped)', 'Antigravity (shipped) *', 'First run (own)', 'Fast (stored)']);
+    assert.deepStrictEqual(shown.dropdown, ['Claude Code', 'Antigravity', 'First run', 'Fast']);
+
+    // Delete: a shipped variant gets a hiding record, listed with its reset; the page's dropdown loses it.
+    shown = await edit({ type: 'deleteVariant', recipe: 'First run', variant: { name: 'Claude Code', origin: 'shipped' } });
+    assert.deepStrictEqual(variantRows(shown.recipes)[0], ['First run', false, ['Antigravity (shipped) *', 'First run (own)', 'Fast (stored)'], ['Claude Code (shipped)']]);
+    assert.deepStrictEqual(shown.dropdown, ['Antigravity', 'First run', 'Fast']);
+    shown = await edit({ type: 'resetVariant', recipe: 'First run', original: { name: 'Claude Code', origin: 'shipped' } });
+    assert.deepStrictEqual(shown.dropdown, ['Claude Code', 'Antigravity', 'First run', 'Fast'], 'reset, the deleted variant shows again');
+    shown = await edit({ type: 'deleteVariant', recipe: 'First run', variant: { name: 'Fast', origin: 'stored' } });
+    assert.deepStrictEqual(shown.dropdown, ['Claude Code', 'Antigravity', 'First run'], 'a deleted duplicate leaves the store');
+
+    // The fixed-name button runs the default picked in the settings view, read afresh at its click.
+    assert.match(await discussGoal(), / chain -- agy /, 'the shipped variant runs first');
+    recipes = (await edit({ type: 'pickDefault', recipe: 'discuss-mission-goal', variant: { name: 'discuss-mission-goal', origin: 'own' } })).recipes;
+    assert.deepStrictEqual(variantRows(recipes)[3][2], ['discuss-mission-goal (shipped)', 'discuss-mission-goal (own) *']);
+    assert.match(await discussGoal(), / chain -- claude /, 'the picked own variant runs');
+    recipes = (await edit({ type: 'deleteVariant', recipe: 'discuss-mission-goal', variant: { name: 'discuss-mission-goal', origin: 'own' } })).recipes;
+    assert.deepStrictEqual(variantRows(recipes)[3], ['discuss-mission-goal', true, ['discuss-mission-goal (shipped) *'], ['discuss-mission-goal (own)']]);
+    assert.deepStrictEqual(stored().defaults, [{ recipe: 'First run', name: 'Antigravity', origin: 'shipped' }], 'deleting the picked default drops its pick');
+    assert.match(await discussGoal(), / chain -- agy /, 'the button falls back to the first listed variant');
+
+    // A dismissed box, a message naming no listed variant, or no variant in form writes and posts nothing.
+    const before = fs.readFileSync(store, 'utf8');
+    const boxes = inputBoxes.length;
+    from = posted.length;
+    send({ type: 'renameVariant', recipe: 'First run', variant: { name: 'Claude Code', origin: 'shipped' } });
+    send({ type: 'duplicateVariant', recipe: 'First run', variant: { name: 'No such variant', origin: 'shipped' } });
+    send({ type: 'deleteVariant', recipe: 'No such recipe', variant: { name: 'Claude Code', origin: 'shipped' } });
+    send({ type: 'pickDefault', recipe: 'First run', variant: { name: 'Claude Code', origin: 'elsewhere' } });
+    send({ type: 'resetVariant', recipe: 'First run', original: { name: 'Antigravity', origin: 'shipped' } });
+    send({ type: 'deleteVariant', recipe: 'First run' });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    assert.strictEqual(inputBoxes.length, boxes + 1, 'only the rename of a listed variant asks for a name');
+    assert.deepStrictEqual(posted.slice(from), []);
+    assert.strictEqual(fs.readFileSync(store, 'utf8'), before);
+
+    assert.strictEqual(fs.readFileSync(path.join(files, 'recipes.md'), 'utf8'), VARIANT_OWN_TEXT, 'the own recipe file is never written');
+    assert.strictEqual(execFileSync('git', ['status', '--porcelain', '--ignored'], { cwd: root, encoding: 'utf8' }), '', "nothing is written into the project's tree");
   } finally {
     process.env.HOME = home;
   }

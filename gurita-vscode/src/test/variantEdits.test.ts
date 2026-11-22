@@ -14,9 +14,10 @@ import {
   replaceLineValue,
   resetVariant,
   resettableVariants,
+  settingsRecipes,
   variantTarget,
 } from '../variantEdits';
-import { readVariantStore } from '../variantStore';
+import { emptyVariantStore, readVariantStore } from '../variantStore';
 
 const FIXTURES = path.join(__dirname, '..', '..', 'src', 'test', 'fixtures', 'recipes');
 const SHIPPED = path.join(FIXTURES, 'shipped.md');
@@ -283,4 +284,34 @@ test('an edit keeps the rest of the store as written, its harness part included,
   }, fs.readFileSync(STORE, 'utf8'));
   assert.strictEqual(fs.readFileSync(SHIPPED, 'utf8'), shippedBefore);
   assert.strictEqual(fs.readFileSync(OWN, 'utf8'), ownBefore);
+});
+
+test('the settings list holds every recipe but the single-task lines, a recipe whose every variant is hidden kept for its resets', () => {
+  const store = emptyVariantStore();
+  store.hidden.push({ recipe: 'Chain', name: 'Chain', origin: 'shipped' }, { recipe: 'Chain', name: 'Chain', origin: 'own' });
+  store.variants.push({ recipe: 'Variants', name: 'Faster', lines: ['echo faster'], copies: { name: 'On Antigravity', origin: 'shipped' } });
+  store.variants.push({ recipe: 'Stored only', name: 'Mine', lines: ['echo mine'] });
+  store.defaults.push({ recipe: 'Variants', name: 'On Antigravity', origin: 'shipped' });
+  const listed = settingsRecipes(base(), store, '/home/x/.gurita/variants.json', ['answer-open-question']);
+  const names = listed.map((recipe) => recipe.name);
+  assert.ok(!names.some((name) => name.startsWith('Single task')), 'the named single-task lines are left out');
+  assert.ok(names.includes('Interactive task line'), 'a task line that is no headless single-task line stays');
+  assert.strictEqual(names[names.length - 1], 'Stored only', 'a recipe only the store holds comes last');
+  const chain = listed.find((recipe) => recipe.name === 'Chain');
+  assert.deepStrictEqual(chain && [chain.variants, chain.hidden], [[], [{ name: 'Chain', origin: 'shipped' }, { name: 'Chain', origin: 'own' }]]);
+  const variants = listed.find((recipe) => recipe.name === 'Variants');
+  assert.ok(variants !== undefined);
+  assert.deepStrictEqual(
+    variants.variants.map((each) => [each.name, each.origin, each.copies?.name, each.isDefault]),
+    [
+      ['On Claude Code', 'shipped', undefined, false],
+      ['Faster', 'stored', 'On Antigravity', true],
+      ['Empty variant', 'shipped', undefined, false],
+      ['On Claude Code', 'own', undefined, false],
+      ['Own variant', 'own', undefined, false],
+    ],
+    'the stored copy in its place and marked the default, the pick standing for the variant it copies',
+  );
+  assert.deepStrictEqual(variants.hidden, [], "a stored copy's reset stands on the copy, not among the hidden");
+  assert.deepStrictEqual(listed.filter((recipe) => recipe.fixed).map((recipe) => recipe.name), ['answer-open-question']);
 });

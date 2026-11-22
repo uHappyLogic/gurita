@@ -102,7 +102,14 @@
 // alone, as the extension posts them at every opening: each entry with its remove control, and
 // each list with its add control, each posted to the extension, which asks for an added entry in
 // VS Code's own input box, writes the change, and posts the lists again; the lists are redrawn
-// only from what it posts.
+// only from what it posts. Under Variants the view draws every recipe the extension posts at every
+// opening, the chains, the seven fixed-name button recipes, and the recipes and variants of the own
+// recipe file, the named single-task lines left out: each variant with where it comes from,
+// whether it is the recipe's default, and its Duplicate, Rename, Delete, and Make default
+// controls, a stored copy also its Reset control, and each variant a hiding record hides with its
+// Reset control alone. Each control posts its edit to the extension, which asks for a duplicate's
+// name or a new name in VS Code's own input box, writes the edit to the variant store, and posts
+// the variants and the pages again; the variants are redrawn only from what it posts.
 
 interface VsCodeApi {
   postMessage(message: unknown): void;
@@ -235,6 +242,38 @@ declare function acquireVsCodeApi(): VsCodeApi;
   /** Each harness's model and effort lists, by its key, or the cause they could not be read. */
   type HarnessLists = { state: 'read'; lists: Record<string, HarnessList> } | { state: 'failed'; cause: string };
 
+  /** Where a variant comes from: the shipped file, the person's own recipe file, or the variant store. */
+  type VariantOrigin = 'shipped' | 'own' | 'stored';
+
+  /** A variant read from a file, which a stored copy stands in for or a hiding record hides. */
+  interface ReadVariantRef {
+    name: string;
+    origin: 'shipped' | 'own';
+  }
+
+  /** One variant as the settings view lists it. */
+  interface SettingsVariant {
+    name: string;
+    origin: VariantOrigin;
+    /** The shipped or own variant a stored copy stands in for. */
+    copies?: ReadVariantRef;
+    lines: string[];
+    isDefault: boolean;
+  }
+
+  /** One recipe as the settings view lists it, with its variants and those a hiding record hides. */
+  interface SettingsRecipe {
+    name: string;
+    group: RecipeGroup;
+    /** Whether a button outside the recipe list runs it by its fixed name. */
+    fixed: boolean;
+    variants: SettingsVariant[];
+    hidden: ReadVariantRef[];
+  }
+
+  /** The recipes and variants the settings view edits, or the cause they could not be read. */
+  type VariantsRead = { state: 'read'; recipes: SettingsRecipe[] } | { state: 'failed'; cause: string };
+
   type PaneMessage =
     | { type: 'live'; missions: Mission[]; running: string[] }
     | { type: 'liveFailure'; cause: string }
@@ -243,7 +282,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
     | { type: 'loopStarted'; mission: string }
     | { type: 'harnessCheck'; check: HarnessCheck }
     | { type: 'harnessSettings'; settings: HarnessSettings }
-    | { type: 'harnessLists'; lists: HarnessLists };
+    | { type: 'harnessLists'; lists: HarnessLists }
+    | { type: 'variants'; variants: VariantsRead };
 
   /** Where a mission's question view stands: the Short Title shown and its place in the list. */
   interface Position {
@@ -273,6 +313,16 @@ declare function acquireVsCodeApi(): VsCodeApi;
   const LISTS_FAILURE_LINE = 'The model and effort lists could not be read.';
   const REMOVE_LABEL = 'Remove';
   const NO_ENTRY_LINE = 'No entry';
+  const VARIANTS_HEADING = 'Variants';
+  const VARIANTS_FAILURE_LINE = 'The variants could not be read.';
+  const DUPLICATE_LABEL = 'Duplicate';
+  const RENAME_LABEL = 'Rename';
+  const DELETE_LABEL = 'Delete';
+  const PICK_DEFAULT_LABEL = 'Make default';
+  const RESET_LABEL = 'Reset';
+  const DEFAULT_MARK = 'Default';
+  const DELETED_MARK = 'Deleted';
+  const FIXED_NOTE = 'Run by a button outside the recipe list, which runs this default.';
   /** Each of a harness's two lists, with its kind, its label, and its add control's label. */
   const LISTS: ['model' | 'effort', string, string][] = [
     ['model', 'Models', 'Add model'],
@@ -342,6 +392,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
   let harnessSettings: HarnessSettings | undefined;
   /** Each harness's lists the extension last posted, drawn by the settings view; undefined until they are posted. */
   let harnessLists: HarnessLists | undefined;
+  /** The recipes and variants the extension last posted, drawn by the settings view; undefined until they are posted. */
+  let variantsRead: VariantsRead | undefined;
   /** The cause of the failure state, kept while it is drawn so the settings view can swap back to it. */
   let failureCause = '';
   /** The card drawn on the page, so a dependency link can scroll to the card it jumped to. */
@@ -625,6 +677,119 @@ declare function acquireVsCodeApi(): VsCodeApi;
     return part;
   }
 
+  /** Where a variant comes from, as the settings view names it. */
+  function originLabel(origin: VariantOrigin, copies?: ReadVariantRef): string {
+    if (origin === 'stored') {
+      return copies === undefined ? 'stored' : `stored copy of ${copies.origin === 'own' ? 'your' : 'the shipped'} variant ${copies.name}`;
+    }
+    return origin === 'own' ? 'yours' : 'shipped';
+  }
+
+  /** The variant a control's message names: its name, where it comes from, and, for a stored copy, the variant it stands in for. */
+  function variantTarget(variant: SettingsVariant): { name: string; origin: VariantOrigin; copies?: ReadVariantRef } {
+    return {
+      name: variant.name,
+      origin: variant.origin,
+      ...(variant.copies === undefined ? {} : { copies: { name: variant.copies.name, origin: variant.copies.origin } }),
+    };
+  }
+
+  /**
+   * The settings view's part of variant edits: the cause the variants could not be read, or each
+   * recipe with its variants, each named with where it comes from and whether it is the default,
+   * and its duplicate, rename, delete, and default controls, a stored copy's reset control too, and
+   * after them each variant a hiding record hides, with its reset control. Every control posts its
+   * edit; the list is redrawn only from what the extension posts.
+   */
+  function drawVariants(): HTMLElement {
+    const part = element('div', undefined, 'variant-edits');
+    part.append(element('h4', VARIANTS_HEADING));
+    const read = variantsRead;
+    if (read === undefined) {
+      return part;
+    }
+    if (read.state === 'failed') {
+      const box = element('div', undefined, 'notice');
+      box.setAttribute('role', 'alert');
+      box.append(element('p', VARIANTS_FAILURE_LINE), element('pre', read.cause));
+      part.append(box);
+      return part;
+    }
+    read.recipes.forEach((recipe, recipeIndex) => {
+      const block = element('div', undefined, 'variant-recipe');
+      block.dataset.recipe = recipe.name;
+      block.append(element('h5', recipe.name));
+      if (recipe.fixed) {
+        block.append(element('p', FIXED_NOTE, 'variant-note'));
+      }
+      const list = element('ul', undefined, 'variant-list');
+      recipe.variants.forEach((variant, variantIndex) => {
+        const item = element('li', undefined, variant.isDefault ? 'variant default' : 'variant');
+        item.dataset.variant = variant.name;
+        item.dataset.origin = variant.origin;
+        const name = element('span', variant.name, 'variant-name');
+        name.title = variant.lines.join('\n');
+        item.append(name, element('span', originLabel(variant.origin, variant.copies), 'variant-origin'));
+        if (variant.isDefault) {
+          item.append(element('span', DEFAULT_MARK, 'variant-default'));
+        }
+        const actions = element('span', undefined, 'variant-actions');
+        const control = (label: string, key: string, hover: string, message: Record<string, unknown>): void => {
+          const each = button(label, 'action', () => vscode.postMessage(message));
+          each.title = hover;
+          each.dataset.focus = `variant-${key}-${recipeIndex}-${variantIndex}`;
+          actions.append(each);
+        };
+        const named = variantTarget(variant);
+        control(DUPLICATE_LABEL, 'duplicate', `Type a name and add a copy of ${variant.name} to ${recipe.name}`, {
+          type: 'duplicateVariant',
+          recipe: recipe.name,
+          variant: named,
+        });
+        control(RENAME_LABEL, 'rename', `Type a new name for ${variant.name}`, { type: 'renameVariant', recipe: recipe.name, variant: named });
+        control(DELETE_LABEL, 'delete', `Take ${variant.name} out of ${recipe.name}`, { type: 'deleteVariant', recipe: recipe.name, variant: named });
+        if (!variant.isDefault) {
+          control(PICK_DEFAULT_LABEL, 'default', `Make ${variant.name} the variant ${recipe.name} runs by default`, {
+            type: 'pickDefault',
+            recipe: recipe.name,
+            variant: named,
+          });
+        }
+        if (variant.copies !== undefined) {
+          control(RESET_LABEL, 'reset', `Remove this stored copy and show ${variant.copies.name} again as its file holds it`, {
+            type: 'resetVariant',
+            recipe: recipe.name,
+            original: { name: variant.copies.name, origin: variant.copies.origin },
+          });
+        }
+        item.append(actions);
+        list.append(item);
+      });
+      recipe.hidden.forEach((hidden, hiddenIndex) => {
+        const item = element('li', undefined, 'variant deleted');
+        item.dataset.variant = hidden.name;
+        item.dataset.origin = hidden.origin;
+        item.append(
+          element('span', hidden.name, 'variant-name'),
+          element('span', originLabel(hidden.origin), 'variant-origin'),
+          element('span', DELETED_MARK, 'variant-deleted'),
+        );
+        const actions = element('span', undefined, 'variant-actions');
+        const reset = button(RESET_LABEL, 'action', () =>
+          vscode.postMessage({ type: 'resetVariant', recipe: recipe.name, original: { name: hidden.name, origin: hidden.origin } }),
+        );
+        reset.title = `Show ${hidden.name} again as its file holds it`;
+        reset.dataset.focus = `variant-reset-${recipeIndex}-hidden-${hiddenIndex}`;
+        actions.append(reset);
+        item.append(actions);
+        list.append(item);
+      });
+      block.append(list);
+      part.append(block);
+    });
+    return part;
+  }
+
   /**
    * The settings view, belonging to no mission: its heading, the control that swaps back to the
    * mission page or failure state shown before, and the harness check. It holds buttons and
@@ -640,7 +805,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
     close.title = 'Go back to the page shown before';
     close.dataset.focus = 'close-settings';
     controls.append(close);
-    view.append(controls, drawHarnesses(), drawLists());
+    view.append(controls, drawHarnesses(), drawLists(), drawVariants());
     return view;
   }
 
@@ -1239,13 +1404,20 @@ declare function acquireVsCodeApi(): VsCodeApi;
     } else if (message.type === 'loopStarted') {
       previews.delete(message.mission);
       draw();
-    } else if (message.type === 'harnessCheck' || message.type === 'harnessSettings' || message.type === 'harnessLists') {
+    } else if (
+      message.type === 'harnessCheck' ||
+      message.type === 'harnessSettings' ||
+      message.type === 'harnessLists' ||
+      message.type === 'variants'
+    ) {
       if (message.type === 'harnessCheck') {
         harnessCheck = message.check;
       } else if (message.type === 'harnessSettings') {
         harnessSettings = message.settings;
-      } else {
+      } else if (message.type === 'harnessLists') {
         harnessLists = message.lists;
+      } else {
+        variantsRead = message.variants;
       }
       if (settingsShown) {
         if (drawn === 'failure') {

@@ -1531,3 +1531,150 @@ test('lists that could not be read are named in the settings view, with no list 
   assert.ok(texts(page).includes('The variant store /home/x/.gurita/variants.json is not JSON.'));
   assert.deepStrictEqual(listRows(page), []);
 });
+
+const CLAUDE_LINE = 'claude -p "/gurita:review-mission-requirements --mission <path>" --model "fable" --effort xhigh;';
+const AGY_LINE = 'agy -p "/gurita:review-mission-requirements --mission <path>" --model "gemini-4-argon" --effort medium;';
+
+/** A variant list as the extension posts it: a chain with a stored copy, a duplicate, and a deleted variant, a button recipe, and an own recipe. */
+const VARIANTS = {
+  type: 'variants',
+  variants: {
+    state: 'read',
+    recipes: [
+      {
+        name: 'First run',
+        group: 'shipped',
+        fixed: false,
+        variants: [
+          { name: 'Gemini', origin: 'stored', copies: { name: 'Antigravity', origin: 'shipped' }, lines: [AGY_LINE], isDefault: true },
+          { name: 'First run', origin: 'own', lines: [CLAUDE_LINE], isDefault: false },
+          { name: 'Fast', origin: 'stored', lines: [CLAUDE_LINE, CLAUDE_LINE], isDefault: false },
+        ],
+        hidden: [{ name: 'Claude Code', origin: 'shipped' }],
+      },
+      {
+        name: 'discuss-mission-goal',
+        group: 'shipped',
+        fixed: true,
+        variants: [{ name: 'discuss-mission-goal', origin: 'shipped', lines: ['claude "/gurita:discuss-mission-goal <goal>"; # interactive'], isDefault: true }],
+        hidden: [],
+      },
+      { name: 'Mine everywhere', group: 'own', fixed: false, variants: [{ name: 'Mine everywhere', origin: 'own', lines: ['echo <path>'], isDefault: true }], hidden: [] },
+    ],
+  },
+};
+
+/** Each recipe the settings view's Variants part draws: its name, then each variant's texts and its controls' labels. */
+function variantEditRows(page: Page): [string, [string[], string[]][]][] {
+  const view = settingsView(page);
+  assert.ok(view !== undefined, 'the settings view is drawn');
+  return view
+    .all()
+    .filter((each) => each.has('variant-recipe'))
+    .map((each) => [
+      each.dataset.recipe as string,
+      each
+        .all()
+        .filter((item) => item.has('variant'))
+        .map((item): [string[], string[]] => [
+          item.all().filter((part) => ['variant-name', 'variant-origin', 'variant-default', 'variant-deleted'].some((name) => part.has(name))).map((part) => part.textContent),
+          item.all().filter((part) => part.tagName === 'button').map((part) => part.textContent),
+        ]),
+    ]);
+}
+
+test('the settings view lists every recipe the extension posts with its variants, each with its edit controls, and a deleted one with its reset alone', () => {
+  const page = loadPage();
+  page.send(live([]));
+  named(page, 'Settings').click();
+  assert.ok(texts(page).includes('Variants'));
+  assert.deepStrictEqual(variantEditRows(page), [], 'nothing is drawn before the extension posts the variants');
+  page.send(VARIANTS);
+  const edits = ['Duplicate', 'Rename', 'Delete'];
+  assert.deepStrictEqual(variantEditRows(page), [
+    [
+      'First run',
+      [
+        [['Gemini', 'stored copy of the shipped variant Antigravity', 'Default'], [...edits, 'Reset']],
+        [['First run', 'yours'], [...edits, 'Make default']],
+        [['Fast', 'stored'], [...edits, 'Make default']],
+        [['Claude Code', 'shipped', 'Deleted'], ['Reset']],
+      ],
+    ],
+    ['discuss-mission-goal', [[['discuss-mission-goal', 'shipped', 'Default'], edits]]],
+    ['Mine everywhere', [[['Mine everywhere', 'yours', 'Default'], edits]]],
+  ]);
+  assert.ok(texts(page).includes('Run by a button outside the recipe list, which runs this default.'), 'a fixed-name button recipe says its default is what its button runs');
+  const fast = page.root.all().find((each) => each.has('variant-name') && each.textContent === 'Fast');
+  assert.strictEqual(fast?.title, `${CLAUDE_LINE}\n${CLAUDE_LINE}`, "a variant's name carries its lines in its hover text");
+  const view = settingsView(page);
+  assert.ok(view !== undefined);
+  assert.deepStrictEqual(
+    view.all().filter((each) => ['input', 'textarea'].includes(each.tagName)),
+    [],
+    'nothing is typed on the page',
+  );
+});
+
+test('each variant control posts its edit, naming the variant as listed, and the list changes only when the extension posts it again', () => {
+  const page = loadPage();
+  page.send({ type: 'liveFailure', cause: 'Error: no repository' });
+  named(page, 'Settings').click();
+  page.send(VARIANTS);
+  const count = page.posted.length;
+  for (const key of ['duplicate-0-0', 'rename-0-0', 'delete-0-0', 'reset-0-0', 'default-0-1', 'rename-0-2', 'reset-0-hidden-0', 'default-2-0']) {
+    const found = page.root.querySelector(`[data-focus="variant-${key}"]`);
+    if (key === 'default-2-0') {
+      assert.strictEqual(found, null, 'the default carries no Make default control');
+      continue;
+    }
+    assert.ok(found !== null, `no control ${key}`);
+    found.click();
+  }
+  const copy = { name: 'Gemini', origin: 'stored', copies: { name: 'Antigravity', origin: 'shipped' } };
+  assert.deepStrictEqual(page.posted.slice(count), [
+    { type: 'duplicateVariant', recipe: 'First run', variant: copy },
+    { type: 'renameVariant', recipe: 'First run', variant: copy },
+    { type: 'deleteVariant', recipe: 'First run', variant: copy },
+    { type: 'resetVariant', recipe: 'First run', original: { name: 'Antigravity', origin: 'shipped' } },
+    { type: 'pickDefault', recipe: 'First run', variant: { name: 'First run', origin: 'own' } },
+    { type: 'renameVariant', recipe: 'First run', variant: { name: 'Fast', origin: 'stored' } },
+    { type: 'resetVariant', recipe: 'First run', original: { name: 'Claude Code', origin: 'shipped' } },
+  ]);
+  assert.strictEqual(variantEditRows(page)[0][1].length, 4, 'nothing changes until the extension posts it');
+  page.send({
+    type: 'variants',
+    variants: { state: 'read', recipes: [{ ...VARIANTS.variants.recipes[0], variants: VARIANTS.variants.recipes[0].variants.slice(1), hidden: [] }] },
+  });
+  assert.deepStrictEqual(variantEditRows(page).map(([name, rows]) => [name, rows.map((row) => row[0][0])]), [['First run', ['First run', 'Fast']]]);
+  page.send({ type: 'live', missions: [mission(ALPHA, 'Alpha')], running: [ALPHA] });
+  assert.strictEqual(page.root.querySelector('[data-focus="variant-delete-0-0"]')?.disabled, false, 'a running chain leaves the controls enabled');
+});
+
+test('variants that could not be read are named in the settings view, with no control drawn', () => {
+  const page = loadPage();
+  page.send(live([]));
+  named(page, 'Settings').click();
+  page.send({ type: 'variants', variants: { state: 'failed', cause: 'The variant store /home/x/.gurita/variants.json is not JSON.' } });
+  assert.ok(texts(page).includes('The variants could not be read.'));
+  assert.ok(texts(page).includes('The variant store /home/x/.gurita/variants.json is not JSON.'));
+  assert.deepStrictEqual(variantEditRows(page), []);
+});
+
+test("an edit the extension posts reaches the mission page's dropdown", () => {
+  const page = loadPage();
+  page.send(live([]));
+  const dropdown = () =>
+    page.root
+      .all()
+      .find((each) => each.tagName === 'select' && each.has('recipe-variant'))
+      ?.children.filter((child): child is FakeElement => child instanceof FakeElement)
+      .map((option) => option.textContent);
+  assert.deepStrictEqual(dropdown(), ['review']);
+  const duplicated = {
+    ...RECIPES,
+    recipes: [{ ...RECIPES.recipes[0], variants: [{ name: 'review', own: false }, { name: 'Fast', own: true }] }, RECIPES.recipes[1]],
+  };
+  page.send({ type: 'live', missions: [{ ...(mission(ALPHA, 'Alpha') as object), recipes: duplicated }, mission(BETA, 'Beta')], running: [] });
+  assert.deepStrictEqual(dropdown(), ['review', 'Fast (yours)']);
+});

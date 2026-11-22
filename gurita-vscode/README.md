@@ -43,7 +43,8 @@ Every Node command runs under Node 22 through nvm, in a subshell, from the repos
   among others, with Node's built-in `node:test` over the compiled files under `out/test/`; the
   run path, the pane's answer to a tab click, the recipe list it posts, with the variant
   selection it remembers, the harness check it runs, with the check script's print stubbed, and
-  the harnesses it enables and disables, with their model and effort lists, are tested against a stub of the `vscode` module,
+  the harnesses it enables and disables, with their model and effort lists, and the variant
+  edits it makes are tested against a stub of the `vscode` module,
   and the page script against a small stand-in for the DOM. Nothing runs inside an editor.
 - `npm run package` runs `vsce package`, which first runs the `vscode:prepublish` script: the
   compile, then `scripts/bundle.js`, the extension's own build step, which copies
@@ -254,6 +255,48 @@ beside the harness's `enabled` state. Adding a removed entry back takes it out o
 removing an entry you added takes it out of the additions. No recipe file is written. When the
 lists cannot be read, the view says so with the cause beneath it.
 
+#### Variants
+
+Under **Variants** the view lists every recipe with its variants, read afresh every time the view
+opens: the chains, the seven recipes the buttons outside the recipe list run by their fixed names,
+and the recipes and variants of your own recipe file, in the order the mission pages list them,
+with the recipes only your stored variants make up last. The named single-task lines are not
+listed here, and neither a recipe's stage nor a disabled harness leaves anything out. Each
+variant shows its name, its lines in the name's hover text, and where it comes from (`shipped`,
+`yours` for your own recipe file, `stored` for a duplicate, or `stored copy of` the variant it
+stands in for), and the recipe's default is marked **Default**. A button recipe carries a note
+that its default is the variant its button runs, since no dropdown stands beside those buttons.
+
+Each variant has these controls, every one carried out in your per-user variant store,
+`~/.gurita/variants.json`, and never in the shipped file or your own recipe file:
+
+- **Duplicate** asks for the new variant's name and adds a copy of the variant's lines under it,
+  listed after the recipe's other variants.
+- **Rename** asks for the new name, the box opening with the current name filled in. A shipped
+  variant or one of your own recipe file gets a stored copy of the new name standing in for it in
+  its place; a stored variant is renamed in the store. When the variant is the picked default,
+  the pick goes with it to the new name.
+- **Delete** takes the variant out of its recipe. A shipped variant or one of your own recipe file
+  gets a record hiding it, and is then listed as **Deleted** with a **Reset** control alone; a
+  stored duplicate leaves the store; a stored copy leaves it and hides the variant it stood in
+  for. Deleting the picked default drops the pick, and the recipe falls back to its first listed
+  variant.
+- **Make default**, on every variant but the default, picks it as the recipe's default, the
+  variant a mission page's dropdown stands on while no selection is remembered for the recipe on
+  that mission, and the one the fixed-name buttons and the looped run's single-task lines run.
+- **Reset**, where a stored copy or a hiding record stands for a shipped variant or one of your
+  own recipe file, removes the copy or the record, so the variant shows again as its file holds
+  it.
+
+A duplicate's name and a new name are each asked for in VS Code's own input box, one box per
+value; the box refuses an empty name and one another variant of the recipe already carries, and
+the name is kept with its outer spaces trimmed. Pressing Escape changes nothing. Every edit is
+shown at once in the view and on the mission pages, whose recipe lists are read again, and the
+fixed-name buttons, which read their recipe afresh at every click, run the changed default at
+their next click. An edit that cannot be made, or a variant store that cannot be read or written,
+is told in an error notification and writes nothing. When the variants cannot be read, the view
+says so with the cause beneath it.
+
 ## Recipes
 
 A recipe is a `###` heading, its name, and one or more named variants, each a literal block of
@@ -281,7 +324,8 @@ sub-headings are read, a block standing above the first sub-heading included in 
 sub-heading with no fence beneath it is a variant of no line, and of a variant name repeated
 within one recipe only the first is read. Headings inside a fence are lines, not headings. The
 pane lists recipes from two files, the shipped file and your own file, and reads both in this
-same form. A recipe's default is its first variant: the buttons that run a recipe by its fixed
+same form. A recipe's default is the variant picked for it in the settings view (see Variants
+above), and while none is picked its first variant: the buttons that run a recipe by its fixed
 name and the looped run's named single-task lines run the default, and the recipe button on a
 mission's page runs the variant selected in the dropdown beside it, the default until you select
 another (see The recipes a page lists).
