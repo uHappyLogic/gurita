@@ -80,5 +80,9 @@ No other live mission's scope overlaps `gurita-vscode/`, so nothing holds or sha
 
 - **Button label.** A recipe button shows the selected variant's distinct harnesses once, its distinct models once, and its distinct efforts once, each as its own list in the order of first appearance and independent of the other two. `First run` reads claude · fable, opus · xhigh, high, and the mixed-agent chain reads agy, claude · gemini-4-argon, opus, fable · medium, high, xhigh. The label does not show which model runs at which effort; that stays readable in the lines as written.
 
+### Harness check
+
+- **Shell.** A new stdlib Python script beside `runner.py` runs the check. It imports the runner as a module, as `runner_tests/conftest.py` already does, and calls its `session_shell` for the shell, then runs the CLI lookup and the harness's `plugin list --json` in that one session and prints one result, which the extension reads from an `execFile` call and parses. `runner.py` itself is not changed.
+
 ## Out of Scope
 
