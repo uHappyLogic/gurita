@@ -170,6 +170,41 @@
   </open-question>
   <open-question id="Remembered choice scope">
     <question>The variant a person selects in a recipe&apos;s dropdown is to be remembered, and the extension today stores nothing beyond the page&apos;s `setState`, which lasts only while the panel stays open. Per what is the selection remembered (the recipe everywhere, the recipe in one project, or the recipe on one mission), and where is it kept so that it outlasts the pane?</question>
+    <alternative id="Per recipe user-wide in globalState">
+      The selection is remembered per recipe name across every project. It is kept in the extension&apos;s `ExtensionContext.globalState` as a map from recipe name to variant name, written by the extension each time the page posts a new dropdown choice and read when the pane posts a mission&apos;s recipes. A remembered variant that no longer exists falls back to the recipe&apos;s default. No file is written for it.
+      <advantage>One selection follows the person into every project and mission and survives a window reload or a restart. VS Code&apos;s own storage holds it, so no file needs a format, a writer, or protection against hand edits, and it stays separate from the variants and settings a person edits on purpose.</advantage>
+      <drawback>A choice made for one project&apos;s work changes what every other project&apos;s button runs, so a critical execution variant picked in one place silently carries over to routine work elsewhere. It is also the extension&apos;s first use of stored state, which the person can neither see nor edit outside the dropdown.</drawback>
+    </alternative>
+    <alternative id="Per recipe user-wide in the variant file">
+      The selection is remembered per recipe name across every project. It is kept as an entry in the per-user file the settings view writes its variants to, rewritten there each time the dropdown changes and read with the recipes on every re-read of the pane.
+      <advantage>Every per-user choice about variants stands in one readable file the person can inspect, copy to another machine, or fix by hand, and the remembered selection is read with the variants it names, so a stale name is visible beside them.</advantage>
+      <drawback>Every dropdown click rewrites a file that also holds hand-editable variant lines, so a click races a hand edit and churns the file. It depends on which file holds the variants and in what format, which the variant-store question owns, and it holds the remembered selection close to each recipe&apos;s default, whose precedence the default-versus-remembered question owns.</drawback>
+    </alternative>
+    <alternative id="Per recipe user-wide in user settings">
+      The selection is remembered per recipe name across every project. It is kept in a new setting the manifest contributes at application scope, an object from recipe name to variant name, written with the configuration API at the global target each time the dropdown changes.
+      <advantage>The selection is visible and editable in the person&apos;s `settings.json` beside `gurita.ownRecipesFile`, and VS Code&apos;s Settings Sync carries it to the person&apos;s other machines with no work of the extension&apos;s own.</advantage>
+      <drawback>Every dropdown click writes the person&apos;s user settings file, which is meant for configuration rather than UI state, and each write raises a settings-change event that other extensions and an open settings editor see. Like every user-wide scope, one project&apos;s choice changes every other project&apos;s.</drawback>
+    </alternative>
+    <alternative id="Per recipe per project in workspaceState">
+      The selection is remembered per recipe name within one project, the workspace the pane was opened on, and shared by every mission of that project. It is kept in the extension&apos;s `ExtensionContext.workspaceState` as a map from recipe name to variant name. Nothing is written into the project&apos;s tree.
+      <advantage>Each project keeps its own working habit (one project run on its critical execution variant, another on its routine one) across reloads and restarts, while every mission in the project, a newly defined one included, opens on the variant last chosen there. The repository stays clean.</advantage>
+      <drawback>Two live missions of one project that need different variants, for example one in a critical scope and one routine, share one selection and overwrite each other&apos;s choice. A new project starts at every recipe&apos;s default again, and the stored state is invisible outside the dropdown.</drawback>
+    </alternative>
+    <alternative id="Per recipe per mission in workspaceState">
+      The selection is remembered per recipe name on one mission, keyed by the mission&apos;s path as the pane lists it, within the project&apos;s `ExtensionContext.workspaceState`, as a map from mission path and recipe name to variant name. Nothing is written into the project&apos;s tree.
+      <advantage>The scope matches the page: each mission&apos;s page shows its own selection, so missions of different weight in one project keep different variants without overwriting each other, and switching mission tabs never changes what another mission&apos;s button runs.</advantage>
+      <drawback>Every newly defined mission opens on the defaults again, so a person who always uses one variant reselects it on every mission. Entries for finished missions are never cleared, and a later mission defined at the same path, which the definition tool allows once the earlier directory is gone, inherits the finished mission&apos;s selections.</drawback>
+    </alternative>
+    <alternative id="Per mission falling back to the project">
+      The selection is remembered on two levels in `ExtensionContext.workspaceState`: per recipe on each mission, keyed by the mission&apos;s path, and per recipe for the project as the variant last selected on any of its missions. A mission&apos;s own selection wins; a mission with none for a recipe opens on the project&apos;s last selection, and only a project with none opens on the default.
+      <advantage>Missions keep their own selections when they differ, while a new mission inherits the variant the person has been using in the project instead of reverting to the default.</advantage>
+      <drawback>Which variant a button opens on depends on a two-level rule the page does not show, so a selection made on one mission silently changes what an untouched new mission starts with. It carries the per-mission option&apos;s stale entries for finished paths, and its fallback overlaps the precedence of the default, which the default-versus-remembered question owns.</drawback>
+    </alternative>
+    <alternative id="Kept in the page state only">
+      The selection is not stored outside the page. It is remembered per recipe on each mission inside the webview&apos;s `setState`, beside the selected mission and each question view&apos;s position, so it lasts while the panel exists and is lost when the panel is closed or the window reloads. The settings view&apos;s default variant is then the only choice that outlasts the pane.
+      <advantage>Nothing new is stored and no storage mechanism is introduced. The lasting choice has one home, the default the settings view picks, and the dropdown is a per-session override that cannot leave a forgotten selection running on later work.</advantage>
+      <drawback>It rejects the premise that the selection outlasts the pane: closing the panel or reloading the window resets every button to its default, so a person who works on one variant reselects it every session. That leaves the goal&apos;s remembered choice met only as far as the page state reaches.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Default versus remembered choice">
     <question>The settings view picks each recipe&apos;s default variant, and the mission page remembers the variant last selected in the recipe&apos;s dropdown. When does the default decide which variant a button runs: only until a first selection is remembered, or does picking a new default also replace a remembered selection?</question>
