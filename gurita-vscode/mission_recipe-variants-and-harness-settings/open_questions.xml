@@ -1,1 +1,86 @@
-<open-questions/>
+<open-questions>
+  <open-question id="Shipped variant format">
+    <question>The mission page is to show one button per recipe with selectable variants, each variant a literal block of command lines. The shipped file `snippets/GURITA_USAGE.md` holds every block as a recipe of its own under a `###` heading, a chain&apos;s Antigravity copy being a separate recipe whose heading ends in `(Antigravity)`, and the recipe reader groups no two recipes. How does the shipped file express that several blocks are variants of one recipe, each under a name of its own?</question>
+  </open-question>
+  <open-question id="Execution recipes as variants">
+    <question>The shipped recipe file holds `Execute tasks of normal difficulty` and `Execute tasks (critical tasks)` as two recipes, each with an Antigravity copy, whose one `complete-all-tasks` line differs only in effort, the Antigravity critical copy running its line on `claude`. Once a recipe carries variants, do the two stay separate recipes, each with its own variants, or become variants of one execution recipe?</question>
+  </open-question>
+  <open-question id="Mixed-agent chain placement">
+    <question>The shipped recipe `Mixed-agent requirements review (Gemini reviews, Claude annotates)` declares the same stage as `Requirements iteration` but runs the same four skills in another order (review, alternatives, recommendation, answer sweep) on `agy` and `claude` lines. Once a recipe carries variants, is it a variant of `Requirements iteration` or a recipe of its own?</question>
+  </open-question>
+  <open-question id="Button recipe variants">
+    <question>Seven buttons outside the mission page&apos;s recipe list (discuss, answer, and record the recommendation on a question card, record an alternative, New mission, Define mission, and the new-task button) each run the recipe of one fixed name, and all seven are shipped as Claude Code lines only. Do these recipes carry variants as the listed recipes do, and if they do, where does a person choose the variant a button runs: beside each button, in the settings view alone, or elsewhere?</question>
+  </open-question>
+  <open-question id="Single-task lines in settings">
+    <question>The looped task run stays as it is, so each single-task line stays a recipe named by its own `###` heading, the name the rule file and the preview&apos;s override list use, and the three shipped headings spell out their line&apos;s model, effort, and harness. Does the settings view list these named single-task lines for editing as it lists variants, or do they stay outside it, read from the recipe files as today?</question>
+  </open-question>
+  <open-question id="Variant store file">
+    <question>Variants edited in the settings view are to be stored as literal lines in a per-user file. The one per-user file today is a person&apos;s hand-written own recipe file (`~/.gurita/recipes.md`, moved by the setting `gurita.ownRecipesFile`), which the extension reads and never writes. Which file holds the variants the settings view writes, that own recipe file or a new file of the extension&apos;s own, and in what format?</question>
+  </open-question>
+  <open-question id="Own recipe replacement">
+    <question>Today a recipe in a person&apos;s hand-written own recipe file that carries a shipped recipe&apos;s name replaces that recipe whole and in place. Once a recipe carries variants, what does a hand-written own recipe of a shipped recipe&apos;s name do: replace every variant of that recipe, or join them as one more variant?</question>
+  </open-question>
+  <open-question id="Recipe list layout">
+    <question>The mission page groups its recipe buttons today under the headings Claude Code, Antigravity, and Your recipes, the last holding a person&apos;s own recipes that replace no shipped one. With the host groups replaced by one button per recipe, does the list keep a separate group for those own recipes, or become one flat list?</question>
+  </open-question>
+  <open-question id="Remembered choice scope">
+    <question>The variant a person selects in a recipe&apos;s dropdown is to be remembered, and the extension today stores nothing beyond the page&apos;s `setState`, which lasts only while the panel stays open. Per what is the selection remembered (the recipe everywhere, the recipe in one project, or the recipe on one mission), and where is it kept so that it outlasts the pane?</question>
+  </open-question>
+  <open-question id="Default versus remembered choice">
+    <question>The settings view picks each recipe&apos;s default variant, and the mission page remembers the variant last selected in the recipe&apos;s dropdown. When does the default decide which variant a button runs: only until a first selection is remembered, or does picking a new default also replace a remembered selection?</question>
+  </open-question>
+  <open-question id="Shipped variant editing">
+    <question>The settings view duplicates, renames, and deletes variants and changes each line&apos;s model and effort, storing the result in a per-user file. Do those edits apply to a shipped variant directly, the stored copy standing in for the shipped one, or are shipped variants read-only, so that only a duplicate can be renamed, deleted, or changed?</question>
+  </open-question>
+  <open-question id="Button label content">
+    <question>A recipe button is to show the harness, models, and efforts of the selected variant, read from its lines. A variant may hold several lines that differ in model and effort (the shipped `First run` runs `fable` at `xhigh` and `opus` at `high`), and one shipped chain mixes `agy` and `claude` lines. What does the button show for such a variant: every line&apos;s values in line order, or each distinct harness, model, and effort once?</question>
+  </open-question>
+  <open-question id="Unreadable lines">
+    <question>The extension is to read each line&apos;s harness, model, and effort from the line&apos;s own text. A variant may hold a line that carries none of them or not all: a shell step of the person&apos;s own, the looped recipe&apos;s slot line `&lt;single-task line&gt;`, a command of a harness the extension does not know, or a harness line written without `--model` or `--effort`. How is such a line treated on the recipe button and in the settings view&apos;s line editor?</question>
+  </open-question>
+  <open-question id="Codex in settings view">
+    <question>The settings view checks, enables or disables, and holds model and effort lists for each harness. The shipped recipe file holds lines for Claude Code (`claude`) and Antigravity (`agy`) only; a Codex line can stand only in a person&apos;s own recipes, and what a Codex line&apos;s plain print opens with, on which the runner&apos;s reading of a headless line depends, was never checked. Does the settings view cover Codex as a third harness, or Claude Code and Antigravity only?</question>
+  </open-question>
+  <open-question id="Model and effort list source">
+    <question>The settings view holds a model list and an effort list for each harness, and no file of the extension or the plugin lists them today: `claude` has no command that prints its models, while `agy models` prints one line per pair of model and effort. Where do the lists come from (values shipped with the extension, the values the recipe lines carry, a query of the harness, or the person&apos;s own entries), and can the person add and remove entries?</question>
+  </open-question>
+  <open-question id="Effort list granularity">
+    <question>On Antigravity the efforts a model takes differ by model: `gemini-4-argon` and `claude-opus-5-5` stop at `high`, while `gemini-4-neon` and `gemini-4-hydrogen` go up to `xhigh`, and a line naming an effort its model lacks stops when run. Is a harness&apos;s effort list one list for the whole harness, offered for every line, or kept per model, so that a line is offered only the efforts its model takes?</question>
+  </open-question>
+  <open-question id="Harness state store">
+    <question>Variants are to be stored as literal lines in a per-user file. Where are the settings view&apos;s other values kept, each harness&apos;s enabled or disabled state and its model and effort lists: in that same per-user file, in VS Code user settings, or in the extension&apos;s own stored state?</question>
+  </open-question>
+  <open-question id="Settings view typed input">
+    <question>Every value a person types in the extension today goes through VS Code&apos;s input box, and nothing is typed on the pane&apos;s page. The settings view needs typed values, a variant&apos;s new name among them. Does it keep the input box for every typed value, or take text in fields on the page?</question>
+  </open-question>
+  <open-question id="Settings view placement">
+    <question>The pane today is a row of mission tabs ending in Refresh, New mission, and Define mission, with the selected mission&apos;s page beneath, and it holds no view that belongs to no mission. Where does the settings view stand in the pane and how is it opened: as a tab of its own in that row, behind a button that swaps the page for it, or as a part of every mission&apos;s page?</question>
+  </open-question>
+  <open-question id="Harness check timing">
+    <question>The settings view checks each harness by finding its CLI through a shell and reading its installed plugins from the harness&apos;s own `plugin list` command, so every check starts an interactive shell and a harness process. When does the check run: each time the settings view is opened, with every re-read of the pane, or only when the person asks for it?</question>
+  </open-question>
+  <open-question id="Harness check shell">
+    <question>A harness&apos;s CLI is to be found through the runner&apos;s shell, the interactive session of the shell `$SHELL` names, whose startup files build the `PATH` a recipe line runs under. The runner is to stay as it is and has no subcommand that looks a command up, and the extension starts its own child processes with `execFile`, through no shell. By what means does the check run in that shell: the runner&apos;s choice of shell repeated in the extension&apos;s own code, or a new bundled script beside the runner?</question>
+  </open-question>
+  <open-question id="Claude plugin entry">
+    <question>`claude plugin list --json` prints one entry per plugin, scope, and project, so Gurita can appear several times, at user scope, for the open project, and for other projects, each entry with its own `enabled` value. Which of those entries does the harness check take as Claude Code&apos;s installed Gurita copy?</question>
+  </open-question>
+  <open-question id="Folder-read plugin version">
+    <question>The harness check compares the installed Gurita copy&apos;s version with the plugin version the extension was packaged from. A Claude Code plugin entry read from a local folder carries two values, `version` (1.9.0 on the maintainer&apos;s machine) and, beside `readFromFolder`, `folderVersion` (2.0.0 there). Which of the two does the check take as that copy&apos;s version?</question>
+  </open-question>
+  <open-question id="Failed check consequence">
+    <question>The settings view checks each harness: its CLI found, its Gurita plugin installed, and that copy&apos;s version equal to the one the extension was packaged from. Is a failed check shown in the settings view only, or does it also act elsewhere, marking or blocking that harness&apos;s variants on the mission pages?</question>
+  </open-question>
+  <open-question id="Initial enabled state">
+    <question>The settings view enables or disables each harness. Before a person has enabled or disabled anything, which harnesses are enabled: all of them, those whose check passes, or those the shipped recipes run on?</question>
+  </open-question>
+  <open-question id="Disabled harness effect">
+    <question>The settings view enables or disables each harness, and a variant&apos;s lines each run on one harness, a variant sometimes mixing two. What does disabling a harness do to the variants holding a line that runs on it: are they left out of the recipe dropdowns, listed but not runnable, or still runnable under a mark?</question>
+  </open-question>
+  <open-question id="Disabled harness reach">
+    <question>The settings view enables or disables each harness, and the looped task run is to stay as it is. Does disabling a harness reach beyond the mission page&apos;s recipe list, to the seven fixed-name buttons, whose shipped lines all run on Claude Code, and to the named single-task lines the looped run&apos;s preview offers and its rules choose?</question>
+  </open-question>
+  <open-question id="Design draft revision">
+    <question>The design draft `ideas/vscode_extension.md` records under Decided that the extension composes no line and holds no host flag, model name, or effort level, and that a variant of a shipped chain is a chain copied into a person&apos;s own recipe file. This mission has the extension read each line&apos;s harness, model, and effort, hold model and effort lists per harness, and rewrite a line&apos;s model and effort. Does the mission revise that draft and `ideas/vscode_extension_follow_up.md` to record the change, or leave both as written?</question>
+  </open-question>
+</open-questions>
