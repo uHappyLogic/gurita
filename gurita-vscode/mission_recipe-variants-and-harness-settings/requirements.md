@@ -80,6 +80,8 @@ No other live mission's scope overlaps `gurita-vscode/`, so nothing holds or sha
 
 - **Default with no pick.** While no picked default stands for a recipe, its default is the first variant in the dropdown order, worked out afresh at each draw and never written. Renaming the picked default in the settings view carries the pick to the new name, so a rename never leaves the recipe without its pick. Only deleting the picked default drops the pick, and the recipe then falls back to the first listed variant.
 
+- **Execution recipe.** `Execute tasks of normal difficulty` and `Execute tasks (critical tasks)` become one execution recipe under a single name that replaces both present names. Its variants are the distinct lines the four shipped copies hold: Claude Code at `high` (`opus`), Antigravity at `high` (`claude-opus-5-5`), and Claude Code at `xhigh` (`opus`). The Antigravity critical copy repeats the last of these and is dropped. `Execute tasks one at a time` stays a recipe of its own.
+
 ### Mission page
 
 - **Recipe list layout.** The list keeps two parts under the page's Recipes heading. First comes one button per shipped recipe, in the shipped file's order and with no heading of their own, an own recipe carrying a shipped name joining that recipe's button as further variants. Then comes a group headed Your recipes, holding the own recipes that carry no shipped recipe's name, in the own file's order. Only the Claude Code and Antigravity headings go; the own group's heading, position, and order stay as they are.
