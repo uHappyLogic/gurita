@@ -644,6 +644,36 @@
   </open-question>
   <open-question id="Claude plugin entry">
     <question>`claude plugin list --json` prints one entry per plugin, scope, and project, so Gurita can appear several times, at user scope, for the open project, and for other projects, each entry with its own `enabled` value. Which of those entries does the harness check take as Claude Code&apos;s installed Gurita copy?</question>
+    <alternative id="Most specific open-project entry">
+      Candidates are the `gurita@gurita` entries that apply to the open project: the `user`-scope entry, plus every `project`- or `local`-scope entry whose `projectPath` equals the project root the extension already resolves. Entries for other projects and `synced` entries are ignored. Of the candidates, the most specific scope wins (`local` over `project` over `user`), and that one entry is the installed copy. Its `enabled` value counts: a disabled winning entry means Gurita is not installed for the project, even when a less specific entry is enabled. The command may run from any working directory, because matching is done on `projectPath`.
+      <advantage>It models what a `claude` line started at the project root loads, using fields every entry carries (`scope`, `projectPath`, `enabled`). The answer does not depend on where the command was run, and other projects&apos; installs can never make the check pass.</advantage>
+      <drawback>The precedence order and the treatment of a disabled specific entry are the extension&apos;s own reconstruction of how Claude Code resolves scopes. Nothing in the list states them, so a different resolution in Claude Code would make the check report a copy that lines do not actually load.</drawback>
+    </alternative>
+    <alternative id="Claude Code&apos;s projectEnabled verdict">
+      The command runs with the open project&apos;s root as its working directory, and the check takes the `gurita@gurita` entries whose `projectEnabled` is true as the copies active in that project. On this machine that field read true for both Gurita entries when run from the repository and false for both when run from `/tmp`, so it is Claude Code&apos;s own per-directory verdict. If several entries read true, the most specific scope (`local`, then `project`, then `user`) is the copy taken. If none reads true, Gurita counts as not installed for the project. The extension applies no scope or `projectPath` matching of its own.
+      <advantage>Claude Code decides which entries are active for the project, so the extension re-implements no scope resolution and stays right if that resolution changes.</advantage>
+      <drawback>`projectEnabled` is an undocumented field whose value depends on the working directory, so a check started anywhere but the project root gives a wrong answer without any sign. This ties the check to how the command is started, an axis the harness-check-shell question owns. A tiebreak is still needed when several entries read true with different versions.</drawback>
+    </alternative>
+    <alternative id="Every applicable entry checked">
+      Every `gurita@gurita` entry that applies to the open project (the `user`-scope entry and every `project`- or `local`-scope entry whose `projectPath` is the project root) is checked, and none is singled out as the one copy. The settings view lists each with its scope, `enabled` value, and version. The check passes only when at least one is enabled and every enabled one carries the expected version. Disabled entries are listed but do not fail the check.
+      <advantage>It needs no guess about precedence, and a stale copy at any scope that could load is shown rather than hidden behind a more specific entry.</advantage>
+      <drawback>A stale user-scope install fails the check even when a matching project-scope install is what lines actually load, so the check can fail where runs would work. The settings view must also show several rows per harness where the other harnesses show one.</drawback>
+    </alternative>
+    <alternative id="User scope only">
+      Only the `user`-scope `gurita@gurita` entry is taken as Claude Code&apos;s installed copy, together with its `enabled` value. `project`- and `local`-scope entries are ignored for every project, the open one included, so the check reads the same whichever project is open.
+      <advantage>The settings view belongs to no mission and the pane has no other project-independent view. A user-scope answer gives that view one stable result per machine, matches the single entries `agy` and `codex` report, and needs no project root and no scope logic.</advantage>
+      <drawback>A project that installs or disables Gurita at project or local scope is misreported. Such a project fails the check when it has no user-scope install, or passes it while project settings turn the plugin off. This machine has a project-scope Gurita entry beside the user one.</drawback>
+    </alternative>
+    <alternative id="Any entry anywhere">
+      Every `gurita@gurita` entry in the list is a candidate, whatever its scope or `projectPath`. The check passes when any enabled entry carries the expected version, and Gurita counts as not installed only when no enabled entry exists anywhere.
+      <advantage>It is the simplest reading. It needs no project root, no scope order, and no working directory, and it never fails a machine that has a correct copy installed somewhere.</advantage>
+      <drawback>An install or enable for another project can pass the check while the open project has no Gurita, or has Gurita disabled, so a recipe line then runs without the plugin even though the check passed.</drawback>
+    </alternative>
+    <alternative id="Open-project presence, enabled ignored">
+      Candidates and precedence are those of the most-specific open-project option: the `user` entry plus the `project` or `local` entries whose `projectPath` is the project root, most specific first. The `enabled` value plays no part in the check, though: the winning entry is the installed copy whether it is enabled or not, and its `enabled` value is at most shown beside it.
+      <advantage>It reads the goal&apos;s &quot;installed Gurita plugin&quot; literally and keeps the check to presence and version. That avoids confusion with the settings view&apos;s own enabling and disabling of the harness, which is a separate switch.</advantage>
+      <drawback>A copy installed but disabled for the project passes the check, while every recipe line run there starts Claude Code without Gurita&apos;s skills and fails at its first slash command.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Folder-read plugin version">
     <question>The harness check compares the installed Gurita copy&apos;s version with the plugin version the extension was packaged from. A Claude Code plugin entry read from a local folder carries two values, `version` (1.9.0 on the maintainer&apos;s machine) and, beside `readFromFolder`, `folderVersion` (2.0.0 there). Which of the two does the check take as that copy&apos;s version?</question>
