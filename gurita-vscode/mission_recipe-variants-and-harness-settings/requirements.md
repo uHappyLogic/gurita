@@ -126,5 +126,7 @@ No other live mission's scope overlaps `gurita-vscode/`, so nothing holds or sha
 
 - **Variant store file.** The settings view writes a new JSON file of the extension's own at a visible per-user path beside the own recipe file, such as `~/.gurita/variants.json`. It holds structured records laid over the recipe list, each a recipe name, a variant name, the variant's literal lines as an array of strings, and which variant is the recipe's default. The extension is the file's only writer, reads it with `JSON.parse`, and merges it with the recipes the Markdown reader yields. The own recipe file stays read-only to the extension and the one place for hand-written recipes.
 
+- **Harness values.** Each harness's enabled or disabled state and its model and effort lists are kept in the same per-user file that holds the variants, in a part of that file set aside for harness values. The settings view reads and writes one file for everything it holds, and nothing of it goes into VS Code settings or the extension's stored state.
+
 ## Out of Scope
 
