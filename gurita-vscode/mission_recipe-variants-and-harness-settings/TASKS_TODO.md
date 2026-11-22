@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Read Recipe Variants in the Recipe Reader
-
-Extend the recipe reader, `gurita-vscode/src/recipes.ts`, so that a recipe holds one or more named variants, each a literal block of lines: under one `###` heading with its optional `Stage:` line once for the whole recipe, each `####` sub-heading names a variant followed by its fenced block, and a recipe with one block and no `####` is a recipe of one variant, in the shipped file and a hand-written own file alike. A hand-written own recipe carrying a shipped recipe's name no longer replaces it: its block, or each of its variants when it writes several, joins the shipped recipe as one more variant, listed after the shipped variants under its own variant name and marked as the person's own, an own variant carrying a shipped variant's name kept as a second entry beside it. Until later tasks let a variant be chosen, the mission page, the seven fixed-name buttons, and the looped run's named lines take a recipe's first variant, `gurita-vscode/README.md` says how the two files are read, and `node:test` unit tests over fixtures of both files verify the reading and the merge, `npm test` passing under Node 22 through nvm.
-
----
-
 ## Read and Replace Line Harness Values
 
 Add a module importing nothing from `vscode` that reads from a recipe line's text the harness it runs on (`claude`, `agy`, or `codex`), its `--model` value, and its `--effort` value, a Codex line's model read from `-m`, and that replaces a model or effort value the line already carries, never inserting text into a line. From a variant's lines it gives the three lists a recipe button shows: the distinct harnesses, the distinct models, and the distinct efforts, each in the order of first appearance and independent of the other two, a line adding only the values its text carries and a shell step, the slot line `<single-task line>`, and a line of a command the extension does not know adding nothing. Verified by `node:test` unit tests, among them the shipped `First run` reading claude · fable, opus · xhigh, high and the mixed-agent chain reading agy, claude · gemini-4-argon, opus, fable · medium, high, xhigh.

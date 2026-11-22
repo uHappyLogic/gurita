@@ -11,7 +11,7 @@
 
 import { execFile } from 'node:child_process';
 import * as path from 'node:path';
-import { Recipe } from './recipes';
+import { Recipe, firstVariant } from './recipes';
 
 /** The rule file's name, standing directly in the project root. */
 export const RULE_FILE_NAME = 'task_line_rules.txt';
@@ -54,9 +54,19 @@ export function ruleFile(root: string): string {
   return path.join(root, RULE_FILE_NAME);
 }
 
-/** The named single-task lines among the recipes, in the merged list's order. */
+/**
+ * The named single-task lines among the recipes, in the merged list's order: every recipe whose
+ * first variant is a single-task line, named by the recipe, with that variant's one line.
+ */
 export function singleTaskLines(recipes: readonly Recipe[]): SingleTaskLine[] {
-  return recipes.filter((recipe) => recipe.singleTask).map((recipe) => ({ name: recipe.name, line: recipe.lines[0] }));
+  const lines: SingleTaskLine[] = [];
+  for (const recipe of recipes) {
+    const variant = firstVariant(recipe);
+    if (variant.singleTask) {
+      lines.push({ name: recipe.name, line: variant.lines[0] });
+    }
+  }
+  return lines;
 }
 
 /** The tasks of a `runner.py preview` print, in the order printed. */

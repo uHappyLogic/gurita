@@ -15,11 +15,12 @@
 // derive tasks is filled and follow up tasks' when finish is, and every undeclared recipe, or every
 // recipe when no step is chosen, laid out within that by the page's other rules, its host groups,
 // its own group, and the leaving off of a recipe holding a placeholder the page cannot fill; or
-// with the one failure state the live read gives. The page redraws its question card in place from
+// with the one failure state the live read gives. Until a variant can be chosen, every recipe
+// button runs its recipe's first variant. The page redraws its question card in place from
 // every such message, keeping the pane the person clicked while the mission stays shown.
 // A click on a recipe button starts that recipe's chain for the page's mission at once, and a
 // recipe the latest answer did not list on that mission's page starts nothing. The
-// buttons outside the chains, untouched by the step, each run the recipe of its fixed name, shipped or replaced by an own recipe of the same name, read afresh at the click,
+// buttons outside the chains, untouched by the step, each run the first variant of the recipe of its fixed name, its shipped variants and those an own recipe of the same name adds, read afresh at the click,
 // through the same run path: on a question's card the discuss, answer, and answer-with-
 // recommendation buttons, on an alternative on that card the answer-with-alternative button,
 // and on the pane at the tab row's end, in its failure state too, the two mission-starting
@@ -597,10 +598,11 @@ const PROMPTS: Record<string, { prompt: string; placeHolder?: string }> = {
 
 /**
  * Reads the recipe of the fixed name `name` afresh from the shipped snippet file and the person's
- * own recipe file, for a button holding values for `fillable`. A recipe that cannot be read or run
- * is told in an error notification and yields nothing.
+ * own recipe file, for a button holding values for `fillable`, and yields its name with the lines
+ * of the variant the button runs. A recipe that cannot be read or run is told in an error
+ * notification and yields nothing.
  */
-function readButtonRecipe(context: vscode.ExtensionContext, name: string, fillable: readonly string[]): Recipe | undefined {
+function readButtonRecipe(context: vscode.ExtensionContext, name: string, fillable: readonly string[]): { name: string; lines: string[] } | undefined {
   let recipes: Recipe[];
   try {
     recipes = readAllRecipes(context);
@@ -613,7 +615,7 @@ function readButtonRecipe(context: vscode.ExtensionContext, name: string, fillab
     void vscode.window.showErrorMessage(found.cause);
     return undefined;
   }
-  return found.recipe;
+  return { name: found.recipe.name, lines: found.variant.lines };
 }
 
 /**

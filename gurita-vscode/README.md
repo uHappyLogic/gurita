@@ -170,13 +170,40 @@ naming the file.
 
 ## Recipes
 
-A recipe is a `###` heading, its name, and the lines of the first fenced block beneath it. The
-pane lists recipes from two files.
+A recipe is a `###` heading, its name, and one or more named variants, each a literal block of
+lines. Each `####` sub-heading beneath the `###` heading names a variant, its lines those of the
+first fenced block beneath the sub-heading:
+
+````
+### Execute tasks
+Stage: execute tasks
+
+#### Claude Code at high
+```
+claude "/gurita:complete-all-tasks --mission <path>" --dangerously-skip-permissions --model "opus" --effort high; # interactive
+```
+
+#### Claude Code at xhigh
+```
+claude "/gurita:complete-all-tasks --mission <path>" --dangerously-skip-permissions --model "opus" --effort xhigh; # interactive
+```
+````
+
+A recipe with one fenced block and no `####` sub-heading is a recipe of one variant, named by the
+recipe's own name. Once a recipe holds a `####` sub-heading, only the blocks beneath its
+sub-headings are read, a block standing above the first sub-heading included in none; a
+sub-heading with no fence beneath it is a variant of no line, and of a variant name repeated
+within one recipe only the first is read. Headings inside a fence are lines, not headings. The
+pane lists recipes from two files, the shipped file and your own file, and reads both in this
+same form. Until a variant can be chosen, a recipe runs its first variant: the recipe button on a
+mission's page, the buttons that run a recipe by its fixed name, and the looped run's named
+single-task lines all take it.
 
 ### The stage line
 
 A recipe may declare the one step of the workflow diagram it belongs to, by one `Stage:` line
-standing between its `###` heading and its fence, outside the fence:
+standing between its `###` heading and its first fence or first `####` sub-heading, outside the
+fence, once for the whole recipe:
 
 ````
 ### Prepare tasks
@@ -190,12 +217,13 @@ claude -p "/gurita:derive-tasks --mission <path>" --dangerously-skip-permissions
 The step is named exactly as the diagram labels its block: `first review round`,
 `additional review round`, `derive tasks`, `execute tasks`, `follow up tasks`, or `finish`. The
 line opens with `Stage:` at its first column, and the name after it is read with its outer spaces
-trimmed. A recipe with no `Stage:` line before its fence, with more than one, or with a name the
-reader does not know (`define`, or a step's name spelled otherwise, capitals included) is
-undeclared; a `Stage:` line inside the fence is an ordinary line of the recipe, and one after the
-fence is not read. The same rule reads the shipped file and your own file, and an own recipe
-that replaces a shipped one carries its own declaration, not the shipped one's. The declared step
-chooses the mission pages that list the recipe.
+trimmed. A recipe with no `Stage:` line before its first fence or sub-heading, with more than
+one, or with a name the reader does not know (`define`, or a step's name spelled otherwise,
+capitals included) is undeclared; a `Stage:` line inside the fence is an ordinary line of the
+recipe, and one after the first fence or beneath a `####` sub-heading is not read. The same rule
+reads the shipped file and your own file, and an own recipe that joins a shipped one keeps the
+shipped recipe's declaration, its own `Stage:` line not read. The declared step chooses the
+mission pages that list the recipe.
 
 ### The recipes a page lists
 
@@ -221,7 +249,9 @@ that run a recipe by its fixed name (on the question card and its alternatives, 
 
 The package ships `snippets/GURITA_USAGE.md` as `bundled/GURITA_USAGE.md`, read at run time. Only
 the `###` blocks under its `## Claude Code` and `## Antigravity` headings are recipes, each
-listed in that host's group; the blocks under `## Manual use` are for reading only.
+listed in that host's group; the blocks under `## Manual use` are for reading only. Each shipped
+recipe is written as one fenced block with no `####` sub-heading, so each is a recipe of one
+variant named by its heading.
 
 Every chain in the file declares the one step it runs and spans no other:
 
@@ -262,10 +292,16 @@ You can keep recipes of your own in one Markdown file, by default `~/.gurita/rec
 `gurita.ownRecipesFile` changes the path; left empty, the default is read, and a leading `~` in
 it is expanded. A missing file simply holds no recipe.
 
-The file is a flat list of `###` recipes, each heading followed by a fenced block of lines;
-`##` headings in it are ignored. An own recipe carrying the name of a shipped recipe replaces
-that recipe in place, a button recipe included; every other own recipe is listed below the
-Claude Code and Antigravity groups under **Your recipes**, in the order your file lists them.
+The file is a flat list of `###` recipes in the form above, each heading followed by a fenced
+block of lines or by `####` variants; `##` headings in it are ignored, and of a recipe name
+repeated in it only the first is read. An own recipe carrying the name of a shipped recipe, a
+button recipe included, replaces neither that recipe nor any of its variants: its block, or each
+of its variants when it writes several, joins the shipped recipe as one more variant, listed after
+the shipped variants under its own variant name (a one-block own recipe's being the recipe's
+name) and marked as your own. An own variant carrying a shipped variant's name is kept as a second
+entry beside it, so every shipped variant stays, and the shipped variant stays the one the recipe
+runs first. Every other own recipe is listed below the Claude Code and Antigravity groups under
+**Your recipes**, in the order your file lists them.
 An own recipe may declare its step by a `Stage:` line, as a shipped one does (see the stage line
 above), and is then listed only on the pages that step fits; an undeclared one is listed on every
 page. For example:
@@ -311,8 +347,9 @@ in your own recipe may read them as `"$GURITA_TASK_TITLE"` and the like.
 
 A click on a looped recipe (one whose last line is the slot line `<single-task line>`) runs
 nothing yet: it shows a preview on the mission's page listing each remaining task with the
-single-task line the rule file gives it. Every recipe holding exactly one headless line with
-`<Task Title>`, shipped or your own, counts as a named single-task line. In the preview you may
+single-task line the rule file gives it. Every recipe whose first variant holds exactly one
+headless line with `<Task Title>`, shipped or your own, counts as a named single-task line, named
+by its `###` heading. In the preview you may
 override any task's line by picking another named line. **Start run** then starts the loop,
 which before each task re-reads the top remaining heading of `TASKS_TODO.md`, runs the recipe's
 lines with that task's line in the slot, goes on only when the line read from the single-task

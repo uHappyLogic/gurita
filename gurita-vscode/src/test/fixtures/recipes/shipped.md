@@ -43,7 +43,34 @@ claude -p "/gurita:answer-open-question --mission <path> <Short Title>. <answer 
 ```
 ## Not a heading
 ### Not a recipe
+#### Not a variant
 echo <mystery thing> <path>
+```
+
+### Variants
+Stage: execute tasks
+Prose between the recipe's heading and its first variant.
+
+#### On Claude Code
+```
+claude -p "/gurita:complete-all-tasks --mission <path>" --model "opus" --effort high;
+```
+
+#### On Antigravity
+Prose between a variant's heading and its fence.
+Stage: finish
+```
+agy -p "/gurita:complete-all-tasks --mission <path>" --model "claude-opus-5-5" --effort high;
+```
+```
+echo a second fence under a variant is not read
+```
+
+#### Empty variant
+
+#### On Claude Code
+```
+echo a repeated variant name is not read
 ```
 
 ## Antigravity
@@ -65,6 +92,15 @@ agy -p "/gurita:derive-tasks --mission <path>";
 Stage: derive tasks
 ```
 echo second fence
+```
+
+### Block before variants
+```
+echo a block above the first variant is not read
+```
+#### Only variant
+```
+agy -p "/gurita:finish-mission --mission <path>";
 ```
 
 ## Manual use

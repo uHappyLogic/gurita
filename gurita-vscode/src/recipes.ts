@@ -1,14 +1,26 @@
-// The recipe reader. A recipe is a `###` heading, its name, and the lines of the first fenced
-// block beneath it. The shipped snippet file yields only the recipes under its `## Claude Code`
-// and `## Antigravity` headings, each in that host's group; a person's own recipe file is a flat
-// list of `###` recipes, one carrying a shipped recipe's name replacing that recipe in place and
-// every other listed after the host groups, in the file's order. Each recipe is classified by
-// its content alone: whether it is a single-task line, whether it is the looped recipe, and which
-// known and unknown placeholders it holds. A recipe may also declare the one step of the workflow
-// diagram it belongs to, by one `Stage: <step name>` line standing outside any fence between its
-// `###` heading and its first fence, in the shipped file and in a person's own file alike, the
-// step named as the diagram labels its block (first review round, additional review round, derive
-// tasks, execute tasks, follow up tasks, or finish). A recipe with no such line, with more than one,
+// The recipe reader. A recipe is a `###` heading, its name, and one or more named variants, each a
+// literal block of lines: every `####` sub-heading beneath the `###` heading names a variant, its
+// lines those of the first fenced block beneath the sub-heading, and a recipe with no `####`
+// sub-heading is a recipe of one variant, named by the recipe's own name, its lines those of the
+// first fenced block beneath the `###` heading. Once a recipe holds a `####` sub-heading only the
+// blocks beneath its sub-headings are read, and of a variant name repeated within one recipe the
+// first is kept. The same form is read in the shipped file and in a person's own file. The shipped
+// snippet file yields only the recipes under its `## Claude Code` and `## Antigravity` headings,
+// each in that host's group; a person's own recipe file is a flat list of `###` recipes. An own
+// recipe carrying a shipped recipe's name replaces neither that recipe nor any of its variants:
+// its variants join the shipped recipe, listed after the shipped variants under their own names and
+// marked as the person's own, an own variant carrying a shipped variant's name kept as a second
+// entry beside it; every other own recipe is listed after the host groups, in the file's order.
+// Until a variant can be chosen, the mission page, the buttons that run a recipe by its fixed name,
+// and the looped run's named single-task lines take a recipe's first variant. Each variant is
+// classified by its content alone: whether it is a single-task line, whether it is the looped
+// recipe, and which known and unknown placeholders it holds. A recipe may also declare the one step
+// of the workflow diagram it belongs to, by one `Stage: <step name>` line standing outside any fence
+// between its `###` heading and its first fence or first `####` sub-heading, once for the whole
+// recipe, in the shipped file and in a person's own file alike, the step named as the diagram
+// labels its block (first review round, additional review round, derive tasks, execute tasks,
+// follow up tasks, or finish); an own recipe that joins a shipped one keeps the shipped recipe's
+// declaration. A recipe with no such line, with more than one,
 // or with a name the reader does not know, `define` included, counts as undeclared. A mission page
 // lists only the recipes that fit the step its diagram fills: those declaring that step, beside them
 // the additional review round's when derive tasks is filled and follow up tasks' when finish is, and
@@ -60,12 +72,13 @@ export const STAGE_NAMES: ReadonlyMap<string, WorkflowStep> = new Map<string, Wo
   ['finish', 'finish'],
 ]);
 
-export interface Recipe {
-  /** The `###` heading's text, the recipe's name. */
+/** One variant of a recipe: a named, literal block of lines. */
+export interface Variant {
+  /** The `####` sub-heading's text, or the recipe's own name for a recipe of one block. */
   name: string;
-  /** The host group the recipe is listed under, or `own`. */
-  group: RecipeGroup;
-  /** The path of the file the recipe's lines came from. */
+  /** Whether it comes from the person's own recipe file. */
+  own: boolean;
+  /** The path of the file the variant's lines came from. */
   file: string;
   /** The fenced block's non-blank lines, as written. */
   lines: string[];
@@ -77,6 +90,18 @@ export interface Recipe {
   knownPlaceholders: string[];
   /** The placeholder names its lines hold that the extension does not know, likewise. */
   unknownPlaceholders: string[];
+}
+
+export interface Recipe {
+  /** The `###` heading's text, the recipe's name. */
+  name: string;
+  /** The host group the recipe is listed under, or `own`. */
+  group: RecipeGroup;
+  /**
+   * Its variants, at least one: the shipped ones in the shipped file's order, then the ones an own
+   * recipe of the same name adds, in the own file's order.
+   */
+  variants: Variant[];
   /**
    * The workflow step its one stage line declares, left out when the recipe is undeclared: it
    * chooses the mission pages that list the recipe, an undeclared one being listed on every page.
@@ -84,12 +109,18 @@ export interface Recipe {
   stage?: WorkflowStep;
 }
 
+/** A block of lines read beneath a heading: undefined until its first fence opens. */
+type Lines = string[] | undefined;
+
 interface Block {
   name: string;
   /** The `##` heading the block stands under, or undefined above the first one. */
   section: string | undefined;
-  lines: string[];
-  /** The names its stage lines give, read outside any fence before its first fence. */
+  /** The first fenced block's lines beneath the `###` heading itself, before any `####`. */
+  lines: Lines;
+  /** Its `####` sub-headings, each with the lines of the first fenced block beneath it. */
+  variants: { name: string; lines: Lines }[];
+  /** The names its stage lines give, read outside any fence before its first fence or `####`. */
   stages: string[];
 }
 
@@ -99,40 +130,60 @@ const INVOCATION = /[/$]gurita:/;
 const INTERACTIVE_MARK = /(?:^|\s)#\s*interactive\s*$/;
 
 /**
- * Splits a Markdown text into its `###` blocks, reading headings outside fences only, and the
- * stage lines standing outside any fence between a block's heading and its first fence.
+ * Splits a Markdown text into its `###` blocks, reading headings outside fences only: each block
+ * with the first fence beneath its heading, its `####` sub-headings each with the first fence
+ * beneath it, and the stage lines standing outside any fence between the block's heading and its
+ * first fence or first sub-heading.
  */
 function blocks(text: string): Block[] {
   const found: Block[] = [];
   let section: string | undefined;
   let current: Block | undefined;
+  /** The heading, `###` or `####`, whose first fence the next fence would be. */
+  let target: { lines: Lines } | undefined;
   let inFence = false;
-  let fenceRead = false;
+  /** Whether the fence open now is the first beneath `target`, its lines read. */
+  let reading = false;
+  let opened = false;
   for (const raw of text.split('\n')) {
     const line = raw.replace(/\r$/, '');
     if (FENCE.test(line)) {
       if (inFence) {
         inFence = false;
-        fenceRead = true;
+        reading = false;
       } else {
         inFence = true;
+        if (current) {
+          opened = true;
+        }
+        if (target && target.lines === undefined) {
+          target.lines = [];
+          reading = true;
+        }
       }
       continue;
     }
     if (inFence) {
-      if (current && !fenceRead && line.trim() !== '') {
-        current.lines.push(line);
+      if (reading && target?.lines && line.trim() !== '') {
+        target.lines.push(line);
       }
       continue;
     }
     if (line.startsWith('### ')) {
-      current = { name: line.slice(4).trim(), section, lines: [], stages: [] };
+      current = { name: line.slice(4).trim(), section, lines: undefined, variants: [], stages: [] };
       found.push(current);
-      fenceRead = false;
+      target = current;
+      opened = false;
     } else if (line.startsWith('## ')) {
       section = line.slice(3).trim();
       current = undefined;
-    } else if (current && !fenceRead && line.startsWith(STAGE_MARKER)) {
+      target = undefined;
+    } else if (current && line.startsWith('#### ')) {
+      const variant = { name: line.slice(5).trim(), lines: undefined };
+      current.variants.push(variant);
+      target = variant;
+      opened = true;
+    } else if (current && !opened && line.startsWith(STAGE_MARKER)) {
       current.stages.push(line.slice(STAGE_MARKER.length).trim());
     }
   }
@@ -178,31 +229,54 @@ export function isHeadless(line: string): boolean {
   return INVOCATION.test(line) && !INTERACTIVE_MARK.test(line);
 }
 
-function classify(block: Block, group: RecipeGroup, file: string): Recipe {
-  const lines = block.lines;
+/** Classifies one variant's lines by their content alone. */
+function variant(name: string, lines: readonly string[], own: boolean, file: string): Variant {
   const looped = lines.length > 0 && lines[lines.length - 1].trim() === SLOT_LINE;
   const known: string[] = [];
   const unknown: string[] = [];
   for (const line of looped ? lines.slice(0, -1) : lines) {
     for (const match of line.matchAll(PLACEHOLDER)) {
-      const name = match[1];
-      const into = KNOWN_PLACEHOLDERS.includes(name) ? known : unknown;
-      if (!into.includes(name)) {
-        into.push(name);
+      const placeholder = match[1];
+      const into = KNOWN_PLACEHOLDERS.includes(placeholder) ? known : unknown;
+      if (!into.includes(placeholder)) {
+        into.push(placeholder);
       }
     }
   }
   const singleTask = lines.length === 1 && isHeadless(lines[0]) && known.includes('Task Title');
-  const stage = declaredStage(block.stages);
   return {
-    name: block.name,
-    group,
+    name,
+    own,
     file,
     lines: [...lines],
     singleTask,
     looped,
     knownPlaceholders: known,
     unknownPlaceholders: unknown,
+  };
+}
+
+/**
+ * The recipe a block reads as: one variant per `####` sub-heading, the first of a repeated name
+ * kept, or, when it holds none, one variant named by the recipe and holding the block's own lines.
+ * A heading with no fence beneath it gives a variant of no line.
+ */
+function classify(block: Block, group: RecipeGroup, own: boolean, file: string): Recipe {
+  const variants: Variant[] = [];
+  if (block.variants.length === 0) {
+    variants.push(variant(block.name, block.lines ?? [], own, file));
+  } else {
+    for (const each of block.variants) {
+      if (!variants.some((kept) => kept.name === each.name)) {
+        variants.push(variant(each.name, each.lines ?? [], own, file));
+      }
+    }
+  }
+  const stage = declaredStage(block.stages);
+  return {
+    name: block.name,
+    group,
+    variants,
     ...(stage === undefined ? {} : { stage }),
   };
 }
@@ -217,7 +291,7 @@ export function parseShippedRecipes(text: string, file: string): Recipe[] {
       continue;
     }
     seen.add(block.name);
-    recipes.push(classify(block, group, file));
+    recipes.push(classify(block, group, false, file));
   }
   return recipes;
 }
@@ -231,27 +305,37 @@ export function parseOwnRecipes(text: string, file: string): Recipe[] {
       continue;
     }
     seen.add(block.name);
-    recipes.push(classify(block, 'own', file));
+    recipes.push(classify(block, 'own', true, file));
   }
   return recipes;
 }
 
 /**
- * Merges the two lists: an own recipe carrying a shipped recipe's name takes that recipe's place
- * in its host group, and every other own recipe follows the host groups, in the own file's order.
+ * Merges the two lists: an own recipe carrying a shipped recipe's name joins that recipe in its
+ * host group, its variants listed after the shipped variants and kept beside any shipped variant
+ * of the same name, the shipped recipe keeping its name, group, and stage; every other own recipe
+ * follows the host groups, in the own file's order.
  */
 export function mergeRecipes(shipped: Recipe[], own: Recipe[]): Recipe[] {
   const ownByName = new Map(own.map((recipe) => [recipe.name, recipe]));
   const merged: Recipe[] = [];
   for (const host of HOST_GROUPS) {
     for (const recipe of shipped.filter((each) => each.group === host)) {
-      const replacement = ownByName.get(recipe.name);
-      merged.push(replacement ? { ...replacement, group: host } : recipe);
+      const joining = ownByName.get(recipe.name);
+      merged.push(joining ? { ...recipe, variants: [...recipe.variants, ...joining.variants] } : recipe);
     }
   }
   const shippedNames = new Set(shipped.map((recipe) => recipe.name));
   merged.push(...own.filter((recipe) => !shippedNames.has(recipe.name)));
   return merged;
+}
+
+/**
+ * The variant a recipe runs until a variant can be chosen: its first, the first shipped one when
+ * it has any.
+ */
+export function firstVariant(recipe: Recipe): Variant {
+  return recipe.variants[0];
 }
 
 /**
@@ -331,40 +415,42 @@ export const LOOPED_PLACEHOLDERS: readonly string[] = ['path', 'Task Title'];
 
 /**
  * The recipes a mission page lists out of `recipes`, for a page the part of the merged list
- * `stageRecipes` keeps for its step, given the placeholder names the page holds a value for. A
- * recipe holding a placeholder the extension does not know is listed as a non-runnable entry
- * naming it and its file. A looped recipe is listed as its own kind, run through its preview
- * rather than as a chain, when every placeholder it holds is one a looped run fills itself. A
- * recipe holding a known placeholder the page has no value for is left off silently, staying
- * reachable by name for the button or loop that fills it, and so is a recipe with no line.
+ * `stageRecipes` keeps for its step, given the placeholder names the page holds a value for, each
+ * entry drawn from the recipe's first variant. A recipe whose variant holds a placeholder the
+ * extension does not know is listed as a non-runnable entry naming it and its file. A looped
+ * recipe is listed as its own kind, run through its preview rather than as a chain, when every
+ * placeholder it holds is one a looped run fills itself. A recipe holding a known placeholder the
+ * page has no value for is left off silently, staying reachable by name for the button or loop
+ * that fills it, and so is a recipe with no line.
  */
 export function pageRecipes(recipes: Recipe[], fillable: readonly string[]): PageRecipe[] {
   const listed: PageRecipe[] = [];
   for (const recipe of recipes) {
-    if (recipe.unknownPlaceholders.length > 0) {
+    const runs = firstVariant(recipe);
+    if (runs.unknownPlaceholders.length > 0) {
       listed.push({
         kind: 'unknown',
         name: recipe.name,
         group: recipe.group,
-        lines: [...recipe.lines],
-        placeholders: [...recipe.unknownPlaceholders],
-        file: recipe.file,
+        lines: [...runs.lines],
+        placeholders: [...runs.unknownPlaceholders],
+        file: runs.file,
       });
       continue;
     }
-    if (recipe.looped) {
-      if (recipe.knownPlaceholders.every((name) => LOOPED_PLACEHOLDERS.includes(name))) {
-        listed.push({ kind: 'looped', name: recipe.name, group: recipe.group, lines: [...recipe.lines] });
+    if (runs.looped) {
+      if (runs.knownPlaceholders.every((name) => LOOPED_PLACEHOLDERS.includes(name))) {
+        listed.push({ kind: 'looped', name: recipe.name, group: recipe.group, lines: [...runs.lines] });
       }
       continue;
     }
-    if (recipe.lines.length === 0) {
+    if (runs.lines.length === 0) {
       continue;
     }
-    if (recipe.knownPlaceholders.some((name) => !fillable.includes(name))) {
+    if (runs.knownPlaceholders.some((name) => !fillable.includes(name))) {
       continue;
     }
-    listed.push({ kind: 'runnable', name: recipe.name, group: recipe.group, lines: [...recipe.lines] });
+    listed.push({ kind: 'runnable', name: recipe.name, group: recipe.group, lines: [...runs.lines] });
   }
   return listed;
 }
@@ -385,34 +471,36 @@ export const BUTTON_RECIPES = {
   discussTask: 'discuss-new-task',
 } as const;
 
-/** The recipe a button runs, by its fixed name, or the cause it cannot be run. */
-export type ButtonRecipe = { state: 'found'; recipe: Recipe } | { state: 'refused'; cause: string };
+/** The recipe a button runs, by its fixed name, with the variant it runs, or the cause it cannot be run. */
+export type ButtonRecipe = { state: 'found'; recipe: Recipe; variant: Variant } | { state: 'refused'; cause: string };
 
 /**
- * The recipe of the fixed name `name` in the merged list, shipped or replaced by an own recipe of
- * the same name, when the button can run it: it holds a line, it is not the looped recipe, and
- * every placeholder it holds is one the button holds a value for, `fillable` naming them.
- * Otherwise the cause it cannot be run, naming the recipe and what is wrong with it.
+ * The recipe of the fixed name `name` in the merged list, its shipped variants and those an own
+ * recipe of the same name adds, with the variant the button runs, its first, when the button can
+ * run it: that variant holds a line, it is not the looped recipe, and every placeholder it holds
+ * is one the button holds a value for, `fillable` naming them. Otherwise the cause it cannot be
+ * run, naming the recipe and what is wrong with it.
  */
 export function buttonRecipe(recipes: Recipe[], name: string, fillable: readonly string[]): ButtonRecipe {
   const recipe = recipes.find((entry) => entry.name === name);
   if (recipe === undefined) {
     return { state: 'refused', cause: `No recipe is named ${name}.` };
   }
-  const where = `The recipe ${name} in ${recipe.file}`;
-  if (recipe.lines.length === 0) {
+  const variant = firstVariant(recipe);
+  const where = `The recipe ${name} in ${variant.file}`;
+  if (variant.lines.length === 0) {
     return { state: 'refused', cause: `${where} holds no line.` };
   }
-  if (recipe.looped) {
+  if (variant.looped) {
     return { state: 'refused', cause: `${where} is a looped recipe.` };
   }
   const unfilled = [
-    ...recipe.unknownPlaceholders,
-    ...recipe.knownPlaceholders.filter((placeholder) => !fillable.includes(placeholder)),
+    ...variant.unknownPlaceholders,
+    ...variant.knownPlaceholders.filter((placeholder) => !fillable.includes(placeholder)),
   ];
   if (unfilled.length > 0) {
     const named = unfilled.map((placeholder) => `<${placeholder}>`).join(', ');
     return { state: 'refused', cause: `${where} holds ${unfilled.length === 1 ? 'a placeholder' : 'placeholders'} this button has no value for: ${named}.` };
   }
-  return { state: 'found', recipe };
+  return { state: 'found', recipe, variant };
 }

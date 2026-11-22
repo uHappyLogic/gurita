@@ -50,12 +50,12 @@ test('the rule file stands directly in the project root as task_line_rules.txt',
   assert.strictEqual(ruleFile('/srv/project'), path.join('/srv/project', 'task_line_rules.txt'));
 });
 
-test('the named single-task lines are every recipe the recognition test passes, in the merged order', () => {
+test('the named single-task lines are every recipe whose first variant the recognition test passes, in the merged order', () => {
   const shipped = parseShippedRecipes(fs.readFileSync(SHIPPED, 'utf8'), SHIPPED);
   const own = parseOwnRecipes(fs.readFileSync(OWN, 'utf8'), OWN);
   assert.deepStrictEqual(singleTaskLines(mergeRecipes(shipped, own)), [
     { name: 'Single task (Claude Code)', line: 'claude -p "/gurita:complete-task --mission <path> <Task Title>" --model "opus" --effort high;' },
-    { name: 'Single task (Antigravity)', line: "codex exec '$gurita:complete-task --mission <path> <Task Title>';" },
+    { name: 'Single task (Antigravity)', line: 'agy -p "/gurita:complete-task --mission <path> <Task Title>" --model "claude-opus-5-5";' },
   ]);
 });
 

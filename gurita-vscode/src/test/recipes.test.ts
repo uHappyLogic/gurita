@@ -7,6 +7,7 @@ import {
   BUTTON_RECIPES,
   buttonRecipe,
   declaredStage,
+  firstVariant,
   isHeadless,
   mergeRecipes,
   ownRecipesFile,
@@ -19,6 +20,7 @@ import {
   SLOT_LINE,
   STAGE_NAMES,
   stageRecipes,
+  Variant,
 } from '../recipes';
 import { WORKFLOW_STEPS, WorkflowStep } from '../workflow';
 
@@ -41,6 +43,16 @@ function byName(recipes: Recipe[], name: string): Recipe {
   return found;
 }
 
+/** The first variant of the recipe named `name`, the one a recipe runs until a variant can be chosen. */
+function runs(recipes: Recipe[], name: string): Variant {
+  return firstVariant(byName(recipes, name));
+}
+
+/** Each recipe's group, name, and variants, each variant by its name and whether it is the person's own. */
+function outline(recipes: Recipe[]): [string, string, [string, boolean][]][] {
+  return recipes.map((recipe) => [recipe.group, recipe.name, recipe.variants.map((variant): [string, boolean] => [variant.name, variant.own])]);
+}
+
 test('the shipped file yields only the blocks under the two host headings, each with its group', () => {
   const names = shipped().map((recipe) => [recipe.group, recipe.name]);
   assert.deepStrictEqual(names, [
@@ -50,40 +62,87 @@ test('the shipped file yields only the blocks under the two host headings, each 
     ['Claude Code', 'Interactive task line'],
     ['Claude Code', 'answer-open-question'],
     ['Claude Code', 'Fenced heading'],
+    ['Claude Code', 'Variants'],
     ['Antigravity', 'Single task (Antigravity)'],
     ['Antigravity', 'Two fences'],
+    ['Antigravity', 'Block before variants'],
   ]);
 });
 
-test('a recipe holds its first fenced block, as written, with prose and blank lines left out', () => {
+test('a recipe of one block and no #### holds its first fenced block, as written, as its one variant', () => {
   const recipes = shipped();
-  assert.deepStrictEqual(byName(recipes, 'Chain').lines, [
+  assert.deepStrictEqual(outline([byName(recipes, 'Chain')]), [['Claude Code', 'Chain', [['Chain', false]]]]);
+  assert.deepStrictEqual(runs(recipes, 'Chain').lines, [
     'claude -p "/gurita:review-mission-requirements --mission <path>" --model "fable";',
     'claude "/gurita:recommend-all-open-questions --mission <path>" --model "fable"; # interactive',
   ]);
-  assert.deepStrictEqual(byName(recipes, 'Single task (Antigravity)').lines, [
+  assert.deepStrictEqual(runs(recipes, 'Single task (Antigravity)').lines, [
     'agy -p "/gurita:complete-task --mission <path> <Task Title>" --model "claude-opus-5-5";',
   ]);
-  assert.deepStrictEqual(byName(recipes, 'Two fences').lines, ['agy -p "/gurita:derive-tasks --mission <path>";']);
-  assert.strictEqual(byName(recipes, 'Chain').file, SHIPPED);
+  assert.deepStrictEqual(byName(recipes, 'Two fences').variants.length, 1);
+  assert.deepStrictEqual(runs(recipes, 'Two fences').lines, ['agy -p "/gurita:derive-tasks --mission <path>";']);
+  assert.strictEqual(runs(recipes, 'Chain').file, SHIPPED);
+  assert.strictEqual(runs(recipes, 'Chain').own, false);
+});
+
+test('a recipe holds one variant per #### sub-heading, each its first fenced block, the first of a repeated name kept', () => {
+  const recipe = byName(shipped(), 'Variants');
+  assert.deepStrictEqual(outline([recipe]), [
+    ['Claude Code', 'Variants', [['On Claude Code', false], ['On Antigravity', false], ['Empty variant', false]]],
+  ]);
+  assert.deepStrictEqual(
+    recipe.variants.map((variant) => variant.lines),
+    [
+      ['claude -p "/gurita:complete-all-tasks --mission <path>" --model "opus" --effort high;'],
+      ['agy -p "/gurita:complete-all-tasks --mission <path>" --model "claude-opus-5-5" --effort high;'],
+      [],
+    ],
+  );
+  for (const variant of recipe.variants) {
+    assert.strictEqual(variant.file, SHIPPED);
+    assert.deepStrictEqual(variant.unknownPlaceholders, []);
+  }
+  assert.deepStrictEqual(recipe.variants[0].knownPlaceholders, ['path']);
+  assert.deepStrictEqual(recipe.variants[2].knownPlaceholders, []);
+  assert.strictEqual(recipe.stage, 'execute', 'the stage line stands once for the whole recipe, and one under a variant is not read');
+});
+
+test('once a recipe holds a #### sub-heading, a block above its first sub-heading is not read', () => {
+  const recipe = byName(shipped(), 'Block before variants');
+  assert.deepStrictEqual(outline([recipe]), [['Antigravity', 'Block before variants', [['Only variant', false]]]]);
+  assert.deepStrictEqual(firstVariant(recipe).lines, ['agy -p "/gurita:finish-mission --mission <path>";']);
+});
+
+test('a #### sub-heading outside any recipe is not read, and a heading with no fence beneath it holds no line', () => {
+  const recipes = parseOwnRecipes(
+    '#### Above every recipe\n```\necho above\n```\n### Recipe\n#### Bare\n## Section\n#### Under a section\n```\necho under\n```\n### No fence\n',
+    OWN,
+  );
+  assert.deepStrictEqual(outline(recipes), [
+    ['own', 'Recipe', [['Bare', true]]],
+    ['own', 'No fence', [['No fence', true]]],
+  ]);
+  assert.deepStrictEqual(firstVariant(recipes[0]).lines, []);
+  assert.deepStrictEqual(firstVariant(recipes[1]).lines, []);
 });
 
 test('heading lines inside a fence are lines of the recipe, not headings', () => {
-  assert.deepStrictEqual(byName(shipped(), 'Fenced heading').lines, [
+  assert.deepStrictEqual(runs(shipped(), 'Fenced heading').lines, [
     '## Not a heading',
     '### Not a recipe',
+    '#### Not a variant',
     'echo <mystery thing> <path>',
   ]);
 });
 
 test('a single-task line is exactly one headless line holding <Task Title>', () => {
   const recipes = shipped();
-  const single = recipes.filter((recipe) => recipe.singleTask).map((recipe) => recipe.name);
+  const single = recipes.filter((recipe) => firstVariant(recipe).singleTask).map((recipe) => recipe.name);
   assert.deepStrictEqual(single, ['Single task (Claude Code)', 'Single task (Antigravity)']);
-  assert.strictEqual(byName(recipes, 'Interactive task line').singleTask, false);
-  assert.strictEqual(byName(recipes, 'answer-open-question').singleTask, false);
-  assert.strictEqual(byName(own(), 'My first own recipe').singleTask, false);
-  assert.strictEqual(byName(own(), 'Single task (Antigravity)').singleTask, true);
+  assert.strictEqual(runs(recipes, 'Interactive task line').singleTask, false);
+  assert.strictEqual(runs(recipes, 'answer-open-question').singleTask, false);
+  assert.strictEqual(runs(own(), 'My first own recipe').singleTask, false);
+  assert.strictEqual(runs(own(), 'Single task (Antigravity)').singleTask, true);
 });
 
 test('a line is headless when it holds a gurita: invocation and no # interactive mark', () => {
@@ -96,64 +155,86 @@ test('a line is headless when it holds a gurita: invocation and no # interactive
 test('the looped recipe is the one whose last line is the slot line', () => {
   const recipes = shipped();
   assert.deepStrictEqual(
-    recipes.filter((recipe) => recipe.looped).map((recipe) => recipe.name),
+    recipes.filter((recipe) => firstVariant(recipe).looped).map((recipe) => recipe.name),
     ['Loop'],
   );
-  const loop = byName(recipes, 'Loop');
+  const loop = runs(recipes, 'Loop');
   assert.deepStrictEqual(loop.lines, ['source .env_fixture', '<single-task line>']);
   assert.deepStrictEqual(loop.knownPlaceholders, []);
   assert.deepStrictEqual(loop.unknownPlaceholders, []);
 });
 
 test('placeholders are split into known and unknown, each named once in order of appearance', () => {
-  const answer = byName(shipped(), 'answer-open-question');
+  const answer = runs(shipped(), 'answer-open-question');
   assert.deepStrictEqual(answer.knownPlaceholders, ['path', 'Short Title', 'answer text']);
   assert.deepStrictEqual(answer.unknownPlaceholders, []);
-  const fenced = byName(shipped(), 'Fenced heading');
+  const fenced = runs(shipped(), 'Fenced heading');
   assert.deepStrictEqual(fenced.knownPlaceholders, ['path']);
   assert.deepStrictEqual(fenced.unknownPlaceholders, ['mystery thing']);
-  const second = byName(own(), 'My second own recipe');
+  const second = runs(own(), 'My second own recipe');
   assert.deepStrictEqual(second.knownPlaceholders, ['scope']);
   assert.deepStrictEqual(second.unknownPlaceholders, ['unknown one']);
 });
 
-test('the own file is a flat list of ### recipes, the first of a repeated name kept', () => {
+test('the own file is a flat list of ### recipes in the same variant form, the first of a repeated name kept', () => {
   const recipes = own();
-  assert.deepStrictEqual(
-    recipes.map((recipe) => [recipe.group, recipe.name]),
-    [
-      ['own', 'Chain'],
-      ['own', 'My first own recipe'],
-      ['own', 'Single task (Antigravity)'],
-      ['own', 'My second own recipe'],
-    ],
-  );
-  assert.deepStrictEqual(byName(recipes, 'Chain').lines, [
+  assert.deepStrictEqual(outline(recipes), [
+    ['own', 'Chain', [['Chain', true]]],
+    ['own', 'My first own recipe', [['My first own recipe', true]]],
+    ['own', 'Single task (Antigravity)', [['Single task (Antigravity)', true]]],
+    ['own', 'My second own recipe', [['My second own recipe', true]]],
+    ['own', 'Variants', [['On Claude Code', true], ['Own variant', true]]],
+    ['own', 'My variant recipe', [['First', true], ['Second', true]]],
+  ]);
+  assert.deepStrictEqual(runs(recipes, 'Chain').lines, [
     'claude-wait;',
     'claude -p "/gurita:review-mission-requirements --mission <path>" --model "opus";',
   ]);
+  const variants = byName(recipes, 'My variant recipe');
+  assert.deepStrictEqual(variants.variants.map((variant) => variant.lines), [['echo first <path>'], ['echo second <Task Title>']]);
+  assert.deepStrictEqual(variants.variants.map((variant) => variant.knownPlaceholders), [['path'], ['Task Title']]);
+  assert.ok(variants.variants.every((variant) => variant.file === OWN));
+  assert.strictEqual(variants.stage, 'finish');
 });
 
-test('an own recipe carrying a shipped name replaces that recipe in place, the rest following in file order', () => {
+test('an own recipe carrying a shipped name joins it as further variants, the rest following in file order', () => {
   const merged = mergeRecipes(shipped(), own());
-  assert.deepStrictEqual(
-    merged.map((recipe) => [recipe.group, recipe.name, recipe.file === OWN ? 'own' : 'shipped']),
+  assert.deepStrictEqual(outline(merged), [
+    ['Claude Code', 'Chain', [['Chain', false], ['Chain', true]]],
+    ['Claude Code', 'Loop', [['Loop', false]]],
+    ['Claude Code', 'Single task (Claude Code)', [['Single task (Claude Code)', false]]],
+    ['Claude Code', 'Interactive task line', [['Interactive task line', false]]],
+    ['Claude Code', 'answer-open-question', [['answer-open-question', false]]],
+    ['Claude Code', 'Fenced heading', [['Fenced heading', false]]],
     [
-      ['Claude Code', 'Chain', 'own'],
-      ['Claude Code', 'Loop', 'shipped'],
-      ['Claude Code', 'Single task (Claude Code)', 'shipped'],
-      ['Claude Code', 'Interactive task line', 'shipped'],
-      ['Claude Code', 'answer-open-question', 'shipped'],
-      ['Claude Code', 'Fenced heading', 'shipped'],
-      ['Antigravity', 'Single task (Antigravity)', 'own'],
-      ['Antigravity', 'Two fences', 'shipped'],
-      ['own', 'My first own recipe', 'own'],
-      ['own', 'My second own recipe', 'own'],
+      'Claude Code',
+      'Variants',
+      [['On Claude Code', false], ['On Antigravity', false], ['Empty variant', false], ['On Claude Code', true], ['Own variant', true]],
+    ],
+    ['Antigravity', 'Single task (Antigravity)', [['Single task (Antigravity)', false], ['Single task (Antigravity)', true]]],
+    ['Antigravity', 'Two fences', [['Two fences', false]]],
+    ['Antigravity', 'Block before variants', [['Only variant', false]]],
+    ['own', 'My first own recipe', [['My first own recipe', true]]],
+    ['own', 'My second own recipe', [['My second own recipe', true]]],
+    ['own', 'My variant recipe', [['First', true], ['Second', true]]],
+  ]);
+  assert.deepStrictEqual(
+    byName(merged, 'Single task (Antigravity)').variants.map((variant) => [variant.file, variant.lines]),
+    [
+      [SHIPPED, ['agy -p "/gurita:complete-task --mission <path> <Task Title>" --model "claude-opus-5-5";']],
+      [OWN, ["codex exec '$gurita:complete-task --mission <path> <Task Title>';"]],
     ],
   );
-  assert.deepStrictEqual(byName(merged, 'Single task (Antigravity)').lines, [
-    "codex exec '$gurita:complete-task --mission <path> <Task Title>';",
-  ]);
+  const twins = byName(merged, 'Variants').variants.filter((variant) => variant.name === 'On Claude Code');
+  assert.deepStrictEqual(
+    twins.map((variant) => [variant.own, variant.lines]),
+    [
+      [false, ['claude -p "/gurita:complete-all-tasks --mission <path>" --model "opus" --effort high;']],
+      [true, ['claude -p "/gurita:complete-all-tasks --mission <path>" --model "fable" --effort xhigh;']],
+    ],
+    'an own variant carrying a shipped variant\'s name is kept beside it',
+  );
+  assert.deepStrictEqual(runs(merged, 'Chain'), runs(shipped(), 'Chain'), 'the first variant stays the shipped one');
 });
 
 test('readRecipes reads both files and treats a missing own file as holding no recipe', () => {
@@ -194,7 +275,7 @@ test('a recipe declares its step by one Stage line between its heading and its f
   const recipes = shipped();
   assert.strictEqual(byName(recipes, 'Chain').stage, 'additional-review');
   assert.strictEqual(byName(recipes, 'Loop').stage, 'execute');
-  assert.deepStrictEqual(byName(recipes, 'Loop').lines, ['source .env_fixture', '<single-task line>']);
+  assert.deepStrictEqual(runs(recipes, 'Loop').lines, ['source .env_fixture', '<single-task line>']);
   assert.strictEqual(stageOf('### Recipe\n\nProse first.\nStage:   finish  \n\n```\necho <path>\n```\n'), 'finish');
   assert.strictEqual(stageOf('### Recipe\nStage:derive tasks\n```\necho <path>\n```\n'), 'derive');
 });
@@ -207,10 +288,12 @@ test('a recipe with no stage line before its first fence is undeclared', () => {
   assert.strictEqual(byName(recipes, 'Two fences').stage, undefined, 'a stage line after the first fence is not read');
   const inFence = parseOwnRecipes('### Recipe\n```\nStage: finish\necho <path>\n```\n', OWN)[0];
   assert.strictEqual(inFence.stage, undefined);
-  assert.deepStrictEqual(inFence.lines, ['Stage: finish', 'echo <path>']);
+  assert.deepStrictEqual(firstVariant(inFence).lines, ['Stage: finish', 'echo <path>']);
   assert.strictEqual(stageOf('### Recipe\n  Stage: finish\n```\necho <path>\n```\n'), undefined);
   assert.strictEqual(stageOf('Stage: finish\n### Recipe\n```\necho <path>\n```\n'), undefined);
   assert.strictEqual(stageOf('### Recipe\n```\necho <path>\n```\n## Next\nStage: finish\n'), undefined);
+  assert.strictEqual(stageOf('### Recipe\n#### Variant\nStage: finish\n```\necho <path>\n```\n'), undefined);
+  assert.strictEqual(stageOf('### Recipe\nStage: finish\n#### Variant\n```\necho <path>\n```\n'), 'finish');
 });
 
 test('a stage line naming a step the reader does not know, or more than one stage line, counts as undeclared', () => {
@@ -226,11 +309,13 @@ test('a stage line naming a step the reader does not know, or more than one stag
   assert.strictEqual(declaredStage(['constructor']), undefined);
 });
 
-test('an own recipe declares its stage the same way, and a replacement carries its own declaration', () => {
+test('an own recipe declares its stage the same way, and one joining a shipped recipe keeps the shipped declaration', () => {
   assert.strictEqual(byName(own(), 'My first own recipe').stage, 'execute');
   assert.strictEqual(byName(own(), 'Chain').stage, undefined);
+  assert.strictEqual(byName(own(), 'Variants').stage, 'finish');
   const merged = mergeRecipes(shipped(), own());
-  assert.strictEqual(byName(merged, 'Chain').stage, undefined);
+  assert.strictEqual(byName(merged, 'Chain').stage, 'additional-review');
+  assert.strictEqual(byName(merged, 'Variants').stage, 'execute');
   assert.strictEqual(byName(merged, 'Loop').stage, 'execute');
   assert.strictEqual(byName(merged, 'My first own recipe').stage, 'execute');
   assert.strictEqual(byName(readRecipes(SHIPPED, OWN), 'My first own recipe').stage, 'execute');
@@ -269,7 +354,7 @@ function stageLineCounts(text: string): Map<string, number> {
 test('every shipped chain declares exactly one step, and no shipped recipe declares follow up tasks', () => {
   const recipes = parseShippedRecipes(fs.readFileSync(SNIPPETS, 'utf8'), SNIPPETS);
   const buttons: readonly string[] = Object.values(BUTTON_RECIPES);
-  const chains = recipes.filter((recipe) => !buttons.includes(recipe.name) && !recipe.singleTask);
+  const chains = recipes.filter((recipe) => !buttons.includes(recipe.name) && !firstVariant(recipe).singleTask);
   assert.deepStrictEqual(
     chains.map((recipe) => [recipe.group, recipe.name, recipe.stage]),
     [
@@ -307,23 +392,24 @@ test('no shipped execute recipe holds a derive-tasks line, each holding its comp
   const execute = recipes.filter((recipe) => recipe.stage === 'execute');
   assert.strictEqual(execute.length, 5);
   for (const recipe of execute) {
-    assert.ok(!recipe.lines.some((line) => line.includes('gurita:derive-tasks')), recipe.name);
-    assert.strictEqual(recipe.lines.length, 1, recipe.name);
-    assert.ok(recipe.lines[0] === SLOT_LINE || recipe.lines[0].includes('/gurita:complete-all-tasks --mission <path>"'), recipe.name);
+    const lines = firstVariant(recipe).lines;
+    assert.ok(!lines.some((line) => line.includes('gurita:derive-tasks')), recipe.name);
+    assert.strictEqual(lines.length, 1, recipe.name);
+    assert.ok(lines[0] === SLOT_LINE || lines[0].includes('/gurita:complete-all-tasks --mission <path>"'), recipe.name);
   }
-  assert.deepStrictEqual(byName(recipes, 'Execute tasks of normal difficulty').lines, [
+  assert.deepStrictEqual(runs(recipes, 'Execute tasks of normal difficulty').lines, [
     'claude "/gurita:complete-all-tasks --mission <path>" --dangerously-skip-permissions --model "opus" --effort high; # interactive',
   ]);
-  assert.deepStrictEqual(byName(recipes, 'Execute tasks (critical tasks)').lines, [
+  assert.deepStrictEqual(runs(recipes, 'Execute tasks (critical tasks)').lines, [
     'claude "/gurita:complete-all-tasks --mission <path>" --dangerously-skip-permissions --model "opus" --effort xhigh; # interactive',
   ]);
-  assert.deepStrictEqual(byName(recipes, 'Execute tasks of normal difficulty (Antigravity)').lines, [
+  assert.deepStrictEqual(runs(recipes, 'Execute tasks of normal difficulty (Antigravity)').lines, [
     'agy -i "/gurita:complete-all-tasks --mission <path>" --dangerously-skip-permissions --model "claude-opus-5-5" --effort high; # interactive',
   ]);
-  assert.deepStrictEqual(byName(recipes, 'Execute tasks (critical tasks) (Antigravity)').lines, [
+  assert.deepStrictEqual(runs(recipes, 'Execute tasks (critical tasks) (Antigravity)').lines, [
     'claude "/gurita:complete-all-tasks --mission <path>" --dangerously-skip-permissions --model "opus" --effort xhigh; # interactive',
   ]);
-  assert.deepStrictEqual(byName(recipes, 'Execute tasks one at a time').lines, [SLOT_LINE]);
+  assert.deepStrictEqual(runs(recipes, 'Execute tasks one at a time').lines, [SLOT_LINE]);
 });
 
 /**
@@ -394,17 +480,21 @@ test('the stage filter holds the host groups, the own group, and the unfillable-
     ['runnable', 'Claude Code', 'Chain'],
     ['looped', 'Claude Code', 'Loop'],
     ['unknown', 'Claude Code', 'Fenced heading'],
+    ['runnable', 'Claude Code', 'Variants'],
     ['runnable', 'Antigravity', 'Two fences'],
+    ['runnable', 'Antigravity', 'Block before variants'],
     ['unknown', 'own', 'My second own recipe'],
+    ['runnable', 'own', 'My variant recipe'],
   ];
+  const without = (...names: string[]) => every.filter(([, , name]) => !names.includes(name));
   assert.deepStrictEqual(at(undefined), every);
-  assert.deepStrictEqual(at('execute'), every, 'the own replacement of Chain is undeclared');
-  assert.deepStrictEqual(at('finish'), every.filter(([, , name]) => name !== 'Loop'));
+  assert.deepStrictEqual(at('execute'), without('Chain', 'My variant recipe'), 'Chain keeps its shipped stage beside its own variant');
+  assert.deepStrictEqual(at('finish'), without('Chain', 'Loop', 'Variants'), 'Variants keeps its shipped stage, not the own one');
   const declared = (step: WorkflowStep | undefined) =>
     pageRecipes(stageRecipes(shipped(), step), ['path']).map((entry) => entry.name);
-  assert.deepStrictEqual(declared('derive'), ['Chain', 'Fenced heading', 'Two fences']);
-  assert.deepStrictEqual(declared('execute'), ['Loop', 'Fenced heading', 'Two fences']);
-  assert.deepStrictEqual(declared('first-review'), ['Fenced heading', 'Two fences']);
+  assert.deepStrictEqual(declared('derive'), ['Chain', 'Fenced heading', 'Two fences', 'Block before variants']);
+  assert.deepStrictEqual(declared('execute'), ['Loop', 'Fenced heading', 'Variants', 'Two fences', 'Block before variants']);
+  assert.deepStrictEqual(declared('first-review'), ['Fenced heading', 'Two fences', 'Block before variants']);
 });
 
 test('each step lists exactly the shipped chains that fit it, and no step chosen lists every chain', () => {
@@ -443,7 +533,7 @@ test('each step lists exactly the shipped chains that fit it, and no step chosen
   assert.strictEqual(at(undefined).length, 14);
 });
 
-test('a page lists the recipes it can fill, in the merged order, and names each unknown placeholder and its file', () => {
+test('a page lists the recipes it can fill, in the merged order, each by its first variant, and names each unknown placeholder and its file', () => {
   const listed = pageRecipes(mergeRecipes(shipped(), own()), ['path']);
   assert.deepStrictEqual(
     listed.map((entry) => [entry.kind, entry.group, entry.name]),
@@ -451,16 +541,29 @@ test('a page lists the recipes it can fill, in the merged order, and names each 
       ['runnable', 'Claude Code', 'Chain'],
       ['looped', 'Claude Code', 'Loop'],
       ['unknown', 'Claude Code', 'Fenced heading'],
+      ['runnable', 'Claude Code', 'Variants'],
       ['runnable', 'Antigravity', 'Two fences'],
+      ['runnable', 'Antigravity', 'Block before variants'],
       ['unknown', 'own', 'My second own recipe'],
+      ['runnable', 'own', 'My variant recipe'],
     ],
   );
   assert.deepStrictEqual(listed[0], {
     kind: 'runnable',
     name: 'Chain',
     group: 'Claude Code',
-    lines: ['claude-wait;', 'claude -p "/gurita:review-mission-requirements --mission <path>" --model "opus";'],
+    lines: [
+      'claude -p "/gurita:review-mission-requirements --mission <path>" --model "fable";',
+      'claude "/gurita:recommend-all-open-questions --mission <path>" --model "fable"; # interactive',
+    ],
   });
+  assert.deepStrictEqual(listed[3], {
+    kind: 'runnable',
+    name: 'Variants',
+    group: 'Claude Code',
+    lines: ['claude -p "/gurita:complete-all-tasks --mission <path>" --model "opus" --effort high;'],
+  });
+  assert.deepStrictEqual(listed[7], { kind: 'runnable', name: 'My variant recipe', group: 'own', lines: ['echo first <path>'] });
   assert.deepStrictEqual(listed[1], {
     kind: 'looped',
     name: 'Loop',
@@ -471,7 +574,7 @@ test('a page lists the recipes it can fill, in the merged order, and names each 
   assert.ok(fenced.kind === 'unknown');
   assert.deepStrictEqual(fenced.placeholders, ['mystery thing']);
   assert.strictEqual(fenced.file, SHIPPED);
-  const second = listed[4];
+  const second = listed[6];
   assert.ok(second.kind === 'unknown');
   assert.deepStrictEqual(second.placeholders, ['unknown one']);
   assert.strictEqual(second.file, OWN);
@@ -518,7 +621,7 @@ test('a discuss-new-task recipe holds the issue description as a known placehold
     '## Claude Code\n\n### discuss-new-task\n```\nclaude "/gurita:discuss-new-task --mission <path> <issue description>" --model "fable"; # interactive\n```\n',
     SHIPPED,
   );
-  const recipe = byName(recipes, BUTTON_RECIPES.discussTask);
+  const recipe = runs(recipes, BUTTON_RECIPES.discussTask);
   assert.deepStrictEqual(recipe.knownPlaceholders, ['path', 'issue description']);
   assert.deepStrictEqual(recipe.unknownPlaceholders, []);
   assert.strictEqual(recipe.singleTask, false);
@@ -536,7 +639,7 @@ test('the shipped snippet file carries every button recipe under Claude Code, di
   for (const name of Object.values(BUTTON_RECIPES)) {
     assert.strictEqual(byName(recipes, name).group, 'Claude Code');
   }
-  const recipe = byName(recipes, BUTTON_RECIPES.discussTask);
+  const recipe = runs(recipes, BUTTON_RECIPES.discussTask);
   assert.deepStrictEqual(recipe.lines, [
     'claude "/gurita:discuss-new-task --mission <path> <issue description>" --dangerously-skip-permissions --model "fable" --effort xhigh; # interactive',
   ]);
@@ -549,7 +652,7 @@ test('the shipped snippet file carries every button recipe under Claude Code, di
 test('the shipped discuss-open-question recipe carries the optional note directly after the Short Title', () => {
   const file = path.join(__dirname, '..', '..', '..', 'snippets', 'GURITA_USAGE.md');
   const recipes = parseShippedRecipes(fs.readFileSync(file, 'utf8'), file);
-  const recipe = byName(recipes, BUTTON_RECIPES.discussQuestion);
+  const recipe = runs(recipes, BUTTON_RECIPES.discussQuestion);
   assert.deepStrictEqual(recipe.lines, [
     'claude "/gurita:discuss-open-question --mission <path> <Short Title>. <note>" --dangerously-skip-permissions --model "fable" --effort xhigh; # interactive',
   ]);
@@ -559,11 +662,11 @@ test('the shipped discuss-open-question recipe carries the optional note directl
   assert.ok(!pageRecipes(recipes, ['path']).some((entry) => entry.name === BUTTON_RECIPES.discussQuestion));
 });
 
-test('a button finds its recipe by fixed name, shipped or replaced by an own recipe of the same name', () => {
+test('a button finds its recipe by fixed name and runs its first variant, an own recipe of the same name adding variants after it', () => {
   const found = buttonRecipe(shipped(), 'answer-open-question', ['path', 'Short Title', 'answer text']);
   assert.ok(found.state === 'found');
-  assert.strictEqual(found.recipe.file, SHIPPED);
-  assert.deepStrictEqual(found.recipe.lines, [
+  assert.strictEqual(found.variant.file, SHIPPED);
+  assert.deepStrictEqual(found.variant.lines, [
     'claude -p "/gurita:answer-open-question --mission <path> <Short Title>. <answer text>";',
   ]);
   const replacement = parseOwnRecipes(
@@ -576,8 +679,16 @@ test('a button finds its recipe by fixed name, shipped or replaced by an own rec
     'answer text',
   ]);
   assert.ok(replaced.state === 'found');
-  assert.strictEqual(replaced.recipe.file, OWN);
+  assert.strictEqual(replaced.variant.file, SHIPPED, 'the shipped variant stays first');
   assert.strictEqual(replaced.recipe.group, 'Claude Code');
+  assert.deepStrictEqual(replaced.recipe.variants.map((variant) => [variant.name, variant.own]), [
+    ['answer-open-question', false],
+    ['answer-open-question', true],
+  ]);
+  const ownOnly = buttonRecipe(mergeRecipes(shipped(), parseOwnRecipes('### discuss-mission-goal\n#### Mine\n```\necho <goal>\n```\n', OWN)), 'discuss-mission-goal', ['goal']);
+  assert.ok(ownOnly.state === 'found');
+  assert.strictEqual(ownOnly.recipe.group, 'own');
+  assert.deepStrictEqual([ownOnly.variant.name, ownOnly.variant.own, ownOnly.variant.lines], ['Mine', true, ['echo <goal>']]);
 });
 
 test('a button refuses a recipe it cannot run, naming the recipe and the cause', () => {

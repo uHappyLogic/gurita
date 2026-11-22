@@ -30,3 +30,25 @@ echo <unknown one> <unknown one> <scope>
 ```
 echo a repeated name is not read
 ```
+
+### Variants
+Stage: finish
+#### On Claude Code
+```
+claude -p "/gurita:complete-all-tasks --mission <path>" --model "fable" --effort xhigh;
+```
+#### Own variant
+```
+codex exec '$gurita:complete-all-tasks --mission <path>';
+```
+
+### My variant recipe
+Stage: finish
+#### First
+```
+echo first <path>
+```
+#### Second
+```
+echo second <Task Title>
+```
