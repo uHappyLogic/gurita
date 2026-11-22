@@ -114,5 +114,9 @@ No other live mission's scope overlaps `gurita-vscode/`, so nothing holds or sha
 
 - **Source.** Each harness's model and effort lists are read from the `--model` and `--effort` values carried by the lines of the shipped recipes, the own recipes, and the stored variants. The extension ships no list of its own and queries no harness. Codex's model list starts from the Codex lines a person has, since no Codex line is shipped. The person can add entries no line uses yet and remove derived entries from the offer, and those additions and removals are stored per user as an overlay on the derived lists.
 
+### Per-user store
+
+- **Variant store file.** The settings view writes a new JSON file of the extension's own at a visible per-user path beside the own recipe file, such as `~/.gurita/variants.json`. It holds structured records laid over the recipe list, each a recipe name, a variant name, the variant's literal lines as an array of strings, and which variant is the recipe's default. The extension is the file's only writer, reads it with `JSON.parse`, and merges it with the recipes the Markdown reader yields. The own recipe file stays read-only to the extension and the one place for hand-written recipes.
+
 ## Out of Scope
 
