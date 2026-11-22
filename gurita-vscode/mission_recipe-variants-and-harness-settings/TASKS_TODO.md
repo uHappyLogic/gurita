@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Per-User Variant Store and Merge
-
-Add the per-user variant store: a JSON file of the extension's own at a visible per-user path beside the own recipe file, such as `~/.gurita/variants.json`, read with `JSON.parse` and merged over the recipes the Markdown reader yields wherever the extension reads recipes, a missing file holding nothing. It holds structured records laid over the recipe list, each a recipe name, a variant name, the variant's literal lines as an array of strings, and which variant is the recipe's default, beside the records that hide a variant: a stored copy stands in for the shipped or own variant it copies and keeps its place in the recipe's order, a hidden variant is left out, and further stored variants are listed with their recipe. A recipe's default is its picked variant and, while no picked default stands, the first variant in order, worked out afresh at each read and never written, and it is the variant the page's button and the seven fixed-name buttons run; verified by `node:test` unit tests merging fixture stores over fixture recipe files.
-
----
-
 ## Variant Store Edit Operations
 
 Add the edits the settings view makes, as functions that write the variant store file, the extension its only writer and the own recipe file never touched: duplicate a variant under a new name, rename one, delete one, replace a line's model or effort value, pick a recipe's default, and reset a variant. Changing a line of, or renaming, a shipped or own-file variant writes a stored copy that stands in for it and keeps its place, deleting one writes a hiding record, and a reset removes the copy or record so the original shows again; renaming the picked default carries the pick to the new name, and only deleting the picked default drops the pick, the recipe falling back to its first listed variant. Verified by `node:test` unit tests that apply each edit to a temporary store file and read the merged recipe list back.

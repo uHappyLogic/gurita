@@ -13,8 +13,17 @@
 // marked as the person's own, an own variant carrying a shipped variant's name kept as a second
 // entry beside it; every other own recipe is listed after the shipped recipes, which keep the
 // shipped file's order, in the own file's order.
-// Until a variant can be chosen, the mission page, the buttons that run a recipe by its fixed name,
-// and the looped run's named single-task lines take a recipe's first variant. Each variant is
+// Over that merged list the per-user variant store (`variantStore.ts`) is laid wherever the
+// extension reads recipes: a stored copy stands in for the shipped or own variant it copies and
+// keeps its place in the recipe's order, a hidden variant is left out, and the further stored
+// variants are listed after the recipe's other variants, in the store's order, the first of a
+// stored name repeated within one recipe kept; stored variants of a recipe the files do not hold
+// form a recipe of their own, listed after every other in the own group, and a recipe every
+// variant of which is left out is dropped. A recipe's default is its picked variant, the store's
+// pick standing for it when it names a listed variant, a pick of a copied variant meaning the copy
+// standing in for it, and, while no picked default stands, its first variant in order, worked out
+// afresh at each read and never written: the mission page's button, the buttons that run a recipe
+// by its fixed name, and the looped run's named single-task lines take the default. Each variant is
 // classified by its content alone: whether it is a single-task line, whether it is the looped
 // recipe, and which known and unknown placeholders it holds. A recipe may also declare the one step
 // of the workflow diagram it belongs to, by one `Stage: <step name>` line standing outside any fence
@@ -35,6 +44,7 @@
 
 import * as fs from 'node:fs';
 import { VariantValues, variantValues } from './lineValues';
+import { ReadVariantRef, StoredVariant, VariantOrigin, VariantRef, VariantStore, readVariantStore } from './variantStore';
 import type { WorkflowStep } from './workflow';
 
 /** The one heading of the shipped snippet file whose `###` blocks are recipes. */
@@ -93,6 +103,10 @@ export interface Variant {
   knownPlaceholders: string[];
   /** The placeholder names its lines hold that the extension does not know, likewise. */
   unknownPlaceholders: string[];
+  /** Set on a variant of the per-user variant store, which also counts as the person's own. */
+  stored?: true;
+  /** The shipped or own variant a stored copy stands in for. */
+  copies?: ReadVariantRef;
 }
 
 export interface Recipe {
@@ -110,6 +124,13 @@ export interface Recipe {
    * chooses the mission pages that list the recipe, an undeclared one being listed on every page.
    */
   stage?: WorkflowStep;
+  /** The default the variant store picks for the recipe, left out when it picks none. */
+  picked?: VariantRef;
+}
+
+/** Where a variant comes from: the variant store, the person's own recipe file, or the shipped file. */
+export function variantOrigin(variant: Variant): VariantOrigin {
+  return variant.stored ? 'stored' : variant.own ? 'own' : 'shipped';
 }
 
 /** A block of lines read beneath a heading: undefined until its first fence opens. */
@@ -330,19 +351,106 @@ export function mergeRecipes(shipped: Recipe[], own: Recipe[]): Recipe[] {
   return merged;
 }
 
-/**
- * The variant a recipe runs until a variant can be chosen: its first, the first shipped one when
- * it has any.
- */
+/** A recipe's first variant in order, the first shipped one when it has any. */
 export function firstVariant(recipe: Recipe): Variant {
   return recipe.variants[0];
 }
 
+/** The variant a stored record classifies as, from the store file `file`. */
+function storedVariant(stored: StoredVariant, file: string): Variant {
+  return {
+    ...variant(stored.name, stored.lines, true, file),
+    stored: true,
+    ...(stored.copies === undefined ? {} : { copies: { ...stored.copies } }),
+  };
+}
+
 /**
- * Reads the shipped snippet file and, when given and present, a person's own recipe file, and
- * returns the merged recipe list. A missing own file holds no recipe; any other read failure throws.
+ * Lays the variant store `store`, read from `file`, over the merged recipe list: in each recipe a
+ * stored copy stands in for the shipped or own variant it copies, in that variant's place, the
+ * first copy of a variant doing so; a hidden variant not copied is left out; every other stored
+ * variant of the recipe follows, in the store's order, the first of a repeated stored name kept.
+ * Stored variants of a recipe the list does not hold form a recipe of that name in the own group,
+ * listed after every other in the order the store first names them, and a recipe left with no
+ * variant is dropped. The first pick the store holds for a recipe is carried as its `picked`.
  */
-export function readRecipes(shippedFile: string, ownFile?: string): Recipe[] {
+export function overlayVariantStore(recipes: readonly Recipe[], store: VariantStore, file: string): Recipe[] {
+  const storedBy = new Map<string, StoredVariant[]>();
+  for (const each of store.variants) {
+    const list = storedBy.get(each.recipe) ?? [];
+    storedBy.set(each.recipe, list);
+    if (!list.some((kept) => kept.name === each.name)) {
+      list.push(each);
+    }
+  }
+  const picks = new Map<string, VariantRef>();
+  for (const pick of store.defaults) {
+    if (!picks.has(pick.recipe)) {
+      picks.set(pick.recipe, { name: pick.name, origin: pick.origin });
+    }
+  }
+  const withPick = (recipe: Recipe): Recipe => {
+    const pick = picks.get(recipe.name);
+    return pick === undefined ? recipe : { ...recipe, picked: { ...pick } };
+  };
+  const overlaid: Recipe[] = [];
+  for (const recipe of recipes) {
+    const stored = storedBy.get(recipe.name) ?? [];
+    const placed = new Set<StoredVariant>();
+    const variants: Variant[] = [];
+    for (const each of recipe.variants) {
+      const origin = variantOrigin(each);
+      const copy = stored.find(
+        (record) => !placed.has(record) && record.copies?.name === each.name && record.copies.origin === origin,
+      );
+      if (copy !== undefined) {
+        placed.add(copy);
+        variants.push(storedVariant(copy, file));
+        continue;
+      }
+      if (store.hidden.some((hidden) => hidden.recipe === recipe.name && hidden.name === each.name && hidden.origin === origin)) {
+        continue;
+      }
+      variants.push(each);
+    }
+    variants.push(...stored.filter((record) => !placed.has(record)).map((record) => storedVariant(record, file)));
+    if (variants.length > 0) {
+      overlaid.push(withPick({ ...recipe, variants }));
+    }
+  }
+  const held = new Set(recipes.map((recipe) => recipe.name));
+  for (const [name, stored] of storedBy) {
+    if (!held.has(name)) {
+      overlaid.push(withPick({ name, group: 'own', variants: stored.map((record) => storedVariant(record, file)) }));
+    }
+  }
+  return overlaid;
+}
+
+/**
+ * The variant a recipe runs, its default: the listed variant its `picked` names, or the stored
+ * copy standing in for the variant it names, and, while no pick stands or the pick names no listed
+ * variant, its first variant in order.
+ */
+export function defaultVariant(recipe: Recipe): Variant {
+  const pick = recipe.picked;
+  if (pick !== undefined) {
+    const named =
+      recipe.variants.find((each) => each.name === pick.name && variantOrigin(each) === pick.origin) ??
+      recipe.variants.find((each) => each.copies?.name === pick.name && each.copies.origin === pick.origin);
+    if (named !== undefined) {
+      return named;
+    }
+  }
+  return firstVariant(recipe);
+}
+
+/**
+ * Reads the shipped snippet file and, when given and present, a person's own recipe file, merges
+ * them, and lays the variant store at `storeFile`, when given, over the merged list. A missing own
+ * file holds no recipe and a missing store file nothing; any other read failure throws.
+ */
+export function readRecipes(shippedFile: string, ownFile?: string, storeFile?: string): Recipe[] {
   const shipped = parseShippedRecipes(fs.readFileSync(shippedFile, 'utf8'), shippedFile);
   let own: Recipe[] = [];
   if (ownFile !== undefined) {
@@ -358,7 +466,11 @@ export function readRecipes(shippedFile: string, ownFile?: string): Recipe[] {
       own = parseOwnRecipes(text, ownFile);
     }
   }
-  return mergeRecipes(shipped, own);
+  const merged = mergeRecipes(shipped, own);
+  if (storeFile === undefined) {
+    return merged;
+  }
+  return overlayVariantStore(merged, readVariantStore(storeFile), storeFile);
 }
 
 /** The default path of a person's own recipe file, under their home directory. */
@@ -420,7 +532,7 @@ export const LOOPED_PLACEHOLDERS: readonly string[] = ['path', 'Task Title'];
 /**
  * The recipes a mission page lists out of `recipes`, for a page the part of the merged list
  * `stageRecipes` keeps for its step, given the placeholder names the page holds a value for, each
- * entry drawn from the recipe's first variant, a button's entry carrying the distinct harnesses,
+ * entry drawn from the recipe's default variant, a button's entry carrying the distinct harnesses,
  * models, and efforts that variant's lines carry, as the line-value module reads them. A recipe whose variant holds a placeholder the
  * extension does not know is listed as a non-runnable entry naming it and its file. A looped
  * recipe is listed as its own kind, run through its preview rather than as a chain, when every
@@ -431,7 +543,7 @@ export const LOOPED_PLACEHOLDERS: readonly string[] = ['path', 'Task Title'];
 export function pageRecipes(recipes: Recipe[], fillable: readonly string[]): PageRecipe[] {
   const listed: PageRecipe[] = [];
   for (const recipe of recipes) {
-    const runs = firstVariant(recipe);
+    const runs = defaultVariant(recipe);
     if (runs.unknownPlaceholders.length > 0) {
       listed.push({
         kind: 'unknown',
@@ -481,7 +593,7 @@ export type ButtonRecipe = { state: 'found'; recipe: Recipe; variant: Variant } 
 
 /**
  * The recipe of the fixed name `name` in the merged list, its shipped variants and those an own
- * recipe of the same name adds, with the variant the button runs, its first, when the button can
+ * recipe of the same name adds, with the variant the button runs, its default, when the button can
  * run it: that variant holds a line, it is not the looped recipe, and every placeholder it holds
  * is one the button holds a value for, `fillable` naming them. Otherwise the cause it cannot be
  * run, naming the recipe and what is wrong with it.
@@ -491,7 +603,7 @@ export function buttonRecipe(recipes: Recipe[], name: string, fillable: readonly
   if (recipe === undefined) {
     return { state: 'refused', cause: `No recipe is named ${name}.` };
   }
-  const variant = firstVariant(recipe);
+  const variant = defaultVariant(recipe);
   const where = `The recipe ${name} in ${variant.file}`;
   if (variant.lines.length === 0) {
     return { state: 'refused', cause: `${where} holds no line.` };

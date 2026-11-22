@@ -17,12 +17,12 @@
 // recipes in the shipped file's order followed by its own group, and the leaving off of a recipe
 // holding a placeholder the page cannot fill, each entry carrying the distinct harnesses, models,
 // and efforts its variant's lines carry, which its button shows with its name; or with the one
-// failure state the live read gives. Until a variant can be chosen, every recipe button runs its
-// recipe's first variant. The page redraws its question card in place from
+// failure state the live read gives. The recipes are read with the per-user variant store laid over
+// them, and until a variant can be chosen every recipe button runs its recipe's default variant. The page redraws its question card in place from
 // every such message, keeping the pane the person clicked while the mission stays shown.
 // A click on a recipe button starts that recipe's chain for the page's mission at once, and a
 // recipe the latest answer did not list on that mission's page starts nothing. The
-// buttons outside the chains, untouched by the step, each run the first variant of the recipe of its fixed name, its shipped variants and those an own recipe of the same name adds, read afresh at the click,
+// buttons outside the chains, untouched by the step, each run the default variant of the recipe of its fixed name, its shipped variants and those an own recipe of the same name adds, the variant store laid over them, read afresh at the click,
 // through the same run path: on a question's card the discuss, answer, and answer-with-
 // recommendation buttons, on an alternative on that card the answer-with-alternative button,
 // and on the pane at the tab row's end, in its failure state too, the two mission-starting
@@ -70,6 +70,7 @@ import { MissionDocuments, readMissionDocuments } from './documents';
 import { LiveMission, LiveRead, projectRoot, readLive } from './live';
 import { PreviewRead, SingleTaskLine, loopArguments, ruleFile, runOverrides, runPreview, singleTaskLines } from './loop';
 import { BUTTON_RECIPES, PageRecipe, Recipe, buttonRecipe, ownRecipesFile, pageRecipes, readRecipes, stageRecipes } from './recipes';
+import { variantStoreFile } from './variantStore';
 import { FileEventKind, RefreshBatch, RefreshQueue, WATCHED_PATTERN, eventEffect } from './refresh';
 import { OPTIONAL_PLACEHOLDERS } from './placeholders';
 import { refuseWhileRunning, runnerFile, runningMissions, showRun, startChain, startLoop } from './runs';
@@ -362,10 +363,14 @@ async function flushEvents(context: vscode.ExtensionContext, target: vscode.Webv
   await post(target, publish(shown));
 }
 
-/** Reads the shipped snippet file and the person's own recipe file into the merged recipe list. */
+/**
+ * Reads the shipped snippet file and the person's own recipe file into the merged recipe list, the
+ * per-user variant store laid over it.
+ */
 function readAllRecipes(context: vscode.ExtensionContext): Recipe[] {
   const setting = vscode.workspace.getConfiguration('gurita').get<string>('ownRecipesFile');
-  return readRecipes(context.asAbsolutePath('bundled/GURITA_USAGE.md'), ownRecipesFile(setting, os.homedir()));
+  const home = os.homedir();
+  return readRecipes(context.asAbsolutePath('bundled/GURITA_USAGE.md'), ownRecipesFile(setting, home), variantStoreFile(home));
 }
 
 /** Reads the shipped snippet file and the person's own recipe file into the merged list, or the cause they could not be read. */

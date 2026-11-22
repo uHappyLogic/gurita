@@ -11,7 +11,7 @@
 
 import { execFile } from 'node:child_process';
 import * as path from 'node:path';
-import { Recipe, firstVariant } from './recipes';
+import { Recipe, defaultVariant } from './recipes';
 
 /** The rule file's name, standing directly in the project root. */
 export const RULE_FILE_NAME = 'task_line_rules.txt';
@@ -56,12 +56,12 @@ export function ruleFile(root: string): string {
 
 /**
  * The named single-task lines among the recipes, in the merged list's order: every recipe whose
- * first variant is a single-task line, named by the recipe, with that variant's one line.
+ * default variant is a single-task line, named by the recipe, with that variant's one line.
  */
 export function singleTaskLines(recipes: readonly Recipe[]): SingleTaskLine[] {
   const lines: SingleTaskLine[] = [];
   for (const recipe of recipes) {
-    const variant = firstVariant(recipe);
+    const variant = defaultVariant(recipe);
     if (variant.singleTask) {
       lines.push({ name: recipe.name, line: variant.lines[0] });
     }

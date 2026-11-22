@@ -1,0 +1,58 @@
+{
+  "variants": [
+    {
+      "recipe": "Variants",
+      "name": "On Antigravity at xhigh",
+      "lines": ["agy -p \"/gurita:complete-all-tasks --mission <path>\" --model \"claude-opus-5-5\" --effort xhigh;"],
+      "copies": { "name": "On Antigravity", "origin": "shipped" }
+    },
+    {
+      "recipe": "Variants",
+      "name": "On Claude Code",
+      "lines": ["claude -p \"/gurita:complete-all-tasks --mission <path>\" --model \"sonnet\" --effort xhigh;"],
+      "copies": { "name": "On Claude Code", "origin": "own" }
+    },
+    {
+      "recipe": "Chain",
+      "name": "Chain on Sonnet",
+      "lines": ["claude -p \"/gurita:review-mission-requirements --mission <path>\" --model \"sonnet\" --effort medium;"]
+    },
+    {
+      "recipe": "Chain",
+      "name": "Chain on Sonnet",
+      "lines": ["echo a repeated stored name is not read"]
+    },
+    {
+      "recipe": "answer-open-question",
+      "name": "Answer on Sonnet",
+      "lines": ["claude -p \"/gurita:answer-open-question --mission <path> <Short Title>. <answer text>\" --model \"sonnet\";"]
+    },
+    {
+      "recipe": "Single task (Sonnet)",
+      "name": "Single task (Sonnet)",
+      "lines": ["claude -p \"/gurita:complete-task --mission <path> <Task Title>\" --model \"sonnet\" --effort high;"]
+    },
+    {
+      "recipe": "Loop",
+      "name": "Copy of a variant no file holds",
+      "lines": ["<single-task line>"],
+      "copies": { "name": "Gone", "origin": "shipped" }
+    }
+  ],
+  "hidden": [
+    { "recipe": "Variants", "name": "Empty variant", "origin": "shipped" },
+    { "recipe": "Variants", "name": "On Antigravity", "origin": "shipped" },
+    { "recipe": "Chain", "name": "Chain", "origin": "own" },
+    { "recipe": "Two fences", "name": "Two fences", "origin": "shipped" },
+    { "recipe": "No such recipe", "name": "No such variant", "origin": "own" }
+  ],
+  "defaults": [
+    { "recipe": "Chain", "name": "Chain on Sonnet", "origin": "stored" },
+    { "recipe": "Chain", "name": "Chain", "origin": "shipped" },
+    { "recipe": "Variants", "name": "On Antigravity", "origin": "shipped" },
+    { "recipe": "answer-open-question", "name": "Answer on Sonnet", "origin": "stored" },
+    { "recipe": "Fenced heading", "name": "Fenced heading", "origin": "own" },
+    { "recipe": "Block before variants", "name": "Deleted variant", "origin": "shipped" }
+  ],
+  "harnesses": { "kept": ["as", "read"] }
+}
