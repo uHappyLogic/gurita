@@ -68,5 +68,9 @@ No other live mission's scope overlaps `gurita-vscode/`, so nothing holds or sha
 
 - **Fixed-name button recipes.** The seven recipes the fixed-name buttons run carry variants as the listed recipes do, and the settings view lists them for duplicating, renaming, deleting, and model and effort editing. The variant a button runs is chosen only in the settings view, as that recipe's default, and the page draws no dropdown beside any of the seven buttons. The shipped file adds no variant for them, so each recipe ships as its one Claude Code variant and any further variant is a duplicate or an own recipe.
 
+### Mission page
+
+- **Recipe list layout.** The list keeps two parts under the page's Recipes heading. First comes one button per shipped recipe, in the shipped file's order and with no heading of their own, an own recipe carrying a shipped name standing in that recipe's place. Then comes a group headed Your recipes, holding the own recipes that replace no shipped one, in the own file's order. Only the Claude Code and Antigravity headings go; the own group's heading, position, and order stay as they are.
+
 ## Out of Scope
 
