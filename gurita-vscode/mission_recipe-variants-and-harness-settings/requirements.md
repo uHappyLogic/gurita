@@ -92,6 +92,8 @@ No other live mission's scope overlaps `gurita-vscode/`, so nothing holds or sha
 
 - **Failed check.** A failed check is shown in the settings view alone, beside the harness it concerns, naming which of the three checks failed: CLI not found, Gurita plugin not installed, or installed version differing from the packaged one. The mission pages draw every variant, the seven fixed-name buttons, and the looped run exactly as they would with every check passing, and a click runs the lines as written.
 
+- **Timing.** The check runs the first time the settings view is opened after the panel is created. Its result is kept for the panel's lifetime and shown on every later opening without running again. A check-again control in the settings view re-runs it on request, and no pane re-read or Refresh runs it.
+
 ### Enabling and disabling harnesses
 
 - **Initial state.** Every harness the settings view covers starts enabled, whatever its check reports and whatever recipes run on it. A harness stays enabled until the person disables it, harness by harness, and the check result never changes the enabled state.
