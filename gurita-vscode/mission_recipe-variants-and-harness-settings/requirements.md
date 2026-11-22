@@ -72,9 +72,11 @@ No other live mission's scope overlaps `gurita-vscode/`, so nothing holds or sha
 
 - **Fixed-name button recipes.** The seven recipes the fixed-name buttons run carry variants as the listed recipes do, and the settings view lists them for duplicating, renaming, deleting, and model and effort editing. The variant a button runs is chosen only in the settings view, as that recipe's default, and the page draws no dropdown beside any of the seven buttons. The shipped file adds no variant for them, so each recipe ships as its one Claude Code variant and any further variant is a duplicate or an own recipe.
 
+- **Own recipe of a shipped name.** A hand-written own recipe carrying a shipped recipe's name never replaces that recipe or any of its variants. Its block, or each of its variants when it writes several, joins the shipped recipe as one more variant, listed after the shipped variants under its own variant name and marked as the person's own. An own variant carrying a shipped variant's name is kept as a second entry beside it and does not take its place, so every shipped variant stays on the button.
+
 ### Mission page
 
-- **Recipe list layout.** The list keeps two parts under the page's Recipes heading. First comes one button per shipped recipe, in the shipped file's order and with no heading of their own, an own recipe carrying a shipped name standing in that recipe's place. Then comes a group headed Your recipes, holding the own recipes that replace no shipped one, in the own file's order. Only the Claude Code and Antigravity headings go; the own group's heading, position, and order stay as they are.
+- **Recipe list layout.** The list keeps two parts under the page's Recipes heading. First comes one button per shipped recipe, in the shipped file's order and with no heading of their own, an own recipe carrying a shipped name joining that recipe's button as further variants. Then comes a group headed Your recipes, holding the own recipes that carry no shipped recipe's name, in the own file's order. Only the Claude Code and Antigravity headings go; the own group's heading, position, and order stay as they are.
 
 - **Remembered selection.** The variant selected in a recipe's dropdown is remembered per recipe name on one mission, keyed by the mission's path as the pane lists it. It is kept in the project's `ExtensionContext.workspaceState`, as a map from mission path and recipe name to variant name. Nothing is written into the project's tree.
 
