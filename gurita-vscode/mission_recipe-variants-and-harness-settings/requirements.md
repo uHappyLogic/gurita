@@ -64,6 +64,8 @@ No other live mission's scope overlaps `gurita-vscode/`, so nothing holds or sha
 
 - **Typed values.** Every value typed in the settings view (a duplicate's name, a rename, and any other free-text entry the view takes) is asked for in VS Code's own input box, one box per value, as `askValues` in `src/pane.ts` asks for the mission page's values. A rename opens with the current name filled in, and the box's own validation refuses an empty name and one the recipe already uses. The page holds buttons and dropdowns only, and nothing is typed on it anywhere in the extension.
 
+- **Placement.** The settings view is opened by a control at the end of the tab row, beside Refresh, New mission, and Define mission, the group that belongs to no mission and stays drawn in the failure state. A click swaps the page beneath the row for the settings view, and a control on that view, or a click on any mission tab, swaps back to the mission page shown before. The mission tabs keep holding missions only, and the extension contributes no command for the settings view.
+
 ### Recipes and variants
 
 - **Mixed-agent chain.** `Mixed-agent requirements review (Gemini reviews, Claude annotates)` stays a recipe of its own, separate from `Requirements iteration`. It still declares the additional review round, its one shipped block is its only variant, and its lines stay as written. The additional review round's page therefore shows two buttons, `Requirements iteration` and the mixed-agent recipe.
