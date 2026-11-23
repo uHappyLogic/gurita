@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Install Script With the Release Lookup
-
-Add the packaged stdlib Python script the install or update terminal will run, beside `harness_check.py`, with its first step: reading the tag of the latest published release of a harness's distribution repository through GitHub's `releases/latest` endpoint and, when that read fails, through the `/releases/latest` page redirect. When both reads fail it prints the cause and exits with a non-zero status before any install, update, or marketplace command runs, falling back to no other ref. Verified by pytest tests in `runner_tests/`, under both pytest runs, with the two reads stubbed: the endpoint answering, only the redirect answering, and both failing.
-
----
-
 ## Antigravity Install and Staged-Swap Update
 
 Give the install script its Antigravity install and update, with no shell pipeline and no `agy` command: the install downloads the distribution repository's `archive/refs/tags/<tag>.tar.gz` with `urllib` and extracts it with `tarfile`, stripped of its top directory, directly into `~/.gemini/config/plugins/gurita`, while the update extracts the new release into a fresh staging directory outside `~/.gemini/config/plugins/` on the same filesystem, checks that its root `plugin.json` is present and reads its version, and only then removes the old `gurita` directory and moves the staged one into its place, keeping no backup. Verified by pytest tests against a local archive and an overridden home: a fresh install, an update leaving exactly what the new release ships, and a staged copy failing its check with the old directory left untouched.
