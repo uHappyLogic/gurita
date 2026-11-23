@@ -85,5 +85,9 @@ The extension has no activity-bar container, side-bar view, tree data provider, 
 
 - **Follow-up record removed with the draft.** `ideas/vscode_extension_follow_up.md` is removed by this mission alongside `ideas/vscode_extension.md`, so no document is left holding references to the draft and none of its citations is rewritten. Its record of deferred work (the drift-gate guards, the tests left out, the Codex print check, publication, shipped Codex recipes) then stands only in git history.
 
+### Side-bar view
+
+- **Mission row layout.** A mission's row in the side-bar tree is a leaf with no child rows, one row per mission, so a click on the row stays free to open the mission's window. The label carries the mission's title. The description carries the next workflow step's name followed by both counts in a compact form, for example "Derive tasks · 3 questions · 2 tasks". The icon carries the running marker, a spinning `ThemeIcon` while the mission's run is going and a steady mission icon otherwise. The tooltip repeats all five facts spelled out in full beside the mission's path, giving whatever a narrow side bar cuts from the description.
+
 ## Out of Scope
 
