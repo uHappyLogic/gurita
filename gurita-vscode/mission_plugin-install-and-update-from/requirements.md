@@ -102,5 +102,9 @@ Nothing in the extension installs or updates the plugin on any harness, and noth
 
 - **Version comparison.** The installed copy is compared with the packaged version alone, as a minimum rather than an equality: a copy older than the packaged version fails the `version` check, and a copy equal to or newer than it passes, the versions ordered as bare MAJOR.MINOR.PATCH. The latest published version is never read for the check, so the check stays offline.
 
+### Command verification
+
+- **Hands-on verification.** Before any code is built on them, the mission runs every install, update, and marketplace command it will use against a separate, throwaway configuration home per harness: an overridden config directory where the CLI honours one (`CLAUDE_CONFIG_DIR` for Claude Code, `CODEX_HOME` for Codex) and an overridden `HOME` for Antigravity's `~/.gemini/config/plugins/gurita`, with a scratch project directory standing in for the project root at Claude Code's project and local scopes. The runs fetch from the real distribution repositories, each command's print, prompts, exit status, and duration are observed, and the findings are recorded as dated facts in the mission's starting state. The real installations on the maintainer's machine are left untouched.
+
 ## Out of Scope
 
