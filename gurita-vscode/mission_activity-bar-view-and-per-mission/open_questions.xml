@@ -34,6 +34,51 @@
   </open-question>
   <open-question id="Side-bar controls and variants">
     <question>The side-bar view is a native VS Code tree and must carry the four controls that belong to no mission: New mission, Define mission, Refresh, and Settings. On today&apos;s page New mission and Define mission are buttons whose label shows the harness, model, and effort of the variant they run, each with a dropdown beside it that selects among its recipe&apos;s variants, and a native tree view holds neither a labelled button nor a dropdown. Where in the side-bar view does each of the four controls sit, and how do New mission and Define mission there show the variant they will run and let a person select another?</question>
+    <alternative id="Title-bar icons, pick at click">
+      All four controls are icon actions in the side-bar view&apos;s title bar (`menus` `view/title`, `navigation` group), so none of them is a tree row. Refresh and Settings run at once. New mission and Define mission each open a VS Code QuickPick of their recipe&apos;s variants, every entry labelled with its harness, model, and effort, the variant remembered in `gurita.projectVariantSelections` listed first and marked; accepting an entry remembers it and then asks for the goal (and scope) as today. Nothing shows the variant before the click.
+      <advantage>It uses the editor&apos;s own place for view-wide actions and adds no row to the tree, so the controls stand unchanged whether the view lists missions, lists none, or shows its failure state, and every variant stays one pick away.</advantage>
+      <drawback>The variant a click will run is visible only after clicking, since a title-bar action&apos;s tooltip is its static command title, and every start costs an extra confirming step even when the remembered variant is wanted.</drawback>
+    </alternative>
+    <alternative id="Title-bar icons, variant in Settings">
+      All four controls are icon actions in the side-bar view&apos;s title bar. New mission and Define mission run the remembered variant directly, showing it nowhere in the side-bar; the two dropdowns that select it move into the Settings window, which already lists the variants.
+      <advantage>Starting a mission is one click on a conventional title-bar icon, and the selection lives beside the variants and harness settings it draws from, so the side-bar needs no variant mechanism at all.</advantage>
+      <drawback>A person cannot see from the side-bar which harness, model, and effort a click will run, and changing it means opening another window, which undoes the at-a-glance label the fixed-name buttons carry today.</drawback>
+    </alternative>
+    <alternative id="Rows with select action">
+      Refresh and Settings are icon actions in the view&apos;s title bar. New mission and Define mission are two tree rows standing above the mission rows, each labelled with its control&apos;s name, its `description` showing the remembered variant&apos;s harness, model, and effort. Clicking the row runs that variant; an inline icon action on the row, also offered in its context menu, opens a QuickPick of the recipe&apos;s variants that changes the remembered selection without starting a run.
+      <advantage>It keeps today&apos;s two properties together: the variant a click will run is visible before clicking, and starting with it is one click, while selecting another stays on the row itself.</advantage>
+      <drawback>Two non-mission rows share the tree with the missions and must also be drawn when no mission is live or the read fails, which bears on how the sibling empty and failure states are drawn, and the hover-only inline action is less discoverable than today&apos;s visible dropdown.</drawback>
+    </alternative>
+    <alternative id="Rows, pick on every click">
+      Refresh and Settings are icon actions in the view&apos;s title bar. New mission and Define mission are two tree rows above the mission rows, each `description` showing the remembered variant&apos;s harness, model, and effort. Clicking a row always opens the QuickPick of its recipe&apos;s variants with the remembered one preselected; accepting runs it and remembers it.
+      <advantage>The variant is visible before the click and a different one is chosen in the same gesture that starts the run, with no separate action to find.</advantage>
+      <drawback>Every start takes a second confirming step even when the shown variant is wanted, and the rows still have to stand in the tree beside the missions in every state of the view.</drawback>
+    </alternative>
+    <alternative id="Rows with variant children">
+      Refresh and Settings are icon actions in the view&apos;s title bar. New mission and Define mission are two collapsible tree rows above the mission rows, each `description` showing the remembered variant. Clicking the row runs the remembered variant; expanding it shows one child row per variant of its recipe, labelled with harness, model, and effort, the remembered one marked by its icon, and clicking a child runs that variant and makes it the remembered one.
+      <advantage>Every variant is visible and runnable with one click inside the tree&apos;s own structure, the closest a native tree comes to today&apos;s dropdown without a QuickPick.</advantage>
+      <drawback>An expanded control row can push the missions far down the list when a recipe carries many variants, and conflating expansion with selection makes the tree&apos;s twisty behave unlike every mission row&apos;s, which also depends on how the sibling row-layout question uses child rows.</drawback>
+    </alternative>
+    <alternative id="Rows, variant in Settings">
+      Refresh and Settings are icon actions in the view&apos;s title bar. New mission and Define mission are two tree rows above the mission rows, each `description` showing the remembered variant&apos;s harness, model, and effort, and clicking a row runs it. The side-bar offers no way to select another variant: the two dropdowns move into the Settings window.
+      <advantage>The variant is visible and runs in one click, and the side-bar carries no selection mechanism of its own, keeping the tree&apos;s rows simple.</advantage>
+      <drawback>Changing the variant requires opening the Settings window, a detour today&apos;s dropdown beside the button does not need, and the rows still stand among the missions in every state of the view.</drawback>
+    </alternative>
+    <alternative id="All four as rows">
+      All four controls are tree rows grouped above the mission rows: Refresh and Settings as labelled rows that act on click, New mission and Define mission as rows whose `description` shows the remembered variant, run on click, and offer an inline action and context-menu entry opening the variant QuickPick that changes the selection. The view&apos;s title bar carries no action.
+      <advantage>Every control is labelled and visible in the same list, so nothing depends on recognising a title-bar icon or hovering for an inline action.</advantage>
+      <drawback>Four rows that belong to no mission crowd the list and scroll away with it, Refresh and Settings sit outside the place VS Code users look for view-wide actions, and all four must be drawn in the empty and failure states as well.</drawback>
+    </alternative>
+    <alternative id="Webview view beside the tree">
+      The side-bar container holds a second view, a `WebviewViewProvider` webview above the mission tree, drawing New mission and Define mission as today&apos;s labelled buttons with a variant dropdown beside each, reused from the page script; Refresh and Settings are icon actions in the tree view&apos;s title bar. The mission tree carries no control rows.
+      <advantage>It keeps today&apos;s labelled buttons and dropdowns exactly, both visible and one click, and leaves the tree for missions alone.</advantage>
+      <drawback>It departs from the goal&apos;s one native tree carrying the four controls and would need the goal revised first, and it adds a second webview with its own content security policy, script, and message protocol to build and test.</drawback>
+    </alternative>
+    <alternative id="No variant choice in side-bar">
+      All four controls are icon actions in the view&apos;s title bar, and for now the side-bar offers no variant display or selection: New mission and Define mission run the variant remembered in `gurita.projectVariantSelections`, or the recipe&apos;s first variant when none is remembered, and a selection mechanism is added in a later mission.
+      <advantage>It is the least to build now, keeping this mission on the side-bar, the windows, and the icon rather than on a replacement for the dropdown.</advantage>
+      <drawback>It drops the variant label and dropdown that the started recipe-variants mission has just landed on the fixed-name buttons, so a person cannot see or change which harness a new mission starts under until the later work lands.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Side-bar view without missions">
     <question>Today&apos;s mission pane shows the line `No mission is live.` when no mission is live, and one failure state naming the cause when the read of the live missions fails. Once the missions are listed in a native side-bar tree, how does that view show each of those two states, in which it has no mission row to draw?</question>
