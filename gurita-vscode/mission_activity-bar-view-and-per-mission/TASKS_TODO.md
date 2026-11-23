@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Icon Script and Tracked Activity-Bar Icon
-
-Add `scripts/render_icon.py`, a stdlib-only Python script run by hand like `scripts/render_banner.py`, which stays unchanged, that writes the activity-bar icon as a tracked SVG under `gurita-vscode/media/`: two short arms cut verbatim from `assets/banner.txt` as a mirrored pair curling inward, one from the drawing's left half on the left and one from its right half on the right, either side of the centre arm read from `assets/icon-centre-arm.txt`, the three composed at one common character scale with no arm magnified. Each arm is drawn as a filled, tapering outline derived from its drawing, with its curl, in one fill colour and with no character drawn as text, the centre arm keeping its suckers as round holes cut out of the fill, the two side arms plain silhouettes with no holes, and the brackets surviving only as the shapes' edges. Verified by a new pytest test under `tests/`, shaped like `tests/test_banner.py`, that loads the script and asserts the tracked icon is well-formed SVG and equals what the script renders from the two drawings, passing in both pytest runs.
-
----
-
 ## Live Read and Watcher Last the Session
 
 Take the live read and the one file watcher off the mission pane's lifetime: the extension still reads no mission and watches no file until a Gurita command first runs, and from then the read and the watcher last until the extension deactivates, released neither when the pane is hidden nor when it is closed. Every debounced burst of file events re-reads what it touches whatever is visible, a hidden pane is redrawn from the current read by its ready message when shown, and no stale flag is left; this is the one read the side-bar tree and every window will draw from. Verified by the pane tests against the `vscode` stub, the watcher surviving the pane's disposal and an event during a hidden pane showing in what its next ready message is answered with.
