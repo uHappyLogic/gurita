@@ -15,11 +15,14 @@
 // fails, the tree holds no mission row. Each state in which it holds no mission row is shown through the
 // view's own `message`: `No mission is live.` with no mission live, and the failure line followed by
 // the cause as the read gave it while the read fails; a read with missions clears it. The two
-// mission-starting rows are redrawn too whenever the variant remembered for either changes.
+// mission-starting rows are redrawn too whenever the variant remembered for either changes. The
+// view's title bar carries Refresh as an icon action running the refresh command, the one command
+// of the extension's own the Command Palette offers beside the view's focus command, which re-reads
+// the live missions and redraws the tree and every open window from the fresh read.
 
 import * as vscode from 'vscode';
 import { MissionRow, missionRow } from './missionRows';
-import { onSessionRead, onStartingSelection, pickStartingVariant, runStartingRow, sessionRead, startLiveRead, startingOffers } from './pane';
+import { onSessionRead, onStartingSelection, pickStartingVariant, refreshMissions, runStartingRow, sessionRead, startLiveRead, startingOffers } from './pane';
 import { runningMissions } from './runs';
 import { STARTING_ROWS, StartingButton, StartingRow, startingRow } from './startingRows';
 
@@ -31,6 +34,13 @@ export const RUNNING_ICON = 'loading~spin';
 
 /** The icon of a mission row while no run of the mission is going. */
 export const MISSION_ICON = 'rocket';
+
+/**
+ * The refresh command, Gurita: Refresh Missions, which the Command Palette offers and the view's
+ * Refresh title-bar action runs: it re-reads the live missions, redrawing the tree and every open
+ * window from the fresh read.
+ */
+export const REFRESH_COMMAND = 'gurita.refreshMissions';
 
 /** The command a click on each mission-starting row runs, hidden from the Command Palette. */
 export const STARTING_COMMANDS: Readonly<Record<StartingButton, string>> = {
@@ -150,6 +160,7 @@ export function registerMissionTree(context: vscode.ExtensionContext): MissionTr
     view,
     onSessionRead(redraw),
     onStartingSelection(redraw),
+    vscode.commands.registerCommand(REFRESH_COMMAND, () => refreshMissions(context)),
     ...STARTING_ROWS.map(({ button }) =>
       vscode.commands.registerCommand(STARTING_COMMANDS[button], () => {
         startLiveRead(context);

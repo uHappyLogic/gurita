@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { registerMissionTree } from './missionTree';
-import { openMissionPane, postRunning, refreshMissionPane } from './pane';
+import { openMissionPane, postRunning, refreshMissions } from './pane';
 import { registerRuns } from './runs';
 
 export function activate(context: vscode.ExtensionContext): void {
@@ -13,12 +13,11 @@ export function activate(context: vscode.ExtensionContext): void {
     ended: () => {
       postRunning();
       tree.redraw();
-      refreshMissionPane(context);
+      refreshMissions(context);
     },
   });
   context.subscriptions.push(
     vscode.commands.registerCommand('gurita.openMissionPane', () => openMissionPane(context)),
-    vscode.commands.registerCommand('gurita.refreshMissionPane', () => refreshMissionPane(context)),
   );
 }
 

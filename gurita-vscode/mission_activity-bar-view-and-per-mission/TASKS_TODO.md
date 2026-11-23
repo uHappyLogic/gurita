@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Refresh Missions Command and Title-Bar Action
-
-Replace `gurita.refreshMissionPane` with a refresh command under a new id whose title names missions rather than the pane, Gurita: Refresh Missions, and add Refresh as an icon action in the side-bar view's title bar that runs that same registered command. The command re-reads the side-bar tree and every open window, and it is the one command of the extension's own the Command Palette is to offer beside the focus command VS Code generates for the view; verified by a check of the manifest and a test against the `vscode` stub that running it re-reads the live missions and redraws the tree, with `gurita-vscode/README.md` naming the command.
-
----
-
 ## Settings Window of Its Own
 
 Move the settings view out of the mission pane's page into a Settings window of its own in the editor area, opened, or revealed when already open, by a Settings command that is hidden from the Command Palette and run by an icon action in the side-bar view's title bar beside Refresh; the pane's tab row loses its Settings control and the view its Close settings control. The harness check first runs on the first opening of the Settings window after the extension activates, its result kept in the extension's own module state for the rest of that session across every close and reopening of the window, only the check-again control running it afresh and no timestamp or stored record added, and every edit made in the window shows at once on every other surface, the refresh command re-reading the window too. Verified by tests against the `vscode` stub of the window's opening and reveal, the check's one run across a close and a reopening, and an edit reaching the mission pages and the two tree rows, with `gurita-vscode/README.md` describing the window.

@@ -1649,7 +1649,7 @@ test('the extension contributes no command for the settings view', () => {
   };
   assert.deepStrictEqual(
     manifest.contributes.commands.map((each) => each.command),
-    ['gurita.openMissionPane', 'gurita.refreshMissionPane', 'gurita.newMission', 'gurita.defineMission', 'gurita.pickStartingVariant'],
+    ['gurita.openMissionPane', 'gurita.refreshMissions', 'gurita.newMission', 'gurita.defineMission', 'gurita.pickStartingVariant'],
   );
 });
 

@@ -579,10 +579,12 @@ export function startLiveRead(context: vscode.ExtensionContext): void {
 
 /**
  * Re-reads everything the session's live read holds, starting the session when no command has
- * started it yet: the live missions, every mission's documents, and the recipes, the fresh parse
- * posted to the pane while it is shown. A hidden or closed pane draws it from its next ready message.
+ * started it yet: the live missions, every mission's documents, and the recipes, the side-bar tree
+ * redrawn from the fresh parse as every kept re-read redraws it, and the fresh parse posted to the
+ * pane while it is shown. A hidden or closed pane draws it from its next ready message. The refresh
+ * command and the side-bar view's Refresh title-bar action both run it.
  */
-export function refreshMissionPane(context: vscode.ExtensionContext): void {
+export function refreshMissions(context: vscode.ExtensionContext): void {
   if (startSession(context)) {
     return;
   }

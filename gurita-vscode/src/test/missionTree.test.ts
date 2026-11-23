@@ -369,7 +369,7 @@ test('a burst of file events and the refresh command each re-read and redraw the
   await until(() => redraws > before && item('Beta mission').description === 'Execute tasks · 0 questions · 2 tasks', 'the burst redraws the row');
   fs.writeFileSync(path.join(root, ALPHA, 'open_questions.xml'), '<open-questions/>\n');
   const again = redraws;
-  const refresh = commands.get('gurita.refreshMissionPane');
+  const refresh = commands.get(missionTree.REFRESH_COMMAND);
   assert.ok(refresh !== undefined);
   refresh();
   await until(() => redraws > again, 'the refresh redraws the tree');
@@ -380,7 +380,7 @@ test('the view shows no mission live and a failed read through its message with 
   assert.strictEqual(view.message, undefined, 'a read with missions shows no message');
   const empty = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-tree-empty-')));
   git(empty, 'init', '-q');
-  const refresh = commands.get('gurita.refreshMissionPane');
+  const refresh = commands.get(missionTree.REFRESH_COMMAND);
   assert.ok(refresh !== undefined);
   workspace.folders = [{ uri: { fsPath: empty } }];
   refresh();
@@ -520,4 +520,51 @@ test('the manifest offers the variant action inline and in the context menu of t
   const when = `view == ${missionTree.MISSIONS_VIEW} && viewItem == ${missionTree.STARTING_ROW_CONTEXT}`;
   assert.ok(entries.some((entry: { when: string; group?: string }) => entry.when === when && entry.group === 'inline'), 'offered inline');
   assert.ok(entries.some((entry: { when: string; group?: string }) => entry.when === when && entry.group !== 'inline'), 'offered in the context menu');
+});
+
+test('the refresh command re-reads the live missions, a mission defined since the last read gaining its row and one finished since losing it', async () => {
+  const refresh = commands.get(missionTree.REFRESH_COMMAND);
+  assert.ok(refresh !== undefined, 'activation registers the refresh command');
+  const EPSILON = 'web/mission_epsilon/';
+  commit(root, `Mission-definition: ${EPSILON}`, {
+    [`${EPSILON}requirements.md`]: '# Epsilon mission\n\n## Goal\n\nA goal.\n',
+    [`${EPSILON}open_questions.xml`]: '<open-questions/>\n',
+    [`${EPSILON}TASKS_TODO.md`]: '# TASKS TODO\n',
+  });
+  const before = redraws;
+  refresh();
+  await until(() => redraws > before && items().some((each) => each.label === 'Epsilon mission'), 'the refresh draws the new mission');
+  assert.deepStrictEqual(
+    items().map((each) => each.label),
+    [...STARTING_LABELS, 'Alpha mission', 'Beta mission', 'Gamma mission', 'Delta mission', 'Epsilon mission'],
+    'the fresh read of the live missions is drawn, in the order it prints them',
+  );
+  git(root, 'rm', '-r', '-q', EPSILON);
+  git(root, 'commit', '-q', '-m', `Mission-finish: ${EPSILON}`);
+  const again = redraws;
+  refresh();
+  await until(() => redraws > again && !items().some((each) => each.label === 'Epsilon mission'), 'the refresh drops the finished mission');
+  assert.deepStrictEqual(
+    items().map((each) => each.label),
+    [...STARTING_LABELS, 'Alpha mission', 'Beta mission', 'Gamma mission', 'Delta mission'],
+  );
+});
+
+test('the manifest contributes the refresh command, offered in the Command Palette as Gurita: Refresh Missions, and runs it from an icon action in the view title bar', () => {
+  const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8'));
+  const contributed = manifest.contributes.commands.map((each: { command: string }) => each.command);
+  assert.ok(!contributed.includes('gurita.refreshMissionPane'), 'the old refresh command id is removed');
+  const refresh = manifest.contributes.commands.find((each: { command: string }) => each.command === missionTree.REFRESH_COMMAND);
+  assert.ok(refresh !== undefined, 'the refresh command is contributed');
+  assert.strictEqual(`${refresh.category}: ${refresh.title}`, 'Gurita: Refresh Missions', 'its title names missions rather than the pane');
+  assert.match(refresh.icon, /^\$\([a-z-]+\)$/, 'the action has an icon');
+  assert.ok(
+    !manifest.contributes.menus.commandPalette.some((entry: { command: string }) => entry.command === missionTree.REFRESH_COMMAND),
+    'the refresh command is not hidden from the Command Palette',
+  );
+  assert.deepStrictEqual(
+    manifest.contributes.menus['view/title'],
+    [{ command: missionTree.REFRESH_COMMAND, when: `view == ${missionTree.MISSIONS_VIEW}`, group: 'navigation' }],
+    "the view's title bar runs the same command as an icon action",
+  );
 });

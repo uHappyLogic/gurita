@@ -98,6 +98,11 @@ The extension contributes an activity-bar entry, **Gurita**, its icon the tracke
 with no child rows, the two rows that start a mission, **New mission** and **Define mission**,
 standing above one row per live mission, in the order `missions.py live` prints them.
 
+The view's title bar carries **Refresh** as an icon action. It runs the command
+**Gurita: Refresh Missions** (`gurita.refreshMissions`), which the Command Palette also offers:
+it re-reads the live missions, every mission's documents, and the recipes, and redraws the tree
+and every open window from that fresh read, in every state of the view.
+
 ### The rows that start a mission
 
 **New mission** runs the `discuss-mission-goal` recipe and **Define mission** the
@@ -168,8 +173,9 @@ state.
 Open the pane with the command **Gurita: Open Mission Pane** (`gurita.openMissionPane`) from the
 Command Palette. Besides the side-bar view it is the extension's only entry point: there is no
 status bar item or keybinding, the pane never opens by itself, and it does not
-survive a restart or a window reload, so open it again after one. **Gurita: Refresh Mission Pane**
-(`gurita.refreshMissionPane`) and the pane's **Refresh** control re-read everything.
+survive a restart or a window reload, so open it again after one. **Gurita: Refresh Missions**
+(`gurita.refreshMissions`), the side-bar view's **Refresh** title-bar action, and the pane's
+**Refresh** control re-read everything.
 
 The project root is the top level of the git work tree holding the first workspace folder;
 every other folder is ignored. The pane lists the live missions that `missions.py live` prints
