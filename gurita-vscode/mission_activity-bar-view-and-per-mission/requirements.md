@@ -97,5 +97,9 @@ The extension has no activity-bar container, side-bar view, tree data provider, 
 
 - **Controls that belong to no mission.** Refresh and Settings are icon actions in the view's title bar. New mission and Define mission are two tree rows standing above the mission rows, each labelled with its control's name, its `description` showing the harness, model, and effort of the remembered variant. Clicking the row runs that variant, so a run still starts in one click with its variant shown before the click. An inline icon action on the row, also offered in its context menu, opens a QuickPick of the recipe's variants that changes the remembered selection without starting a run.
 
+### Commands
+
+- **Command Palette commands.** The two existing command ids, `gurita.openMissionPane` and `gurita.refreshMissionPane`, are removed. The Command Palette offers one command of the extension's own beside the focus command VS Code generates for the view: a refresh command under a new id, with a title naming missions rather than the pane (such as Gurita: Refresh Missions). It re-reads the side-bar tree and every open mission and Settings window exactly as the side-bar's Refresh control does, and that control runs the same registered command. The commands behind New mission, Define mission, Settings, and opening a mission are hidden from the Command Palette through `menus.commandPalette` entries whose `when` is `false`.
+
 ## Out of Scope
 
