@@ -7,7 +7,9 @@ import * as path from 'node:path';
 // The Settings window, against a stub of the `vscode` module standing in for the editor: the
 // webview panels the extension creates, one record per panel with the messages its page posts
 // and its reveals, the side-bar view's tree stand-in, the commands, the terminals, and the
-// notifications the extension's activation reaches.
+// notifications the extension's activation reaches. The terminals record how they were created and
+// how often they were shown, and a test closes one with an exit status as the editor does when its
+// process ends; the notifications are recorded by kind.
 const Module = require('node:module') as {
   _load: (request: string, parent: unknown, isMain: boolean) => unknown;
 };
@@ -70,6 +72,28 @@ class StubEventEmitter<T> {
   }
   dispose(): void {
     this.listeners = [];
+  }
+}
+
+/** A terminal the stub's editor created: its options, the number of `show` calls, and its exit status once closed. */
+interface StubTerminal {
+  options: Record<string, unknown>;
+  shows: number;
+  exitStatus?: { code: number | undefined };
+  show(): void;
+}
+/** Every terminal the stub's editor created, in order. */
+const terminals: StubTerminal[] = [];
+/** The listeners the extension registered for a terminal's close. */
+const closeListeners: ((terminal: unknown) => void)[] = [];
+/** Every notification the extension showed, in order, by kind. */
+const notifications: { kind: 'information' | 'warning' | 'error'; message: string }[] = [];
+
+/** Closes `terminal` with the exit status `code`, as the editor does when its process ends. */
+function closeTerminal(terminal: StubTerminal, code: number | undefined): void {
+  terminal.exitStatus = { code };
+  for (const listener of [...closeListeners]) {
+    listener(terminal);
   }
 }
 
@@ -151,11 +175,33 @@ const stub = {
         },
       };
     },
-    createTerminal: () => ({ show(): void {} }),
-    onDidCloseTerminal: () => disposable,
-    showInformationMessage: () => Promise.resolve(undefined),
-    showWarningMessage: () => Promise.resolve(undefined),
-    showErrorMessage: () => Promise.resolve(undefined),
+    createTerminal(options: Record<string, unknown>): StubTerminal {
+      const terminal: StubTerminal = {
+        options,
+        shows: 0,
+        show(): void {
+          terminal.shows++;
+        },
+      };
+      terminals.push(terminal);
+      return terminal;
+    },
+    onDidCloseTerminal(listener: (terminal: unknown) => void) {
+      closeListeners.push(listener);
+      return disposable;
+    },
+    showInformationMessage(message: string) {
+      notifications.push({ kind: 'information', message });
+      return Promise.resolve(undefined);
+    },
+    showWarningMessage(message: string) {
+      notifications.push({ kind: 'warning', message });
+      return Promise.resolve(undefined);
+    },
+    showErrorMessage(message: string) {
+      notifications.push({ kind: 'error', message });
+      return Promise.resolve(undefined);
+    },
     showInputBox: () => Promise.resolve(undefined),
     showQuickPick: () => Promise.resolve(undefined),
   },
@@ -167,6 +213,7 @@ const extension = require('../extension') as typeof import('../extension');
 const settingsWindow = require('../settingsWindow') as typeof import('../settingsWindow');
 const missionTree = require('../missionTree') as typeof import('../missionTree');
 const startingRows = require('../startingRows') as typeof import('../startingRows');
+const pluginRuns = require('../pluginRuns') as typeof import('../pluginRuns');
 const { MISSION_VIEW_TYPE } = require('../pane') as typeof import('../pane');
 Module._load = load;
 
@@ -450,4 +497,154 @@ test('the refresh command re-reads the open Settings window, its lists posted af
   await new Promise((resolve) => setTimeout(resolve, 200));
   assert.deepStrictEqual(postedOf(window, 'harnessCheck', from), [], 'the refresh posts no check');
   assert.strictEqual(checkRuns(), runs, 'and runs none');
+});
+
+/** The install or update run notes posted to `panel` beyond the first `from`, in order. */
+function runNotes(panel: StubPanel, from = 0): unknown[] {
+  return postedOf(panel, 'pluginRun', from).map((message) => message.run);
+}
+
+/** The states of the harness checks posted to `panel` beyond the first `from`, in order. */
+function checkStates(panel: StubPanel, from = 0): string[] {
+  return postedOf(panel, 'harnessCheck', from).map((message) => (message.check as { state: string }).state);
+}
+
+/** Waits until no check is running, the last check posted to the open window being a result. */
+async function checkSettled(): Promise<void> {
+  await until(() => {
+    const states = checkStates(openWindow());
+    return states.length > 0 && states[states.length - 1] !== 'running';
+  }, 'the check is done');
+}
+
+test('an install starts the packaged install script as a shown terminal of its own at the project root, its note kept and posted, and a success is reported with the restart sentence and the check run afresh', async () => {
+  await checkSettled();
+  const window = openWindow();
+  const from = window.posted.length;
+  const created = terminals.length;
+  const runs = checkRuns();
+  sendSettings({ type: 'runPlugin', harness: 'claude', action: 'install', scopes: ['project'] });
+  await until(() => terminals.length === created + 1 && runNotes(window, from).length > 0, 'the run starts');
+  const terminal = terminals[created];
+  assert.deepStrictEqual(terminal.options, {
+    name: 'Gurita: install on Claude Code (project)',
+    shellPath: 'python3',
+    shellArgs: ['/extension/install_plugin.py', 'claude', 'install', '--project', root, '--scope', 'project', '--wait'],
+    cwd: root,
+    isTransient: true,
+  }, "the terminal's own process is the packaged install script, started at the project root");
+  assert.strictEqual(terminal.shows, 1, 'the terminal is shown');
+  assert.deepStrictEqual(runNotes(window, from), [{ harness: 'claude', action: 'install', scopes: ['project'] }], 'the window is posted the run going');
+  assert.deepStrictEqual(pluginRuns.pluginRunGoing(), { harness: 'claude', action: 'install', scopes: ['project'] }, "the run's note is kept");
+
+  const readyFrom = window.posted.length;
+  sendSettings({ type: 'ready' });
+  await until(() => runNotes(window, readyFrom).length > 0, 'the ready message is answered');
+  assert.deepStrictEqual(runNotes(window, readyFrom), [{ harness: 'claude', action: 'install', scopes: ['project'] }], 'a ready message is posted the run going');
+  sendSettings({ type: 'checkHarnesses' });
+  await new Promise((resolve) => setTimeout(resolve, 200));
+  assert.strictEqual(checkRuns(), runs, 'check again runs no check while the run goes');
+
+  const told = notifications.length;
+  const endFrom = window.posted.length;
+  closeTerminal(terminal, 0);
+  await until(() => checkRuns() === runs + 1 && checkStates(window, endFrom).includes('checked'), 'the run ending runs the check afresh');
+  assert.deepStrictEqual(notifications.slice(told), [
+    { kind: 'information', message: `The Gurita plugin was installed on Claude Code. ${pluginRuns.RESTART_SENTENCE}` },
+  ], 'a success is reported in an information notification with the restart sentence');
+  assert.strictEqual(pluginRuns.RESTART_SENTENCE, 'Running sessions of that harness must be restarted to use the new copy.');
+  assert.deepStrictEqual(runNotes(window, endFrom), [null], 'the window is posted that no run is going');
+  assert.deepStrictEqual(checkStates(window, endFrom), ['running', 'checked'], 'the whole check runs afresh, its result posted');
+  assert.strictEqual(pluginRuns.pluginRunGoing(), undefined, "the run's note is cleared");
+});
+
+test('a failed run, a failed release lookup included, is reported as an error with no restart sentence, and the check runs afresh', async () => {
+  await checkSettled();
+  const window = openWindow();
+  for (const [action, code, done] of [
+    ['update', 1, 'updated'],
+    ['install', undefined, 'installed'],
+  ] as const) {
+    const from = window.posted.length;
+    const created = terminals.length;
+    const runs = checkRuns();
+    sendSettings({ type: 'runPlugin', harness: 'codex', action });
+    await until(() => terminals.length === created + 1 && runNotes(window, from).length > 0, 'the run starts');
+    const terminal = terminals[created];
+    assert.deepStrictEqual(terminal.options.shellArgs, ['/extension/install_plugin.py', 'codex', action, '--project', root, '--wait'], 'Codex is given no scope');
+    assert.strictEqual(terminal.options.name, `Gurita: ${action} on Codex`);
+    const told = notifications.length;
+    closeTerminal(terminal, code);
+    await until(() => checkRuns() === runs + 1 && checkStates(window, from).includes('checked'), 'the run ending runs the check afresh');
+    const why = code === undefined ? 'its terminal closed before the run ended' : `the run ended with exit status ${code}, its terminal having shown the cause`;
+    assert.deepStrictEqual(notifications.slice(told), [{ kind: 'error', message: `The Gurita plugin could not be ${done} on Codex: ${why}.` }]);
+    assert.ok(!notifications[told].message.includes(pluginRuns.RESTART_SENTENCE), 'a failure adds no restart sentence');
+    assert.deepStrictEqual(runNotes(window, from).slice(-1), [null]);
+    assert.strictEqual(pluginRuns.pluginRunGoing(), undefined);
+  }
+});
+
+test('a second run is refused while one is going, its terminal revealed, and a closing terminal of another run does not end it', async () => {
+  await checkSettled();
+  const window = openWindow();
+  const from = window.posted.length;
+  const created = terminals.length;
+  sendSettings({ type: 'runPlugin', harness: 'antigravity', action: 'update' });
+  await until(() => terminals.length === created + 1 && runNotes(window, from).length > 0, 'the first run starts');
+  const first = terminals[created];
+  assert.deepStrictEqual(first.options.shellArgs, ['/extension/install_plugin.py', 'antigravity', 'update', '--project', root, '--wait']);
+  const told = notifications.length;
+  const shows = first.shows;
+  for (const second of [
+    { type: 'runPlugin', harness: 'codex', action: 'install' },
+    { type: 'runPlugin', harness: 'claude', action: 'update', scopes: ['user', 'local'] },
+  ]) {
+    sendSettings(second);
+  }
+  await until(() => notifications.length === told + 2, 'each refusal is told');
+  assert.strictEqual(terminals.length, created + 1, 'no second terminal is created');
+  assert.deepStrictEqual(notifications.slice(told), [
+    { kind: 'information', message: pluginRuns.RUN_GOING },
+    { kind: 'information', message: pluginRuns.RUN_GOING },
+  ]);
+  assert.strictEqual(first.shows, shows + 2, "each refusal reveals the going run's terminal");
+  assert.deepStrictEqual(pluginRuns.pluginRunGoing(), { harness: 'antigravity', action: 'update', scopes: [] }, 'the first run is still the one going');
+
+  const other: StubTerminal = { options: {}, shows: 0, show(): void {} };
+  closeTerminal(other, 0);
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  assert.ok(pluginRuns.pluginRunGoing() !== undefined, "another terminal's close leaves the run going");
+
+  const runs = checkRuns();
+  closeTerminal(first, 0);
+  await until(() => checkRuns() === runs + 1, 'the run ending runs the check afresh');
+  await checkSettled();
+  const next = terminals.length;
+  sendSettings({ type: 'runPlugin', harness: 'claude', action: 'update', scopes: ['user', 'local'] });
+  await until(() => terminals.length === next + 1, 'once the run ended, another starts');
+  assert.deepStrictEqual(terminals[next].options.shellArgs, [
+    '/extension/install_plugin.py', 'claude', 'update', '--project', root, '--scope', 'user', '--scope', 'local', '--wait',
+  ]);
+  closeTerminal(terminals[next], 0);
+  await until(() => pluginRuns.pluginRunGoing() === undefined, 'that run ends');
+  await checkSettled();
+});
+
+test('a run request naming no harness, action, or scopes the install script takes starts nothing', async () => {
+  const created = terminals.length;
+  for (const request of [
+    { type: 'runPlugin', harness: 'vscode', action: 'install' },
+    { type: 'runPlugin', harness: 'codex', action: 'remove' },
+    { type: 'runPlugin', harness: 'codex', action: 'install', scopes: ['user'] },
+    { type: 'runPlugin', harness: 'claude', action: 'install' },
+    { type: 'runPlugin', harness: 'claude', action: 'install', scopes: ['user', 'project'] },
+    { type: 'runPlugin', harness: 'claude', action: 'update', scopes: ['managed'] },
+    { type: 'runPlugin', harness: 'claude', action: 'update', scopes: ['user', 'user'] },
+    { type: 'runPlugin', harness: 'claude', action: 'update', scopes: 'user' },
+  ]) {
+    sendSettings(request);
+  }
+  await new Promise((resolve) => setTimeout(resolve, 200));
+  assert.strictEqual(terminals.length, created, 'no terminal is created');
+  assert.strictEqual(pluginRuns.pluginRunGoing(), undefined);
 });

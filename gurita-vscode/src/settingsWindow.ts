@@ -12,9 +12,22 @@
 // the window after the extension activates, and its result is kept in this module's state for the
 // rest of that session, across every close and reopening of the window, every later opening
 // posting the result kept without running the check again. Only the window's check-again control
-// runs it afresh: no refresh, re-read, or reopening does, a restart or a window reload ends the
+// and the end of an install or update run run it afresh: no refresh, re-read, or reopening does, a restart or a window reload ends the
 // session, and no timestamp or stored record is kept. Its result reaches the window alone, the
 // mission pages drawn and their clicks run whatever it reports.
+//
+// The window also starts the install and update runs (`pluginRuns.ts`): a page's request to install
+// or update the plugin on a harness starts the packaged `install_plugin.py` as a terminal's own
+// process at the project root, opened and shown as a recipe run's terminal is, with a note of the
+// run kept in this extension's state for the session, so that at most one goes at a time: while it
+// stands a second request starts nothing, showing a notification and revealing that run's terminal,
+// and check again runs no check. The note is posted to the window on every ready message and each
+// time it changes, and the page draws check again disabled while it stands. When the run's terminal
+// closes, its exit status read from the terminal, the window reports how the run ended in a
+// notification, an information one for a success, adding the one sentence that running sessions of
+// that harness must be restarted to use the new copy, and an error one for a failure, a failed
+// release lookup included, and then runs the whole harness check afresh through the code path check
+// again runs, its result replacing the kept one for every harness.
 //
 // The window enables and disables each harness: a click of a harness's enable or disable control
 // writes that state to the harness part of the variant store file and posts it again. Every
@@ -100,6 +113,16 @@ import {
 import { SwitchableHarness } from './lineValues';
 import { CHECK_SCRIPT, CheckResult, HARNESSES, PLUGIN_VERSION_FILE, readPackagedVersion, runHarnessCheck } from './harnessCheck';
 import { pageShell, recipeFiles, recipesChanged, startLiveRead, startingRoot, webviewOptions } from './pane';
+import {
+  CLAUDE_SCOPES,
+  PLUGIN_ACTIONS,
+  PluginAction,
+  PluginRun,
+  pluginRunEnd,
+  pluginRunGoing,
+  registerPluginRuns,
+  startPluginRun,
+} from './pluginRuns';
 
 /** The Settings window's webview view type. */
 export const SETTINGS_VIEW_TYPE = 'gurita.settings';
@@ -120,6 +143,7 @@ export const SETTINGS_COMMAND = 'gurita.openSettings';
 type SettingsPageMessage =
   | { type: 'ready' }
   | { type: 'checkHarnesses' }
+  | { type: 'runPlugin'; harness: string; action: string; scopes?: string[] }
   | { type: 'setHarnessEnabled'; harness: string; enabled: boolean }
   | { type: 'addHarnessValue'; harness: string; kind: string }
   | { type: 'removeHarnessValue'; harness: string; kind: string; value: string }
@@ -154,6 +178,7 @@ type LinesRead = ({ state: 'read' } & SettingsLines) | { state: 'failed'; cause:
 /** A message the extension posts to the Settings window's page. */
 type SettingsMessage =
   | { type: 'harnessCheck'; check: HarnessCheck }
+  | { type: 'pluginRun'; run: PluginRun | null }
   | { type: 'harnessSettings'; settings: HarnessSettings }
   | { type: 'harnessLists'; lists: HarnessListsRead }
   | { type: 'variants'; variants: VariantsRead }
@@ -180,6 +205,7 @@ let checks = 0;
  * its restore starting the session's live read, and drawn from fresh reads on its ready message.
  */
 export function registerSettingsWindow(context: vscode.ExtensionContext): void {
+  registerPluginRuns(context, (run, status) => void pluginRunEnded(context, run, status));
   context.subscriptions.push(
     vscode.commands.registerCommand(SETTINGS_COMMAND, () => openSettings(context)),
     vscode.window.registerWebviewPanelSerializer(SETTINGS_VIEW_TYPE, {
@@ -231,6 +257,11 @@ function hookSettings(context: vscode.ExtensionContext, created: vscode.WebviewP
         settingsReady(context, created);
       } else if (message?.type === 'checkHarnesses') {
         void checkHarnesses(context);
+      } else if (message?.type === 'runPlugin') {
+        const run = pluginRunOf(message.harness, message.action, message.scopes);
+        if (run !== undefined) {
+          void startPluginInstallRun(context, run);
+        }
       } else if (message?.type === 'setHarnessEnabled') {
         void enableHarness(context, created, message.harness, message.enabled);
       } else if (message?.type === 'addHarnessValue') {
@@ -308,6 +339,7 @@ async function postLists(context: vscode.ExtensionContext, target: vscode.Webvie
  */
 function settingsReady(context: vscode.ExtensionContext, target: vscode.WebviewPanel): void {
   void postLists(context, target);
+  void post(target, { type: 'pluginRun', run: pluginRunGoing() ?? null });
   if (harnessCheck === undefined) {
     void checkHarnesses(context);
     return;
@@ -316,13 +348,15 @@ function settingsReady(context: vscode.ExtensionContext, target: vscode.WebviewP
 }
 
 /**
- * Runs the harness check afresh, unless one is running: the packaged `harness_check.py` run from
- * the project root, else the home directory when no folder is open, its installed versions
- * compared with the packaged plugin version. The window, while open, is told it runs, and then
- * what it gave, which is kept for the rest of the session whether or not the window is still open.
+ * Runs the harness check afresh, unless one is running or an install or update run is going: the
+ * packaged `harness_check.py` run from the project root, else the home directory when no folder is
+ * open, its installed versions compared with the packaged plugin version. The window, while open,
+ * is told it runs, and then what it gave, which is kept for the rest of the session whether or not
+ * the window is still open. `afterRun`, the check that follows an install or update run's end,
+ * runs even while an earlier check is running, the latest started keeping its result.
  */
-async function checkHarnesses(context: vscode.ExtensionContext): Promise<void> {
-  if (harnessCheck?.state === 'running') {
+async function checkHarnesses(context: vscode.ExtensionContext, afterRun = false): Promise<void> {
+  if (pluginRunGoing() !== undefined || (!afterRun && harnessCheck?.state === 'running')) {
     return;
   }
   const sequence = ++checks;
@@ -336,6 +370,65 @@ async function checkHarnesses(context: vscode.ExtensionContext): Promise<void> {
   }
   harnessCheck = result;
   await postCheck();
+}
+
+/**
+ * The install or update run a page message names: a harness key, an action, and, on Claude Code
+ * alone, the scopes it acts at, each one of user, project, and local, named once, exactly one for
+ * an install and at least one for an update. Undefined for anything else.
+ */
+function pluginRunOf(harness: unknown, action: unknown, scopes: unknown): PluginRun | undefined {
+  if (!isHarnessKey(harness) || typeof action !== 'string' || !PLUGIN_ACTIONS.includes(action as PluginAction)) {
+    return undefined;
+  }
+  const named = scopes === undefined ? [] : scopes;
+  if (!Array.isArray(named) || !named.every((scope) => typeof scope === 'string' && CLAUDE_SCOPES.includes(scope))) {
+    return undefined;
+  }
+  if (new Set(named).size !== named.length) {
+    return undefined;
+  }
+  if (harness === 'claude' ? named.length === 0 || (action === 'install' && named.length !== 1) : named.length !== 0) {
+    return undefined;
+  }
+  return { harness, action: action as PluginAction, scopes: named as string[] };
+}
+
+/**
+ * Starts the install or update run `run` at the project root, else the home directory when no
+ * folder is open, unless one is going, which shows a notification and reveals its terminal, and
+ * posts the window the run's note. Returns whether the run started.
+ */
+export async function startPluginInstallRun(context: vscode.ExtensionContext, run: PluginRun): Promise<boolean> {
+  const root = (await startingRoot()) ?? os.homedir();
+  if (!startPluginRun(context, root, run)) {
+    return false;
+  }
+  await postPluginRun();
+  return true;
+}
+
+/**
+ * Reports how the install or update run `run` ended, its exit status `status`, in a notification,
+ * an information one adding the restart sentence for a success and an error one for a failure,
+ * posts the window that no run is going, and runs the whole harness check afresh.
+ */
+async function pluginRunEnded(context: vscode.ExtensionContext, run: PluginRun, status: number | undefined): Promise<void> {
+  const end = pluginRunEnd(run, status);
+  if (end.succeeded) {
+    void vscode.window.showInformationMessage(end.message);
+  } else {
+    void vscode.window.showErrorMessage(end.message);
+  }
+  await postPluginRun();
+  await checkHarnesses(context, true);
+}
+
+/** Posts the install or update run going, or that none is, to the window, while it is open. */
+async function postPluginRun(): Promise<void> {
+  if (settingsPanel !== undefined) {
+    await post(settingsPanel, { type: 'pluginRun', run: pluginRunGoing() ?? null });
+  }
 }
 
 /** Posts the harness check kept to the window, while it is open. */

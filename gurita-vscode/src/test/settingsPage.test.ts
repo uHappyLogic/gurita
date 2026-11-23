@@ -347,6 +347,28 @@ test("the window's check again control asks for the check afresh, and a check th
   assert.deepStrictEqual(page.posted.slice(count), [{ type: 'checkHarnesses' }]);
 });
 
+test('while the extension posts an install or update run as going, the window names it and draws check again disabled, until it posts that none is', () => {
+  const page = loadSettings();
+  page.send(CHECKED);
+  assert.strictEqual(named(page, 'Check again').disabled, false);
+  assert.deepStrictEqual(page.root.all().filter((each) => each.has('plugin-run')), [], 'no run is named while none goes');
+  page.send({ type: 'pluginRun', run: { harness: 'claude', action: 'install', scopes: ['project'] } });
+  assert.strictEqual(named(page, 'Check again').disabled, true, 'check again is disabled while the run goes');
+  const going = page.root.all().filter((each) => each.has('plugin-run'));
+  assert.deepStrictEqual(
+    going.map((each) => [each.dataset.harness, each.textContent]),
+    [['claude', 'Installing the Gurita plugin on Claude Code… Its terminal shows the run.']],
+  );
+  page.send({ type: 'harnessCheck', check: { state: 'running' } });
+  page.send(CHECKED);
+  assert.strictEqual(named(page, 'Check again').disabled, true, 'a check result posted meanwhile leaves it disabled');
+  page.send({ type: 'pluginRun', run: { harness: 'codex', action: 'update', scopes: [] } });
+  assert.ok(texts(page).includes('Updating the Gurita plugin on Codex… Its terminal shows the run.'));
+  page.send({ type: 'pluginRun', run: null });
+  assert.strictEqual(named(page, 'Check again').disabled, false, 'check again is enabled once no run goes');
+  assert.deepStrictEqual(page.root.all().filter((each) => each.has('plugin-run')), []);
+});
+
 /** Each harness's enabled state as the extension posts it. */
 function harnessSettings(enabled: Record<string, boolean>): unknown {
   return { type: 'harnessSettings', settings: { state: 'read', enabled } };

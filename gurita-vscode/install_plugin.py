@@ -4,7 +4,7 @@
 Stdlib only, Python 3.9 or later, shipped in the extension's package beside `harness_check.py`
 and runnable by hand outside the editor.
 
-    install_plugin.py HARNESS ACTION [--project ROOT] [--scope SCOPE]...
+    install_plugin.py HARNESS ACTION [--project ROOT] [--scope SCOPE]... [--wait]
 
 HARNESS is one of `claude`, `antigravity`, and `codex`, ACTION one of `install` and `update`.
 ROOT is the project root a harness CLI's commands run at, the current directory when it is not
@@ -65,6 +65,12 @@ tag by removing it and adding it again, then installs the plugin again over the 
 standing: `codex plugin marketplace remove gurita`, then that marketplace add at the tag, then
 `codex plugin add gurita@gurita`. Nothing removes the installed plugin. A command that fails
 ends the chain, and the script exits with the session's status, non-zero.
+
+With `--wait`, which the extension's install or update terminal passes, the script waits for a
+keypress before exiting, as the runner does at the end of a chain (its `wait_for_key`), so the
+run's output stays readable in the terminal until the person dismisses it; it waits after a
+refusal or a failed step too, its exit status unchanged, and returns at once when there is no
+terminal. Without it the script exits as soon as it is done.
 """
 
 import argparse
@@ -564,6 +570,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="a Claude Code scope: the one an install installs at, or, repeated, each one an "
         "update acts on",
     )
+    parser.add_argument(
+        "--wait",
+        action="store_true",
+        help="wait for a keypress before exiting, so the output stays readable in the terminal",
+    )
     return parser
 
 
@@ -575,11 +586,16 @@ def main(
     args = build_parser().parse_args(argv)
     try:
         target = resolve_target(args.harness, args.action, args.project, args.scope)
-        return run(args.harness, args.action, target, reads, steps)
+        status = run(args.harness, args.action, target, reads, steps)
     except InstallError as error:
         sys.stdout.flush()
         sys.stderr.write(f"Error: {error}\n")
-        return 1
+        status = 1
+    if args.wait:
+        sys.stdout.flush()
+        sys.stderr.flush()
+        runner.wait_for_key()
+    return status
 
 
 if __name__ == "__main__":

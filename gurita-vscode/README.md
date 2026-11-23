@@ -398,12 +398,39 @@ reported as before.
 The check runs the first time you open the Settings window after the extension starts. Its
 result is kept in the extension, with no timestamp and nothing stored, for the rest of that
 session: closing the window and opening it again, or showing it again after it was hidden, shows
-the result kept without the check running again. **Check again** in the window runs it afresh.
+the result kept without the check running again. **Check again** in the window runs it afresh,
+and so does the end of an install or update run.
 Neither **Refresh** nor any re-read runs it; a restart or a window reload ends the session, so the
 next first opening runs the check again. A failed check is shown only here. The mission pages still draw every variant,
 the buttons that run a recipe of a fixed name, and the looped run exactly as they would if every
 check passed, and a click runs the lines as written. When the check cannot run at all, the window
 shows one line saying so, with the cause beneath it.
+
+### Installing and updating the plugin
+
+An install or update of the Gurita plugin that the window starts runs in a terminal of its own,
+opened and shown as a recipe run's terminal is. The terminal's own process is the packaged
+`install_plugin.py`, beside `runner.py`, run with `python3` at the project root (the home
+directory when no folder is open) and given the harness, `install` or `update`, the project root,
+each Claude Code scope it acts at, and `--wait`. The script first reads the tag of the latest
+published release of the harness's distribution repository, then installs or updates the plugin
+at that tag by the harness's own install path, and at the end waits for a keypress, so its output
+and any prompt stay visible and answerable in the terminal until you dismiss it. Run by hand
+without `--wait`, it exits as soon as it is done.
+
+Only one install or update runs at a time. The extension keeps a note of the run going for the
+rest of its session, until the run's terminal closes: meanwhile the window says beneath the
+harnesses which harness the plugin is being installed or updated on, draws **Check again**
+disabled, and starts no second run, a request that still reaches the extension showing a
+notification and bringing the running terminal forward. When the terminal closes, the extension
+reads the run's exit status from it and reports how the run ended in a notification. A success,
+status 0, is an information notification, for example `The Gurita plugin was installed on Claude
+Code.`, followed by the one sentence `Running sessions of that harness must be restarted to use
+the new copy.`, whether or not the version changed. Any other status is an error notification
+naming the status, and so is a failed release lookup, which the script reports in the terminal
+before exiting non-zero with no install, update, or marketplace command run. Either way the
+window then runs the whole harness check afresh, for all three harnesses, as **Check again**
+does, and its result replaces the one kept.
 
 ### Enabling and disabling harnesses
 

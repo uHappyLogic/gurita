@@ -13,7 +13,8 @@ scope, an update over one scope and over several, and a failing command ending t
 non-zero status. The Codex install and update run the same way against a stand-in `codex`: the
 install's marketplace add at the tag and plugin add, the update's marketplace remove, add, and
 plugin add in that order with no plugin removed, and an update stopped by a failed step running
-none of the steps after it."""
+none of the steps after it. With `--wait` the script waits for a keypress once the run is over,
+its exit status kept, the wait recorded rather than waited for."""
 
 import io
 import json
@@ -159,6 +160,48 @@ def test_an_unknown_harness_is_refused_by_the_parser(install):
     with pytest.raises(SystemExit) as stopped:
         install.main(["vscode", "install"], (), {})
     assert stopped.value.code == 2
+
+
+# The keypress the extension's terminal waits for
+
+
+@pytest.fixture
+def keypresses(install, monkeypatch):
+    """Every wait for a keypress the script makes, recorded instead of waited for."""
+    waits = []
+    monkeypatch.setattr(install.runner, "wait_for_key", lambda: waits.append("wait"))
+    return waits
+
+
+@pytest.mark.parametrize("status", [0, 3])
+def test_wait_waits_for_a_keypress_after_the_run_keeping_its_status(install, keypresses, status):
+    recorder = Recorder()
+    reads = stub_reads(install, recorder, endpoint="2.1.0")
+    steps = {("codex", "install"): recorder.step("codex install", status=status)}
+    assert install.main(["codex", "install", "--wait"], reads, steps) == status
+    assert recorder.calls == [("endpoint", "uHappyLogic/gurita-codex"), ("codex install", "2.1.0")]
+    assert keypresses == ["wait"]
+
+
+def test_wait_waits_after_a_failed_lookup_too(install, keypresses, capsys):
+    recorder = Recorder()
+    reads = stub_reads(install, recorder)
+    assert install.main(["antigravity", "update", "--wait"], reads, all_steps(recorder)) == 1
+    assert capsys.readouterr().err.startswith("Error: the latest release of uHappyLogic/gurita-antigravity could not be read")
+    assert keypresses == ["wait"]
+
+
+def test_without_wait_the_script_exits_with_no_keypress(install, keypresses):
+    recorder = Recorder()
+    reads = stub_reads(install, recorder, endpoint="2.1.0")
+    assert install.main(["antigravity", "install"], reads, all_steps(recorder)) == 0
+    assert keypresses == []
+
+
+def test_the_keypress_wait_returns_at_once_with_no_terminal(install, monkeypatch, capsys):
+    monkeypatch.setattr("sys.stdin", io.StringIO(""))
+    install.runner.wait_for_key()
+    assert capsys.readouterr().out == ""
 
 
 # The two reads, through a stand-in opener

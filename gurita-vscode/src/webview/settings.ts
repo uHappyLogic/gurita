@@ -18,7 +18,10 @@
 // Codex's Gurita copy or its marketplace named `gurita` comes from a source other than the
 // harness's distribution repository, the window states the source found and the CLI commands
 // that would switch the harness to that repository. Its check-again
-// control, disabled while a check runs, asks the extension to run the check afresh. The extension
+// control, disabled while a check runs and while an install or update run is going, asks the
+// extension to run the check afresh. While the extension posts an install or update run as going,
+// the window says beneath the harnesses which harness it installs or updates the plugin on, its
+// terminal showing the run, and redraws once the extension posts that none is. The extension
 // runs the check on the first opening of the window in the extension's session and otherwise
 // posts the result it keeps. Beside each harness the window also shows whether it is enabled,
 // with one control that disables an enabled harness or enables a disabled one, posted to the
@@ -95,6 +98,13 @@ declare function acquireVsCodeApi(): VsCodeApi;
 
   /** The harness check: running, every harness's outcome, or the cause it could not be run. */
   type HarnessCheck = { state: 'running' } | { state: 'checked'; harnesses: HarnessOutcome[] } | { state: 'failed'; cause: string };
+
+  /** The install or update run going: its harness's key, its action, and its Claude Code scopes. */
+  interface PluginRun {
+    harness: string;
+    action: 'install' | 'update';
+    scopes: string[];
+  }
 
   /** Each harness's enabled state, by its key, or the cause it could not be read. */
   type HarnessSettings = { state: 'read'; enabled: Record<string, boolean> } | { state: 'failed'; cause: string };
@@ -180,6 +190,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
 
   type SettingsMessage =
     | { type: 'harnessCheck'; check: HarnessCheck }
+    | { type: 'pluginRun'; run: PluginRun | null }
     | { type: 'harnessSettings'; settings: HarnessSettings }
     | { type: 'harnessLists'; lists: HarnessLists }
     | { type: 'variants'; variants: VariantsRead }
@@ -192,6 +203,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
   const CHECK_AGAIN_LABEL = 'Check again';
   const HARNESSES_HEADING = 'Harnesses';
   const CHECKING_LINE = 'Checking the harnesses…';
+  /** What the window says of the run going beside where it runs. */
+  const RUN_TERMINAL_NOTE = 'Its terminal shows the run.';
   const CHECK_FAILURE_LINE = 'The harness check could not be run.';
   const SETTINGS_FAILURE_LINE = 'The harness settings could not be read.';
   const LISTS_HEADING = 'Models and efforts';
@@ -247,6 +260,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
   const root = document.getElementById('root') as HTMLElement;
   /** The harness check the extension last posted; undefined until one is posted. */
   let harnessCheck: HarnessCheck | undefined;
+  /** The install or update run the extension last posted as going; undefined while none is. */
+  let pluginRun: PluginRun | undefined;
   /** Each harness's enabled state the extension last posted; undefined until one is posted. */
   let harnessSettings: HarnessSettings | undefined;
   /** Each harness's lists the extension last posted; undefined until they are posted. */
@@ -358,7 +373,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
   /**
    * The window's harness part: that the check runs or could not be run, then each harness
    * with what its checks gave, when they gave anything, and whether it is enabled, with its enable
-   * or disable control, and the check-again control, disabled while a check runs.
+   * or disable control, the install or update run going, when one is, and the check-again
+   * control, disabled while a check runs or a run is going.
    */
   function drawHarnesses(): HTMLElement {
     const part = element('div', undefined, 'harnesses');
@@ -407,10 +423,18 @@ declare function acquireVsCodeApi(): VsCodeApi;
       list.append(item);
     }
     part.append(list);
+    const run = pluginRun;
+    if (run !== undefined) {
+      const name = HARNESSES.find(([key]) => key === run.harness)?.[1] ?? run.harness;
+      const going = element('p', `${run.action === 'install' ? 'Installing' : 'Updating'} the Gurita plugin on ${name}… ${RUN_TERMINAL_NOTE}`, 'plugin-run');
+      going.dataset.harness = run.harness;
+      going.setAttribute('role', 'status');
+      part.append(going);
+    }
     const controls = element('div', undefined, 'controls');
     const again = button(CHECK_AGAIN_LABEL, 'control', () => vscode.postMessage({ type: 'checkHarnesses' }));
     again.title = "Run the harness check again: each harness's CLI, its Gurita plugin, and that copy's version";
-    again.disabled = check === undefined || check.state === 'running';
+    again.disabled = check === undefined || check.state === 'running' || run !== undefined;
     again.dataset.focus = 'check-again';
     controls.append(again);
     part.append(controls);
@@ -826,6 +850,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
     const message = event.data;
     if (message.type === 'harnessCheck') {
       harnessCheck = message.check;
+    } else if (message.type === 'pluginRun') {
+      pluginRun = message.run ?? undefined;
     } else if (message.type === 'harnessSettings') {
       harnessSettings = message.settings;
     } else if (message.type === 'harnessLists') {
