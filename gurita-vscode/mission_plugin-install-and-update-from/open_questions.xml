@@ -145,6 +145,36 @@
   </open-question>
   <open-question id="Update target scopes">
     <question>When Claude Code holds Gurita copies at more than one scope that applies to the open project, which does Update in the Settings window act on: every detected scope, only the copy that wins for the project, or one scope the person picks?</question>
+    <alternative id="Every detected scope">
+      One click on Update acts on every scope at which a Gurita copy was detected for the open project: the user entry and each project or local entry whose projectPath equals the project root. The window runs one scoped update per such scope (claude plugin update gurita@gurita -s user, then -s project, then -s local, as detected) in one run, and the person chooses nothing about scope.
+      <advantage>No copy that applies to the project is left at the old release. The check&apos;s winning copy and every less specific copy end on the same version, so a later winner change, such as a local entry removed, never brings back a stale copy. On this machine, which holds user and project entries, one click covers both.</advantage>
+      <drawback>It changes scopes the person may not have meant to touch. Updating the user scope changes the copy every other project on the machine uses, and the project scope belongs to the repository&apos;s shared setup. One run issues several CLI calls, so the window must say how a run ends when one scope&apos;s update fails and another succeeds. Which scopes count as detected depends on the Disabled Claude Code copy question: is a scope holding only a disabled copy updated too?</drawback>
+    </alternative>
+    <alternative id="Winning copy only">
+      Update acts only on the one copy the harness check already picks for the project root, local over project over user. The window runs claude plugin update gurita@gurita -s with that copy&apos;s scope, and leaves every less specific copy as it stands. The person chooses nothing about scope.
+      <advantage>It updates exactly the copy this project&apos;s harness sessions load, which is also the copy whose version the check reports. It touches nothing else, so the user scope other projects use and any second project-level entry stay as they were, and the run is one CLI call with one outcome.</advantage>
+      <drawback>Less specific copies stay at the old release. A user-scope copy left stale goes on serving every other project, and it becomes this project&apos;s copy again once the winning entry is removed. The person may also not see that anything was left behind, depending on what the Several-scope display question shows next to each scope. And when the winner is disabled, which scope is &quot;the winner&quot; turns on the Disabled Claude Code copy question.</drawback>
+    </alternative>
+    <alternative id="Person picks one scope">
+      Update acts on one scope per click, and the person chooses it from the detected scopes only, either from a dropdown beside Update or through one Update control per detected scope. Each click runs one claude plugin update gurita@gurita -s with the chosen scope. No single action updates several scopes, and updating every scope takes one click per scope.
+      <advantage>The person sees and chooses each scope that changes, so the user scope other projects share and the repository&apos;s project scope are never changed as a side effect. Each run is still one CLI call with one outcome.</advantage>
+      <drawback>It adds a scope control to Update and puts a choice on the person in the most common case too: a person who just wants everything current has to click once per scope. The choice is only informed if the window shows which scope is stale, which depends on the Several-scope display question (scope names alone, or each scope with its own version) and on the Update control availability question.</drawback>
+    </alternative>
+    <alternative id="Pick one or all">
+      The person chooses Update&apos;s target from a dropdown that lists each detected scope alone plus one choice covering every detected scope. A single-scope choice runs one claude plugin update gurita@gurita -s with that scope. The all-scopes choice runs one scoped update per detected scope in one run.
+      <advantage>Both needs are met by one control. A person who wants everything current gets it in one click, and a person who wants to leave the user scope or the shared project scope alone can still update only the copy they mean.</advantage>
+      <drawback>It is the largest control of the set: one more dropdown with one more choice to draw, test, and document. Its all-scopes choice also carries the same partial-failure reporting as Every detected scope. Whether a single-scope choice is an informed one again depends on the Several-scope display question.</drawback>
+    </alternative>
+    <alternative id="CLI auto-detect">
+      The window passes no scope at all. Update runs claude plugin update gurita@gurita without -s, so Claude Code&apos;s own default (auto-detect) decides which copy or copies it updates, and the window neither chooses the scope nor lets the person choose it.
+      <advantage>The extension holds no scope rule of its own for Update and follows the harness&apos;s own update path exactly, so if Claude Code changes how it resolves a scope, the window follows without any change.</advantage>
+      <drawback>What auto-detect acts on when several scopes hold a copy has not been observed. It may be neither the winner the check reports nor every scope, and the window cannot say beforehand which copy will change. So whether this option is viable depends on what the Hands-on command verification question observes.</drawback>
+    </alternative>
+    <alternative id="No update across scopes">
+      When more than one applicable scope holds a Gurita copy, the window offers no Update for Claude Code. It says that copies stand at several scopes and names the claude plugin update command with its -s option for the person to run. Update is offered only while exactly one applicable scope holds a copy, and then acts on that scope. This is meant as a permanent rule, not a postponement.
+      <advantage>The window never has to resolve the ambiguity, so it can never change a scope the person did not mean. Its Update code handles one scope and one outcome only.</advantage>
+      <drawback>The case it gives up is a real one: this machine holds user and project copies for this repository today, so the maintainer&apos;s own setup could not update from the window. The person also has to leave the window for the terminal exactly when updating is most involved, which cuts against the goal of installing and updating from Settings.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Marketplace registration scope">
     <question>For a Claude Code install at project or local scope made from the Settings window, at which scope is the `gurita` marketplace registered: the user scope, where `claude plugin install --marketplace` adds a marketplace not yet known, or the same scope as the install, through `claude plugin marketplace add --scope`?</question>
