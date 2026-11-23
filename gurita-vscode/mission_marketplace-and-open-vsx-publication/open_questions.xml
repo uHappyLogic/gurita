@@ -373,6 +373,36 @@
   </open-question>
   <open-question id="Gallery banner">
     <question>The manifest holds no `galleryBanner` entry, which sets the colour and the light or dark theme of the header band on the Marketplace listing page. Does the published manifest gain one, and if so with which colour and theme?</question>
+    <alternative id="No gallery banner">
+      The published manifest gains no `galleryBanner` entry. The listing header keeps each registry&apos;s default colour and text theme, and the icon&apos;s violet square is shown against that default.
+      <advantage>Nothing to choose, write, or keep in step with the icon and banner colours, and the manifest stays as small as the listing needs. Whether the extension has a branded header has no bearing on whether it installs or how it is found.</advantage>
+      <drawback>The header band is the largest coloured area of the listing page, and a default one ties the page to nothing of Gurita&apos;s look. The listing icon and the README&apos;s GIF are then the only branded elements, so the deliberate brand work in the icon decision stops at the icon&apos;s edge.</drawback>
+    </alternative>
+    <alternative id="Icon violet, dark theme">
+      The manifest gains `&quot;galleryBanner&quot;: { &quot;color&quot;: &quot;#9333ea&quot;, &quot;theme&quot;: &quot;dark&quot; }`. The band is the banner&apos;s darker violet, the same colour as the listing icon&apos;s square, with light header text (white on `#9333ea` is about 5.4:1).
+      <advantage>One colour runs through the icon and the header, so the page reads as one branded surface. The icon&apos;s square blends into the band and leaves the near-white arms standing on a continuous violet field. The colour is already a recorded brand colour, so nothing new is introduced.</advantage>
+      <drawback>The icon&apos;s square edge disappears against a band of its own colour, so on the listing page the icon no longer reads as a tile, although it still does in search results and the Extensions view. The hex is copied by hand from the icon&apos;s colour and drifts silently if the icon decision is ever revisited.</drawback>
+    </alternative>
+    <alternative id="Light violet, light theme">
+      The manifest gains `&quot;galleryBanner&quot;: { &quot;color&quot;: &quot;#a855f7&quot;, &quot;theme&quot;: &quot;light&quot; }`. The band is the banner&apos;s lighter violet with dark header text, because dark text on `#a855f7` reaches about 5.3:1 while white reaches only about 4:1.
+      <advantage>The header stays in the project&apos;s own palette and visibly related to the icon, while the icon&apos;s darker `#9333ea` square still shows its edge against the lighter band, so the page is branded and the icon keeps reading as a tile.</advantage>
+      <drawback>Two close violets side by side can look like a near miss rather than a deliberate pairing. The page also gets dark text on a saturated mid-violet, a less usual look than either a dark band with light text or a pale band with dark text.</drawback>
+    </alternative>
+    <alternative id="Slate, dark theme">
+      The manifest gains `&quot;galleryBanner&quot;: { &quot;color&quot;: &quot;#64748b&quot;, &quot;theme&quot;: &quot;dark&quot; }`. The band is the banner&apos;s slate, with light header text (white on `#64748b` is about 4.7:1).
+      <advantage>The colour comes from the project&apos;s own banner palette, but it is a muted neutral, so the violet icon square stands out against it instead of merging. That keeps the brand tie and makes the icon the page&apos;s one strong accent.</advantage>
+      <drawback>A mid-grey band reads as subdued or close to a default, so much of the branding benefit of having a banner is lost. Its text contrast clears the usual threshold only narrowly, with little margin on either text theme.</drawback>
+    </alternative>
+    <alternative id="Near-black, dark theme">
+      The manifest gains a `galleryBanner` with a near-black neutral outside the project&apos;s palette, for example `#1e1e1e` (VS Code&apos;s default dark editor background), and `&quot;theme&quot;: &quot;dark&quot;`, with light header text.
+      <advantage>It gives the strongest contrast both for the header text and for the violet icon square, which stands out sharply against it. It also makes the page look like the editor the extension runs in, a common and safe choice for developer tools.</advantage>
+      <drawback>The colour belongs to none of Gurita&apos;s recorded brand material, so the band adds contrast but no identity. It looks like many other extensions&apos; dark headers, and its value is a free choice with no source in the repository to check it against.</drawback>
+    </alternative>
+    <alternative id="Light neutral, light theme">
+      The manifest gains a `galleryBanner` with a pale neutral outside the project&apos;s palette, for example white or a light grey such as `#f3f4f6`, and `&quot;theme&quot;: &quot;light&quot;`, with dark header text.
+      <advantage>It gives a clean, high-contrast page on which the saturated violet icon is the dominant colour, so attention goes to the icon and the README&apos;s GIF rather than to the band.</advantage>
+      <drawback>A near-white band looks almost the same as having no band, so it adds little over the default and carries no brand colour. Its value is a free choice with no source in the repository.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Order with plugin-install mission">
     <question>Another live mission in the same scope, `gurita-vscode/mission_plugin-install-and-update-from/`, has the extension&apos;s Settings window install and update the Gurita plugin on each harness. Does the first publication wait until that mission is finished, so that the listing README, the manifest description, and the demo recording describe an extension that installs the plugin itself, or does it go out without that feature, with the listing material describing the extension as it stands today?</question>
