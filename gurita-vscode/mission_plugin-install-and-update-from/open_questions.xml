@@ -1,1 +1,56 @@
-<open-questions/>
+<open-questions>
+  <open-question id="Install run form">
+    <question>Does an install or update of the Gurita plugin started from the Settings window run in a terminal the person can watch, as a recipe run does, or as a background process like the harness check, with the window reporting how it ended?</question>
+  </open-question>
+  <open-question id="Published release ref">
+    <question>Which ref of a harness&apos;s distribution repository (`uHappyLogic/gurita-&lt;host&gt;`) is the latest published release that an install or update fetches: the tip of `main`, which the documented installs fetch, or the highest version tag or the latest GitHub release?</question>
+  </open-question>
+  <open-question id="Version comparison baseline">
+    <question>Installing the latest published release can leave a copy whose version differs from the one the extension was packaged from, which the harness check today reports as a failed check. Once the Settings window can install and update, which version is an installed copy compared with: the packaged version as today, the latest published version read from the distribution repository, or both? And if the latest published version is read, is it read with every harness check or only when the person asks?</question>
+  </open-question>
+  <open-question id="Update control availability">
+    <question>For a harness that has a Gurita copy installed, is the Update control in the Settings window offered always, or only when the installed copy&apos;s version is found to differ from the version it is compared with?</question>
+  </open-question>
+  <open-question id="Copy from another source">
+    <question>A harness&apos;s existing Gurita copy, or its marketplace named `gurita`, may come from somewhere other than the distribution repository, for example a local checkout registered as a directory marketplace under the same name and plugin id. What does Install or Update in the Settings window do on such a harness: switch it to the distribution repository, update from the source already registered, or refuse and say why?</question>
+  </open-question>
+  <open-question id="Hands-on command verification">
+    <question>No install, update, or marketplace command has yet been run against any harness, so what each prints, whether it prompts, and how long it takes are unknown, and the copies on the maintainer&apos;s machine are installed from the local checkout. How does the mission observe the commands before building on them: by running them against those real installations, by running them against a separate configuration home per harness, or not at all, relying on each CLI&apos;s help text?</question>
+  </open-question>
+  <open-question id="Claude Code scope selection">
+    <question>How does the person pick the scope of a Claude Code install (user, project, or local) in the Settings window, whose page holds buttons and dropdowns only?</question>
+  </open-question>
+  <open-question id="Install beside existing copy">
+    <question>When Claude Code already holds a Gurita copy at one scope, does the Settings window still offer installing at the other scopes, or is Install offered only while no copy applies to the open project?</question>
+  </open-question>
+  <open-question id="Update target scopes">
+    <question>When Claude Code holds Gurita copies at more than one scope that applies to the open project, which does Update in the Settings window act on: every detected scope, only the copy that wins for the project, or one scope the person picks?</question>
+  </open-question>
+  <open-question id="Marketplace registration scope">
+    <question>For a Claude Code install at project or local scope made from the Settings window, at which scope is the `gurita` marketplace registered: the user scope, where `claude plugin install --marketplace` adds a marketplace not yet known, or the same scope as the install, through `claude plugin marketplace add --scope`?</question>
+  </open-question>
+  <open-question id="Several-scope display">
+    <question>When Claude Code holds Gurita copies at several scopes that apply to the open project, does the Settings window show the scope names alone beside the version of the one copy that wins for the project, or each scope with its own version?</question>
+  </open-question>
+  <open-question id="Disabled Claude Code copy">
+    <question>When the Claude Code entry that wins for the open project is disabled, the harness check counts Gurita as not installed. How does the Settings window treat such a copy: is its scope shown as a detected scope, and is Install offered for a scope that already holds a disabled copy?</question>
+  </open-question>
+  <open-question id="Project scopes without project">
+    <question>Claude Code&apos;s project and local scopes belong to a project root. What does the Settings window offer for those two scopes when no workspace folder is open, so that the root it works from is the home directory?</question>
+  </open-question>
+  <open-question id="Confirmation before install">
+    <question>An install or update changes a harness&apos;s configuration, and at Claude Code&apos;s project scope the project&apos;s own `.claude/settings.json`. Does a click on Install or Update in the Settings window start it at once, or does the window ask for a confirmation first?</question>
+  </open-question>
+  <open-question id="Antigravity install mechanism">
+    <question>Antigravity&apos;s documented install is a `curl` and `tar` pipeline that extracts the distribution repository&apos;s archive into `~/.gemini/config/plugins/gurita`, while `agy plugin install &lt;target&gt;` exists but has only been seen to accept a directory. Which does the Settings window&apos;s Antigravity install use?</question>
+  </open-question>
+  <open-question id="Antigravity update of directory">
+    <question>Antigravity has no update command. When an update from the Settings window brings a newer release into the existing plugin directory `~/.gemini/config/plugins/gurita`, are the new files laid over the old ones, which keeps files the new release no longer ships, or is the directory&apos;s content replaced whole?</question>
+  </open-question>
+  <open-question id="Check after install">
+    <question>The harness check&apos;s result is kept for the extension&apos;s session and only Check again runs it afresh. After an install or update ends, does the Settings window run the check again by itself, or keep showing the earlier result until Check again is used?</question>
+  </open-question>
+  <open-question id="Restart notice">
+    <question>Claude Code says an updated plugin needs a restart to apply, and Antigravity discovers a new plugin directory only when a session starts. After an install or update, does the Settings window tell the person that running harness sessions must be restarted?</question>
+  </open-question>
+</open-questions>
