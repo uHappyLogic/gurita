@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Claude Code Detected Scopes in the Check
-
-Have `harness_check.py` print, for Claude Code, every scope holding a `gurita@gurita` copy that applies to the project root, which of them won, and whether the winner is disabled, and have the Settings window show them: the winning scope first as the one in effect, the others as also installed, one version, the winner's, and a disabled winner's scope marked disabled with the statement that the copy must be enabled in Claude Code itself, through its `/plugin` menu or `claude plugin enable`. The window needs this to show where an installed copy stands and, in later tasks, which scopes Install and Update act on. Verified by the script's pytest tests on listings holding one scope, several scopes, and a disabled winning scope, and by the extension's unit tests of the outcome and the drawn row, the README's harness-check section saying the same.
-
----
-
 ## Disabled Antigravity and Codex Copies Reported
 
 Have the harness check report a disabled Antigravity or Codex copy as a state of its own, installed but disabled, beside the not-installed and installed states, and have the Settings window say for it that the copy is disabled and must be enabled in the harness itself, on Antigravity with `agy plugin enable gurita` and on Codex through its own plugin settings. Verified by the script's pytest tests on a disabled entry of each listing and by the extension's unit tests of the outcome and the drawn row, the README saying the same.

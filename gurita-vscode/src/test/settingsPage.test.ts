@@ -156,6 +156,65 @@ test('the window names beside each harness the check that failed, or that every 
   ]);
 });
 
+/** Each harness the window lists: its key, and the scopes line drawn for it, or undefined without one. */
+function harnessScopeLines(page: Page): [string, string | undefined][] {
+  const view = settingsView(page);
+  assert.ok(view !== undefined, 'the window is drawn');
+  return view
+    .all()
+    .filter((each) => each.tagName === 'li' && each.dataset.harness !== undefined)
+    .map((each) => [each.dataset.harness as string, each.all().find((child) => child.has('harness-scopes'))?.textContent]);
+}
+
+test("the window names Claude Code's detected scopes, the one in effect first with the winner's version alone, and a disabled winner's scope marked disabled", () => {
+  const page = loadSettings();
+  const send = (claude: Record<string, unknown>) =>
+    page.send({
+      type: 'harnessCheck',
+      check: {
+        state: 'checked',
+        harnesses: [
+          { key: 'claude', name: 'Claude Code', cli: 'claude', packaged: '2.0.0', ...claude },
+          { key: 'antigravity', name: 'Antigravity', cli: 'agy', installed: '2.0.0', packaged: '2.0.0' },
+          { key: 'codex', name: 'Codex', cli: 'codex', failed: 'cli', packaged: '2.0.0' },
+        ],
+      },
+    });
+  send({ installed: '2.0.0', scopes: ['user'] });
+  assert.deepStrictEqual(harnessScopeLines(page), [
+    ['claude', 'In effect at user scope.'],
+    ['antigravity', undefined],
+    ['codex', undefined],
+  ]);
+  assert.deepStrictEqual(harnessRows(page)[0], ['claude', undefined, ['Claude Code', 'Every check passes: Gurita 2.0.0 is installed, the packaged version.']]);
+
+  send({ installed: '2.1.0', scopes: ['local', 'project', 'user'] });
+  assert.deepStrictEqual(harnessScopeLines(page)[0], ['claude', 'In effect at local scope; also installed at project and user scopes.']);
+  const drawn = texts(page).join('\n');
+  assert.ok(drawn.includes('2.1.0'), "the winner's version is shown");
+  assert.strictEqual(drawn.split('2.1.0').length - 1, 1, 'one version is shown, once');
+  send({ failed: 'version', installed: '1.9.0', scopes: ['project', 'user'] });
+  assert.deepStrictEqual(harnessScopeLines(page)[0], ['claude', 'In effect at project scope; also installed at user scope.']);
+
+  send({ failed: 'plugin', scopes: ['local', 'user'], disabled: true });
+  assert.deepStrictEqual(harnessRows(page)[0], [
+    'claude',
+    'plugin',
+    [
+      'Claude Code',
+      'Gurita plugin disabled: the copy in effect is disabled and must be enabled in Claude Code itself, through its /plugin menu or claude plugin enable.',
+    ],
+  ]);
+  assert.deepStrictEqual(harnessScopeLines(page)[0], ['claude', 'In effect at local scope, disabled; also installed at user scope.']);
+  const disabled = settingsView(page)?.all().find((each) => each.has('harness-scopes'));
+  assert.ok(disabled?.has('disabled'), 'the scopes line is marked disabled');
+  assert.strictEqual(disabled?.dataset.scopes, 'local user');
+
+  send({ failed: 'plugin' });
+  assert.deepStrictEqual(harnessScopeLines(page)[0], ['claude', undefined], 'no copy detected, no scope named');
+  assert.deepStrictEqual(harnessRows(page)[0], ['claude', 'plugin', ['Claude Code', 'Gurita plugin not installed.']]);
+});
+
 test("the window's check again control asks for the check afresh, and a check that could not run shows its cause", () => {
   const page = loadSettings();
   page.send({ type: 'harnessCheck', check: { state: 'failed', cause: 'python3: not found' } });

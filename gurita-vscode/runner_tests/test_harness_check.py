@@ -1,5 +1,6 @@
 """The harness check, gurita-vscode/harness_check.py: the copy each canned listing gives, Claude
-Code's chosen among the entries that apply to the project root, and the one JSON result the
+Code's chosen among the entries that apply to the project root with every applying scope listed,
+the winning one first and marked disabled when it is, and the one JSON result the
 check prints, its session replaced by a stub that writes the files a real session would, so no
 shell session starts."""
 
@@ -44,12 +45,12 @@ def listing(entries):
 
 def test_claude_user_entry_alone_is_the_copy(check):
     text = listing([claude_entry("user", "1.9.0")])
-    assert check.claude_copy(text, ROOT) == (True, "1.9.0")
+    assert check.claude_copy(text, ROOT)[:2] == (True, "1.9.0")
 
 
 def test_claude_project_entry_of_the_root_wins_over_user(check):
     text = listing([claude_entry("user", "1.8.0"), claude_entry("project", "1.9.0", ROOT)])
-    assert check.claude_copy(text, ROOT) == (True, "1.9.0")
+    assert check.claude_copy(text, ROOT)[:2] == (True, "1.9.0")
 
 
 def test_claude_local_wins_over_project_and_user(check):
@@ -60,7 +61,7 @@ def test_claude_local_wins_over_project_and_user(check):
             claude_entry("user", "1.8.0"),
         ]
     )
-    assert check.claude_copy(text, ROOT) == (True, "2.1.0")
+    assert check.claude_copy(text, ROOT)[:2] == (True, "2.1.0")
 
 
 def test_claude_other_projects_and_synced_entries_are_ignored(check):
@@ -73,22 +74,22 @@ def test_claude_other_projects_and_synced_entries_are_ignored(check):
             claude_entry("user", "1.9.0"),
         ]
     )
-    assert check.claude_copy(text, ROOT) == (True, "1.9.0")
+    assert check.claude_copy(text, ROOT)[:2] == (True, "1.9.0")
 
 
 def test_claude_only_other_projects_means_not_installed(check):
     text = listing([claude_entry("project", "1.9.0", "/work/other"), claude_entry("synced", "1.9.0")])
-    assert check.claude_copy(text, ROOT) == (False, None)
+    assert check.claude_copy(text, ROOT)[:2] == (False, None)
 
 
 def test_claude_disabled_winning_entry_means_not_installed(check):
     text = listing([claude_entry("user", "1.9.0"), claude_entry("local", "1.9.0", ROOT, enabled=False)])
-    assert check.claude_copy(text, ROOT) == (False, None)
+    assert check.claude_copy(text, ROOT)[:2] == (False, None)
 
 
 def test_claude_disabled_less_specific_entry_does_not_count(check):
     text = listing([claude_entry("user", "1.8.0", enabled=False), claude_entry("project", "1.9.0", ROOT)])
-    assert check.claude_copy(text, ROOT) == (True, "1.9.0")
+    assert check.claude_copy(text, ROOT)[:2] == (True, "1.9.0")
 
 
 def test_claude_folder_read_entry_reads_folder_version(check):
@@ -98,24 +99,62 @@ def test_claude_folder_read_entry_reads_folder_version(check):
             claude_entry("project", "1.9.0", ROOT, folder="2.0.0"),
         ]
     )
-    assert check.claude_copy(text, ROOT) == (True, "2.0.0")
+    assert check.claude_copy(text, ROOT)[:2] == (True, "2.0.0")
 
 
 def test_claude_entry_without_folder_reads_version_even_beside_a_folder_entry(check):
     text = listing([claude_entry("user", "1.9.0", folder="2.0.0"), claude_entry("project", "1.7.0", ROOT)])
-    assert check.claude_copy(text, ROOT) == (True, "1.7.0")
+    assert check.claude_copy(text, ROOT)[:2] == (True, "1.7.0")
 
 
 def test_claude_project_path_matched_whatever_the_spelling(check, tmp_path):
     root = tmp_path / "project"
     root.mkdir()
     text = listing([claude_entry("project", "1.9.0", str(root) + "/")])
-    assert check.claude_copy(text, os.path.join(str(root), ".")) == (True, "1.9.0")
+    assert check.claude_copy(text, os.path.join(str(root), "."))[:2] == (True, "1.9.0")
 
 
 def test_claude_no_gurita_entry_means_not_installed(check):
     text = listing([claude_entry("user", "1.0.0", plugin="other@market")])
-    assert check.claude_copy(text, ROOT) == (False, None)
+    assert check.claude_copy(text, ROOT)[:2] == (False, None)
+
+
+def test_claude_one_scope_is_the_scope_in_effect(check):
+    text = listing([claude_entry("user", "2.0.0"), claude_entry("local", "3.0.0", "/work/other")])
+    assert check.claude_copy(text, ROOT) == check.ClaudeCopy(True, "2.0.0", ["user"], "user", False)
+
+
+def test_claude_several_scopes_listed_winner_first_with_the_winners_version(check):
+    text = listing(
+        [
+            claude_entry("user", "1.8.0"),
+            claude_entry("local", "2.1.0", ROOT),
+            claude_entry("project", "1.9.0", ROOT),
+            claude_entry("project", "3.0.0", "/work/other"),
+        ]
+    )
+    assert check.claude_copy(text, ROOT) == check.ClaudeCopy(
+        True, "2.1.0", ["local", "project", "user"], "local", False
+    )
+    two = listing([claude_entry("user", "1.8.0"), claude_entry("project", "1.9.0", ROOT)])
+    assert check.claude_copy(two, ROOT) == check.ClaudeCopy(True, "1.9.0", ["project", "user"], "project", False)
+
+
+def test_claude_disabled_winning_scope_is_listed_and_marked_disabled(check):
+    text = listing([claude_entry("user", "1.9.0"), claude_entry("local", "1.9.0", ROOT, enabled=False)])
+    assert check.claude_copy(text, ROOT) == check.ClaudeCopy(False, None, ["local", "user"], "local", True)
+    alone = listing([claude_entry("user", "1.9.0", enabled=False)])
+    assert check.claude_copy(alone, ROOT) == check.ClaudeCopy(False, None, ["user"], "user", True)
+
+
+def test_claude_disabled_less_specific_scope_is_still_listed(check):
+    text = listing([claude_entry("user", "1.8.0", enabled=False), claude_entry("project", "1.9.0", ROOT)])
+    assert check.claude_copy(text, ROOT) == check.ClaudeCopy(True, "1.9.0", ["project", "user"], "project", False)
+
+
+def test_claude_no_applying_entry_lists_no_scope(check):
+    text = listing([claude_entry("project", "1.9.0", "/work/other"), claude_entry("synced", "1.9.0")])
+    assert check.claude_copy(text, ROOT) == check.ClaudeCopy(False, None, [], None, False)
 
 
 @pytest.mark.parametrize("text", ["not json", "{}"])
@@ -233,7 +272,14 @@ def test_check_runs_one_session_in_the_runners_shell_and_reports_each_harness(ch
     assert argv[-2] == "-c"
     assert started_at == root
     assert result == {
-        "claude": {"found": True, "installed": True, "version": "2.0.0"},
+        "claude": {
+            "found": True,
+            "installed": True,
+            "version": "2.0.0",
+            "scopes": ["project"],
+            "scope": "project",
+            "disabled": False,
+        },
         "antigravity": {"found": False, "installed": False, "version": None},
         "codex": {"found": True, "installed": False, "version": None},
     }
@@ -255,6 +301,7 @@ def test_check_failed_listing_reports_its_error(check, tmp_path):
     assert result["codex"]["installed"] is False
     assert result["codex"]["error"].startswith("the listing printed no JSON")
     assert result["claude"]["error"] == "the listing did not finish"
+    assert (result["claude"]["scopes"], result["claude"]["scope"], result["claude"]["disabled"]) == ([], None, False)
 
 
 def test_check_leaves_no_run_directory(check, tmp_path):
@@ -275,6 +322,26 @@ def test_main_prints_one_json_line(check, tmp_path, monkeypatch, capsys):
     out = capsys.readouterr().out
     assert out.count("\n") == 1
     assert json.loads(out)["antigravity"] == {"found": True, "installed": True, "version": "1.9.0"}
+
+
+def test_main_prints_claude_codes_scopes_and_a_disabled_winner(check, tmp_path, monkeypatch, capsys):
+    root = str(tmp_path)
+    files = found(
+        "claude",
+        listing([claude_entry("user", "2.0.0"), claude_entry("local", "2.0.0", root, enabled=False)]),
+    )
+    monkeypatch.setattr(check, "run_session", fake_session(files, []))
+    assert check.main(["--project", root]) == 0
+    printed = json.loads(capsys.readouterr().out)
+    assert printed["claude"] == {
+        "found": True,
+        "installed": False,
+        "version": None,
+        "scopes": ["local", "user"],
+        "scope": "local",
+        "disabled": True,
+    }
+    assert printed["codex"] == {"found": False, "installed": False, "version": None}
 
 
 def test_main_refuses_a_root_that_is_not_a_directory(check, tmp_path, monkeypatch, capsys):

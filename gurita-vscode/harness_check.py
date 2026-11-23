@@ -19,13 +19,18 @@ It prints one JSON object on one line, keyed `claude`, `antigravity`, and `codex
 `version` (the version that copy reads, null when none is installed or the entry carries no
 version), and `error` beside them when the listing could not be read: it exited non-zero, did
 not finish within the session's time limit, or printed no JSON of the listing's shape, the copy
-then counted as not installed.
+then counted as not installed. Claude Code's result also holds `scopes` (every scope holding a
+`gurita@gurita` entry that applies to ROOT, the winning one first and the rest from the most
+specific down, empty when none applies or the listing could not be read), `scope` (the winning
+scope, null when none applies), and `disabled` (whether the winning entry reads `enabled`
+false).
 
 Claude Code's copy is chosen among the `gurita@gurita` entries that apply to ROOT: the
 `user`-scope entry and every `project`- or `local`-scope entry whose `projectPath` equals ROOT,
 other projects' entries and `synced` entries ignored, `local` winning over `project` over
-`user`, a winning entry whose `enabled` is false meaning not installed. Its version is
-`folderVersion` whenever the entry carries `readFromFolder` and `version` otherwise.
+`user`, a winning entry whose `enabled` is false meaning not installed, its scope still listed
+and marked disabled. Its version is `folderVersion` whenever the entry carries `readFromFolder`
+and `version` otherwise.
 Antigravity's copy is the `gurita` entry of the listing's array, Codex's the `gurita@gurita`
 entry of the listing's `installed` array, each counted not installed when it reads `enabled`
 (or, for Codex, `installed`) false; each copy's version is its `version`.
@@ -42,7 +47,7 @@ import signal
 import subprocess
 import sys
 import tempfile
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, NamedTuple, Optional, Tuple
 
 # The extension's directory is packaged into the VSIX, so importing the runner from it must
 # leave no __pycache__ behind there.
@@ -141,12 +146,24 @@ def entry_version(entry: Dict[str, Any], key: str) -> Optional[str]:
     return value if isinstance(value, str) and value else None
 
 
-def claude_copy(text: str, root: str) -> Tuple[bool, Optional[str]]:
-    """Whether Claude Code's listing holds a Gurita copy for `root`, and its version."""
+class ClaudeCopy(NamedTuple):
+    """What Claude Code's listing holds for a project root: whether a Gurita copy is installed
+    there and its version, every scope holding an applying entry (the winning one first), the
+    winning scope, and whether the winning entry is disabled."""
+
+    installed: bool
+    version: Optional[str]
+    scopes: List[str]
+    scope: Optional[str]
+    disabled: bool
+
+
+def claude_copy(text: str, root: str) -> ClaudeCopy:
+    """Which Gurita copies Claude Code's listing holds for `root`, and the one that wins."""
     entries = parse_json(text)
     if not isinstance(entries, list):
         raise ListingError("the listing is not a JSON array")
-    winner: Optional[Dict[str, Any]] = None
+    applying: Dict[str, Dict[str, Any]] = {}
     for entry in entries:
         if not isinstance(entry, dict) or entry.get("id") != CLAUDE_PLUGIN_ID:
             continue
@@ -157,13 +174,15 @@ def claude_copy(text: str, root: str) -> Tuple[bool, Optional[str]]:
             project = entry.get("projectPath")
             if not isinstance(project, str) or not same_path(project, root):
                 continue
-        if winner is None or SCOPE_RANK[scope] > SCOPE_RANK[winner["scope"]]:
-            winner = entry
-    if winner is None or winner.get("enabled") is False:
-        return False, None
-    if "readFromFolder" in winner:
-        return True, entry_version(winner, "folderVersion")
-    return True, entry_version(winner, "version")
+        applying.setdefault(scope, entry)
+    scopes = sorted(applying, key=lambda name: SCOPE_RANK[name], reverse=True)
+    if not scopes:
+        return ClaudeCopy(False, None, [], None, False)
+    winner = applying[scopes[0]]
+    if winner.get("enabled") is False:
+        return ClaudeCopy(False, None, scopes, scopes[0], True)
+    key = "folderVersion" if "readFromFolder" in winner else "version"
+    return ClaudeCopy(True, entry_version(winner, key), scopes, scopes[0], False)
 
 
 def antigravity_copy(text: str) -> Tuple[bool, Optional[str]]:
@@ -193,9 +212,8 @@ def codex_copy(text: str) -> Tuple[bool, Optional[str]]:
     return False, None
 
 
-def read_copy(key: str, text: str, root: str) -> Tuple[bool, Optional[str]]:
-    if key == CLAUDE:
-        return claude_copy(text, root)
+def read_copy(key: str, text: str) -> Tuple[bool, Optional[str]]:
+    """Antigravity's or Codex's copy, by the harness's key."""
     if key == ANTIGRAVITY:
         return antigravity_copy(text)
     return codex_copy(text)
@@ -213,6 +231,8 @@ def harness_result(key: str, run_dir: str, root: str) -> Dict[str, Any]:
     """One harness's result from the files the session wrote for it in `run_dir`."""
     base = os.path.join(run_dir, key)
     result: Dict[str, Any] = {"found": False, "installed": False, "version": None}
+    if key == CLAUDE:
+        result.update({"scopes": [], "scope": None, "disabled": False})
     if not os.path.exists(base + FOUND_SUFFIX):
         return result
     result["found"] = True
@@ -224,7 +244,13 @@ def harness_result(key: str, run_dir: str, root: str) -> Dict[str, Any]:
             detail = (read_file(base + ERR_SUFFIX) or "").strip().splitlines()
             reason = f"the listing exited with status {status.strip()}"
             raise ListingError(f"{reason}: {detail[-1]}" if detail else reason)
-        installed, version = read_copy(key, read_file(base + OUT_SUFFIX) or "", root)
+        text = read_file(base + OUT_SUFFIX) or ""
+        if key == CLAUDE:
+            copy = claude_copy(text, root)
+            installed, version = copy.installed, copy.version
+            result.update({"scopes": copy.scopes, "scope": copy.scope, "disabled": copy.disabled})
+        else:
+            installed, version = read_copy(key, text)
     except ListingError as error:
         result["error"] = str(error)
         return result

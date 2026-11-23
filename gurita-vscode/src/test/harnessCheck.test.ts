@@ -62,6 +62,43 @@ test('a version is at least another only when both are bare MAJOR.MINOR.PATCH', 
   assert.strictEqual(versionAtLeast('2.0.0', 'unknown'), false);
 });
 
+test("Claude Code's detected scopes are carried with the winning scope first, and a disabled winner is marked and fails the plugin check", () => {
+  const claude = (printed: unknown) => harnessOutcomes(print(printed), '2.0.0')[0];
+  assert.deepStrictEqual(claude({ found: true, installed: true, version: '2.0.0', scopes: ['user'], scope: 'user', disabled: false }), {
+    key: 'claude',
+    name: 'Claude Code',
+    cli: 'claude',
+    packaged: '2.0.0',
+    installed: '2.0.0',
+    scopes: ['user'],
+  });
+  assert.deepStrictEqual(
+    claude({ found: true, installed: true, version: '2.1.0', scopes: ['local', 'project', 'user'], scope: 'local', disabled: false }),
+    { key: 'claude', name: 'Claude Code', cli: 'claude', packaged: '2.0.0', installed: '2.1.0', scopes: ['local', 'project', 'user'] },
+    "several scopes, one version: the winner's",
+  );
+  assert.deepStrictEqual(
+    claude({ found: true, installed: true, version: '2.0.0', scopes: ['user', 'project'], scope: 'project', disabled: false }).scopes,
+    ['project', 'user'],
+    'the winning scope is put first whatever the printed order',
+  );
+  assert.deepStrictEqual(claude({ found: true, installed: false, version: null, scopes: ['local', 'user'], scope: 'local', disabled: true }), {
+    key: 'claude',
+    name: 'Claude Code',
+    cli: 'claude',
+    packaged: '2.0.0',
+    failed: 'plugin',
+    scopes: ['local', 'user'],
+    disabled: true,
+  });
+  const none = claude({ found: true, installed: false, version: null, scopes: [], scope: null, disabled: false });
+  assert.strictEqual(none.scopes, undefined, 'no scope detected, none carried');
+  assert.strictEqual(none.disabled, undefined);
+  assert.strictEqual(harnessOutcomes(print(PASSING), '2.0.0')[1].scopes, undefined, 'a harness printing no scopes carries none');
+  assert.throws(() => harnessOutcomes(print({ ...PASSING, scopes: 'user' }), '2.0.0'), /for claude/);
+  assert.throws(() => harnessOutcomes(print({ ...PASSING, scopes: ['user'], disabled: 'no' }), '2.0.0'), /for claude/);
+});
+
 test('a print not in the check script form throws', () => {
   assert.throws(() => harnessOutcomes('not json', '2.0.0'), /printed no JSON/);
   assert.throws(() => harnessOutcomes('[]', '2.0.0'), /no JSON object/);

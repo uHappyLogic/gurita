@@ -7,7 +7,12 @@
 //
 // Under Harnesses the window lists Claude Code, Antigravity, and Codex, each with the checks it
 // passed or the one that failed first, named: CLI not found, Gurita plugin not installed, or
-// installed version older than the packaged one, with the versions read; and its check-again
+// installed version older than the packaged one, with the versions read. For Claude Code it also
+// names every scope a Gurita copy applying to the project was detected at: the winning scope first,
+// as the one in effect, the others after it as also installed, with the one version the status
+// shows being the winner's; a disabled winner's scope is marked disabled, and the status then says
+// the copy must be enabled in Claude Code itself, through its `/plugin` menu or
+// `claude plugin enable`. Its check-again
 // control, disabled while a check runs, asks the extension to run the check afresh. The extension
 // runs the check on the first opening of the window in the extension's session and otherwise
 // posts the result it keeps. Beside each harness the window also shows whether it is enabled,
@@ -75,6 +80,10 @@ declare function acquireVsCodeApi(): VsCodeApi;
     installed?: string;
     packaged?: string;
     detail?: string;
+    /** The scopes a copy was detected at, the one in effect first; Claude Code's alone. */
+    scopes?: string[];
+    /** Set when the copy in effect, at the first of `scopes`, is disabled. */
+    disabled?: true;
   }
 
   /** The harness check: running, every harness's outcome, or the cause it could not be run. */
@@ -219,6 +228,9 @@ declare function acquireVsCodeApi(): VsCodeApi;
     plugin: 'Gurita plugin not installed',
     version: 'Installed version older than the packaged one',
   };
+  /** What the window says of a Claude Code copy in effect that is disabled. */
+  const DISABLED_COPY_LINE =
+    'Gurita plugin disabled: the copy in effect is disabled and must be enabled in Claude Code itself, through its /plugin menu or claude plugin enable.';
 
   const vscode = acquireVsCodeApi();
   const root = document.getElementById('root') as HTMLElement;
@@ -263,10 +275,31 @@ declare function acquireVsCodeApi(): VsCodeApi;
     if (outcome.failed === 'cli') {
       return `${FAILED_CHECKS.cli}: the runner's shell finds no ${outcome.cli} command.`;
     }
+    if (outcome.failed === 'plugin' && outcome.disabled === true) {
+      return DISABLED_COPY_LINE;
+    }
     if (outcome.failed === 'plugin') {
       return outcome.detail !== undefined ? `${FAILED_CHECKS.plugin}: ${outcome.detail}` : `${FAILED_CHECKS.plugin}.`;
     }
     return `${FAILED_CHECKS.version}: installed ${installed}, packaged ${packaged}.`;
+  }
+
+  /**
+   * The scopes a harness's copy was detected at: the first, the scope in effect, marked disabled
+   * when its copy is, then the others as also installed; undefined when the outcome names none.
+   */
+  function harnessScopes(outcome: HarnessOutcome): string | undefined {
+    const scopes = outcome.scopes ?? [];
+    if (scopes.length === 0) {
+      return undefined;
+    }
+    const [winner, ...others] = scopes;
+    const inEffect = `In effect at ${winner} scope${outcome.disabled === true ? ', disabled' : ''}`;
+    if (others.length === 0) {
+      return `${inEffect}.`;
+    }
+    const also = others.length === 1 ? `${others[0]} scope` : `${others.slice(0, -1).join(', ')} and ${others[others.length - 1]} scopes`;
+    return `${inEffect}; also installed at ${also}.`;
   }
 
   /**
@@ -322,6 +355,12 @@ declare function acquireVsCodeApi(): VsCodeApi;
       item.append(element('span', outcome?.name ?? name, 'harness-name'));
       if (outcome !== undefined) {
         item.append(element('span', harnessStatus(outcome), 'harness-status'));
+        const scopes = harnessScopes(outcome);
+        if (scopes !== undefined) {
+          const shown = element('span', scopes, outcome.disabled === true ? 'harness-scopes disabled' : 'harness-scopes');
+          shown.dataset.scopes = (outcome.scopes ?? []).join(' ');
+          item.append(shown);
+        }
       }
       if (settings?.state === 'read') {
         item.append(drawEnabled(key, outcome?.name ?? name, settings.enabled[key] !== false));

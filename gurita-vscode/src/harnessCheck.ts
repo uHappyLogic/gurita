@@ -7,7 +7,10 @@
 // one, the version `scripts/bundle.js` recorded in `bundled/plugin_version.txt`, a copy equal to or
 // newer than it passing, the versions ordered as bare MAJOR.MINOR.PATCH; or every check passing.
 // The packaged version is the only one compared with, so the check reads nothing over the network. A check that could not be run at all carries its cause verbatim, classified by
-// nothing. This module imports nothing from `vscode`.
+// nothing. For Claude Code the outcome also names every scope at which a Gurita copy applying to
+// the project root was detected, the winning scope, the one in effect, first and the others after
+// it, and whether that winning copy is disabled, a disabled winner failing the plugin check.
+// This module imports nothing from `vscode`.
 
 import { execFile } from 'node:child_process';
 import * as fs from 'node:fs';
@@ -51,6 +54,13 @@ export interface HarnessOutcome {
   packaged?: string;
   /** Why the listing could not be read, as the script printed it, when it could not. */
   detail?: string;
+  /**
+   * Every scope a Gurita copy applying to the project root was detected at, the winning one, in
+   * effect, first and the others after it as also installed; Claude Code's alone, when any.
+   */
+  scopes?: string[];
+  /** Set when the winning copy, at the first of `scopes`, is disabled. */
+  disabled?: true;
 }
 
 /** What a check gave: every harness's outcome, or the cause it could not be run. */
@@ -62,6 +72,12 @@ interface PrintedHarness {
   installed: boolean;
   version: string | null;
   error?: string;
+  /** Claude Code's: every scope holding an applying copy, the winning one first. */
+  scopes?: string[];
+  /** Claude Code's: the winning scope, null when none applies. */
+  scope?: string | null;
+  /** Claude Code's: whether the winning copy is disabled. */
+  disabled?: boolean;
 }
 
 /** The packaged plugin version recorded in `file`, or undefined when it cannot be read. */
@@ -109,11 +125,24 @@ function printedHarness(value: unknown, key: string): PrintedHarness {
     typeof entry.found !== 'boolean' ||
     typeof entry.installed !== 'boolean' ||
     !(entry.version === null || typeof entry.version === 'string') ||
-    !(entry.error === undefined || typeof entry.error === 'string')
+    !(entry.error === undefined || typeof entry.error === 'string') ||
+    !(entry.scopes === undefined || (Array.isArray(entry.scopes) && entry.scopes.every((each) => typeof each === 'string'))) ||
+    !(entry.scope === undefined || entry.scope === null || typeof entry.scope === 'string') ||
+    !(entry.disabled === undefined || typeof entry.disabled === 'boolean')
   ) {
     throw new Error(`the harness check printed no result of its form for ${key}`);
   }
   return entry as unknown as PrintedHarness;
+}
+
+/** The scopes a harness's print names, the winning scope first and the others after it in their printed order. */
+function detectedScopes(printed: PrintedHarness): string[] {
+  const scopes = printed.scopes ?? [];
+  const winner = printed.scope;
+  if (winner === undefined || winner === null || !scopes.includes(winner)) {
+    return [...scopes];
+  }
+  return [winner, ...scopes.filter((each) => each !== winner)];
 }
 
 /**
@@ -142,6 +171,13 @@ export function harnessOutcomes(stdout: string, packaged: string | undefined): H
     }
     if (printed.error !== undefined) {
       outcome.detail = printed.error;
+    }
+    const scopes = detectedScopes(printed);
+    if (scopes.length > 0) {
+      outcome.scopes = scopes;
+      if (printed.disabled === true) {
+        outcome.disabled = true;
+      }
     }
     if (!printed.found) {
       outcome.failed = 'cli';

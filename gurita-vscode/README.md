@@ -349,6 +349,19 @@ with the version installed, or names the first of the three checks that failed:
 - **Installed version older than the packaged one**: the installed and the packaged versions
   are both shown.
 
+For Claude Code the check also reads at which scopes a `gurita@gurita` copy applying to the
+project is installed: the `user` scope, and the `project` and `local` scopes recorded for the
+project root, copies recorded for other project roots not counting. The most specific of them,
+`local` over `project` over `user`, wins, and `harness_check.py` prints every such scope, the
+winning one first, together with which scope won and whether its copy is disabled. Beside Claude
+Code the window then names the scopes: the winning scope first, as the one in effect, and the
+others after it as also installed, for example `In effect at project scope; also installed at
+user scope.` It shows one version, the winning copy's, and none for a scope that does not win.
+When the winning copy is disabled, its scope is marked disabled, even beside an enabled copy at a
+less specific scope, and in place of **Gurita plugin not installed** the window says the copy in
+effect is disabled and must be enabled in Claude Code itself, through its `/plugin` menu or
+`claude plugin enable`; the window adds no control of its own to enable it.
+
 The check runs the first time you open the Settings window after the extension starts. Its
 result is kept in the extension, with no timestamp and nothing stored, for the rest of that
 session: closing the window and opening it again, or showing it again after it was hidden, shows
