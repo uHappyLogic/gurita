@@ -194,4 +194,10 @@
       <drawback>It needs the most geometry of any option, edges and curl traced from characters plus hole placement, and on the two smaller side arms the holes come out around a pixel or less, so they may blur into the fill and add generation cost for detail only the centre arm can show; how much smaller the side arms are is the three-arm derivation question&apos;s to settle.</drawback>
     </alternative>
   </open-question>
+  <open-question id="Settings control on mission windows">
+    <question>The goal makes the Settings window reachable from the side-bar view and from every mission window, and a recorded decision places the side-bar&apos;s Settings as an icon action in the view&apos;s title bar. Today the Settings control stands at the end of the pane&apos;s tab row, which a mission window does not draw, and a mission window at times replaces its whole page with the failure state or with the notice that its mission is no longer live. In what form does a mission window offer Settings, as a control drawn in the mission&apos;s page (and where on it) or as an action contributed to the editor&apos;s title bar of that window, and is it still offered while the window shows the failure state or the no-longer-live notice?</question>
+  </open-question>
+  <open-question id="Centre arm drawing home">
+    <question>A recorded decision makes the activity-bar icon&apos;s centre arm a new arm drawn by hand in the banner&apos;s characters at a larger character scale, a second hand-drawn source of the icon beside `assets/banner.txt`, from which the two side arms are cut. Where is the centre arm&apos;s drawing kept: as a plain-text file of its own, and then in which directory (`assets/` beside the banner&apos;s drawing, or under `gurita-vscode/`), or as text held inside the icon script itself?</question>
+  </open-question>
 </open-questions>
