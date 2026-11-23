@@ -57,5 +57,9 @@ No Marketplace publisher, Open VSX namespace, or token for either is recorded as
 
 - **Listing screenshots.** The README the listings show carries one animated GIF near its top showing the extension at work: a sample mission opened from the side-bar view and a recipe or looped task run progressing in a mission window. It is recorded by hand from VS Code and converted to GIF with a local tool, tracked in the repository under `gurita-vscode/`, referenced from the README by a relative path the packager resolves against the repository's raw files, and re-recorded when the flow it shows changes. The README carries no banner and no still screenshot.
 
+### First publication
+
+- **Listing verification.** Nothing is observed after publication. The extension counts as live on both registries once the release skill's two publish commands, `vsce publish` for the Marketplace and `ovsx publish` for Open VSX, have both exited successfully. The mission opens no listing page, queries no registry, and installs the published extension in no editor, VS Code or a fork, to confirm it.
+
 ## Out of Scope
 
