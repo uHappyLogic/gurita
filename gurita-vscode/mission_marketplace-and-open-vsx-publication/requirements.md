@@ -112,6 +112,8 @@ No Marketplace publisher, Open VSX namespace, or token for either is recorded as
 
 - **Listing keywords.** The manifest gains a short `keywords` list of about six to ten entries: the extension's own terms (`gurita`, `missions`), the three harnesses the plugin runs on (`claude code`, `codex`, `antigravity`), and a few domain terms naming what it does (`ai agents`, `planning`, `requirements`).
 
+- **Gallery banner.** The manifest gains `"galleryBanner": { "color": "#9333ea", "theme": "dark" }`. The header band of the Marketplace listing page is the banner's darker violet, the same colour as the listing icon's square, with light header text (white on `#9333ea` is about 5.4:1).
+
 ### Package and platforms
 
 - **Engine floor for forks.** The published package lowers `engines.vscode` to the oldest VS Code base among the Open VSX forks the extension means to reach, looked up when the change is made. `@types/vscode` is re-pinned exactly to the newest published typings not above that floor, and the extension is compiled and tested against them. The floor then stays fixed until a change needs a newer API.
