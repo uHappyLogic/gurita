@@ -1,1 +1,95 @@
-<open-questions/>
+<open-questions>
+  <open-question id="Maintainer-only tasks">
+    <question>The goal makes creating the Marketplace publisher and the Open VSX namespace and issuing the two tokens the mission&apos;s first tasks, but a task run is carried out by an agent that can do none of them. What does completing such a task consist of: who does what, and what does the task verify before it counts as done?</question>
+  </open-question>
+  <open-question id="Publish site and tokens">
+    <question>Does the extension&apos;s release skill publish from the maintainer&apos;s machine or by starting a GitHub Actions workflow, and where are the Marketplace and Open VSX tokens kept for it to read? The two choices constrain each other, since a local run cannot read an Actions secret and a workflow cannot read a store on the maintainer&apos;s machine, and today the repository names no such token and the shell holds no variable for one.</question>
+  </open-question>
+  <open-question id="Open VSX namespace ownership">
+    <question>Open VSX distinguishes a namespace whose ownership has been claimed and verified from one that has not. Does the mission include claiming ownership of the `uhappylogic` namespace, or does it end with the extension live under a namespace nobody has claimed?</question>
+  </open-question>
+  <open-question id="Listing icon design">
+    <question>What does the icon on the two listings show: the three arms of the activity-bar icon, arms from the README banner, or another drawing, and in which colours on which background?</question>
+  </open-question>
+  <open-question id="Listing icon production">
+    <question>The pinned vsce refuses an SVG file as the manifest&apos;s icon, and the repository tracks no raster image and no script that writes one. How is the listing icon&apos;s raster file produced and kept: by a tracked generator checked by a test, as the activity-bar icon is, by a hand conversion with a local tool, or some other way, and is the file committed or written at package time?</question>
+  </open-question>
+  <open-question id="Listing README file">
+    <question>The package carries `gurita-vscode/README.md`, whose first sections are for a person building the extension from the checkout. Which file do the listings show as the README: that file rewritten for a person installing from a listing, or a separate file the package carries in its place, and where do the building, packaging, and hand-install sections then stand?</question>
+  </open-question>
+  <open-question id="Listing README depth">
+    <question>Does the README the listings show carry the extension&apos;s whole use documentation (the side-bar view, the mission windows, the Settings window, recipes, the looped task run and its rule file, the runner), or a shorter introduction that sends the reader to the full documentation in the repository?</question>
+  </open-question>
+  <open-question id="Listing screenshots">
+    <question>The extension&apos;s README holds no image and the repository tracks no raster image. Does the README the listings show carry screenshots or other images of the extension, or text only?</question>
+  </open-question>
+  <open-question id="Listing name and description">
+    <question>Do the listings keep the manifest&apos;s display name, `Gurita for VS Code`, and its description, which speaks of the Gurita plugin&apos;s missions, questions, and recipes, as they stand, or are they reworded for a reader who does not know the plugin?</question>
+  </open-question>
+  <open-question id="Listing categories">
+    <question>The manifest lists `Other` as its only category. Under which categories is the extension listed?</question>
+  </open-question>
+  <open-question id="Preview flag">
+    <question>Is the extension published marked as a preview, through the manifest&apos;s `preview` entry, or as a regular release?</question>
+  </open-question>
+  <open-question id="Issue and question links">
+    <question>Where does a listing send a reader who looks for the project&apos;s home page, wants to report an issue, or wants to ask a question: which targets do the manifest&apos;s `homepage`, `bugs`, and `qna` entries name, the Marketplace&apos;s own Q&amp;A tab being one possibility for the last?</question>
+  </open-question>
+  <open-question id="Engine floor for forks">
+    <question>The manifest declares `engines.vscode` as `^1.143.0`, the version of the editor installed when the extension was first built, while it builds against `@types/vscode` 1.140.0, and a fork that reads Open VSX may be built on an earlier VS Code than the current one. Does the published package keep that floor or lower it, and to which version?</question>
+  </open-question>
+  <open-question id="Windows installs">
+    <question>The extension supports macOS and Linux, and Windows only through Remote-WSL, but the package names no target platform, so a listing would offer it on every platform. Does the published package restrict where it installs, or stay installable everywhere with the limit stated in its README?</question>
+  </open-question>
+  <open-question id="First published version">
+    <question>The manifest&apos;s version has read `0.1.0` since it was created, through three missions that changed the extension. Which version number does the first publication carry?</question>
+  </open-question>
+  <open-question id="Version source at release">
+    <question>Does the extension&apos;s release skill take the version to release as an argument and write it into `package.json` and `package-lock.json` itself, as `/release-plugin` writes the plugin&apos;s, or does it release whatever version the manifest already holds after a bump made by hand?</question>
+  </open-question>
+  <open-question id="Release skill name">
+    <question>What is the extension&apos;s release skill called, as the name of its directory under `.claude/skills/` and of its command?</question>
+  </open-question>
+  <open-question id="Release commit subject">
+    <question>Does an extension release make a commit of its own, and under which subject, given that `/release-plugin` recognises its own interrupted run by a `HEAD` subject of exactly `Release: &lt;VERSION&gt;`?</question>
+  </open-question>
+  <open-question id="Extension release tag">
+    <question>Every tag in the repository is a bare plugin version, and `/release-plugin` takes the nearest tag reachable from `HEAD` as the last plugin release, whatever its name. Does an extension release create a git tag, in what form, and how does `/release-plugin`&apos;s lookup keep finding the last plugin release?</question>
+  </open-question>
+  <open-question id="Extension GitHub release">
+    <question>Does an extension release create a GitHub release in `uHappyLogic/gurita`, with or without the VSIX attached, or do the two registries alone carry it?</question>
+  </open-question>
+  <open-question id="Extension changelog">
+    <question>`gurita-vscode/` holds no changelog, and the root `CHANGELOG.md` holds the plugin&apos;s release notes. Does the extension get a changelog of its own, which the package would carry to both listings, and in which file?</question>
+  </open-question>
+  <open-question id="Release notes source">
+    <question>From what are the notes of an extension release composed: the finish summaries of the missions scoped to `gurita-vscode/` since the previous extension release, as `/release-plugin` composes the plugin&apos;s notes from finished missions, the commits in between, or text the maintainer writes?</question>
+  </open-question>
+  <open-question id="Extension missions in plugin notes">
+    <question>`/release-plugin` composes the plugin&apos;s release notes from every mission finished since the last tag, whatever its scope, so the next plugin release would list the missions scoped to `gurita-vscode/`. Do those missions stay in the plugin&apos;s release notes, or does `/release-plugin` leave them out once the extension has releases of its own?</question>
+  </open-question>
+  <open-question id="Bundled plugin state">
+    <question>A package bundles the missions tool, the fixed console lines, and the plugin version from the checkout it is built from. From which state of the repository may an extension release be built: any `main`, or only one whose bundled sources (`core/tools/missions.py`, `docs/skill-reference.md`, `VERSION`) are those of a released plugin version?</question>
+  </open-question>
+  <open-question id="Release pre-flight checks">
+    <question>Which conditions must hold before the extension&apos;s release skill changes or publishes anything, for example a clean tracked tree, `main` not behind `origin/main`, the extension&apos;s tests and the runner&apos;s tests passing, a package that builds, and tokens both registries still accept?</question>
+  </open-question>
+  <open-question id="Pre-publish confirmation">
+    <question>Does the extension&apos;s release skill pause for the maintainer&apos;s confirmation before it publishes, as `/release-plugin` pauses once before anything public, or run through unattended once its checks pass?</question>
+  </open-question>
+  <open-question id="Half-published release">
+    <question>A version a registry has accepted cannot be published to it again. What does a re-run of the extension&apos;s release skill with the same version do after one of the two registries accepted that version and the other did not?</question>
+  </open-question>
+  <open-question id="First publication step">
+    <question>The goal has the first publication made through the new release skill, which only the maintainer runs. Is that run a task on the mission&apos;s list, or a step the maintainer takes after the task run and before finishing the mission, as the mission that first built the extension kept its install-and-try step off the list?</question>
+  </open-question>
+  <open-question id="Listing verification">
+    <question>What must be observed before the mission counts the extension as live on both registries: the listing pages or a registry query alone, an install from the Extensions view of VS Code, an install in a fork that reads Open VSX, none of which is installed on this machine, or something else?</question>
+  </open-question>
+  <open-question id="CI for the extension">
+    <question>CI sets up no Node, so neither the extension&apos;s `node:test` tests nor a package build runs there. Does this mission add them to CI now that the extension is published, or do they stay checked only where the maintainer runs them?</question>
+  </open-question>
+  <open-question id="Root documents mention">
+    <question>The root `README.md`, `CONTRIBUTING.md`, and `docs/` do not mention the extension, by a decision of the mission that first built it. Once it is published, does any of them gain a mention of it with links to its listings, and which?</question>
+  </open-question>
+</open-questions>
