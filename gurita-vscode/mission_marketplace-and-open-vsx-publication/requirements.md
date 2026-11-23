@@ -52,5 +52,9 @@ No Marketplace publisher, Open VSX namespace, or token for either is recorded as
 
 - **Publish site and tokens.** The extension's release skill builds and publishes from the maintainer's machine, running the pinned `vsce publish` and an `ovsx publish` in its own shell, and starts no GitHub Actions workflow. Both tokens are kept as environment variables named `VSCE_PAT` and `OVSX_PAT`, the names both command-line tools read without a flag, exported from the maintainer's shell profile so that every session started from that shell has them, and the skill passes no token on any command line. The skill checks that both variables are set and prints how to set them when one is missing. Nothing is stored in the repository or on GitHub.
 
+### Listing README
+
+- **Listing screenshots.** The README the listings show carries one animated GIF near its top showing the extension at work: a sample mission opened from the side-bar view and a recipe or looped task run progressing in a mission window. It is recorded by hand from VS Code and converted to GIF with a local tool, tracked in the repository under `gurita-vscode/`, referenced from the README by a relative path the packager resolves against the repository's raw files, and re-recorded when the flow it shows changes. The README carries no banner and no still screenshot.
+
 ## Out of Scope
 
