@@ -4,9 +4,9 @@ import { execFileSync } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-// The pane's answer to a tab click, against a stub of the `vscode` module standing in for the
-// editor: the webview panel and the messages its page posts, the terminals the run path creates,
-// and the notifications.
+// The pane's and the Settings window's answers to what their pages post, against a stub of the
+// `vscode` module standing in for the editor: the two webview panels, one per view type, and the
+// messages each page posts, the terminals the run path creates, and the notifications.
 const Module = require('node:module') as {
   _load: (request: string, parent: unknown, isMain: boolean) => unknown;
 };
@@ -32,11 +32,29 @@ interface InputBoxOptions {
 }
 /** The options of every input box the stub's editor showed, in order. */
 const inputBoxes: InputBoxOptions[] = [];
-/** Every message the extension posted to the page. */
+/** Every message the extension posted to either page, the pane's and the Settings window's, in order. */
 const posted: unknown[] = [];
-let receive: ((message: unknown) => void) | undefined;
-/** Closes the panel the extension created last, as the editor does when the person closes it. */
-let dispose: (() => void) | undefined;
+
+/** A webview panel the stub's editor created: what its page's messages reach, its disposal, and its reveals. */
+interface StubPanel {
+  viewType: string;
+  title: string;
+  visible: boolean;
+  /** The number of `reveal` calls made on it. */
+  reveals: number;
+  /** The script its page shell loads. */
+  html: string;
+  receive?: (message: unknown) => void;
+  /** Closes the panel, as the editor does when the person closes it. */
+  dispose?: () => void;
+}
+/** Every webview panel the stub's editor created, in order. */
+const panels: StubPanel[] = [];
+
+/** The panel of `viewType` the extension created last. */
+function panelOf(viewType: string): StubPanel | undefined {
+  return [...panels].reverse().find((each) => each.viewType === viewType);
+}
 
 function notify(message: string): Promise<undefined> {
   notifications.push(message);
@@ -52,8 +70,6 @@ interface StubWatcher {
 }
 /** Every file system watcher the stub's editor created, in order. */
 const watchers: StubWatcher[] = [];
-/** The panel the extension created last, its `visible` set by a test as the editor sets it on hiding and showing. */
-let lastPanel: { visible: boolean } | undefined;
 
 /** The workspace the stub's editor holds open: its folders and the `gurita` settings it answers with. */
 const workspace = {
@@ -103,16 +119,27 @@ const stub = {
     },
   },
   window: {
-    createWebviewPanel(): unknown {
-      lastPanel = {
-        visible: true,
-        reveal(): void {},
+    createWebviewPanel(viewType: string, title: string): unknown {
+      const record: StubPanel = { viewType, title, visible: true, reveals: 0, html: '' };
+      panels.push(record);
+      return {
+        get visible() {
+          return record.visible;
+        },
+        reveal(): void {
+          record.reveals++;
+        },
         webview: {
-          html: '',
+          set html(value: string) {
+            record.html = value;
+          },
+          get html() {
+            return record.html;
+          },
           cspSource: 'stub-csp',
           asWebviewUri: (uri: unknown) => ({ toString: () => `webview:${JSON.stringify(uri)}` }),
           onDidReceiveMessage(listener: (message: unknown) => void) {
-            receive = listener;
+            record.receive = listener;
             return disposable;
           },
           postMessage(message: unknown): Promise<boolean> {
@@ -122,11 +149,10 @@ const stub = {
         },
         onDidChangeViewState: () => disposable,
         onDidDispose(listener: () => void) {
-          dispose = listener;
+          record.dispose = listener;
           return disposable;
         },
-      } as { visible: boolean };
-      return lastPanel;
+      };
     },
     createTerminal(options: { name: string; shellArgs?: string[] }): StubTerminal & { show(preserveFocus?: boolean): void } {
       const terminal = {
@@ -155,6 +181,7 @@ const load = Module._load;
 Module._load = (request, parent, isMain) => (request === 'vscode' ? stub : load(request, parent, isMain));
 const pane = require('../pane') as typeof import('../pane');
 const runs = require('../runs') as typeof import('../runs');
+const settingsWindow = require('../settingsWindow') as typeof import('../settingsWindow');
 Module._load = load;
 
 /** The project's `workspaceState` as the stub's editor keeps it, by key. */
@@ -179,10 +206,56 @@ const BETA = 'mission_beta/';
 
 pane.openMissionPane(context);
 
-/** Delivers a message to the extension as the page posts it. */
+/** The messages only the Settings window's page posts: its check-again control and its edits. */
+const SETTINGS_MESSAGES = new Set([
+  'checkHarnesses',
+  'setHarnessEnabled',
+  'addHarnessValue',
+  'removeHarnessValue',
+  'duplicateVariant',
+  'renameVariant',
+  'deleteVariant',
+  'pickDefault',
+  'resetVariant',
+  'resetVariantLines',
+  'replaceLineValue',
+  'replaceLineHarness',
+  'duplicateLine',
+  'renameLine',
+  'deleteLine',
+  'resetLine',
+]);
+
+/**
+ * Delivers a message to the extension as the page that posts it does: a message of the Settings
+ * window's page from that window, opened first when it is not, and every other from the pane's page.
+ */
 function send(message: unknown): void {
-  assert.ok(receive !== undefined, 'the pane listens to its page');
-  receive(message);
+  const settings = SETTINGS_MESSAGES.has((message as { type?: string }).type ?? '');
+  if (settings && panelOf(settingsWindow.SETTINGS_VIEW_TYPE)?.dispose === undefined) {
+    settingsWindow.openSettings(context);
+  }
+  const target = panelOf(settings ? settingsWindow.SETTINGS_VIEW_TYPE : 'gurita.missionPane');
+  assert.ok(target?.receive !== undefined, `the ${settings ? 'Settings window' : 'pane'} listens to its page`);
+  target.receive(message);
+}
+
+/** Opens the Settings window, or reveals it when it is open, and delivers the ready message its page posts on loading. */
+function showSettings(): void {
+  settingsWindow.openSettings(context);
+  const target = panelOf(settingsWindow.SETTINGS_VIEW_TYPE);
+  assert.ok(target?.receive !== undefined, 'the Settings window listens to its page');
+  target.receive({ type: 'ready' });
+}
+
+/** Closes the panel of `viewType` the extension created last, as the person closing it does. */
+function close(viewType: string): void {
+  const target = panelOf(viewType);
+  assert.ok(target?.dispose !== undefined, `a ${viewType} panel is open`);
+  const dispose = target.dispose;
+  target.dispose = undefined;
+  target.receive = undefined;
+  dispose();
 }
 
 /** Starts a held run for `mission` through the run path and returns its terminal. */
@@ -527,7 +600,7 @@ const CHECK_PRINT = {
 /** A mission no earlier test holds a run for. */
 const ETA = 'pkg/mission_eta/';
 
-test('the first opening of the settings view runs the check once, every later opening and re-read posting the result kept without running it', async () => {
+test("the Settings window's first opening runs the check once for the session, every later opening, a close and a reopening, and every re-read posting the result kept without running it", async () => {
   const root = project(ETA);
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-check-'));
   const stubbed = stubCheckScript(dir);
@@ -548,7 +621,7 @@ test('the first opening of the settings view runs the check once, every later op
   assert.deepStrictEqual(checkRuns(stubbed.log), [], 'no answer of the pane runs the check');
 
   let from = posted.length;
-  send({ type: 'settingsOpened' });
+  showSettings();
   await checkPosted('running', from);
   const checked = await checkPosted('checked', from);
   assert.deepStrictEqual(checkRuns(stubbed.log), [{ argv: ['--project', root], cwd: root }], 'run once, from the project root');
@@ -562,8 +635,23 @@ test('the first opening of the settings view runs the check once, every later op
   });
 
   from = posted.length;
-  send({ type: 'settingsOpened' });
-  assert.deepStrictEqual(await checkPosted('checked', from), checked, 'a later opening posts the result kept');
+  showSettings();
+  assert.deepStrictEqual(await checkPosted('checked', from), checked, 'the window shown again posts the result kept');
+
+  // The window is closed and opened again: a fresh window, the result kept in the session posted to it.
+  const first = panelOf(settingsWindow.SETTINGS_VIEW_TYPE);
+  close(settingsWindow.SETTINGS_VIEW_TYPE);
+  from = posted.length;
+  showSettings();
+  assert.notStrictEqual(panelOf(settingsWindow.SETTINGS_VIEW_TYPE), first, 'the reopening creates a window afresh');
+  assert.deepStrictEqual(await checkPosted('checked', from), checked, 'the reopened window is posted the result kept');
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  assert.strictEqual(checkRuns(stubbed.log).length, 1, 'a close and a reopening run no check');
+  assert.ok(
+    !posted.slice(from).some((message) => (message as { type?: string; check?: { state: string } }).type === 'harnessCheck' && (message as { check: { state: string } }).check.state === 'running'),
+    'the reopened window never shows the check running',
+  );
+
   const after = (await entryAfter({ type: 'refresh' }, ETA, 'First run')) as unknown;
   await entryAfter({ type: 'ready' }, ETA, 'First run');
   assert.strictEqual(checkRuns(stubbed.log).length, 1, 'no later opening, re-read, or Refresh runs the check');
@@ -586,7 +674,7 @@ test('the first opening of the settings view runs the check once, every later op
     ],
   );
   from = posted.length;
-  send({ type: 'settingsOpened' });
+  showSettings();
   assert.deepStrictEqual(await checkPosted('checked', from), again, 'the fresh result is the one kept');
 
   fs.writeFileSync(stubbed.print, 'not json\n');
@@ -595,14 +683,19 @@ test('the first opening of the settings view runs the check once, every later op
   const failed = await checkPosted('failed', from);
   assert.match(String(failed.cause), /the harness check printed no JSON/);
 
-  // A panel created afresh runs the check again at its first opening.
+  // Neither a pane created afresh nor a Settings window created afresh runs the check again: only check again does.
   fs.writeFileSync(stubbed.print, JSON.stringify(CHECK_PRINT) + '\n');
-  assert.ok(dispose !== undefined);
-  dispose();
+  close('gurita.missionPane');
   pane.openMissionPane(context);
   await entryAfter({ type: 'ready' }, ETA, 'First run');
+  close(settingsWindow.SETTINGS_VIEW_TYPE);
   from = posted.length;
-  send({ type: 'settingsOpened' });
+  showSettings();
+  assert.deepStrictEqual(await checkPosted('failed', from), failed, 'the last result kept is posted, failed as it was');
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  assert.strictEqual(checkRuns(stubbed.log).length, 3, 'no reopening of either window runs the check');
+  from = posted.length;
+  send({ type: 'checkHarnesses' });
   assert.deepStrictEqual(await checkPosted('checked', from), checked);
   assert.strictEqual(checkRuns(stubbed.log).length, 4);
 });
@@ -661,7 +754,7 @@ test("disabling a harness is stored in the variant store's harness part and leav
     await page({ type: 'selectVariant', mission: THETA, recipe: 'First run', variant: 'Antigravity' });
 
     from = posted.length;
-    send({ type: 'settingsOpened' });
+    showSettings();
     assert.deepStrictEqual(await postedOf('harnessSettings', from), {
       type: 'harnessSettings',
       settings: { state: 'read', enabled: { claude: true, antigravity: true, codex: true } },
@@ -781,7 +874,7 @@ codex exec "/gurita:finish-mission --mission <path>" -m gpt-5.5;
     );
 
     let from = posted.length;
-    send({ type: 'settingsOpened' });
+    showSettings();
     assert.deepStrictEqual(await postedLists(from), {
       claude: { models: ['fable', 'opus', 'sonnet'], efforts: ['xhigh', 'high'] },
       antigravity: { models: ['gemini-4-argon', 'claude-opus-5-5', 'gemini-4-neon'], efforts: ['medium', 'high', 'xhigh'] },
@@ -931,7 +1024,7 @@ test('the settings view lists every recipe with its variants and carries out eac
 
     await entryAfter({ type: 'refresh' }, IOTA, 'First run');
     let from = posted.length;
-    send({ type: 'settingsOpened' });
+    showSettings();
     let recipes = await postedVariants(from);
     assert.deepStrictEqual(variantRows(recipes), [
       ['First run', false, ['Claude Code (shipped) *', 'Antigravity (shipped)', 'default (own)'], []],
@@ -1072,7 +1165,7 @@ test("a pick in a line's dropdown on a shipped variant leaves it unchanged besid
 
     await entryAfter({ type: 'refresh' }, KAPPA, 'First run');
     const from = posted.length;
-    send({ type: 'settingsOpened' });
+    showSettings();
     const listed = (await postedVariants(from))[0].variants as EditedVariant[];
     const shippedLines = listed[0].lines;
     assert.deepStrictEqual(listed.map((each) => [each.name, each.origin, each.editors]), [
@@ -1208,7 +1301,7 @@ test("a pick in a line's harness dropdown rewrites the line onto the picked harn
 
     await entryAfter({ type: 'refresh' }, SIGMA, 'First run');
     const from = posted.length;
-    send({ type: 'settingsOpened' });
+    showSettings();
     const shippedLines = ((await postedVariants(from))[0].variants as EditedVariant[])[0].lines;
 
     // Claude Code to Antigravity: the prompt and form kept, the first listed model, an effort not offered becoming the first listed.
@@ -1372,7 +1465,7 @@ test("the settings view lists the named single-task lines and carries out each l
 
     await entryAfter({ type: 'refresh' }, LAMBDA, 'First run');
     let from = posted.length;
-    send({ type: 'settingsOpened' });
+    showSettings();
     let listed = await postedLines(from);
     assert.deepStrictEqual(rows(listed), [
       [CC, 'shipped', ccLine],
@@ -1634,7 +1727,7 @@ test("every fixed-name button is posted with the variants it can run and the lin
       initial,
       'with no pick each button stands on its first listed variant, the shipped one, an own variant the button cannot run left out of its dropdown, the answer-with-alternative buttons posted per alternative instead',
     );
-    send({ type: 'settingsOpened' });
+    showSettings();
 
     // A pick of a two-line own variant: the button stands on it, carrying both lines.
     let buttons = await buttonsAfter({ type: 'pickDefault', recipe: 'discuss-open-question', variant: { name: 'default', origin: 'own' } });
@@ -1870,7 +1963,7 @@ test("a fixed-name button's dropdown selection is remembered in workspaceState, 
     assert.match((await click({ type: 'missionButton', button: 'discussGoal', variant: 'Opus' }, ['A goal'])) ?? '', / chain -- claude "\/gurita:discuss-mission-goal \${GURITA_GOAL}" --model "opus"/);
 
     // A default picked in the settings view leaves every remembered selection standing.
-    send({ type: 'settingsOpened' });
+    showSettings();
     live = await liveAfter({ type: 'pickDefault', recipe: 'discuss-mission-goal', variant: { name: 'default', origin: 'shipped' } });
     assert.deepStrictEqual(dropdown(live, NU, 'discussGoal')[1], 'Opus');
 
@@ -2035,8 +2128,7 @@ test("the live read and its one watcher outlast the pane, every debounced event 
     assert.deepStrictEqual((await pageAfter({ type: 'ready' })).tasks.headings, [], 'a ready message reads nothing afresh');
 
     // The pane is closed: the watcher stays, and its event is re-read with no pane to post to.
-    assert.ok(dispose !== undefined);
-    dispose();
+    close('gurita.missionPane');
     assert.strictEqual(watcher.disposed, false, "the watcher survives the pane's disposal");
     assert.deepStrictEqual(
       [watcher.listeners.create.length, watcher.listeners.change.length, watcher.listeners.delete.length],
@@ -2052,8 +2144,9 @@ test("the live read and its one watcher outlast the pane, every debounced event 
     assert.strictEqual(watchers.length, count, 'reopening the pane creates no second watcher');
 
     // The pane is hidden: an event is re-read all the same, and shown by the ready message the page posts when shown.
-    assert.ok(lastPanel !== undefined);
-    lastPanel.visible = false;
+    const shownPane = panelOf('gurita.missionPane');
+    assert.ok(shownPane !== undefined);
+    shownPane.visible = false;
     fs.writeFileSync(
       path.join(root, OMEGA, 'open_questions.xml'),
       '<open-questions>\n  <open-question id="Pane Layout">\n    <question>Which layout?</question>\n  </open-question>\n</open-questions>\n',
@@ -2062,7 +2155,7 @@ test("the live read and its one watcher outlast the pane, every debounced event 
     fire('change', 'open_questions.xml');
     await wait(1500);
     assert.deepStrictEqual(livePosted(from), [], 'nothing is posted to a hidden pane');
-    lastPanel.visible = true;
+    shownPane.visible = true;
     const shown = await pageAfter({ type: 'ready' });
     assert.deepStrictEqual(shown.questions.questions?.map((each) => each.id), ['Pane Layout'], 'an event during a hidden pane shows in its next ready answer');
     assert.deepStrictEqual(shown.tasks.headings, ['First task']);

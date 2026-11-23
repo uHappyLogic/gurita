@@ -563,8 +563,8 @@ test('the manifest contributes the refresh command, offered in the Command Palet
     'the refresh command is not hidden from the Command Palette',
   );
   assert.deepStrictEqual(
-    manifest.contributes.menus['view/title'],
-    [{ command: missionTree.REFRESH_COMMAND, when: `view == ${missionTree.MISSIONS_VIEW}`, group: 'navigation' }],
-    "the view's title bar runs the same command as an icon action",
+    manifest.contributes.menus['view/title'].filter((entry: { command: string }) => entry.command === missionTree.REFRESH_COMMAND),
+    [{ command: missionTree.REFRESH_COMMAND, when: `view == ${missionTree.MISSIONS_VIEW}`, group: 'navigation@1' }],
+    "the view's title bar runs the same command as an icon action, first in its group",
   );
 });

@@ -2,187 +2,17 @@ import { test } from 'node:test';
 import * as assert from 'node:assert';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import * as vm from 'node:vm';
+import { FakeElement, Page, loadScript, stylesheetRules } from './fakePage';
 
-// The page script, compiled as the pane loads it, run against a small stand-in for the DOM: just
-// the elements, attributes, and events the script uses, so the drawn page can be walked.
-
-class FakeText {
-  constructor(public textContent: string) {}
-}
-
-class FakeElement {
-  textContent = '';
-  className = '';
-  type = '';
-  title = '';
-  value = '';
-  selected = false;
-  disabled = false;
-  readonly dataset: Record<string, string> = {};
-  readonly style: Record<string, string> = {};
-  readonly attributes = new Map<string, string>();
-  children: (FakeElement | FakeText)[] = [];
-  private readonly listeners = new Map<string, ((event: unknown) => void)[]>();
-
-  /** `measure` gives the element's laid-out width, as the test's stand-in for the browser's layout. */
-  constructor(
-    readonly tagName: string,
-    private readonly measure: (element: FakeElement) => number = () => 0,
-  ) {}
-
-  /** The class list, kept in `className` as the page script's `element` sets it. */
-  get classList(): { remove(name: string): void; toggle(name: string, force: boolean): void } {
-    const names = () => this.className.split(' ').filter((name) => name !== '');
-    return {
-      remove: (name) => {
-        this.className = names().filter((each) => each !== name).join(' ');
-      },
-      toggle: (name, force) => {
-        const kept = names().filter((each) => each !== name);
-        this.className = (force ? [...kept, name] : kept).join(' ');
-      },
-    };
-  }
-
-  getBoundingClientRect(): { width: number } {
-    return { width: this.measure(this) };
-  }
-
-  setAttribute(name: string, value: string): void {
-    this.attributes.set(name, value);
-  }
-
-  getAttribute(name: string): string | undefined {
-    return this.attributes.get(name);
-  }
-
-  append(...nodes: (FakeElement | FakeText)[]): void {
-    this.children.push(...nodes);
-  }
-
-  replaceChildren(...nodes: (FakeElement | FakeText)[]): void {
-    this.children = [...nodes];
-  }
-
-  get childElementCount(): number {
-    return this.children.filter((child) => child instanceof FakeElement).length;
-  }
-
-  addEventListener(type: string, listener: (event: unknown) => void): void {
-    this.listeners.set(type, [...(this.listeners.get(type) ?? []), listener]);
-  }
-
-  click(): void {
-    for (const listener of this.listeners.get('click') ?? []) {
-      listener({});
-    }
-  }
-
-  /** Picks the option of `value` in a select, firing its change event as the browser does. */
-  change(value: string): void {
-    this.value = value;
-    for (const listener of this.listeners.get('change') ?? []) {
-      listener({});
-    }
-  }
-
-  scrollIntoView(): void {}
-
-  focus(): void {}
-
-  querySelector(selector: string): FakeElement | null {
-    const focus = /^\[data-focus="(.*)"\]$/.exec(selector);
-    return this.all().find((each) => focus !== null && each.dataset.focus === focus[1]) ?? null;
-  }
-
-  /** This element and every element beneath it, in document order. */
-  all(): FakeElement[] {
-    return [this, ...this.children.flatMap((child) => (child instanceof FakeElement ? child.all() : []))];
-  }
-
-  /** Whether the element's class list holds `name`. */
-  has(name: string): boolean {
-    return this.className.split(' ').includes(name);
-  }
-}
-
-interface Page {
-  root: FakeElement;
-  posted: unknown[];
-  /** Every state the page saved with `setState`, in order. */
-  saved: unknown[];
-  send(message: unknown): void;
-  /** Fires the window's resize event, as a change of the pane's width does. */
-  resize(): void;
-  /** Fires the document's keydown event for `key`, pressed with no modifier outside any input. */
-  key(key: string): void;
-}
+// The pane's page script, compiled as the pane loads it, run against the small stand-in for the DOM
+// in `fakePage.ts`, so the drawn page can be walked.
 
 /**
  * Loads the compiled page script into a fresh page, as the pane does each time it is shown, its
  * elements laid out to the widths `measure` gives.
  */
 function loadPage(measure?: (element: FakeElement) => number): Page {
-  const root = new FakeElement('div', measure);
-  const posted: unknown[] = [];
-  const saved: unknown[] = [];
-  const windowListeners: ((event: { data: unknown }) => void)[] = [];
-  const resizeListeners: (() => void)[] = [];
-  const keyListeners: ((event: unknown) => void)[] = [];
-  const context = {
-    HTMLElement: FakeElement,
-    acquireVsCodeApi: () => ({
-      // Cloned, as a posted message is, out of the script's own realm.
-      postMessage: (message: unknown) => posted.push(JSON.parse(JSON.stringify(message))),
-      getState: () => undefined,
-      setState: (state: unknown) => saved.push(JSON.parse(JSON.stringify(state))),
-    }),
-    document: {
-      activeElement: null,
-      getElementById: (id: string) => (id === 'root' ? root : null),
-      createElement: (tag: string) => new FakeElement(tag, measure),
-      createTextNode: (text: string) => new FakeText(text),
-      addEventListener: (type: string, listener: (event: unknown) => void) => {
-        if (type === 'keydown') {
-          keyListeners.push(listener);
-        }
-      },
-    },
-    window: {
-      scrollY: 0,
-      scrollTo: () => undefined,
-      addEventListener: (type: string, listener: (event: { data: unknown }) => void) => {
-        if (type === 'message') {
-          windowListeners.push(listener);
-        } else if (type === 'resize') {
-          resizeListeners.push(listener as () => void);
-        }
-      },
-    },
-  };
-  const script = fs.readFileSync(path.join(__dirname, '..', 'webview', 'page.js'), 'utf8');
-  vm.runInNewContext(script, context);
-  return {
-    root,
-    posted,
-    saved,
-    send: (message) => {
-      for (const listener of windowListeners) {
-        listener({ data: message });
-      }
-    },
-    resize: () => {
-      for (const listener of resizeListeners) {
-        listener();
-      }
-    },
-    key: (key) => {
-      for (const listener of keyListeners) {
-        listener({ key, target: null, altKey: false, ctrlKey: false, metaKey: false, shiftKey: false, preventDefault: () => undefined });
-      }
-    },
-  };
+  return loadScript('page.js', measure);
 }
 
 const ALPHA = 'lib/mission_alpha/';
@@ -268,8 +98,8 @@ const ACTIONS: Record<PaneName, string[]> = {
 
 /** The buttons that stay enabled whatever runs, with each pane shown. */
 const STAYING: Record<PaneName, string[]> = {
-  questions: ['Alpha', 'Beta', 'Refresh', 'New mission', 'Define mission', 'Settings', 'Open questions', 'Remaining tasks', 'Next'],
-  tasks: ['Alpha', 'Beta', 'Refresh', 'New mission', 'Define mission', 'Settings', 'Open questions', 'Remaining tasks'],
+  questions: ['Alpha', 'Beta', 'Refresh', 'New mission', 'Define mission', 'Open questions', 'Remaining tasks', 'Next'],
+  tasks: ['Alpha', 'Beta', 'Refresh', 'New mission', 'Define mission', 'Open questions', 'Remaining tasks'],
 };
 
 /** Shows the Remaining tasks pane, then the Open questions pane, running `check` with each shown. */
@@ -1059,7 +889,7 @@ test('a fixed-name button posted with no variant, every one left out for a disab
       'only the recipe list holds dropdowns',
     );
   });
-  for (const text of ['review', 'Refresh', 'Settings']) {
+  for (const text of ['review', 'Refresh']) {
     assert.strictEqual(named(page, text).disabled, false, `${text} stays enabled`);
   }
 
@@ -1521,13 +1351,6 @@ test('the arrow keys move the question view only while the Open questions pane i
   assert.ok(texts(page).includes('1 / 2'));
 });
 
-/** The settings view drawn beneath the tab row, when one is. */
-function settingsView(page: Page): FakeElement | undefined {
-  const drawn = page.root.all().filter((each) => each.has('settings'));
-  assert.ok(drawn.length <= 1);
-  return drawn[0];
-}
-
 /** The tab row's controls belonging to no mission, in the order drawn. */
 function rowEnds(page: Page): string[] {
   const ends = page.root.all().find((each) => each.has('ends'));
@@ -1535,18 +1358,10 @@ function rowEnds(page: Page): string[] {
   return ends.all().filter((each) => each.tagName === 'button').map(shownName);
 }
 
-/** The titles of the mission tabs that read selected. */
-function selectedTabs(page: Page): string[] {
-  return page.root
-    .all()
-    .filter((each) => each.getAttribute('role') === 'tab' && each.getAttribute('aria-selected') === 'true' && !each.has('pane-tab'))
-    .map((each) => each.textContent);
-}
-
-test('the settings control stands at the end of the tab row, after Refresh, New mission, and Define mission, in the failure state too', () => {
+test('the tab row ends in Refresh, New mission, and Define mission with no Settings control, in the failure state too', () => {
   const page = loadPage();
   page.send(live([]));
-  assert.deepStrictEqual(rowEnds(page), ['Refresh', 'New mission', 'Define mission', 'Settings']);
+  assert.deepStrictEqual(rowEnds(page), ['Refresh', 'New mission', 'Define mission']);
   const tabs = page.root.all().find((each) => each.has('tab-list'));
   assert.ok(tabs !== undefined);
   assert.deepStrictEqual(
@@ -1554,194 +1369,11 @@ test('the settings control stands at the end of the tab row, after Refresh, New 
     ['Alpha', 'Beta'],
     'the mission tabs hold missions only',
   );
+  assert.ok(!buttons(page).some((each) => ['Settings', 'Close settings'].includes(shownName(each))), 'the pane draws no Settings or Close settings control');
+  assert.deepStrictEqual(page.root.all().filter((each) => each.has('settings')), [], 'and no settings view');
   page.send({ type: 'liveFailure', cause: 'Error: no repository' });
-  assert.deepStrictEqual(rowEnds(page), ['Refresh', 'New mission', 'Define mission', 'Settings']);
-});
-
-test('the settings control swaps the mission page for the settings view, and its close control swaps back to the page shown before', () => {
-  const page = loadPage();
-  page.send(liveWith('questions', 'questions'));
-  named(page, 'Beta').click();
-  named(page, 'Remaining tasks').click();
-  const count = page.posted.length;
-  named(page, 'Settings').click();
-  const view = settingsView(page);
-  assert.ok(view !== undefined, 'the settings view is drawn');
-  assert.strictEqual(page.root.all().filter((each) => each.has('page')).length, 0, 'no mission page beneath the row');
-  assert.strictEqual(blocks(page).length, 0, 'no workflow diagram');
-  assert.deepStrictEqual(selectedTabs(page), [], 'no tab reads selected');
-  assert.strictEqual(named(page, 'Settings').getAttribute('aria-pressed'), 'true');
-  assert.deepStrictEqual(rowEnds(page), ['Refresh', 'New mission', 'Define mission', 'Settings']);
-  assert.deepStrictEqual(
-    view.all().filter((each) => ['input', 'textarea'].includes(each.tagName)),
-    [],
-    'nothing is typed on the settings view',
-  );
-  assert.deepStrictEqual(
-    [...new Set(view.all().map((each) => each.tagName))].filter(
-      (tag) => !['section', 'h3', 'h4', 'div', 'p', 'pre', 'ul', 'li', 'span', 'button', 'select', 'option'].includes(tag),
-    ),
-    [],
-    'the settings view holds text, buttons, and dropdowns only',
-  );
-  named(page, 'Close settings').click();
-  assert.strictEqual(settingsView(page), undefined);
-  assert.deepStrictEqual(selectedTabs(page), ['Beta'], 'back on the mission shown before');
-  assert.strictEqual(shownPane(page), 'tasks', 'with the pane it showed');
-  assert.strictEqual(named(page, 'Settings').getAttribute('aria-pressed'), 'false');
-  assert.deepStrictEqual(page.posted.slice(count), [{ type: 'settingsOpened' }], 'the opening is posted, the swap back posts nothing');
-});
-
-test("a click on any mission tab swaps the settings view back to that mission's page", () => {
-  const page = loadPage();
-  page.send(live([]));
-  named(page, 'Settings').click();
-  const count = page.posted.length;
-  named(page, 'Beta').click();
-  assert.strictEqual(settingsView(page), undefined);
-  assert.deepStrictEqual(selectedTabs(page), ['Beta']);
-  assert.strictEqual(page.root.all().filter((each) => each.has('page')).length, 1);
-  assert.deepStrictEqual(page.posted.slice(count), [{ type: 'missionTab', mission: BETA }]);
-  named(page, 'Settings').click();
-  named(page, 'Beta').click();
-  assert.strictEqual(settingsView(page), undefined, 'the tab of the mission shown before swaps back too');
-  assert.deepStrictEqual(selectedTabs(page), ['Beta']);
-});
-
-test('the settings view stays shown through every answer the extension posts until it is swapped back', () => {
-  const page = loadPage();
-  page.send(live([]));
-  named(page, 'Settings').click();
-  page.send(live([ALPHA]));
-  assert.ok(settingsView(page) !== undefined);
-  page.send({ type: 'running', missions: [] });
-  assert.ok(settingsView(page) !== undefined);
-  assert.strictEqual(named(page, 'Settings').disabled, false);
-  page.key('ArrowRight');
-  assert.ok(settingsView(page) !== undefined, 'the arrow keys move no question view');
-  page.send({ type: 'liveFailure', cause: 'Error: no repository' });
-  assert.ok(settingsView(page) !== undefined);
-  assert.ok(!texts(page).includes('The live missions could not be read.'));
-  named(page, 'Close settings').click();
-  assert.ok(texts(page).includes('The live missions could not be read.'), 'back on the failure state shown before');
-});
-
-test('in the failure state the settings control swaps the failure for the settings view, and its close control swaps back', () => {
-  const page = loadPage();
-  page.send({ type: 'liveFailure', cause: 'Error: no repository' });
-  named(page, 'Settings').click();
-  assert.ok(settingsView(page) !== undefined);
-  assert.ok(!texts(page).includes('The live missions could not be read.'));
-  assert.ok(!texts(page).includes('Error: no repository'));
-  assert.deepStrictEqual(rowEnds(page), ['Refresh', 'New mission', 'Define mission', 'Settings']);
-  named(page, 'Close settings').click();
-  assert.strictEqual(settingsView(page), undefined);
-  assert.ok(texts(page).includes('The live missions could not be read.'));
-  assert.ok(texts(page).includes('Error: no repository'));
-  page.send(live([]));
-  assert.strictEqual(settingsView(page), undefined, 'a later answer draws the mission pages');
-  assert.deepStrictEqual(selectedTabs(page), ['Alpha']);
-});
-
-test('the extension contributes no command for the settings view', () => {
-  const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8')) as {
-    contributes: { commands: { command: string }[] };
-  };
-  assert.deepStrictEqual(
-    manifest.contributes.commands.map((each) => each.command),
-    ['gurita.openMissionPane', 'gurita.refreshMissions', 'gurita.newMission', 'gurita.defineMission', 'gurita.pickStartingVariant'],
-  );
-});
-
-/** A harness check as the extension posts it: Claude Code passing, Antigravity on another version, Codex not found. */
-const CHECKED = {
-  type: 'harnessCheck',
-  check: {
-    state: 'checked',
-    harnesses: [
-      { key: 'claude', name: 'Claude Code', cli: 'claude', installed: '2.0.0', packaged: '2.0.0' },
-      { key: 'antigravity', name: 'Antigravity', cli: 'agy', failed: 'version', installed: '1.9.0', packaged: '2.0.0' },
-      { key: 'codex', name: 'Codex', cli: 'codex', failed: 'cli', packaged: '2.0.0' },
-    ],
-  },
-};
-
-/** Each harness the settings view lists: its key, the check that failed when one did, and its two lines of text. */
-function harnessRows(page: Page): [string, string | undefined, string[]][] {
-  const view = settingsView(page);
-  assert.ok(view !== undefined, 'the settings view is drawn');
-  return view
-    .all()
-    .filter((each) => each.tagName === 'li' && each.dataset.harness !== undefined)
-    .map((each) => [
-      each.dataset.harness,
-      each.dataset.failed,
-      each
-        .all()
-        .filter((child) => child.has('harness-name') || child.has('harness-status'))
-        .map((child) => child.textContent),
-    ]);
-}
-
-test('every opening of the settings view is posted, and the view shows the check running with check again disabled until a result comes', () => {
-  const page = loadPage();
-  page.send(live([]));
-  const count = page.posted.length;
-  named(page, 'Settings').click();
-  named(page, 'Settings').click();
-  assert.deepStrictEqual(page.posted.slice(count), [{ type: 'settingsOpened' }], 'a click while the view is open opens nothing');
-  assert.ok(texts(page).includes('Checking the harnesses…'));
-  assert.strictEqual(named(page, 'Check again').disabled, true);
-  named(page, 'Close settings').click();
-  named(page, 'Settings').click();
-  assert.deepStrictEqual(page.posted.slice(count), [{ type: 'settingsOpened' }, { type: 'settingsOpened' }], 'each opening is posted');
-  page.send({ type: 'harnessCheck', check: { state: 'running' } });
-  assert.ok(texts(page).includes('Checking the harnesses…'));
-  assert.strictEqual(named(page, 'Check again').disabled, true);
-});
-
-test('the settings view names beside each harness the check that failed, or that every check passed', () => {
-  const page = loadPage();
-  page.send(live([]));
-  named(page, 'Settings').click();
-  page.send(CHECKED);
-  assert.deepStrictEqual(harnessRows(page), [
-    ['claude', undefined, ['Claude Code', 'Every check passes: Gurita 2.0.0 is installed, the packaged version.']],
-    ['antigravity', 'version', ['Antigravity', 'Installed version differs from the packaged one: installed 1.9.0, packaged 2.0.0.']],
-    ['codex', 'cli', ['Codex', "CLI not found: the runner's shell finds no codex command."]],
-  ]);
-  page.send({
-    type: 'harnessCheck',
-    check: {
-      state: 'checked',
-      harnesses: [
-        { key: 'claude', name: 'Claude Code', cli: 'claude', failed: 'plugin', packaged: '2.0.0' },
-        { key: 'antigravity', name: 'Antigravity', cli: 'agy', failed: 'plugin', packaged: '2.0.0', detail: 'the listing exited with status 1: boom' },
-        { key: 'codex', name: 'Codex', cli: 'codex', failed: 'version', packaged: '2.0.0' },
-      ],
-    },
-  });
-  assert.deepStrictEqual(harnessRows(page), [
-    ['claude', 'plugin', ['Claude Code', 'Gurita plugin not installed.']],
-    ['antigravity', 'plugin', ['Antigravity', 'Gurita plugin not installed: the listing exited with status 1: boom']],
-    ['codex', 'version', ['Codex', 'Installed version differs from the packaged one: installed unknown, packaged 2.0.0.']],
-  ]);
-});
-
-test("the settings view's check again control asks for the check afresh, and a check that could not run shows its cause", () => {
-  const page = loadPage();
-  page.send({ type: 'liveFailure', cause: 'Error: no repository' });
-  named(page, 'Settings').click();
-  page.send({ type: 'harnessCheck', check: { state: 'failed', cause: 'python3: not found' } });
-  assert.ok(texts(page).includes('The harness check could not be run.'));
-  assert.ok(texts(page).includes('python3: not found'));
-  const again = named(page, 'Check again');
-  assert.strictEqual(again.disabled, false);
-  const count = page.posted.length;
-  again.click();
-  assert.deepStrictEqual(page.posted.slice(count), [{ type: 'checkHarnesses' }]);
-  page.send({ type: 'live', missions: [mission(ALPHA, 'Alpha')], running: [ALPHA] });
-  assert.strictEqual(named(page, 'Check again').disabled, false, 'a running chain leaves check again enabled');
+  assert.deepStrictEqual(rowEnds(page), ['Refresh', 'New mission', 'Define mission']);
+  assert.ok(!buttons(page).some((each) => shownName(each) === 'Settings'));
 });
 
 /** The mission page as drawn: every element's tag, text, class, and state, in document order. */
@@ -1749,30 +1381,26 @@ function pageShape(page: Page): string[] {
   return page.root.all().map((each) => `${each.tagName}|${each.textContent}|${each.className}|${each.disabled}|${each.title}`);
 }
 
-test('a failed check is shown in the settings view alone, every mission page drawn and its clicks posted as with every check passing', () => {
-  const passing = loadPage();
-  passing.send(live([]));
-  passing.send({
-    type: 'harnessCheck',
-    check: {
-      state: 'checked',
-      harnesses: CHECKED.check.harnesses.map(({ key, name, cli }) => ({ key, name, cli, installed: '2.0.0', packaged: '2.0.0' })),
-    },
-  });
-  const failing = loadPage();
-  failing.send(live([]));
-  failing.send(CHECKED);
-  for (const page of [passing, failing]) {
-    named(page, 'Settings').click();
-    named(page, 'Close settings').click();
+test('a harness check or settings message posted to the pane changes nothing it draws, and every click posts as before', () => {
+  const plain = loadPage();
+  plain.send(live([]));
+  const posted = loadPage();
+  posted.send(live([]));
+  const harnesses = [
+    { key: 'claude', name: 'Claude Code', cli: 'claude', installed: '2.0.0', packaged: '2.0.0' },
+    { key: 'codex', name: 'Codex', cli: 'codex', failed: 'cli', packaged: '2.0.0' },
+  ];
+  posted.send({ type: 'harnessCheck', check: { state: 'checked', harnesses } });
+  posted.send({ type: 'harnessSettings', settings: { state: 'read', enabled: { claude: true, antigravity: false, codex: true } } });
+  for (const page of [plain, posted]) {
     named(page, 'Remaining tasks').click();
   }
-  assert.deepStrictEqual(pageShape(failing), pageShape(passing), 'the mission page draws every recipe, button, and the looped run alike');
-  assert.ok(!texts(failing).some((text) => text.includes('not found') || text.includes('differs')), 'no failure is named on the mission page');
-  for (const page of [passing, failing]) {
+  assert.deepStrictEqual(pageShape(posted), pageShape(plain), 'the mission page draws every recipe, button, and the looped run alike');
+  assert.ok(!texts(posted).some((text) => text.includes('not found') || text.includes('Checking the harnesses')), 'nothing of the check is named on the pane');
+  for (const page of [plain, posted]) {
     named(page, 'Open questions').click();
   }
-  assert.deepStrictEqual(pageShape(failing), pageShape(passing));
+  assert.deepStrictEqual(pageShape(posted), pageShape(plain));
   const clicks = (page: Page): unknown[] => {
     const count = page.posted.length;
     for (const text of ['review', 'complete', 'Discuss', 'Answer', 'Answer with recommendation', 'Answer with this alternative', 'New mission', 'Define mission']) {
@@ -1780,91 +1408,10 @@ test('a failed check is shown in the settings view alone, every mission page dra
     }
     return page.posted.slice(count);
   };
-  assert.deepStrictEqual(clicks(failing), clicks(passing), 'every click posts as it would with every check passing');
+  assert.deepStrictEqual(clicks(posted), clicks(plain), 'every click posts as it would with nothing of the settings posted');
 });
 
-/** Each harness's enabled state as the extension posts it. */
-function harnessSettings(enabled: Record<string, boolean>): unknown {
-  return { type: 'harnessSettings', settings: { state: 'read', enabled } };
-}
-
-/** Each harness the settings view lists: its key, the state it shows, and its control's label, or undefined without one. */
-function enabledRows(page: Page): [string, string | undefined, string | undefined][] {
-  const view = settingsView(page);
-  assert.ok(view !== undefined, 'the settings view is drawn');
-  return view
-    .all()
-    .filter((each) => each.tagName === 'li' && each.dataset.harness !== undefined)
-    .map((each) => [
-      each.dataset.harness as string,
-      each.all().find((child) => child.has('harness-state'))?.textContent,
-      each.all().find((child) => child.tagName === 'button')?.textContent,
-    ]);
-}
-
-/** The enable or disable control of the harness `key` in the settings view. */
-function harnessToggle(page: Page, key: string): FakeElement {
-  const found = page.root.querySelector(`[data-focus="harness-${key}"]`);
-  assert.ok(found !== null, `no control for ${key}`);
-  return found;
-}
-
-test('the settings view shows each harness enabled with its disable control, whatever its check reports or while it runs', () => {
-  const page = loadPage();
-  page.send(live([]));
-  named(page, 'Settings').click();
-  page.send(harnessSettings({ claude: true, antigravity: true, codex: true }));
-  assert.ok(texts(page).includes('Checking the harnesses…'));
-  const all: [string, string, string][] = [
-    ['claude', 'Enabled', 'Disable'],
-    ['antigravity', 'Enabled', 'Disable'],
-    ['codex', 'Enabled', 'Disable'],
-  ];
-  assert.deepStrictEqual(enabledRows(page), all, 'drawn while the check runs');
-  page.send(CHECKED);
-  assert.deepStrictEqual(enabledRows(page), all, 'a failed check changes no state');
-  assert.deepStrictEqual(harnessRows(page)[2], ['codex', 'cli', ['Codex', "CLI not found: the runner's shell finds no codex command."]]);
-  page.send({ type: 'harnessCheck', check: { state: 'failed', cause: 'python3: not found' } });
-  assert.deepStrictEqual(enabledRows(page), all, 'drawn when the check could not run');
-});
-
-test("a harness's control posts the state it asks for and the view shows only the state the extension posts back", () => {
-  const page = loadPage();
-  page.send({ type: 'liveFailure', cause: 'Error: no repository' });
-  named(page, 'Settings').click();
-  page.send(harnessSettings({ claude: true, antigravity: false, codex: true }));
-  assert.deepStrictEqual(enabledRows(page), [
-    ['claude', 'Enabled', 'Disable'],
-    ['antigravity', 'Disabled', 'Enable'],
-    ['codex', 'Enabled', 'Disable'],
-  ]);
-  const count = page.posted.length;
-  harnessToggle(page, 'codex').click();
-  assert.deepStrictEqual(page.posted.slice(count), [{ type: 'setHarnessEnabled', harness: 'codex', enabled: false }]);
-  assert.deepStrictEqual(enabledRows(page)[2], ['codex', 'Enabled', 'Disable'], 'nothing changes until the extension posts it');
-  page.send(harnessSettings({ claude: true, antigravity: false, codex: false }));
-  assert.deepStrictEqual(enabledRows(page)[2], ['codex', 'Disabled', 'Enable']);
-  harnessToggle(page, 'antigravity').click();
-  assert.deepStrictEqual(page.posted.slice(count + 1), [{ type: 'setHarnessEnabled', harness: 'antigravity', enabled: true }]);
-  page.send({ type: 'live', missions: [mission(ALPHA, 'Alpha')], running: [ALPHA] });
-  assert.strictEqual(harnessToggle(page, 'claude').disabled, false, 'a running chain leaves the controls enabled');
-});
-
-test('harness settings that could not be read are named in the settings view, with no control drawn', () => {
-  const page = loadPage();
-  page.send(live([]));
-  named(page, 'Settings').click();
-  page.send({ type: 'harnessSettings', settings: { state: 'failed', cause: 'The variant store /home/x/.gurita/variants.json is not JSON.' } });
-  assert.ok(texts(page).includes('The harness settings could not be read.'));
-  assert.ok(texts(page).includes('The variant store /home/x/.gurita/variants.json is not JSON.'));
-  assert.deepStrictEqual(enabledRows(page), [
-    ['claude', undefined, undefined],
-    ['antigravity', undefined, undefined],
-    ['codex', undefined, undefined],
-  ]);
-});
-
-test("after a harness is disabled the page draws the list the extension posts: the variant gone from its dropdown and a recipe left with none gone", () => {
+test("after a harness is disabled in the Settings window the page draws the list the extension posts: the variant gone from its dropdown and a recipe left with none gone", () => {
   const both = runnable(
     'Requirements iteration',
     'shipped',
@@ -1884,252 +1431,13 @@ test("after a harness is disabled the page draws the list the extension posts: t
       .map((each) => each.textContent);
   assert.deepStrictEqual(recipeNames(page), ['Requirements iteration', 'Gemini review']);
   assert.deepStrictEqual(options(), ['Claude Code', 'Antigravity', 'default']);
-  named(page, 'Settings').click();
-  page.send(harnessSettings({ claude: true, antigravity: false, codex: true }));
   const narrowed = runnable('Requirements iteration', 'shipped', (both as { lines: string[] }).lines, [{ name: 'Claude Code', own: false }]);
   page.send({ type: 'live', missions: [mission(ALPHA, 'Alpha', { step: 'derive', recipes: { state: 'read', recipes: [narrowed] } })], running: [] });
-  named(page, 'Close settings').click();
   assert.deepStrictEqual(recipeNames(page), ['Requirements iteration']);
   assert.deepStrictEqual(options(), ['Claude Code'], 'the left-out variant is gone from the dropdown, and the recipe left with none with its button');
   assert.ok(texts(page).includes('Discuss'), 'the fixed-name buttons are drawn as before');
 });
 
-/** Each harness's lists as the extension posts them. */
-function harnessListsMessage(lists: Record<string, { models: string[]; efforts?: string[] }>): unknown {
-  return { type: 'harnessLists', lists: { state: 'read', lists } };
-}
-
-const LISTS = {
-  claude: { models: ['fable', 'opus'], efforts: ['xhigh', 'high'] },
-  antigravity: { models: ['gemini-4-argon'], efforts: [] },
-  codex: { models: ['gpt-5.5'] },
-};
-
-/** Each harness's lists the settings view draws: its key, then each list's kind and its entries, in order. */
-function listRows(page: Page): [string, [string, string[]][]][] {
-  const view = settingsView(page);
-  assert.ok(view !== undefined, 'the settings view is drawn');
-  return view
-    .all()
-    .filter((each) => each.has('harness-lists'))
-    .map((each) => [
-      each.dataset.harness as string,
-      each
-        .all()
-        .filter((row) => row.has('value-list'))
-        .map((row): [string, string[]] => [row.dataset.kind as string, row.all().filter((item) => item.has('value')).map((item) => item.dataset.value as string)]),
-    ]);
-}
-
-/** The control in the settings view whose focus key is `key`. */
-function focused(page: Page, key: string): FakeElement {
-  const found = page.root.querySelector(`[data-focus="${key}"]`);
-  assert.ok(found !== null, `no control ${key}`);
-  return found;
-}
-
-test("the settings view draws each harness's model list and effort list, Codex its model list alone, each entry with a remove control and each list with an add control", () => {
-  const page = loadPage();
-  page.send(live([]));
-  named(page, 'Settings').click();
-  assert.ok(texts(page).includes('Models and efforts'));
-  assert.deepStrictEqual(listRows(page), [], 'nothing is drawn before the extension posts the lists');
-  page.send(harnessListsMessage(LISTS));
-  assert.deepStrictEqual(listRows(page), [
-    ['claude', [['model', ['fable', 'opus']], ['effort', ['xhigh', 'high']]]],
-    ['antigravity', [['model', ['gemini-4-argon']], ['effort', []]]],
-    ['codex', [['model', ['gpt-5.5']]]],
-  ]);
-  assert.ok(texts(page).includes('No entry'), 'an empty list says so');
-  for (const key of ['add-model-claude', 'add-effort-claude', 'add-model-antigravity', 'add-effort-antigravity', 'add-model-codex', 'remove-effort-claude-high']) {
-    focused(page, key);
-  }
-  assert.strictEqual(page.root.querySelector('[data-focus="add-effort-codex"]'), null, 'Codex has no effort list to add to');
-  const view = settingsView(page);
-  assert.ok(view !== undefined);
-  assert.deepStrictEqual(
-    view.all().filter((each) => ['input', 'textarea'].includes(each.tagName)),
-    [],
-    'nothing is typed on the page',
-  );
-});
-
-test('an add or remove control posts its edit and the lists change only when the extension posts them again', () => {
-  const page = loadPage();
-  page.send({ type: 'liveFailure', cause: 'Error: no repository' });
-  named(page, 'Settings').click();
-  page.send(harnessListsMessage(LISTS));
-  const count = page.posted.length;
-  focused(page, 'add-model-codex').click();
-  focused(page, 'add-effort-antigravity').click();
-  focused(page, 'remove-model-claude-opus').click();
-  assert.deepStrictEqual(page.posted.slice(count), [
-    { type: 'addHarnessValue', harness: 'codex', kind: 'model' },
-    { type: 'addHarnessValue', harness: 'antigravity', kind: 'effort' },
-    { type: 'removeHarnessValue', harness: 'claude', kind: 'model', value: 'opus' },
-  ]);
-  assert.deepStrictEqual(listRows(page)[0], ['claude', [['model', ['fable', 'opus']], ['effort', ['xhigh', 'high']]]], 'nothing changes until the extension posts it');
-  page.send(harnessListsMessage({ ...LISTS, claude: { models: ['fable', 'haiku'], efforts: ['xhigh', 'high'] } }));
-  assert.deepStrictEqual(listRows(page)[0], ['claude', [['model', ['fable', 'haiku']], ['effort', ['xhigh', 'high']]]]);
-  page.send({ type: 'live', missions: [mission(ALPHA, 'Alpha')], running: [ALPHA] });
-  assert.strictEqual(focused(page, 'remove-model-claude-haiku').disabled, false, 'a running chain leaves the controls enabled');
-});
-
-test('lists that could not be read are named in the settings view, with no list drawn', () => {
-  const page = loadPage();
-  page.send(live([]));
-  named(page, 'Settings').click();
-  page.send({ type: 'harnessLists', lists: { state: 'failed', cause: 'The variant store /home/x/.gurita/variants.json is not JSON.' } });
-  assert.ok(texts(page).includes('The model and effort lists could not be read.'));
-  assert.ok(texts(page).includes('The variant store /home/x/.gurita/variants.json is not JSON.'));
-  assert.deepStrictEqual(listRows(page), []);
-});
-
-const CLAUDE_LINE = 'claude -p "/gurita:review-mission-requirements --mission <path>" --model "fable" --effort xhigh;';
-const AGY_LINE = 'agy -p "/gurita:review-mission-requirements --mission <path>" --model "gemini-4-argon" --effort medium;';
-
-/** A variant list as the extension posts it: a chain with a stored copy, a duplicate, and a deleted variant, a button recipe, and an own recipe. */
-const VARIANTS = {
-  type: 'variants',
-  variants: {
-    state: 'read',
-    recipes: [
-      {
-        name: 'First run',
-        group: 'shipped',
-        fixed: false,
-        variants: [
-          {
-            name: 'Gemini',
-            origin: 'stored',
-            copies: { name: 'Antigravity', origin: 'shipped' },
-            lines: [AGY_LINE],
-            isDefault: true,
-            from: { name: 'Antigravity', origin: 'shipped' },
-          },
-          { name: 'default', origin: 'own', lines: [CLAUDE_LINE], isDefault: false },
-          { name: 'Fast', origin: 'stored', lines: [CLAUDE_LINE, CLAUDE_LINE], isDefault: false },
-          { name: 'custom 1', origin: 'stored', lines: [CLAUDE_LINE], isDefault: false, from: { name: 'default', origin: 'own' } },
-        ],
-        hidden: [{ name: 'Claude Code', origin: 'shipped' }],
-      },
-      {
-        name: 'discuss-mission-goal',
-        group: 'shipped',
-        fixed: true,
-        variants: [{ name: 'default', origin: 'shipped', lines: ['claude "/gurita:discuss-mission-goal <goal>"; # interactive'], isDefault: true }],
-        hidden: [],
-      },
-      { name: 'Mine everywhere', group: 'own', fixed: false, variants: [{ name: 'default', origin: 'own', lines: ['echo <path>'], isDefault: true }], hidden: [] },
-    ],
-  },
-};
-
-/** Each recipe the settings view's Variants part draws: its name, then each variant's texts and its controls' labels. */
-function variantEditRows(page: Page): [string, [string[], string[]][]][] {
-  const view = settingsView(page);
-  assert.ok(view !== undefined, 'the settings view is drawn');
-  return view
-    .all()
-    .filter((each) => each.has('variant-recipe'))
-    .map((each) => [
-      each.dataset.recipe as string,
-      each
-        .all()
-        .filter((item) => item.has('variant'))
-        .map((item): [string[], string[]] => [
-          item.all().filter((part) => ['variant-name', 'variant-origin', 'variant-default', 'variant-deleted'].some((name) => part.has(name))).map((part) => part.textContent),
-          item.all().filter((part) => part.tagName === 'button').map((part) => part.textContent),
-        ]),
-    ]);
-}
-
-test('the settings view lists every recipe the extension posts with its variants, each with its edit controls, and a deleted one with its reset alone', () => {
-  const page = loadPage();
-  page.send(live([]));
-  named(page, 'Settings').click();
-  assert.ok(texts(page).includes('Variants'));
-  assert.deepStrictEqual(variantEditRows(page), [], 'nothing is drawn before the extension posts the variants');
-  page.send(VARIANTS);
-  const edits = ['Duplicate', 'Rename', 'Delete'];
-  assert.deepStrictEqual(variantEditRows(page), [
-    [
-      'First run',
-      [
-        [['Gemini', 'stored copy of the shipped variant Antigravity', 'Default'], [...edits, 'Reset']],
-        [['default', 'yours'], [...edits, 'Make default']],
-        [['Fast', 'stored'], [...edits, 'Make default']],
-        [['custom 1', 'stored'], [...edits, 'Make default', 'Reset']],
-        [['Claude Code', 'shipped', 'Deleted'], ['Reset']],
-      ],
-    ],
-    ['discuss-mission-goal', [[['default', 'shipped', 'Default'], edits]]],
-    ['Mine everywhere', [[['default', 'yours', 'Default'], edits]]],
-  ]);
-  assert.ok(
-    texts(page).includes('Run by a button outside the recipe list, which runs this default until another variant is selected beside it.'),
-    'a fixed-name button recipe says its default is what its button runs while no other variant is selected',
-  );
-  const fast = page.root.all().find((each) => each.has('variant-name') && each.textContent === 'Fast');
-  assert.strictEqual(fast?.title, `${CLAUDE_LINE}\n${CLAUDE_LINE}`, "a variant's name carries its lines in its hover text");
-  const view = settingsView(page);
-  assert.ok(view !== undefined);
-  assert.deepStrictEqual(
-    view.all().filter((each) => ['input', 'textarea'].includes(each.tagName)),
-    [],
-    'nothing is typed on the page',
-  );
-});
-
-test('each variant control posts its edit, naming the variant as listed, and the list changes only when the extension posts it again', () => {
-  const page = loadPage();
-  page.send({ type: 'liveFailure', cause: 'Error: no repository' });
-  named(page, 'Settings').click();
-  page.send(VARIANTS);
-  const count = page.posted.length;
-  for (const key of ['duplicate-0-0', 'rename-0-0', 'delete-0-0', 'reset-0-0', 'default-0-1', 'rename-0-2', 'reset-0-2', 'reset-0-3', 'reset-0-hidden-0', 'default-2-0']) {
-    const found = page.root.querySelector(`[data-focus="variant-${key}"]`);
-    if (key === 'default-2-0') {
-      assert.strictEqual(found, null, 'the default carries no Make default control');
-      continue;
-    }
-    if (key === 'reset-0-2') {
-      assert.strictEqual(found, null, 'a stored variant posted with no variant it was made from carries no Reset control');
-      continue;
-    }
-    assert.ok(found !== null, `no control ${key}`);
-    found.click();
-  }
-  const copy = { name: 'Gemini', origin: 'stored', copies: { name: 'Antigravity', origin: 'shipped' } };
-  assert.deepStrictEqual(page.posted.slice(count), [
-    { type: 'duplicateVariant', recipe: 'First run', variant: copy },
-    { type: 'renameVariant', recipe: 'First run', variant: copy },
-    { type: 'deleteVariant', recipe: 'First run', variant: copy },
-    { type: 'resetVariantLines', recipe: 'First run', variant: copy },
-    { type: 'pickDefault', recipe: 'First run', variant: { name: 'default', origin: 'own' } },
-    { type: 'renameVariant', recipe: 'First run', variant: { name: 'Fast', origin: 'stored' } },
-    { type: 'resetVariantLines', recipe: 'First run', variant: { name: 'custom 1', origin: 'stored' } },
-    { type: 'resetVariant', recipe: 'First run', original: { name: 'Claude Code', origin: 'shipped' } },
-  ]);
-  assert.strictEqual(variantEditRows(page)[0][1].length, 5, 'nothing changes until the extension posts it');
-  page.send({
-    type: 'variants',
-    variants: { state: 'read', recipes: [{ ...VARIANTS.variants.recipes[0], variants: VARIANTS.variants.recipes[0].variants.slice(1), hidden: [] }] },
-  });
-  assert.deepStrictEqual(variantEditRows(page).map(([name, rows]) => [name, rows.map((row) => row[0][0])]), [['First run', ['default', 'Fast', 'custom 1']]]);
-  page.send({ type: 'live', missions: [mission(ALPHA, 'Alpha')], running: [ALPHA] });
-  assert.strictEqual(page.root.querySelector('[data-focus="variant-delete-0-0"]')?.disabled, false, 'a running chain leaves the controls enabled');
-});
-
-test('variants that could not be read are named in the settings view, with no control drawn', () => {
-  const page = loadPage();
-  page.send(live([]));
-  named(page, 'Settings').click();
-  page.send({ type: 'variants', variants: { state: 'failed', cause: 'The variant store /home/x/.gurita/variants.json is not JSON.' } });
-  assert.ok(texts(page).includes('The variants could not be read.'));
-  assert.ok(texts(page).includes('The variant store /home/x/.gurita/variants.json is not JSON.'));
-  assert.deepStrictEqual(variantEditRows(page), []);
-});
 
 test("an edit the extension posts reaches the mission page's dropdown", () => {
   const page = loadPage();
@@ -2148,538 +1456,6 @@ test("an edit the extension posts reaches the mission page's dropdown", () => {
   page.send({ type: 'live', missions: [{ ...(mission(ALPHA, 'Alpha') as object), recipes: duplicated }, mission(BETA, 'Beta')], running: [] });
   assert.deepStrictEqual(dropdown(), ['review', 'Fast']);
 });
-
-const MODEL_ONLY_LINE = 'claude -p "/gurita:provide-alternatives-to-all-open-questions --mission <path>" --model "opus";';
-const CODEX_LINE = 'codex exec "/gurita:finish-mission --mission <path>" -m gpt-5.5;';
-
-/** A variant list whose variants carry their line editors, as the extension posts them. */
-const EDITED_VARIANTS = {
-  type: 'variants',
-  variants: {
-    state: 'read',
-    recipes: [
-      {
-        name: 'First run',
-        group: 'shipped',
-        fixed: false,
-        variants: [
-          {
-            name: 'Claude Code',
-            origin: 'shipped',
-            lines: [CLAUDE_LINE, MODEL_ONLY_LINE, 'echo <path>', '<single-task line>'],
-            editors: [{ harness: 'claude', model: 'fable', effort: 'xhigh' }, null, null, null],
-            rows: [
-              { skill: 'review-mission-requirements', interactive: false, harness: 'claude' },
-              { skill: 'provide-alternatives-to-all-open-questions', interactive: false, harness: 'claude' },
-              null,
-              null,
-            ],
-            isDefault: true,
-          },
-          {
-            name: 'Antigravity',
-            origin: 'shipped',
-            lines: [AGY_LINE],
-            editors: [{ harness: 'antigravity', model: 'gemini-4-argon', effort: 'medium' }],
-            rows: [{ skill: 'review-mission-requirements', interactive: false, harness: 'antigravity' }],
-            isDefault: false,
-          },
-          {
-            name: 'Codex',
-            origin: 'own',
-            lines: [CODEX_LINE],
-            editors: [{ harness: 'codex', model: 'gpt-5.5' }],
-            rows: [{ skill: 'finish-mission', interactive: false, harness: 'codex' }],
-            isDefault: false,
-          },
-        ],
-        hidden: [],
-      },
-    ],
-  },
-};
-
-/** The parts a line row draws as text: the line's text, or its skill's name, its interactive mark, and its harness where it is no dropdown. */
-const ROW_PARTS = ['line-text', 'line-skill', 'line-interactive', 'line-harness'];
-
-/** Whether `part` is one of the texts a line row draws, a dropdown never being one. */
-function rowText(part: FakeElement): boolean {
-  return part.tagName !== 'select' && ROW_PARTS.some((name) => part.has(name));
-}
-
-/** Each line the settings view's line editor draws: its texts, then each dropdown's class, its options, and the one it stands on. */
-function lineRows(page: Page): [string[], [string, string[], string | undefined][]][] {
-  const view = settingsView(page);
-  assert.ok(view !== undefined, 'the settings view is drawn');
-  return view
-    .all()
-    .filter((each) => each.has('variant-line'))
-    .map((each) => [
-      each.all().filter(rowText).map((part) => part.textContent),
-      each
-        .all()
-        .filter((part) => part.tagName === 'select')
-        .map((select): [string, string[], string | undefined] => {
-          const choices = select.children.filter((child): child is FakeElement => child instanceof FakeElement);
-          return [select.className, choices.map((option) => option.textContent), choices.find((option) => option.selected)?.textContent];
-        }),
-    ]);
-}
-
-/** The harness dropdown of a line posted with model and effort dropdowns, standing on Claude Code or on Antigravity. */
-const CC_HARNESS: [string, string[], string] = ['line-harness', ['Claude Code', 'Antigravity'], 'Claude Code'];
-const AGY_HARNESS: [string, string[], string] = ['line-harness', ['Claude Code', 'Antigravity'], 'Antigravity'];
-
-test("the line editor draws each line as its row, and only a line with both --model and --effort gets the harness's model and whole effort lists, a Codex line its model alone", () => {
-  const page = loadPage();
-  page.send(live([]));
-  named(page, 'Settings').click();
-  page.send(harnessListsMessage(LISTS));
-  page.send(EDITED_VARIANTS);
-  assert.deepStrictEqual(lineRows(page), [
-    [['review-mission-requirements'], [CC_HARNESS, ['line-model', ['fable', 'opus'], 'fable'], ['line-effort', ['xhigh', 'high'], 'xhigh']]],
-    [['provide-alternatives-to-all-open-questions', 'Claude Code'], []],
-    [['echo <path>'], []],
-    [['<single-task line>'], []],
-    [['review-mission-requirements'], [AGY_HARNESS, ['line-model', ['gemini-4-argon'], 'gemini-4-argon'], ['line-effort', ['medium'], 'medium']]],
-    [['finish-mission', 'Codex'], [['line-model', ['gpt-5.5'], 'gpt-5.5']]],
-  ], 'a line without both flags, a shell step, and the slot line draw no control; a value the list lacks is offered as the line carries it; a Codex line keeps its harness as text');
-  page.send(harnessListsMessage({ ...LISTS, antigravity: { models: ['gemini-4-argon', 'claude-opus-5-5'], efforts: ['low', 'medium', 'high'] } }));
-  assert.deepStrictEqual(lineRows(page)[4][1], [
-    AGY_HARNESS,
-    ['line-model', ['gemini-4-argon', 'claude-opus-5-5'], 'gemini-4-argon'],
-    ['line-effort', ['low', 'medium', 'high'], 'medium'],
-  ], 'the dropdowns follow the lists the extension posts');
-  const view = settingsView(page);
-  assert.ok(view !== undefined);
-  assert.deepStrictEqual(view.all().filter((each) => ['input', 'textarea'].includes(each.tagName)), [], 'nothing is typed on the page');
-  assert.deepStrictEqual(variantEditRows(page)[0][1].map((row) => row[1]), [
-    ['Duplicate', 'Rename', 'Delete'],
-    ['Duplicate', 'Rename', 'Delete', 'Make default'],
-    ['Duplicate', 'Rename', 'Delete', 'Make default'],
-  ], "the line editor adds no button to a variant's controls");
-});
-
-test("a pick in a line's dropdown posts the line, the kind, and the value, and the line changes only when the extension posts it again", () => {
-  const page = loadPage();
-  page.send({ type: 'liveFailure', cause: 'Error: no repository' });
-  named(page, 'Settings').click();
-  page.send(harnessListsMessage(LISTS));
-  page.send(EDITED_VARIANTS);
-  const count = page.posted.length;
-  focused(page, 'line-model-0-0-0').change('opus');
-  focused(page, 'line-effort-0-0-0').change('high');
-  focused(page, 'line-model-0-2-0').change('gpt-5.5');
-  focused(page, 'line-model-0-2-0').change('gpt-5.5');
-  assert.strictEqual(page.root.querySelector('[data-focus="line-effort-0-2-0"]'), null, 'a Codex line has no effort dropdown');
-  assert.strictEqual(page.root.querySelector('[data-focus="line-model-0-0-1"]'), null, 'a line with --model alone has no model dropdown');
-  assert.deepStrictEqual(page.posted.slice(count), [
-    { type: 'replaceLineValue', recipe: 'First run', variant: { name: 'Claude Code', origin: 'shipped' }, line: 0, kind: 'model', value: 'opus' },
-    { type: 'replaceLineValue', recipe: 'First run', variant: { name: 'Claude Code', origin: 'shipped' }, line: 0, kind: 'effort', value: 'high' },
-  ], 'a pick of the value the line carries posts nothing');
-  assert.strictEqual(lineRows(page)[0][1][1][2], 'fable', 'nothing changes until the extension posts it');
-  const copied = { ...EDITED_VARIANTS.variants.recipes[0].variants[0], name: 'Claude Code', origin: 'stored', copies: { name: 'Claude Code', origin: 'shipped' } };
-  const opusLine = CLAUDE_LINE.replace('"fable"', '"opus"');
-  page.send({
-    type: 'variants',
-    variants: {
-      state: 'read',
-      recipes: [
-        {
-          ...EDITED_VARIANTS.variants.recipes[0],
-          variants: [{ ...copied, lines: [opusLine, ...copied.lines.slice(1)], editors: [{ harness: 'claude', model: 'opus', effort: 'xhigh' }, null, null, null] }, ...EDITED_VARIANTS.variants.recipes[0].variants.slice(1)],
-        },
-      ],
-    },
-  });
-  assert.deepStrictEqual(lineRows(page)[0], [['review-mission-requirements'], [CC_HARNESS, ['line-model', ['fable', 'opus'], 'opus'], ['line-effort', ['xhigh', 'high'], 'xhigh']]]);
-  assert.strictEqual(lineHovers(page)[0], opusLine, 'the hover text shows the changed line as written');
-  focused(page, 'line-effort-0-0-0').change('high');
-  assert.deepStrictEqual(page.posted[page.posted.length - 1], {
-    type: 'replaceLineValue',
-    recipe: 'First run',
-    variant: { name: 'Claude Code', origin: 'stored', copies: { name: 'Claude Code', origin: 'shipped' } },
-    line: 0,
-    kind: 'effort',
-    value: 'high',
-  }, 'a stored copy is named as listed');
-});
-
-test("a pick in a line's harness dropdown posts the line and the harness, a Codex line and a line without both flags getting none, and the row is redrawn only from what the extension posts", () => {
-  const page = loadPage();
-  page.send(live([]));
-  named(page, 'Settings').click();
-  page.send(harnessListsMessage(LISTS));
-  const summarize = 'claude -p "Summarize <path>" --model "opus" --effort high;';
-  page.send({
-    type: 'variants',
-    variants: {
-      state: 'read',
-      recipes: [
-        {
-          ...EDITED_VARIANTS.variants.recipes[0],
-          variants: [
-            ...EDITED_VARIANTS.variants.recipes[0].variants,
-            {
-              name: 'Plain',
-              origin: 'own',
-              lines: [summarize],
-              editors: [{ harness: 'claude', model: 'opus', effort: 'high' }],
-              rows: [null],
-              isDefault: false,
-            },
-          ],
-        },
-      ],
-    },
-  });
-  assert.deepStrictEqual(lineRows(page)[6], [[summarize], [CC_HARNESS, ['line-model', ['fable', 'opus'], 'opus'], ['line-effort', ['xhigh', 'high'], 'high']]], 'a line drawn as its text gets its harness dropdown before the model dropdown');
-  assert.strictEqual(page.root.querySelector('[data-focus="line-harness-0-0-1"]'), null, 'a line with --model alone has no harness dropdown');
-  assert.strictEqual(page.root.querySelector('[data-focus="line-harness-0-2-0"]'), null, 'a Codex line has no harness dropdown');
-  const count = page.posted.length;
-  focused(page, 'line-harness-0-0-0').change('antigravity');
-  focused(page, 'line-harness-0-1-0').change('antigravity');
-  focused(page, 'line-harness-0-1-0').change('claude');
-  focused(page, 'line-harness-0-1-0').change('codex');
-  assert.deepStrictEqual(page.posted.slice(count), [
-    { type: 'replaceLineHarness', recipe: 'First run', variant: { name: 'Claude Code', origin: 'shipped' }, line: 0, harness: 'antigravity' },
-    { type: 'replaceLineHarness', recipe: 'First run', variant: { name: 'Antigravity', origin: 'shipped' }, line: 0, harness: 'claude' },
-  ], 'a pick of the harness the line runs on, or of one not offered, posts nothing');
-  assert.deepStrictEqual(lineRows(page)[0][1][0], CC_HARNESS, 'nothing changes until the extension posts it');
-  const rewritten = 'agy -p "/gurita:review-mission-requirements --mission <path>" --model "gemini-4-argon" --effort xhigh;';
-  const first = EDITED_VARIANTS.variants.recipes[0].variants[0];
-  page.send({
-    type: 'variants',
-    variants: {
-      state: 'read',
-      recipes: [
-        {
-          ...EDITED_VARIANTS.variants.recipes[0],
-          variants: [
-            {
-              ...first,
-              origin: 'stored',
-              copies: { name: 'Claude Code', origin: 'shipped' },
-              lines: [rewritten, ...first.lines.slice(1)],
-              editors: [{ harness: 'antigravity', model: 'gemini-4-argon', effort: 'xhigh' }, null, null, null],
-              rows: [{ skill: 'review-mission-requirements', interactive: false, harness: 'antigravity' }, ...first.rows.slice(1)],
-            },
-            ...EDITED_VARIANTS.variants.recipes[0].variants.slice(1),
-          ],
-        },
-      ],
-    },
-  });
-  assert.deepStrictEqual(lineRows(page)[0], [['review-mission-requirements'], [AGY_HARNESS, ['line-model', ['gemini-4-argon'], 'gemini-4-argon'], ['line-effort', ['xhigh'], 'xhigh']]], "the row stands on the posted harness and offers that harness's lists");
-  assert.strictEqual(lineHovers(page)[0], rewritten, 'the hover text shows the rewritten line as written');
-  focused(page, 'line-harness-0-0-0').change('claude');
-  assert.deepStrictEqual(page.posted[page.posted.length - 1], {
-    type: 'replaceLineHarness',
-    recipe: 'First run',
-    variant: { name: 'Claude Code', origin: 'stored', copies: { name: 'Claude Code', origin: 'shipped' } },
-    line: 0,
-    harness: 'claude',
-  }, 'a stored copy is named as listed');
-});
-
-/** The hover text of each skill row the settings view draws, the line as written, or null for a line drawn as its text. */
-function lineHovers(page: Page): (string | null)[] {
-  const view = settingsView(page);
-  assert.ok(view !== undefined, 'the settings view is drawn');
-  return view
-    .all()
-    .filter((each) => each.has('variant-line'))
-    .map((each) => each.all().find((part) => part.has('line-label'))?.title ?? null);
-}
-
-const INTERACTIVE_LINE = 'claude "/gurita:recommend-all-open-questions --mission <path>" --model "fable" --effort xhigh; # interactive';
-const AGY_INTERACTIVE_LINE = 'agy -i "/gurita:complete-all-tasks --mission <path>" --model "claude-opus-5-5" --effort high; # interactive';
-
-test("a line running a gurita: skill is drawn as the skill's bare name, an interactive mark where it is not headless, the line in its hover text, and its harness and dropdowns on the right", () => {
-  const page = loadPage();
-  page.send(live([]));
-  named(page, 'Settings').click();
-  page.send(harnessListsMessage({ ...LISTS, antigravity: { models: ['claude-opus-5-5'], efforts: ['high'] } }));
-  page.send({
-    type: 'variants',
-    variants: {
-      state: 'read',
-      recipes: [
-        {
-          name: 'Mixed',
-          group: 'shipped',
-          fixed: false,
-          variants: [
-            {
-              name: 'One',
-              origin: 'shipped',
-              lines: [CLAUDE_LINE, INTERACTIVE_LINE, AGY_INTERACTIVE_LINE, 'echo <path>', 'gemini -p "/gurita:finish-mission" --model "pro";'],
-              editors: [
-                { harness: 'claude', model: 'fable', effort: 'xhigh' },
-                { harness: 'claude', model: 'fable', effort: 'xhigh' },
-                { harness: 'antigravity', model: 'claude-opus-5-5', effort: 'high' },
-                null,
-                null,
-              ],
-              rows: [
-                { skill: 'review-mission-requirements', interactive: false, harness: 'claude' },
-                { skill: 'recommend-all-open-questions', interactive: true, harness: 'claude' },
-                { skill: 'complete-all-tasks', interactive: true, harness: 'antigravity' },
-                null,
-                null,
-              ],
-              isDefault: true,
-            },
-          ],
-          hidden: [],
-        },
-      ],
-    },
-  });
-  const both = (harness: [string, string[], string], model: string, models: string[], effort: string, efforts: string[]): [string, string[], string][] => [
-    harness,
-    ['line-model', models, model],
-    ['line-effort', efforts, effort],
-  ];
-  assert.deepStrictEqual(lineRows(page), [
-    [['review-mission-requirements'], both(CC_HARNESS, 'fable', ['fable', 'opus'], 'xhigh', ['xhigh', 'high'])],
-    [['recommend-all-open-questions', 'interactive'], both(CC_HARNESS, 'fable', ['fable', 'opus'], 'xhigh', ['xhigh', 'high'])],
-    [['complete-all-tasks', 'interactive'], both(AGY_HARNESS, 'claude-opus-5-5', ['claude-opus-5-5'], 'high', ['high'])],
-    [['echo <path>'], []],
-    [['gemini -p "/gurita:finish-mission" --model "pro";'], []],
-  ], 'a shell step and a command the extension does not know keep their text and draw no control');
-  assert.deepStrictEqual(lineHovers(page), [CLAUDE_LINE, INTERACTIVE_LINE, AGY_INTERACTIVE_LINE, null, null], 'each skill row carries its line as written in its hover text');
-  const view = settingsView(page);
-  assert.ok(view !== undefined);
-  const rows = view.all().filter((each) => each.has('variant-line'));
-  assert.ok(rows.slice(0, 3).every((row) => row.has('skill-line')) && rows.slice(3).every((row) => !row.has('skill-line')));
-  const order = (row: FakeElement) =>
-    row.children
-      .filter((child): child is FakeElement => child instanceof FakeElement)
-      .map((child) => (child.tagName === 'select' ? child.className : child.className.split(' ')[0]));
-  assert.deepStrictEqual(order(rows[1]), ['line-label', 'line-harness', 'line-model', 'line-effort'], 'the harness and the dropdowns follow the skill on the right');
-  assert.deepStrictEqual(order(rows[3]), ['line-text'], 'a line drawn as its text keeps it alone');
-  assert.strictEqual(texts(page).some((text) => text.includes('claude -p')), false, 'no skill row shows its whole command line');
-});
-
-const TASK_LINE = 'claude -p "/gurita:complete-task --mission <path> <Task Title>" --model "opus" --effort high;';
-const AGY_TASK_LINE = 'agy -p "/gurita:complete-task --mission <path> <Task Title>" --model "claude-opus-5-5" --effort high;';
-const CODEX_TASK_LINE = "codex exec '$gurita:complete-task --mission <path> <Task Title>';";
-const TASK_ROW = { skill: 'complete-task', interactive: false, harness: 'claude' };
-
-/** One variant of a line as the extension posts it, holding the one line `line` with its editor and row. */
-function lineVariant(
-  name: string,
-  origin: string,
-  line: string,
-  editor: { harness: string; model: string; effort?: string } | null,
-  row: { skill: string; interactive: boolean; harness: string } | null,
-  isDefault: boolean,
-  more: Record<string, unknown> = {},
-): Record<string, unknown> {
-  return { name, origin, lines: [line], editors: [editor], rows: [row], isDefault, ...more };
-}
-
-const CUSTOM_TASK_LINE = TASK_LINE.replace('"opus"', '"fable"');
-const RENAMED_COPY = { name: 'default', origin: 'shipped', recipe: 'Single task (Antigravity)' };
-
-/**
- * A line list as the extension posts it: a shipped line with its default and a custom 1 picked as
- * the default, a renamed one, an own one, a duplicate, and a line whose one variant was deleted.
- */
-const LINES = {
-  type: 'singleTaskLines',
-  lines: {
-    state: 'read',
-    lines: [
-      {
-        name: 'Single task (Claude Code)',
-        group: 'shipped',
-        variants: [
-          lineVariant('default', 'shipped', TASK_LINE, { harness: 'claude', model: 'opus', effort: 'high' }, TASK_ROW, false),
-          lineVariant('custom 1', 'stored', CUSTOM_TASK_LINE, { harness: 'claude', model: 'fable', effort: 'high' }, TASK_ROW, true, {
-            from: { name: 'default', origin: 'shipped' },
-          }),
-        ],
-        hidden: [],
-      },
-      {
-        name: 'Agy line',
-        group: 'shipped',
-        variants: [
-          lineVariant('Agy line', 'stored', AGY_TASK_LINE, { harness: 'antigravity', model: 'claude-opus-5-5', effort: 'high' }, { skill: 'complete-task', interactive: false, harness: 'antigravity' }, true, {
-            copies: RENAMED_COPY,
-            from: RENAMED_COPY,
-          }),
-        ],
-        hidden: [],
-        reset: { recipe: 'Single task (Antigravity)', original: { name: 'default', origin: 'shipped' } },
-      },
-      {
-        name: 'My own line',
-        group: 'own',
-        variants: [lineVariant('default', 'own', CODEX_TASK_LINE, null, { skill: 'complete-task', interactive: false, harness: 'codex' }, true)],
-        hidden: [],
-      },
-      {
-        name: 'Single task (Sonnet)',
-        group: 'own',
-        variants: [lineVariant('Single task (Sonnet)', 'stored', TASK_LINE, { harness: 'claude', model: 'opus', effort: 'high' }, TASK_ROW, true)],
-        hidden: [],
-      },
-      { name: 'Single task (Old)', group: 'shipped', variants: [], hidden: [{ name: 'default', origin: 'shipped' }] },
-    ],
-  },
-};
-
-/** The settings view's Single-task lines part. */
-function linesPart(page: Page): FakeElement {
-  const view = settingsView(page);
-  assert.ok(view !== undefined, 'the settings view is drawn');
-  const part = view.all().find((each) => each.has('line-edits'));
-  assert.ok(part !== undefined, 'the view holds a single-task lines part');
-  return part;
-}
-
-/** Each line the settings view's Single-task lines part draws: its name, its own controls' labels, and its variants as `singleLineRows` reads them. */
-function singleLines(page: Page): [string, string[], [string[], string[], string[]][]][] {
-  return linesPart(page)
-    .all()
-    .filter((block) => block.has('single-task-line'))
-    .map((block): [string, string[], [string[], string[], string[]][]] => {
-      const heading = block.all().find((each) => each.has('line-heading'));
-      assert.ok(heading !== undefined);
-      return [
-        heading.all().find((each) => each.has('line-name'))?.textContent ?? '',
-        heading.all().filter((each) => each.tagName === 'button').map((each) => each.textContent),
-        block
-          .all()
-          .filter((item) => item.has('variant'))
-          .map((item): [string[], string[], string[]] => [
-            item.all().filter((each) => each.tagName !== 'select' && ['variant-name', 'variant-origin', 'variant-default', 'variant-deleted', ...ROW_PARTS].some((name) => each.has(name))).map((each) => each.textContent),
-            item.all().filter((each) => each.tagName === 'button').map((each) => each.textContent),
-            item.all().filter((each) => each.tagName === 'select').map((each) => each.className),
-          ]),
-      ];
-    });
-}
-
-/** Each variant row the settings view's Single-task lines part draws, across every line. */
-function singleLineRows(page: Page): [string[], string[], string[]][] {
-  return singleLines(page).flatMap((line) => line[2]);
-}
-
-test("the settings view lists every named single-task line under its name, its default and customs beneath it with a recipe variant's controls, a deleted one with its reset alone", () => {
-  const page = loadPage();
-  page.send(live([]));
-  named(page, 'Settings').click();
-  assert.ok(texts(page).includes('Single-task lines'));
-  assert.deepStrictEqual(singleLines(page), [], 'nothing is drawn before the extension posts the lines');
-  page.send(harnessListsMessage(LISTS));
-  page.send(LINES);
-  const lineEdits = ['Duplicate', 'Rename', 'Delete'];
-  const variantEdits = ['Duplicate', 'Rename', 'Delete'];
-  const both = ['line-harness', 'line-model', 'line-effort'];
-  assert.deepStrictEqual(singleLines(page), [
-    ['Single task (Claude Code)', lineEdits, [
-      [['default', 'shipped', 'complete-task'], [...variantEdits, 'Make default'], both],
-      [['custom 1', 'stored', 'Default', 'complete-task'], [...variantEdits, 'Reset'], both],
-    ]],
-    ['Agy line', [...lineEdits, 'Reset'], [
-      [['Agy line', 'stored copy of the shipped variant default', 'Default', 'complete-task'], [...variantEdits, 'Reset'], both],
-    ]],
-    ['My own line', lineEdits, [[['default', 'yours', 'Default', 'complete-task', 'Codex'], variantEdits, []]]],
-    ['Single task (Sonnet)', lineEdits, [[['Single task (Sonnet)', 'stored', 'Default', 'complete-task'], variantEdits, both]]],
-    ['Single task (Old)', [], [[['default', 'shipped', 'Deleted'], ['Reset'], []]]],
-  ], "each line's heading keeps its own Duplicate, Rename, and Delete, and every variant beneath it gets a recipe variant's controls and line editor");
-  const view = settingsView(page);
-  assert.ok(view !== undefined);
-  assert.deepStrictEqual(view.all().filter((each) => ['input', 'textarea'].includes(each.tagName)), [], 'nothing is typed on the page');
-});
-
-test("each line and line-variant control posts its edit, the line's own controls naming its default, and the list changes only when the extension posts it again", () => {
-  const page = loadPage();
-  page.send({ type: 'liveFailure', cause: 'Error: no repository' });
-  named(page, 'Settings').click();
-  page.send(harnessListsMessage({ ...LISTS, antigravity: { models: ['claude-opus-5-5'], efforts: ['medium', 'high'] } }));
-  page.send(LINES);
-  const count = page.posted.length;
-  for (const key of [
-    'line-duplicate-0',
-    'line-rename-1',
-    'line-delete-1',
-    'line-reset-1',
-    'line-delete-3',
-    'line-reset-4-hidden-0',
-    'line-variant-default-0-0',
-    'line-variant-rename-0-1',
-    'line-variant-reset-0-1',
-    'line-variant-duplicate-2-0',
-    'line-variant-delete-0-1',
-  ]) {
-    const found = page.root.querySelector(`[data-focus="${key}"]`);
-    assert.ok(found !== null, `no control ${key}`);
-    found.click();
-  }
-  focused(page, 'line-model-single-0-0-0').change('fable');
-  focused(page, 'line-effort-single-1-0-0').change('medium');
-  focused(page, 'line-harness-single-1-0-0').change('claude');
-  focused(page, 'line-model-single-0-1-0').change('opus');
-  assert.strictEqual(page.root.querySelector('[data-focus="line-harness-single-2-0-0"]'), null, 'a Codex line has no harness dropdown');
-  assert.strictEqual(page.root.querySelector('[data-focus="line-variant-default-0-1"]'), null, 'the default carries no Make default control');
-  const custom = { name: 'custom 1', origin: 'stored' };
-  const renamed = { name: 'Agy line', origin: 'stored', copies: RENAMED_COPY };
-  assert.deepStrictEqual(page.posted.slice(count), [
-    { type: 'duplicateLine', line: 'Single task (Claude Code)', variant: custom },
-    { type: 'renameLine', line: 'Agy line', variant: renamed },
-    { type: 'deleteLine', line: 'Agy line', variant: renamed },
-    { type: 'resetLine', line: 'Single task (Antigravity)', original: { name: 'default', origin: 'shipped' } },
-    { type: 'deleteLine', line: 'Single task (Sonnet)', variant: { name: 'Single task (Sonnet)', origin: 'stored' } },
-    { type: 'resetLine', line: 'Single task (Old)', original: { name: 'default', origin: 'shipped' } },
-    { type: 'pickDefault', recipe: 'Single task (Claude Code)', variant: { name: 'default', origin: 'shipped' } },
-    { type: 'renameVariant', recipe: 'Single task (Claude Code)', variant: custom },
-    { type: 'resetVariantLines', recipe: 'Single task (Claude Code)', variant: custom },
-    { type: 'duplicateVariant', recipe: 'My own line', variant: { name: 'default', origin: 'own' } },
-    { type: 'deleteVariant', recipe: 'Single task (Claude Code)', variant: custom },
-    { type: 'replaceLineValue', recipe: 'Single task (Claude Code)', variant: { name: 'default', origin: 'shipped' }, line: 0, kind: 'model', value: 'fable' },
-    { type: 'replaceLineValue', recipe: 'Agy line', variant: renamed, line: 0, kind: 'effort', value: 'medium' },
-    { type: 'replaceLineHarness', recipe: 'Agy line', variant: renamed, line: 0, harness: 'claude' },
-    { type: 'replaceLineValue', recipe: 'Single task (Claude Code)', variant: custom, line: 0, kind: 'model', value: 'opus' },
-  ]);
-  assert.strictEqual(singleLineRows(page).length, 6, 'nothing changes until the extension posts it');
-  page.send({ ...LINES, lines: { ...LINES.lines, lines: LINES.lines.lines.slice(0, 1) } });
-  assert.deepStrictEqual(singleLines(page).map((line) => line[0]), ['Single task (Claude Code)']);
-});
-
-test('single-task lines that could not be read are named in the settings view, with no control drawn', () => {
-  const page = loadPage();
-  page.send(live([]));
-  named(page, 'Settings').click();
-  page.send({ type: 'singleTaskLines', lines: { state: 'failed', cause: 'The variant store /home/x/.gurita/variants.json is not JSON.' } });
-  assert.ok(texts(page).includes('The single-task lines could not be read.'));
-  assert.ok(texts(page).includes('The variant store /home/x/.gurita/variants.json is not JSON.'));
-  assert.deepStrictEqual(singleLines(page), []);
-});
-
-/** The pane's stylesheet as the page shell in `src/pane.ts` sets it, as its rules: each selector list split at its commas, with its declarations by property. */
-function stylesheetRules(): { selectors: string[]; declarations: Map<string, string> }[] {
-  const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'pane.ts'), 'utf8');
-  const sheet = /<style nonce="\$\{token\}">([\s\S]*?)<\/style>/.exec(source);
-  assert.ok(sheet !== null, 'the page shell holds the stylesheet');
-  return [...sheet[1].matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((rule) => ({
-    selectors: rule[1].split(',').map((selector) => selector.trim()),
-    declarations: new Map(
-      rule[2]
-        .split(';')
-        .map((declaration) => declaration.trim())
-        .filter((declaration) => declaration !== '')
-        .map((declaration): [string, string] => {
-          const colon = declaration.indexOf(':');
-          return [declaration.slice(0, colon).trim(), declaration.slice(colon + 1).trim()];
-        }),
-    ),
-  }));
-}
 
 /** The push button classes, every one drawn with the one shared look. */
 const PUSH_CLASSES = ['recipe', 'action', 'control'];
@@ -2738,13 +1514,6 @@ test('every push button the pane draws carries one class of the one shared look,
     result: { state: 'read', tasks: [{ state: 'resolved', name: 'complete-task', title: 'First Task' }] },
   });
   collect();
-  named(page, 'Settings').click();
-  page.send(CHECKED);
-  page.send(harnessSettings({ claude: true, antigravity: false, codex: true }));
-  page.send(harnessListsMessage(LISTS));
-  page.send(VARIANTS);
-  page.send(LINES);
-  collect();
   for (const name of [
     'review',
     'complete',
@@ -2756,20 +1525,7 @@ test('every push button the pane draws carries one class of the one shared look,
     'Answer with recommendation',
     'Answer with this alternative',
     'New task',
-    'Duplicate',
-    'Rename',
-    'Delete',
-    'Make default',
-    'Reset',
-    'Disable',
-    'Enable',
-    'Remove',
-    'Add model',
-    'Add effort',
     'Refresh',
-    'Settings',
-    'Close settings',
-    'Check again',
     'Previous',
     'Next',
     'Close preview',
@@ -2777,7 +1533,6 @@ test('every push button the pane draws carries one class of the one shared look,
     assert.ok(seen.has(name), `${name} is drawn as a push button`);
   }
   assert.ok(look.tabs.includes('Alpha') && look.headers.includes('Open questions') && look.links.includes('Tab Order'), 'the tabs, headers, and links were drawn');
-  assert.strictEqual(named(page, 'Settings').getAttribute('aria-pressed'), 'true');
 
   const rules = stylesheetRules();
   const push = PUSH_CLASSES.map((name) => `button.${name}`);
@@ -2798,89 +1553,24 @@ test('every push button the pane draws carries one class of the one shared look,
     'one disabled rule for every push button class',
   );
 
-  const pressed = '.tabs button.control[aria-pressed="true"]';
   for (const each of rules) {
     if (each === rule || each === hover[0]) {
       continue;
     }
     for (const selector of each.selectors) {
       const target = selector.split(/\s+/).pop() ?? '';
-      if (push.some((button) => target.startsWith(button)) && selector !== pressed) {
+      if (push.some((button) => target.startsWith(button))) {
         for (const property of LOOK) {
           assert.ok(!each.declarations.has(property), `${selector} sets no ${property} of its own`);
         }
       }
     }
   }
-  const pressedRule = rules.find((each) => each.selectors.includes(pressed));
-  assert.ok(pressedRule !== undefined, 'the Settings control has a rule for while its view is shown');
-  assert.notStrictEqual(pressedRule.declarations.get('background'), rule.declarations.get('background'), 'pressed, it is filled differently');
-  assert.ok(pressedRule.declarations.has('outline'), 'pressed, it carries a ring of its own');
   const tabRule = rules.find((each) => each.selectors.includes('.tab-list button'));
   const headerRule = rules.find((each) => each.selectors.includes('.pane-tabs button'));
   const linkRule = rules.find((each) => each.selectors.includes('button.link'));
   for (const kept of [tabRule, headerRule, linkRule]) {
     assert.ok(kept !== undefined);
     assert.strictEqual(kept.declarations.get('background'), 'none', 'the tabs, headers, and links keep their unfilled look');
-  }
-});
-
-test('each variant under Variants and Single-task lines, the deleted ones included, is drawn as a card of its own, indented under its heading with a line down its left edge and space between cards', () => {
-  const page = loadPage();
-  page.send(live([]));
-  named(page, 'Settings').click();
-  page.send(VARIANTS);
-  page.send(LINES);
-  const view = settingsView(page);
-  assert.ok(view !== undefined, 'the settings view is drawn');
-  const parts = view.all().filter((each) => each.has('variant-edits') || each.has('line-edits'));
-  assert.strictEqual(parts.length, 2, 'the Variants and Single-task lines parts are drawn');
-  const cards = { listed: 0, deleted: 0 };
-  for (const part of parts) {
-    const blocks = part.all().filter((each) => each.has('variant-recipe'));
-    assert.ok(blocks.length > 0);
-    for (const block of blocks) {
-      const children = block.children.filter((child): child is FakeElement => child instanceof FakeElement);
-      const heading = children.findIndex((child) => child.tagName === 'h5');
-      const list = children.findIndex((child) => child.has('variant-list'));
-      assert.ok(heading >= 0 && list > heading, 'the variant list stands beneath its recipe or line heading');
-      const items = children[list].children.filter((child): child is FakeElement => child instanceof FakeElement);
-      for (const item of items) {
-        assert.strictEqual(item.tagName, 'li');
-        assert.ok(item.has('variant') && item.has('variant-card'), `${item.dataset.variant} is drawn as a card`);
-        if (item.has('deleted')) {
-          cards.deleted += 1;
-        } else {
-          cards.listed += 1;
-        }
-      }
-    }
-  }
-  assert.ok(cards.listed > 0 && cards.deleted === 2, 'listed and deleted variants alike are cards, under both headings');
-  const cardItems = view.all().filter((each) => each.has('variant-card'));
-  assert.ok(cardItems.every((each) => each.has('variant')), 'nothing but a variant is a card');
-
-  const rules = stylesheetRules();
-  const ruleOf = (selector: string): Map<string, string> => {
-    const found = rules.filter((rule) => rule.selectors.includes(selector));
-    assert.strictEqual(found.length, 1, `one rule selects ${selector}`);
-    return found[0].declarations;
-  };
-  const card = ruleOf('.variant-list li.variant-card');
-  assert.match(card.get('border-left') ?? '', /^[1-9]\d*px solid var\(--vscode-[a-zA-Z]+\)$/, 'a solid line in a theme colour down the left edge');
-  const padding = (card.get('padding') ?? '').split(/\s+/);
-  assert.strictEqual(padding.length, 4);
-  assert.notStrictEqual(Number.parseFloat(padding[3]), 0, 'the card keeps its content off the line');
-  const list = ruleOf('.variant-list');
-  const margin = (list.get('margin') ?? '').split(/\s+/);
-  assert.strictEqual(margin.length, 4);
-  assert.ok(Number.parseFloat(margin[3]) > 0, 'the cards are indented under the heading');
-  assert.strictEqual(list.get('display'), 'flex');
-  assert.strictEqual(list.get('flex-direction'), 'column');
-  assert.ok(Number.parseFloat(list.get('gap') ?? '0') > 0, 'space between one card and the next');
-  for (const rule of rules) {
-    if (rule.selectors.some((selector) => selector.includes('variant-card'))) {
-      assert.deepStrictEqual(rule.selectors, ['.variant-list li.variant-card'], 'the card has one rule of its own');
-    }
   }
 });

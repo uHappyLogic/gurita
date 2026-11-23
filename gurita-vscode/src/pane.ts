@@ -65,76 +65,18 @@
 // closes, that mission's page draws every action button on it disabled, its recipe buttons, its
 // question card's buttons, its preview's start button, and its New task button, and pulses its
 // workflow diagram's filled block, while the tabs, the two pane headers, the refresh control, the
-// other missions' pages, the two mission-starting buttons, and the settings control stay enabled.
-// The settings control at the tab row's end swaps the page beneath the row for the settings view
-// and back within the page itself, and the extension contributes no command for that view. The
-// view shows the harness check: the page posts every opening of the view, and the first opening
-// after the panel is created runs the packaged `harness_check.py` through `execFile` from the
-// project root, its result posted to the page and kept for the panel's lifetime, every later
-// opening posting the result kept without running the check again. Only the view's check-again
-// control runs it afresh; no re-read of the pane and no Refresh runs it, and its result reaches
-// the settings view alone, the mission pages drawn and their clicks run whatever it reports. The
-// view also enables and disables each harness: every opening posts each harness's enabled state, read
-// afresh from the harness part of the variant store file, and a click of a harness's enable or
-// disable control writes that state there and posts it again with the pages, re-read. Every harness
-// starts enabled and stays so until the person disables it, the check never changing it. A variant
-// with at least one line on a disabled harness is left out of the list the pane posts, so out of
-// its recipe's dropdown and refused on a click as any variant the list lacks is, a recipe whose
-// every variant is left out loses its button, and where the remembered variant or the default is
-// left out the button stands on the default when it is still listed and otherwise on the first
-// listed variant, the remembered selection kept for when the harness is enabled again. The
-// fixed-name buttons' dropdowns leave such a variant out in the same way, and the looped run's
-// preview, overrides, and lines keep every named single-task line. The view holds each harness's
-// model list and its one effort list for the whole harness, Codex a model list alone: every
-// opening posts them, derived afresh from the `--model` and `--effort` values, on a Codex line
-// `-m`, the lines of the shipped recipes, the own recipes, and the stored variants carry, with the
-// person's overlay from the harness part of the variant store file laid over them. A click of a
-// list's add control asks for the entry in VS Code's own input box, whose validation refuses an
-// empty entry and one the list already offers, and a click of an entry's remove control takes it
-// out of the offer; either is written to the overlay and the lists posted again. The view also
-// edits variants: every opening posts every recipe but the named single-task lines, the chains,
-// the seven fixed-name button recipes, and the recipes and variants of the own recipe file alike,
-// each with its variants as the variant store lays them over the two Markdown files, its default
-// marked, and the variants a hiding record hides. A click of a variant's duplicate, rename,
-// delete, or default control, or of a reset control, on a stored variant returning its lines to
-// those of the variant it was made from, its name and entry kept, and on a deleted variant showing
-// it again, is carried out through the variant store's edits (`variantEdits.ts`); a duplicate's name
-// and a rename are asked for in VS Code's own input box, one box per value as `askValues` asks, a
-// rename's box opening on the current name, and the box's validation refusing an empty name and
-// one the recipe's other variants carry. Each variant is posted with its lines and the line editor
-// each gets: a `claude` or `agy` line carrying both `--model` and `--effort` gets model and effort
-// dropdowns, a Codex line carrying `-m` its model dropdown alone, and every other line is shown as
-// its text, read-only, and the row each is drawn as (`lineRow`): a line of a known harness running
-// a `gurita:` skill as the skill's name, marked interactive when the line is not headless, with
-// its harness, every other line as its text. A pick in a line's dropdown, of a value the
-// harness's model list or its whole effort list offers, whatever the line's model, replaces the value the line carries, never
-// inserting text into it, through the store's edit (`replaceLineValue`), a shipped or own variant
-// left untouched and listed and a stored variant named `custom N`, N the lowest number from 1 that
-// no variant of the recipe carries, added beside it holding the changed line, neither selected
-// nor made the default, and a stored variant changed in place, keeping its name; a pick of a value the list does not
-// offer, of the value the line already carries, or on a line or variant the list read afresh does
-// not hold with that control writes nothing. A line with model and effort dropdowns also gets a
-// harness dropdown offering Claude Code and Antigravity, and a pick of the other of the two
-// rewrites the line onto it through the store's edit (`replaceLineHarness`), stored as a model or
-// effort pick is: the line keeps its prompt and its headless or interactive form (`claude -p
-// "…"` to `agy -p "…"`, `claude "…"` to `agy -i "…"`, and back), takes the picked harness's
-// first listed model, and keeps its effort where that harness's effort list offers it, taking its
-// first listed effort otherwise; a Codex line keeps its harness, and a pick of the harness the
-// line runs on, or on a line the list read afresh gives no such dropdown, writes nothing. The view
-// also edits the named single-task lines:
-// every opening posts them, shipped and own alike, each under its name with its single-task
-// variants beneath it, its `default` and its customs, posted as a recipe's variants are, and the
-// variants a hiding record hides. A click of a variant's duplicate, rename, delete, default, or
-// reset control, or a pick in its dropdowns, is carried out as on any recipe's variant, so a
-// harness, model, or effort pick on a shipped or own line adds `custom N` under the same line
-// name, and the default picked is the variant the looped run passes as the line's `--line`. A
-// click of the line's own duplicate, rename, delete, or reset control is carried out through the
-// store's line edits on its default variant, a new name asked for in VS Code's own input box, whose
-// validation refuses an empty name and one any recipe or line carries. A stored line reaches the
-// merged recipe list under its name, so the looped run's lines, the rule file, and the override
-// list see it as any named line. Every edit posts the variant and line lists and the harness lists
-// again, and the pages with their recipes re-read, or the failure state again while it stands, so
-// the mission pages' dropdowns and the fixed-name buttons' dropdowns and labels show it at once.
+// other missions' pages, and the two mission-starting buttons stay enabled. The settings live in
+// the Settings window of their own (`settingsWindow.ts`), not on the pane: the pane draws no
+// Settings control, and a variant with at least one line on a harness the window disabled is left
+// out of the list the pane posts, so out of its recipe's dropdown and refused on a click as any
+// variant the list lacks is, a recipe whose every variant is left out loses its button, and where
+// the remembered variant or the default is left out the button stands on the default when it is
+// still listed and otherwise on the first listed variant, the remembered selection kept for when
+// the harness is enabled again. The fixed-name buttons' dropdowns leave such a variant out in the
+// same way, and the looped run's preview, overrides, and lines keep every named single-task line.
+// Every edit the window makes re-reads the recipes and posts the pages again while the pane is
+// shown, or the failure state again while it stands, so the mission pages' dropdowns and the
+// fixed-name buttons' dropdowns and labels show it at once.
 // The
 // extension posts the
 // paths of the missions with a running runner to the page when a run starts and when its terminal closes, and
@@ -205,47 +147,11 @@ import {
   rememberAlternativeSelection,
   rememberSelection,
 } from './selections';
-import { ReadVariantRef, readVariantStore, variantStoreFile } from './variantStore';
-import {
-  LineEditor,
-  SettingsLine,
-  SettingsLines,
-  SettingsRecipe,
-  VariantTarget,
-  deleteLine,
-  deleteVariant,
-  duplicateLine,
-  duplicateVariant,
-  lineNames,
-  pickDefault,
-  renameLine,
-  renameVariant,
-  replaceLineHarness,
-  replaceLineValue,
-  resetLine,
-  resetVariant,
-  resetVariantLines,
-  settingsLines,
-  settingsRecipes,
-} from './variantEdits';
-import {
-  HarnessKey,
-  HarnessLists,
-  HarnessStates,
-  ListKind,
-  disabledCommands,
-  editHarnessList,
-  holdsList,
-  isHarnessKey,
-  isListKind,
-  readHarnessLists,
-  readHarnessStates,
-  setHarnessEnabled,
-} from './harnessSettings';
-import { Harness, SwitchableHarness } from './lineValues';
+import { variantStoreFile } from './variantStore';
+import { disabledCommands, readHarnessStates } from './harnessSettings';
+import { Harness } from './lineValues';
 import { FileEventKind, RefreshBatch, RefreshQueue, WATCHED_PATTERN, eventEffect } from './refresh';
 import { OPTIONAL_PLACEHOLDERS } from './placeholders';
-import { CHECK_SCRIPT, CheckResult, HARNESSES, PLUGIN_VERSION_FILE, readPackagedVersion, runHarnessCheck } from './harnessCheck';
 import { refuseWhileRunning, runnerFile, runningMissions, showRun, startChain, startLoop } from './runs';
 import { MissionWorkflow, WorkflowStep, missionWorkflow, reviewCount } from './workflow';
 import { StartingButton, StartingOffer, variantValues } from './startingRows';
@@ -276,45 +182,13 @@ type PageMessage =
   | { type: 'selectButtonVariant'; button: FixedButton; mission?: string; variant: string }
   | { type: 'selectAlternativeVariant'; mission: string; question: string; alternative: string; variant: string }
   | { type: 'previewLoop'; mission: string; recipe: string; variant: string }
-  | { type: 'startLoop'; mission: string; recipe: string; overrides: Record<string, string> }
-  | { type: 'settingsOpened' }
-  | { type: 'checkHarnesses' }
-  | { type: 'setHarnessEnabled'; harness: string; enabled: boolean }
-  | { type: 'addHarnessValue'; harness: string; kind: string }
-  | { type: 'removeHarnessValue'; harness: string; kind: string; value: string }
-  | { type: 'duplicateVariant'; recipe: string; variant: VariantTarget }
-  | { type: 'renameVariant'; recipe: string; variant: VariantTarget }
-  | { type: 'deleteVariant'; recipe: string; variant: VariantTarget }
-  | { type: 'pickDefault'; recipe: string; variant: VariantTarget }
-  | { type: 'resetVariant'; recipe: string; original: ReadVariantRef }
-  | { type: 'resetVariantLines'; recipe: string; variant: VariantTarget }
-  | { type: 'replaceLineValue'; recipe: string; variant: VariantTarget; line: number; kind: string; value: string }
-  | { type: 'replaceLineHarness'; recipe: string; variant: VariantTarget; line: number; harness: string }
-  | { type: 'duplicateLine'; line: string; variant: VariantTarget }
-  | { type: 'renameLine'; line: string; variant: VariantTarget }
-  | { type: 'deleteLine'; line: string; variant: VariantTarget }
-  | { type: 'resetLine'; line: string; original: ReadVariantRef };
-
-/** The harness check as the settings view shows it: running, or what it gave. */
-type HarnessCheck = { state: 'running' } | CheckResult;
+  | { type: 'startLoop'; mission: string; recipe: string; overrides: Record<string, string> };
 
 /**
  * The merged recipe list as read from the two recipe files, with the commands of the harnesses the
- * settings view disabled, or the cause they could not be read.
+ * Settings window disabled, or the cause they could not be read.
  */
 type RecipeRead = { state: 'read'; recipes: Recipe[]; disabled: Harness[] } | { state: 'failed'; cause: string };
-
-/** Each harness's enabled state as the variant store file holds it, or the cause it could not be read. */
-type HarnessSettings = { state: 'read'; enabled: HarnessStates } | { state: 'failed'; cause: string };
-
-/** Each harness's model and effort lists, the overlay laid over them, or the cause they could not be read. */
-type HarnessListsRead = { state: 'read'; lists: HarnessLists } | { state: 'failed'; cause: string };
-
-/** The recipes and variants the settings view lists for editing, or the cause they could not be read. */
-type VariantsRead = { state: 'read'; recipes: SettingsRecipe[] } | { state: 'failed'; cause: string };
-
-/** The named single-task lines the settings view lists for editing, or the cause they could not be read. */
-type LinesRead = ({ state: 'read' } & SettingsLines) | { state: 'failed'; cause: string };
 
 /** The recipe list one mission's page shows, or the cause the recipes could not be read. */
 type RecipePart = { state: 'read'; recipes: PageRecipe[] } | { state: 'failed'; cause: string };
@@ -412,12 +286,7 @@ type PaneMessage =
       names: string[];
       result: PreviewRead;
     }
-  | { type: 'loopStarted'; mission: string }
-  | { type: 'harnessCheck'; check: HarnessCheck }
-  | { type: 'harnessSettings'; settings: HarnessSettings }
-  | { type: 'harnessLists'; lists: HarnessListsRead }
-  | { type: 'variants'; variants: VariantsRead }
-  | { type: 'singleTaskLines'; lines: LinesRead };
+  | { type: 'loopStarted'; mission: string };
 
 /** What a mission's latest preview ran with, which starting its run passes on unchanged. */
 interface HeldPreview {
@@ -484,12 +353,6 @@ let settled = 0;
 /** Each mission's latest preview, by the mission's path. */
 const previews = new Map<string, HeldPreview>();
 
-/** The harness check kept for the panel's lifetime: undefined until the settings view is first opened. */
-let harnessCheck: HarnessCheck | undefined;
-
-/** The number of harness checks started, so only the latest one started keeps its result. */
-let checks = 0;
-
 /** What is called after every re-read the session's live read keeps, a full one or a burst's. */
 const readListeners: (() => void)[] = [];
 
@@ -540,7 +403,8 @@ export function onSessionRead(listener: () => void): vscode.Disposable {
 
 /**
  * Calls `listener` after every change to the variant remembered for either mission-starting control,
- * made from the side-bar view's QuickPick or the pane's dropdown, until the returned disposable is
+ * made from the side-bar view's QuickPick or the pane's dropdown, and after every edit in the
+ * Settings window, which may change what either control runs, until the returned disposable is
  * disposed.
  */
 export function onStartingSelection(listener: () => void): vscode.Disposable {
@@ -555,7 +419,7 @@ export function onStartingSelection(listener: () => void): vscode.Disposable {
   };
 }
 
-/** Tells every listener that a mission-starting control's remembered variant changed. */
+/** Tells every listener that what a mission-starting control runs may have changed. */
 function startingChanged(): void {
   for (const listener of [...startingListeners]) {
     listener();
@@ -643,7 +507,7 @@ export function openMissionPane(context: vscode.ExtensionContext): void {
     localResourceRoots: [scripts],
   });
   panel = created;
-  created.webview.html = pageShell(created.webview, vscode.Uri.joinPath(scripts, 'page.js'));
+  created.webview.html = pageShell(created.webview, vscode.Uri.joinPath(scripts, 'page.js'), PANEL_TITLE);
   created.webview.onDidReceiveMessage(
     (message: PageMessage) => {
       if (message?.type === 'ready') {
@@ -676,34 +540,6 @@ export function openMissionPane(context: vscode.ExtensionContext): void {
         void previewLoop(context, created, message.mission, message.recipe, message.variant);
       } else if (message?.type === 'startLoop') {
         runLoop(context, created, message.mission, message.recipe, message.overrides);
-      } else if (message?.type === 'settingsOpened') {
-        settingsOpened(context, created);
-      } else if (message?.type === 'checkHarnesses') {
-        void checkHarnesses(context, created);
-      } else if (message?.type === 'setHarnessEnabled') {
-        void enableHarness(context, created, message.harness, message.enabled);
-      } else if (message?.type === 'addHarnessValue') {
-        void addHarnessValue(context, created, message.harness, message.kind);
-      } else if (message?.type === 'removeHarnessValue') {
-        void removeHarnessValue(context, created, message.harness, message.kind, message.value);
-      } else if (
-        message?.type === 'duplicateVariant' ||
-        message?.type === 'renameVariant' ||
-        message?.type === 'deleteVariant' ||
-        message?.type === 'pickDefault' ||
-        message?.type === 'resetVariantLines'
-      ) {
-        void editVariant(context, created, message.type, message.recipe, message.variant);
-      } else if (message?.type === 'resetVariant') {
-        void resetStoredVariant(context, created, message.recipe, message.original);
-      } else if (message?.type === 'replaceLineValue') {
-        void editLineValue(context, created, message.recipe, message.variant, message.line, message.kind, message.value);
-      } else if (message?.type === 'replaceLineHarness') {
-        void editLineHarness(context, created, message.recipe, message.variant, message.line, message.harness);
-      } else if (message?.type === 'duplicateLine' || message?.type === 'renameLine' || message?.type === 'deleteLine') {
-        void editLine(context, created, message.type, message.line, message.variant);
-      } else if (message?.type === 'resetLine') {
-        void resetStoredLine(context, created, message.line, message.original);
       }
     },
     undefined,
@@ -716,7 +552,6 @@ export function openMissionPane(context: vscode.ExtensionContext): void {
         posted = undefined;
         startingPosts = undefined;
         previews.clear();
-        harnessCheck = undefined;
       }
     },
     undefined,
@@ -818,20 +653,20 @@ function readAllRecipes(context: vscode.ExtensionContext): Recipe[] {
 }
 
 /** The shipped recipe file, the person's own recipe file, and the per-user variant store file. */
-function recipeFiles(context: vscode.ExtensionContext): { shipped: string; own: string; store: string } {
+export function recipeFiles(context: vscode.ExtensionContext): { shipped: string; own: string; store: string } {
   const setting = vscode.workspace.getConfiguration('gurita').get<string>('ownRecipesFile');
   const home = os.homedir();
   return { shipped: context.asAbsolutePath('bundled/shipped_recipes.md'), own: ownRecipesFile(setting, home), store: variantStoreFile(home) };
 }
 
-/** The commands of the harnesses the settings view disabled, read afresh from the variant store file. */
+/** The commands of the harnesses the Settings window disabled, read afresh from the variant store file. */
 function readDisabled(): Harness[] {
   return disabledCommands(readHarnessStates(variantStoreFile(os.homedir())));
 }
 
 /**
  * Reads the shipped recipe file and the person's own recipe file into the merged list, with the
- * harnesses the settings view disabled, or the cause they could not be read.
+ * harnesses the Settings window disabled, or the cause they could not be read.
  */
 function readRecipeList(context: vscode.ExtensionContext): RecipeRead {
   try {
@@ -969,9 +804,9 @@ function projectSelections(context: vscode.ExtensionContext, read: RecipeRead): 
 
 /**
  * Posts the pages again from the session's live read, their recipes re-read, in answer to a ready
- * message and after an edit in the settings view, so the recipe list's dropdowns and the fixed-name
- * buttons' labels show it at once: the mission pages when the latest read gave them, and the
- * failure state, its buttons re-read, when it gave that.
+ * message and after a change to a remembered selection, so the recipe list's dropdowns and the
+ * fixed-name buttons' labels show it at once: the mission pages when the latest read gave them,
+ * and the failure state, its buttons re-read, when it gave that.
  */
 async function postPages(context: vscode.ExtensionContext, target: vscode.WebviewPanel): Promise<void> {
   if (panel !== target) {
@@ -982,6 +817,20 @@ async function postPages(context: vscode.ExtensionContext, target: vscode.Webvie
     await post(target, publish(context, current));
   } else if (failure !== undefined) {
     await post(target, failureMessage(context, failure));
+  }
+}
+
+/**
+ * Tells every surface drawn from the recipes that an edit in the Settings window changed them: the
+ * side-bar view's two mission-starting rows are redrawn, their recipes read afresh, and the pages
+ * are posted again to the pane while it is shown, their recipes re-read. A hidden or closed pane
+ * draws them from its next ready message.
+ */
+export async function recipesChanged(context: vscode.ExtensionContext): Promise<void> {
+  startingChanged();
+  const target = shownPanel();
+  if (target !== undefined) {
+    await postPages(context, target);
   }
 }
 
@@ -1276,662 +1125,6 @@ async function selectAlternativeVariant(
   await postPages(context, target);
 }
 
-/** Each harness's enabled state, read afresh from the variant store file, or the cause it could not be read. */
-function readHarnessSettings(): HarnessSettings {
-  try {
-    return { state: 'read', enabled: readHarnessStates(variantStoreFile(os.homedir())) };
-  } catch (error) {
-    return { state: 'failed', cause: error instanceof Error ? error.message : String(error) };
-  }
-}
-
-/**
- * Answers an opening of the settings view: each harness's enabled state and its model and effort
- * lists are posted, read afresh;
- * the first opening after the panel is created runs the harness check, and every later one posts
- * the check kept, running or done, without running it.
- */
-function settingsOpened(context: vscode.ExtensionContext, target: vscode.WebviewPanel): void {
-  void post(target, { type: 'harnessSettings', settings: readHarnessSettings() });
-  void post(target, { type: 'harnessLists', lists: readListsOf(context) });
-  void post(target, { type: 'variants', variants: readVariantList(context) });
-  void post(target, { type: 'singleTaskLines', lines: readLineList(context) });
-  if (harnessCheck === undefined) {
-    void checkHarnesses(context, target);
-    return;
-  }
-  void post(target, { type: 'harnessCheck', check: harnessCheck });
-}
-
-/**
- * Runs the harness check afresh, unless one is running: the packaged `harness_check.py` run from
- * the project root, else the home directory when no folder is open, its installed versions
- * compared with the packaged plugin version. The page is told it runs, and then what it gave,
- * which is kept for the panel's lifetime.
- */
-async function checkHarnesses(context: vscode.ExtensionContext, target: vscode.WebviewPanel): Promise<void> {
-  if (panel !== target || harnessCheck?.state === 'running') {
-    return;
-  }
-  const sequence = ++checks;
-  harnessCheck = { state: 'running' };
-  await post(target, { type: 'harnessCheck', check: harnessCheck });
-  const root = (await startingRoot()) ?? os.homedir();
-  const packaged = readPackagedVersion(context.asAbsolutePath(PLUGIN_VERSION_FILE));
-  const result = await runHarnessCheck(context.asAbsolutePath(CHECK_SCRIPT), root, packaged);
-  if (panel !== target || sequence !== checks) {
-    return;
-  }
-  harnessCheck = result;
-  await post(target, { type: 'harnessCheck', check: result });
-}
-
-/**
- * Enables or disables the harness `harness` in the harness part of the variant store file, read
- * afresh and written whole, then posts each harness's state and the pages again, their recipes
- * re-read, so a variant on a disabled harness leaves its dropdown at once. A key naming no harness
- * or a state that is not true or false writes nothing; a store that cannot be read or written is
- * told in an error notification, nothing written.
- */
-async function enableHarness(context: vscode.ExtensionContext, target: vscode.WebviewPanel, harness: unknown, enabled: unknown): Promise<void> {
-  if (panel !== target || !isHarnessKey(harness) || typeof enabled !== 'boolean') {
-    return;
-  }
-  try {
-    setHarnessEnabled(variantStoreFile(os.homedir()), harness, enabled);
-  } catch (error) {
-    void vscode.window.showErrorMessage(
-      `The harness could not be ${enabled ? 'enabled' : 'disabled'}: ${error instanceof Error ? error.message : String(error)}`,
-    );
-  }
-  await post(target, { type: 'harnessSettings', settings: readHarnessSettings() });
-  await postPages(context, target);
-}
-
-/** Each harness's model and effort lists, read afresh, or the cause they could not be read. */
-function readListsOf(context: vscode.ExtensionContext): HarnessListsRead {
-  try {
-    const files = recipeFiles(context);
-    return { state: 'read', lists: readHarnessLists(files.shipped, files.own, files.store) };
-  } catch (error) {
-    return { state: 'failed', cause: error instanceof Error ? error.message : String(error) };
-  }
-}
-
-/** The name the settings view gives the harness `key`. */
-function harnessName(key: string): string {
-  return HARNESSES.find((harness) => harness.key === key)?.name ?? key;
-}
-
-/**
- * Adds an entry to the harness `harness`'s list of `kind`: the entry is asked for in VS Code's own
- * input box, whose validation refuses an empty entry and one the list already offers, and written
- * to the overlay in the harness part of the variant store file, the lists then posted again. A key
- * naming no harness, a list the harness does not hold, lists that cannot be read, or a dismissed
- * box writes nothing; a store that cannot be written is told in an error notification.
- */
-async function addHarnessValue(context: vscode.ExtensionContext, target: vscode.WebviewPanel, harness: unknown, kind: unknown): Promise<void> {
-  if (panel !== target || !isHarnessKey(harness) || !isListKind(kind) || !holdsList(harness, kind)) {
-    return;
-  }
-  const read = readListsOf(context);
-  if (read.state === 'failed') {
-    void vscode.window.showErrorMessage(`The ${kind} list could not be read: ${read.cause}`);
-    return;
-  }
-  const offered = kind === 'model' ? read.lists[harness].models : read.lists[harness].efforts ?? [];
-  const typed = await vscode.window.showInputBox({
-    prompt: `The ${kind} to add to the ${harnessName(harness)} ${kind} list`,
-    placeHolder: kind === 'model' ? 'a model name' : 'an effort level',
-    ignoreFocusOut: true,
-    validateInput: (value) =>
-      value.trim() === ''
-        ? `Type a ${kind}, or press Escape to add nothing.`
-        : offered.includes(value.trim())
-          ? `The ${kind} list already offers ${value.trim()}.`
-          : undefined,
-  });
-  if (typed === undefined || typed.trim() === '' || offered.includes(typed.trim()) || panel !== target) {
-    return;
-  }
-  editList(context, target, harness, kind, 'add', typed.trim());
-}
-
-/**
- * Removes the entry `value` from the offer of the harness `harness`'s list of `kind`, written to the
- * overlay in the harness part of the variant store file, the lists then posted again. A key naming
- * no harness, a list the harness does not hold, or an entry the list does not offer writes nothing.
- */
-async function removeHarnessValue(context: vscode.ExtensionContext, target: vscode.WebviewPanel, harness: unknown, kind: unknown, value: unknown): Promise<void> {
-  if (panel !== target || !isHarnessKey(harness) || !isListKind(kind) || !holdsList(harness, kind) || typeof value !== 'string') {
-    return;
-  }
-  const read = readListsOf(context);
-  if (read.state === 'failed' || !(kind === 'model' ? read.lists[harness].models : read.lists[harness].efforts ?? []).includes(value)) {
-    return;
-  }
-  editList(context, target, harness, kind, 'remove', value);
-}
-
-/** Writes one edit of a harness's list to the variant store file and posts the lists again. */
-function editList(
-  context: vscode.ExtensionContext,
-  target: vscode.WebviewPanel,
-  harness: HarnessKey,
-  kind: ListKind,
-  edit: 'add' | 'remove',
-  value: string,
-): void {
-  try {
-    const files = recipeFiles(context);
-    editHarnessList(files.shipped, files.own, files.store, harness, kind, edit, value);
-  } catch (error) {
-    void vscode.window.showErrorMessage(
-      `The ${kind} could not be ${edit === 'add' ? 'added' : 'removed'}: ${error instanceof Error ? error.message : String(error)}`,
-    );
-  }
-  void post(target, { type: 'harnessLists', lists: readListsOf(context) });
-}
-
-/**
- * The recipes and variants the settings view lists, read afresh: the shipped recipe file and the
- * person's own recipe file merged, the variant store laid over them, as `settingsRecipes` lists
- * them, or the cause they could not be read.
- */
-function readVariantList(context: vscode.ExtensionContext): VariantsRead {
-  try {
-    const files = recipeFiles(context);
-    const base = readRecipes(files.shipped, files.own);
-    return { state: 'read', recipes: settingsRecipes(base, readVariantStore(files.store), files.store, Object.values(BUTTON_RECIPES)) };
-  } catch (error) {
-    return { state: 'failed', cause: error instanceof Error ? error.message : String(error) };
-  }
-}
-
-/**
- * The named single-task lines the settings view lists, read afresh: the shipped recipe file and
- * the person's own recipe file merged, the variant store laid over them, as `settingsLines` lists
- * them, or the cause they could not be read.
- */
-function readLineList(context: vscode.ExtensionContext): LinesRead {
-  try {
-    const files = recipeFiles(context);
-    return { state: 'read', ...settingsLines(readRecipes(files.shipped, files.own), readVariantStore(files.store), files.store) };
-  } catch (error) {
-    return { state: 'failed', cause: error instanceof Error ? error.message : String(error) };
-  }
-}
-
-function isOrigin(value: unknown, allowed: readonly string[]): boolean {
-  return typeof value === 'string' && allowed.includes(value);
-}
-
-/** The variant a page message names, or undefined when it names none in the form a target takes. */
-function variantTargetOf(value: unknown): VariantTarget | undefined {
-  if (typeof value !== 'object' || value === null) {
-    return undefined;
-  }
-  const { name, origin, copies } = value as Record<string, unknown>;
-  if (typeof name !== 'string' || !isOrigin(origin, ['shipped', 'own', 'stored'])) {
-    return undefined;
-  }
-  if (copies === undefined) {
-    return { name, origin: origin as VariantTarget['origin'] };
-  }
-  const original = readVariantRefOf(copies);
-  return original === undefined ? undefined : { name, origin: origin as VariantTarget['origin'], copies: original };
-}
-
-/** The shipped or own variant a page message names, or undefined when it names none. */
-function readVariantRefOf(value: unknown): ReadVariantRef | undefined {
-  if (typeof value !== 'object' || value === null) {
-    return undefined;
-  }
-  const { name, origin, recipe } = value as Record<string, unknown>;
-  if (typeof name !== 'string' || !isOrigin(origin, ['shipped', 'own']) || (recipe !== undefined && typeof recipe !== 'string')) {
-    return undefined;
-  }
-  return { name, origin: origin as ReadVariantRef['origin'], ...(recipe === undefined ? {} : { recipe: recipe as string }) };
-}
-
-/** Whether a listed variant is the one `target` names. */
-function isTarget(variant: VariantTarget, target: VariantTarget): boolean {
-  return (
-    variant.name === target.name &&
-    variant.origin === target.origin &&
-    (variant.copies === undefined || target.copies === undefined
-      ? variant.copies === target.copies
-      : variant.copies.name === target.copies.name &&
-        variant.copies.origin === target.copies.origin &&
-        variant.copies.recipe === target.copies.recipe)
-  );
-}
-
-/**
- * Asks for a variant's name in VS Code's own input box, one box for the one value, as `askValues`
- * asks for a page's values: the box opens on `value` when given, and its validation refuses an
- * empty name and one of `taken`, the names the recipe's other variants carry. The name is returned
- * with its outer spaces trimmed, or undefined when the box is dismissed.
- */
-async function askVariantName(prompt: string, taken: readonly string[], value?: string): Promise<string | undefined> {
-  const typed = await vscode.window.showInputBox({
-    prompt,
-    ...(value === undefined ? {} : { value }),
-    ignoreFocusOut: true,
-    validateInput: (text) =>
-      text.trim() === ''
-        ? 'Type a name, or press Escape to change nothing.'
-        : taken.includes(text.trim())
-          ? `The recipe already has a variant named ${text.trim()}.`
-          : undefined,
-  });
-  if (typed === undefined || typed.trim() === '' || taken.includes(typed.trim())) {
-    return undefined;
-  }
-  return typed.trim();
-}
-
-/** The word a notification gives each variant edit. */
-const EDIT_VERBS: Record<'duplicateVariant' | 'renameVariant' | 'deleteVariant' | 'pickDefault' | 'resetVariant' | 'resetVariantLines', string> = {
-  duplicateVariant: 'duplicated',
-  renameVariant: 'renamed',
-  deleteVariant: 'deleted',
-  pickDefault: 'picked as the default',
-  resetVariant: 'reset',
-  resetVariantLines: 'reset',
-};
-
-/**
- * Makes one edit of the settings view on the variant `variant` of the recipe `recipe`, as the
- * variant list read afresh lists it, through the variant store's edits: a duplicate under a name
- * and a rename to one, each asked for in VS Code's own input box, a rename's box opening on the
- * current name, a delete, the pick of the variant as its recipe's default, or the reset of a stored
- * variant, returning its lines to those of the variant it was made from, its name kept. A recipe or
- * variant the list does not hold, a reset of a variant it lists with no variant it was made from,
- * or a dismissed box, writes nothing; an edit the store refuses, or a store
- * that cannot be read or written, is told in an error notification. Every edit made posts the
- * variant list, the harness lists, and the pages again, their recipes re-read.
- */
-async function editVariant(
-  context: vscode.ExtensionContext,
-  target: vscode.WebviewPanel,
-  edit: 'duplicateVariant' | 'renameVariant' | 'deleteVariant' | 'pickDefault' | 'resetVariantLines',
-  recipe: unknown,
-  variant: unknown,
-): Promise<void> {
-  const named = variantTargetOf(variant);
-  if (panel !== target || typeof recipe !== 'string' || named === undefined) {
-    return;
-  }
-  const read = readVariantList(context);
-  if (read.state === 'failed') {
-    void vscode.window.showErrorMessage(`The variants could not be read: ${read.cause}`);
-    return;
-  }
-  const listed = read.recipes.find((each) => each.name === recipe) ?? listedLine(context, recipe);
-  const index = listed?.variants.findIndex((each) => isTarget(each, named)) ?? -1;
-  if (listed === undefined || index < 0 || (edit === 'resetVariantLines' && listed.variants[index].from === undefined)) {
-    return;
-  }
-  const others = listed.variants.filter((_, each) => each !== index).map((each) => each.name);
-  let name: string | undefined;
-  if (edit === 'duplicateVariant') {
-    name = await askVariantName(`The name of the duplicate of ${named.name} in ${recipe}`, listed.variants.map((each) => each.name));
-  } else if (edit === 'renameVariant') {
-    name = await askVariantName(`The new name of ${named.name} in ${recipe}`, others, named.name);
-  }
-  if ((edit === 'duplicateVariant' || edit === 'renameVariant') && name === undefined) {
-    return;
-  }
-  if (panel !== target) {
-    return;
-  }
-  try {
-    const files = recipeFiles(context);
-    const base = readRecipes(files.shipped, files.own);
-    if (edit === 'duplicateVariant') {
-      duplicateVariant(files.store, base, recipe, named, name as string);
-    } else if (edit === 'renameVariant') {
-      renameVariant(files.store, base, recipe, named, name as string);
-    } else if (edit === 'deleteVariant') {
-      deleteVariant(files.store, base, recipe, named);
-    } else if (edit === 'resetVariantLines') {
-      resetVariantLines(files.store, base, recipe, named);
-    } else {
-      pickDefault(files.store, base, recipe, named);
-    }
-  } catch (error) {
-    void vscode.window.showErrorMessage(
-      `The variant could not be ${EDIT_VERBS[edit]}: ${error instanceof Error ? error.message : String(error)}`,
-    );
-  }
-  await postVariantEdit(context, target);
-}
-
-/** The named single-task line of the name `name` the line list read afresh holds, its variants edited as a recipe's are. */
-function listedLine(context: vscode.ExtensionContext, name: string): SettingsLine | undefined {
-  const lines = readLineList(context);
-  return lines.state === 'read' ? lines.lines.find((each) => each.name === name) : undefined;
-}
-
-/**
- * Resets the deleted shipped or own variant `original` of the recipe `recipe`, removing the hiding
- * record and any stored copy standing for it, so it shows again as its file holds it, then posts
- * the variant list, the harness lists, and the pages again. A variant the list read afresh does
- * not list as deleted writes nothing; a store that cannot be read or written is told in an error notification.
- */
-async function resetStoredVariant(context: vscode.ExtensionContext, target: vscode.WebviewPanel, recipe: unknown, original: unknown): Promise<void> {
-  const ref = readVariantRefOf(original);
-  if (panel !== target || typeof recipe !== 'string' || ref === undefined) {
-    return;
-  }
-  const read = readVariantList(context);
-  if (read.state === 'failed') {
-    void vscode.window.showErrorMessage(`The variants could not be read: ${read.cause}`);
-    return;
-  }
-  const listed = read.recipes.find((each) => each.name === recipe);
-  const offered = listed?.hidden ?? [];
-  if (!offered.some((each) => each.name === ref.name && each.origin === ref.origin)) {
-    return;
-  }
-  try {
-    resetVariant(recipeFiles(context).store, recipe, ref);
-  } catch (error) {
-    void vscode.window.showErrorMessage(`The variant could not be ${EDIT_VERBS.resetVariant}: ${error instanceof Error ? error.message : String(error)}`);
-  }
-  await postVariantEdit(context, target);
-}
-
-/**
- * Replaces the model or the effort that line `line` of the variant `variant` of the recipe `recipe`
- * carries with `value`, picked in the line's dropdown in the settings view, through the store's
- * edit, a shipped or own variant left as it is and a `custom N` holding the changed line added
- * beside it, a stored variant changed in place, then
- * posts the variant list, the harness lists, and the pages again. Only a line the variant list read
- * afresh gives a control of `kind` is changed, and only to a value the harness's list of `kind`
- * offers: anything else, or the value the line already carries, writes nothing. An edit the store
- * refuses, or lists or a store that cannot be read or written, is told in an error notification.
- */
-async function editLineValue(
-  context: vscode.ExtensionContext,
-  target: vscode.WebviewPanel,
-  recipe: unknown,
-  variant: unknown,
-  line: unknown,
-  kind: unknown,
-  value: unknown,
-): Promise<void> {
-  const named = variantTargetOf(variant);
-  if (
-    panel !== target ||
-    typeof recipe !== 'string' ||
-    named === undefined ||
-    typeof line !== 'number' ||
-    !Number.isInteger(line) ||
-    line < 0 ||
-    !isListKind(kind) ||
-    typeof value !== 'string'
-  ) {
-    return;
-  }
-  const read = readVariantList(context);
-  if (read.state === 'failed') {
-    void vscode.window.showErrorMessage(`The variants could not be read: ${read.cause}`);
-    return;
-  }
-  const editor = listedEditor(context, read, recipe, named, line);
-  const current = editor === undefined || editor === null ? undefined : kind === 'model' ? editor.model : editor.effort;
-  if (editor === undefined || editor === null || current === undefined || current === value) {
-    return;
-  }
-  const lists = readListsOf(context);
-  if (lists.state === 'failed') {
-    void vscode.window.showErrorMessage(`The ${kind} list could not be read: ${lists.cause}`);
-    return;
-  }
-  const offered = kind === 'model' ? lists.lists[editor.harness].models : lists.lists[editor.harness].efforts ?? [];
-  if (!offered.includes(value) || panel !== target) {
-    return;
-  }
-  try {
-    const files = recipeFiles(context);
-    replaceLineValue(files.store, readRecipes(files.shipped, files.own), recipe, named, line, kind, value);
-  } catch (error) {
-    void vscode.window.showErrorMessage(`The ${kind} could not be changed: ${error instanceof Error ? error.message : String(error)}`);
-  }
-  await postVariantEdit(context, target);
-}
-
-/**
- * The line editor the lists read afresh give line `line` of the variant `named` of `recipe`: a
- * listed variant's line, or the line of a variant of the named single-task line of that name.
- */
-function listedEditor(
-  context: vscode.ExtensionContext,
-  read: Extract<VariantsRead, { state: 'read' }>,
-  recipe: string,
-  named: VariantTarget,
-  line: number,
-): LineEditor | null | undefined {
-  const listed = read.recipes.find((each) => each.name === recipe) ?? listedLine(context, recipe);
-  return listed?.variants.find((each) => isTarget(each, named))?.editors[line];
-}
-
-/** The harnesses a line's harness dropdown picks between, by key, each with the command its lines open with. */
-const SWITCHABLE: readonly { key: HarnessKey; cli: SwitchableHarness }[] = [
-  { key: 'claude', cli: 'claude' },
-  { key: 'antigravity', cli: 'agy' },
-];
-
-/**
- * Rewrites line `line` of the variant `variant` of the recipe `recipe` onto the harness `harness`,
- * Claude Code or Antigravity, picked in the line's harness dropdown in the settings view, through
- * the store's edit (`replaceLineHarness`): the line's prompt and its headless or interactive form
- * kept, its model the picked harness's first listed model, and its effort kept where that
- * harness's effort list offers it and otherwise the first listed, stored as a model or effort pick
- * is, a shipped or own variant getting a `custom N` beside it; then posts
- * the variant list, the harness lists, and the pages again. Only a line the variant list read
- * afresh gives model and effort controls on Claude Code or Antigravity is rewritten, and only onto
- * the other of the two: anything else writes nothing. An edit the store refuses, a picked harness
- * listing no model or no effort among them, or lists or a store that cannot be read or written, is
- * told in an error notification.
- */
-async function editLineHarness(
-  context: vscode.ExtensionContext,
-  target: vscode.WebviewPanel,
-  recipe: unknown,
-  variant: unknown,
-  line: unknown,
-  harness: unknown,
-): Promise<void> {
-  const named = variantTargetOf(variant);
-  const picked = SWITCHABLE.find((each) => each.key === harness);
-  if (
-    panel !== target ||
-    typeof recipe !== 'string' ||
-    named === undefined ||
-    typeof line !== 'number' ||
-    !Number.isInteger(line) ||
-    line < 0 ||
-    picked === undefined
-  ) {
-    return;
-  }
-  const read = readVariantList(context);
-  if (read.state === 'failed') {
-    void vscode.window.showErrorMessage(`The variants could not be read: ${read.cause}`);
-    return;
-  }
-  const editor = listedEditor(context, read, recipe, named, line);
-  if (
-    editor === undefined ||
-    editor === null ||
-    editor.effort === undefined ||
-    !SWITCHABLE.some((each) => each.key === editor.harness) ||
-    editor.harness === picked.key
-  ) {
-    return;
-  }
-  const lists = readListsOf(context);
-  if (lists.state === 'failed') {
-    void vscode.window.showErrorMessage(`The harness lists could not be read: ${lists.cause}`);
-    return;
-  }
-  if (panel !== target) {
-    return;
-  }
-  const offer = { models: lists.lists[picked.key].models, efforts: lists.lists[picked.key].efforts ?? [] };
-  try {
-    const files = recipeFiles(context);
-    replaceLineHarness(files.store, readRecipes(files.shipped, files.own), recipe, named, line, picked.cli, offer);
-  } catch (error) {
-    void vscode.window.showErrorMessage(`The harness could not be changed: ${error instanceof Error ? error.message : String(error)}`);
-  }
-  await postVariantEdit(context, target);
-}
-
-/**
- * Asks for a single-task line's name in VS Code's own input box, one box for the one value, as
- * `askValues` asks for a page's values: the box opens on `value` when given, and its validation
- * refuses an empty name and one of `taken`, the names a recipe or another line carries. The name
- * is returned with its outer spaces trimmed, or undefined when the box is dismissed.
- */
-async function askLineName(prompt: string, taken: readonly string[], value?: string): Promise<string | undefined> {
-  const typed = await vscode.window.showInputBox({
-    prompt,
-    ...(value === undefined ? {} : { value }),
-    ignoreFocusOut: true,
-    validateInput: (text) =>
-      text.trim() === ''
-        ? 'Type a name, or press Escape to change nothing.'
-        : taken.includes(text.trim())
-          ? `A recipe or line is already named ${text.trim()}.`
-          : undefined,
-  });
-  if (typed === undefined || typed.trim() === '' || taken.includes(typed.trim())) {
-    return undefined;
-  }
-  return typed.trim();
-}
-
-/** The word a notification gives each line edit. */
-const LINE_EDIT_VERBS: Record<'duplicateLine' | 'renameLine' | 'deleteLine' | 'resetLine', string> = {
-  duplicateLine: 'duplicated',
-  renameLine: 'renamed',
-  deleteLine: 'deleted',
-  resetLine: 'reset',
-};
-
-/**
- * Makes one edit of the settings view on the named single-task line `variant` of the line named
- * `line`, as the line list read afresh lists it, through the variant store's edits: a duplicate
- * under a new name and a rename to one, each asked for in VS Code's own input box, a rename's box
- * opening on the current name, or a delete. A line the list does not hold, or a dismissed box,
- * writes nothing; an edit the store refuses, or a store that cannot be read or written, is told in
- * an error notification. Every edit made posts the variant and line lists, the harness lists, and
- * the pages again, their recipes re-read.
- */
-async function editLine(
-  context: vscode.ExtensionContext,
-  target: vscode.WebviewPanel,
-  edit: 'duplicateLine' | 'renameLine' | 'deleteLine',
-  line: unknown,
-  variant: unknown,
-): Promise<void> {
-  const named = variantTargetOf(variant);
-  if (panel !== target || typeof line !== 'string' || named === undefined) {
-    return;
-  }
-  const read = readLineList(context);
-  if (read.state === 'failed') {
-    void vscode.window.showErrorMessage(`The single-task lines could not be read: ${read.cause}`);
-    return;
-  }
-  if (!read.lines.some((each) => each.name === line && each.variants.some((variant) => isTarget(variant, named)))) {
-    return;
-  }
-  let name: string | undefined;
-  if (edit !== 'deleteLine') {
-    let taken: string[];
-    try {
-      const files = recipeFiles(context);
-      taken = lineNames(readRecipes(files.shipped, files.own), readVariantStore(files.store), files.store);
-    } catch (error) {
-      void vscode.window.showErrorMessage(`The single-task lines could not be read: ${error instanceof Error ? error.message : String(error)}`);
-      return;
-    }
-    name =
-      edit === 'duplicateLine'
-        ? await askLineName(`The name of the duplicate of the line ${line}`, taken)
-        : await askLineName(`The new name of the line ${line}`, taken.filter((each) => each !== line), line);
-    if (name === undefined) {
-      return;
-    }
-  }
-  if (panel !== target) {
-    return;
-  }
-  try {
-    const files = recipeFiles(context);
-    const base = readRecipes(files.shipped, files.own);
-    if (edit === 'duplicateLine') {
-      duplicateLine(files.store, base, line, named, name as string);
-    } else if (edit === 'renameLine') {
-      renameLine(files.store, base, line, named, name as string);
-    } else {
-      deleteLine(files.store, base, line, named);
-    }
-  } catch (error) {
-    void vscode.window.showErrorMessage(
-      `The line could not be ${LINE_EDIT_VERBS[edit]}: ${error instanceof Error ? error.message : String(error)}`,
-    );
-  }
-  await postVariantEdit(context, target);
-}
-
-/**
- * Resets the shipped or own single-task line `original` of the recipe `line`, removing every stored
- * copy and hiding record standing for it, so it shows again as its file holds it, then posts the
- * variant and line lists, the harness lists, and the pages again. A line the list read afresh
- * offers no reset for writes nothing; a store that cannot be read or written is told in an error
- * notification.
- */
-async function resetStoredLine(context: vscode.ExtensionContext, target: vscode.WebviewPanel, line: unknown, original: unknown): Promise<void> {
-  const ref = readVariantRefOf(original);
-  if (panel !== target || typeof line !== 'string' || ref === undefined || ref.recipe !== undefined) {
-    return;
-  }
-  const read = readLineList(context);
-  if (read.state === 'failed') {
-    void vscode.window.showErrorMessage(`The single-task lines could not be read: ${read.cause}`);
-    return;
-  }
-  const offered = read.lines.flatMap((each) => [
-    ...(each.reset === undefined ? [] : [{ name: each.reset.recipe, original: each.reset.original }]),
-    ...each.hidden.map((original) => ({ name: each.name, original })),
-  ]);
-  if (!offered.some((each) => each.name === line && each.original.name === ref.name && each.original.origin === ref.origin)) {
-    return;
-  }
-  try {
-    resetLine(recipeFiles(context).store, line, ref);
-  } catch (error) {
-    void vscode.window.showErrorMessage(`The line could not be ${LINE_EDIT_VERBS.resetLine}: ${error instanceof Error ? error.message : String(error)}`);
-  }
-  await postVariantEdit(context, target);
-}
-
-/** Posts the variant and line lists and the harness lists, read afresh, and the pages again, their recipes re-read. */
-async function postVariantEdit(context: vscode.ExtensionContext, target: vscode.WebviewPanel): Promise<void> {
-  if (panel !== target) {
-    return;
-  }
-  await post(target, { type: 'variants', variants: readVariantList(context) });
-  await post(target, { type: 'singleTaskLines', lines: readLineList(context) });
-  await post(target, { type: 'harnessLists', lists: readListsOf(context) });
-  await postPages(context, target);
-}
 
 async function post(target: vscode.WebviewPanel, message: PaneMessage): Promise<void> {
   try {
@@ -2219,7 +1412,7 @@ async function runTaskButton(context: vscode.ExtensionContext, mission: string, 
  * the top level of the git work tree holding the first workspace folder, else that folder, and
  * undefined when no folder is open.
  */
-async function startingRoot(): Promise<string | undefined> {
+export async function startingRoot(): Promise<string | undefined> {
   if (posted !== undefined) {
     return posted.root;
   }
@@ -2370,7 +1563,8 @@ function nonce(): string {
 }
 
 /**
- * The page shell `webview.html` is set to once: the pane's stylesheet and the page script. The
+ * The page shell `webview.html` is set to once, titled `title`: the stylesheet the pane and the
+ * Settings window share and one page script, `script`, the pane's or the Settings window's. The
  * stylesheet centers the workflow diagram's row of blocks horizontally in the pane, as wide as the
  * row itself and never wrapping or scrolling sideways, and under the `vertical` class the page
  * script sets when that row would overflow the pane, it stacks the same blocks in a centered
@@ -2384,14 +1578,13 @@ function nonce(): string {
  * line beneath a button's name. Every push button, the `recipe`, `action`, and `control` classes
  * alike, takes one look in one shared rule: the theme's primary button colour, its hover colour,
  * and a 1px outline in the contrast border colour, else the foreground colour, so it stands out
- * against both the page and its own fill; the Settings control, while its view is shown, swaps to
- * the secondary button colour with a focus-coloured ring around it. The mission tabs, the two pane
- * headers, and the dependency links keep looks of their own. In the settings view each variant
+ * against both the page and its own fill. The mission tabs, the two pane headers, and the
+ * dependency links keep looks of their own. In the Settings window each variant
  * under Variants and Single-task lines, a deleted one included, is a card of its own: its list
  * indented under the recipe's or line's heading, a vertical line down the card's left edge, and a
  * gap between one card and the next.
  */
-function pageShell(webview: vscode.Webview, script: vscode.Uri): string {
+export function pageShell(webview: vscode.Webview, script: vscode.Uri, title: string): string {
   const token = nonce();
   const policy = [
     "default-src 'none'",
@@ -2404,7 +1597,7 @@ function pageShell(webview: vscode.Webview, script: vscode.Uri): string {
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="${policy}">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>${PANEL_TITLE}</title>
+<title>${title}</title>
 <style nonce="${token}">
   body { font-family: var(--vscode-font-family); color: var(--vscode-foreground); padding: 0 1em; }
   .tabs { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25em; border-bottom: 1px solid var(--vscode-panel-border); padding: 0.5em 0; }
@@ -2432,7 +1625,6 @@ function pageShell(webview: vscode.Webview, script: vscode.Uri): string {
   button.recipe:hover:not(:disabled), button.action:hover:not(:disabled), button.control:hover:not(:disabled) { background: var(--vscode-button-hoverBackground); }
   button.recipe:disabled, button.action:disabled, button.control:disabled { opacity: 0.5; cursor: default; }
   button.action { white-space: nowrap; }
-  .tabs button.control[aria-pressed="true"] { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); outline: 2px solid var(--vscode-focusBorder); outline-offset: 2px; }
   .settings { margin-top: 1em; }
   .settings h4 { margin: 0.8em 0 0.3em; }
   .harness-list { list-style: none; margin: 0 0 0.5em; padding: 0; }

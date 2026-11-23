@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Settings Window of Its Own
-
-Move the settings view out of the mission pane's page into a Settings window of its own in the editor area, opened, or revealed when already open, by a Settings command that is hidden from the Command Palette and run by an icon action in the side-bar view's title bar beside Refresh; the pane's tab row loses its Settings control and the view its Close settings control. The harness check first runs on the first opening of the Settings window after the extension activates, its result kept in the extension's own module state for the rest of that session across every close and reopening of the window, only the check-again control running it afresh and no timestamp or stored record added, and every edit made in the window shows at once on every other surface, the refresh command re-reading the window too. Verified by tests against the `vscode` stub of the window's opening and reveal, the check's one run across a close and a reopening, and an edit reaching the mission pages and the two tree rows, with `gurita-vscode/README.md` describing the window.
-
----
-
 ## Mission Windows Replace the Mission Pane
 
 Replace the one mission pane with a window per mission: a click on a mission's row in the side-bar tree does nothing beyond opening that mission's own window in the editor area, or revealing it when open, several windows open at once, each showing that one mission's page with no tab row and drawing from the session's one read. While the live read fails every open window replaces its whole page with the line `The live missions could not be read.` and the cause beneath it, and a window whose mission stops being live stays open showing one fixed notice that the mission is no longer live, with no diagram, recipe, pane, or action button, each drawing its mission's page again once a live read lists the path. The pane, its tab row, and `gurita.openMissionPane` are removed and the command behind the row click is hidden from the Command Palette, leaving the refresh command the only one of the extension's own it offers; verified by the pane and page tests reworked for several windows, with `gurita-vscode/README.md` describing the windows.

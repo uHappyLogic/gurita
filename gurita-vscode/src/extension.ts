@@ -2,9 +2,11 @@ import * as vscode from 'vscode';
 import { registerMissionTree } from './missionTree';
 import { openMissionPane, postRunning, refreshMissions } from './pane';
 import { registerRuns } from './runs';
+import { registerSettingsWindow } from './settingsWindow';
 
 export function activate(context: vscode.ExtensionContext): void {
   const tree = registerMissionTree(context);
+  registerSettingsWindow(context);
   registerRuns(context, {
     started: () => {
       postRunning();

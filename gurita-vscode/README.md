@@ -101,7 +101,10 @@ standing above one row per live mission, in the order `missions.py live` prints 
 The view's title bar carries **Refresh** as an icon action. It runs the command
 **Gurita: Refresh Missions** (`gurita.refreshMissions`), which the Command Palette also offers:
 it re-reads the live missions, every mission's documents, and the recipes, and redraws the tree
-and every open window from that fresh read, in every state of the view.
+and every open window from that fresh read, the Settings window included, in every state of the
+view. Beside it stands **Settings**, a gear icon action that opens the Settings window (see The
+Settings window below), or brings it forward when it is already open; its command
+(`gurita.openSettings`) is hidden from the Command Palette.
 
 ### The rows that start a mission
 
@@ -185,7 +188,8 @@ from that root:
   path as a tooltip, and at its end the two mission-starting buttons, **New mission** (runs the
   `discuss-mission-goal` recipe) and **Define mission** (runs the `define-mission-goal` recipe),
   each with a dropdown of its recipe's variants beside it (see The buttons that run a recipe by
-  its fixed name), and last the **Settings** control, which opens the settings view (see below).
+  its fixed name). The pane has no Settings control: the settings open in a window of their own
+  from the side-bar view (see The Settings window below).
 - Under the selected tab, the mission's page: the workflow diagram, the recipe buttons of the
   recipes that fit the step its diagram fills, each with a dropdown of its variants beside it
   (see The recipes a page lists), the **New task** button with its dropdown in a row of its own,
@@ -243,14 +247,11 @@ recipe buttons carry, with a clearly visible 1px outline in the theme's contrast
 or its foreground colour where the theme sets none, so each button stands out against the page
 and its own fill alike. That covers the recipe buttons, **New mission**, **Define mission**,
 **Start run**, the question card's **Discuss**, **Answer**, and **Answer with recommendation**,
-every **Answer with this alternative**, **New task**, the settings view's edit controls
-(**Enable** and **Disable**, **Add model**, **Add effort**, and **Remove**, **Duplicate**, **Rename**, **Delete**,
-**Make default**, and **Reset**), and **Refresh**, **Settings**, **Close settings**, **Check
-again**, **Previous**, **Next**, and **Close preview**. A disabled button is drawn faded. While
-the settings view is shown, **Settings** is drawn in the theme's secondary button colour with a
-ring in the focus colour around it, so it stays distinguishable from the other buttons. The
-mission tabs, the two pane headers, and the links of a card's dependencies keep their own
-unfilled look.
+every **Answer with this alternative**, **New task**, **Refresh**, **Previous**, **Next**, and
+**Close preview**, and in the Settings window its edit controls (**Enable** and **Disable**,
+**Add model**, **Add effort**, and **Remove**, **Duplicate**, **Rename**, **Delete**, **Make
+default**, and **Reset**) and **Check again**. A disabled button is drawn faded. The mission
+tabs, the two pane headers, and the links of a card's dependencies keep their own unfilled look.
 
 Every value a button needs (a goal, a scope typed as a path from the project root, an answer,
 an issue description, a discussion note) is typed into VS Code's own input box, one line per
@@ -261,7 +262,7 @@ mission's page shows it: every action button on the page (the recipe buttons, th
 the question card and its alternatives, a preview's **Start run**, and **New task**) is
 disabled, and the workflow diagram's filled block pulses. The recipe dropdowns and the dropdowns beside the buttons that run a recipe by its fixed name, the tabs, the **Open questions** and
 **Remaining tasks** headers, **Refresh**, the question view's **Previous** and **Next**, the
-other missions' pages, **New mission** and **Define mission**, and **Settings** stay enabled, and the page is
+other missions' pages, and **New mission** and **Define mission** stay enabled, and the page is
 drawn this way again whenever it is redrawn, after the pane was hidden and shown included.
 Should a click still reach the extension for that mission, it starts nothing: a notification
 says a chain is already running and the run's terminal is shown. Clicking a mission's tab,
@@ -275,41 +276,43 @@ is not watched. The extension reads no mission and watches no file until the sid
 first shown or a Gurita command first runs; from then the read and the watch last until the extension deactivates, kept current
 whether the pane is shown, hidden, or closed, so a pane shown or opened again draws the latest
 read at once. When the live missions cannot be read, the pane shows one line saying so with
-the cause beneath it, and the two mission-starting buttons and **Settings** stay. When a single
+the cause beneath it, and the two mission-starting buttons stay. When a single
 mission document is missing or does not parse, only the part of the page drawn from it is
 replaced by a notice naming the file.
 
-### The settings view
+## The Settings window
 
-The settings view is opened only by the **Settings** control at the end of the tab row, beside
-**Refresh**, **New mission**, and **Define mission**; there is no command for it, and it is not a
-tab. A click swaps whatever stands beneath the row, the selected mission's page or the failure
-state, for the settings view, and the row stays as it was. **Close settings** on the view swaps
-back to the mission page or failure state shown before, with the pane you had picked on it, and
-a click on any mission tab swaps back to that mission's page. The view stays open through
-refreshes and re-reads until you swap back, and while it is open no mission tab reads selected.
-Like the rest of the page it holds buttons and dropdowns only: anything you type is asked for in
-VS Code's own input box.
+The settings open in a window of their own in the editor area, titled **Gurita Settings** and
+belonging to no mission. The **Settings** gear in the side-bar view's title bar, beside
+**Refresh**, opens it, or brings it forward when it is already open, so there is never more than
+one; its command is hidden from the Command Palette, and the pane draws no Settings control. You
+close it as you close any editor tab, and it has no close control of its own. The window holds
+buttons and dropdowns only: anything you type is asked for in VS Code's own input box. Every
+edit you make in it shows at once on every other surface: the mission pages, their dropdowns and
+the buttons that run a recipe by its fixed name, are posted again with their recipes re-read,
+and the side-bar view's **New mission** and **Define mission** rows are redrawn from the variant
+they now run. **Refresh** re-reads the window too, its lists read afresh, without running the
+harness check. Like the pane it does not yet survive a restart or a window reload.
 
-The view's parts stand one beneath the other under their headings: **Harnesses**, **Models and
+The window's parts stand one beneath the other under their headings: **Harnesses**, **Models and
 efforts**, **Variants**, and **Single-task lines**. Under **Variants** each recipe is headed by its
 name, and under **Single-task lines** each line by its name with the line's own controls beside
 it. Beneath each such heading every variant, a **Deleted** one included, is drawn as a card of its
 own: indented under the heading, with a vertical line down its left edge and space between one card
 and the next, the card holding the variant's name, where it comes from, its controls, and its line
 editor. The cards only set the recipes and lines apart from their variants; they change no control
-and nothing the view stores.
+and nothing the window stores.
 
-#### The harness check
+### The harness check
 
-Under **Harnesses** the view lists Claude Code, Antigravity, and Codex, each with the result of
+Under **Harnesses** the window lists Claude Code, Antigravity, and Codex, each with the result of
 the harness check. The check is the packaged `harness_check.py`, beside `runner.py`, which the
 extension runs with `python3` from the project root. In one session of the shell the runner
 starts its chains in, it looks up each harness's CLI (`claude`, `agy`, `codex`) and, when found,
 reads which Gurita copy that harness has installed (`claude plugin list --json`,
 `agy plugin list --json`, `codex plugin list -m gurita --json`). The extension then compares each
 installed copy's version with the plugin version the package was built from, the one
-`scripts/bundle.js` recorded in `bundled/plugin_version.txt`. Beside each harness the view either
+`scripts/bundle.js` recorded in `bundled/plugin_version.txt`. Beside each harness the window either
 says that every check passes, with the version installed, or names the first of the three checks
 that failed:
 
@@ -319,23 +322,25 @@ that failed:
 - **Installed version differs from the packaged one**: the installed and the packaged versions
   are both shown.
 
-The check runs the first time you open the settings view after the pane is created. Its result
-is kept while the pane stays open and is shown again at every later opening without the check
-running again. **Check again** on the view runs it afresh. Neither **Refresh** nor any re-read of
-the pane runs it. A failed check is shown only here. The mission pages still draw every variant,
+The check runs the first time you open the Settings window after the extension starts. Its
+result is kept in the extension, with no timestamp and nothing stored, for the rest of that
+session: closing the window and opening it again, or showing it again after it was hidden, shows
+the result kept without the check running again. **Check again** in the window runs it afresh.
+Neither **Refresh** nor any re-read runs it; a restart or a window reload ends the session, so the
+next first opening runs the check again. A failed check is shown only here. The mission pages still draw every variant,
 the buttons that run a recipe of a fixed name, and the looped run exactly as they would if every
-check passed, and a click runs the lines as written. When the check cannot run at all, the view
+check passed, and a click runs the lines as written. When the check cannot run at all, the window
 shows one line saying so, with the cause beneath it.
 
-#### Enabling and disabling harnesses
+### Enabling and disabling harnesses
 
-Beside each harness the view also shows whether it is **Enabled** or **Disabled**, with one
+Beside each harness the window also shows whether it is **Enabled** or **Disabled**, with one
 control, **Disable** or **Enable**, that switches it. Every harness starts enabled, whatever its
 check reports and whatever recipes run on it, and stays enabled until you disable it; the check
 never changes it. The state is kept in your per-user variant store, `~/.gurita/variants.json`, in
 the part of that file set aside for harness values, its `harnesses` object, as
 `"<harness>": { "enabled": false }` keyed `claude`, `antigravity`, or `codex`, so it lasts across
-the pane, the editor, and every project. When the file cannot be read, the view says so with the
+the pane, the editor, and every project. When the file cannot be read, the window says so with the
 cause beneath it and draws no control.
 
 Disabling a harness acts on the mission pages' recipe lists alone. A variant with at least one
@@ -353,11 +358,11 @@ beside it, until the harness is enabled again. The looped run is untouched: its 
 list offers every named single-task line, the rule file chooses among all of them, and every one
 is passed to the runner.
 
-#### Model and effort lists
+### Model and effort lists
 
-Under **Models and efforts** the view holds each harness's model list and its one effort list
+Under **Models and efforts** the window holds each harness's model list and its one effort list
 for the whole harness; Codex holds a model list and no effort list. The extension ships no list
-of its own and queries no harness: each list is read, every time the view opens, from the values
+of its own and queries no harness: each list is read, every time the window opens, from the values
 the lines of the shipped recipes, your own recipes, and your stored variants carry, `--model` and
 `--effort` on a `claude` or `agy` line and `-m` on a `codex` line, in the order they first appear.
 Codex's model list therefore starts from the Codex lines you have. The list keeps no record of
@@ -370,11 +375,11 @@ are stored as an overlay on the derived lists in the `harnesses` part of
 `~/.gurita/variants.json`, as `addedModels`, `removedModels`, `addedEfforts`, and `removedEfforts`
 beside the harness's `enabled` state. Adding a removed entry back takes it out of the removals, and
 removing an entry you added takes it out of the additions. No recipe file is written. When the
-lists cannot be read, the view says so with the cause beneath it.
+lists cannot be read, the window says so with the cause beneath it.
 
-#### Variants
+### Variants
 
-Under **Variants** the view lists every recipe with its variants, read afresh every time the view
+Under **Variants** the window lists every recipe with its variants, read afresh every time the window
 opens: the chains, the seven recipes the buttons outside the recipe list run by their fixed names,
 and the recipes and variants of your own recipe file, in the order the mission pages list them,
 with the recipes only your stored variants make up last. The named single-task lines are not
@@ -412,10 +417,10 @@ Each variant has these controls, every one carried out in your per-user variant 
 A duplicate's name and a new name are each asked for in VS Code's own input box, one box per
 value; the box refuses an empty name and one another variant of the recipe already carries, and
 the name is kept with its outer spaces trimmed. Pressing Escape changes nothing. Every edit is
-shown at once in the view and on the mission pages, whose recipe lists are read again, the
+shown at once in the window and on the mission pages, whose recipe lists are read again, the
 fixed-name buttons' dropdowns, labels, and hover text included, in the failure state too, so every
 button runs the variant its label shows. An edit that cannot be made, or a variant store that cannot be read or written,
-is told in an error notification and writes nothing. When the variants cannot be read, the view
+is told in an error notification and writes nothing. When the variants cannot be read, the window
 says so with the cause beneath it.
 
 Beneath each variant stands its line editor, one row per line. A line of a known harness
@@ -455,13 +460,13 @@ delete taken again). The new variant is neither selected in any dropdown nor mad
 every button runs what it ran before until you select it or make it the default, and it remembers
 the variant it was made from, which its **Reset** returns its lines to. On a stored variant, a
 `custom N` included, the line is changed in the store and the variant keeps its name, so a second
-pick on `custom 1` changes `custom 1`. Like every other edit, a pick is shown at once in the view
+pick on `custom 1` changes `custom 1`. Like every other edit, a pick is shown at once in the window
 and on the mission pages.
 
-#### Single-task lines
+### Single-task lines
 
-Under **Single-task lines** the view lists the named single-task lines the looped run takes,
-read afresh every time the view opens: the shipped ones and those of your own recipe file alike,
+Under **Single-task lines** the window lists the named single-task lines the looped run takes,
+read afresh every time the window opens: the shipped ones and those of your own recipe file alike,
 in the order the looped run's preview offers them, with the lines only your store holds last.
 Each line is headed by its name, the one `task_line_rules.txt` and the preview's override list use,
 and beneath it stand its variants: its `default` (the one variant of a line of one block, as every
@@ -534,7 +539,7 @@ claude "/gurita:complete-all-tasks --mission <path>" --dangerously-skip-permissi
 
 A recipe with one fenced block and no `####` sub-heading is a recipe of one variant, named
 `default`, in the shipped file and your own file alike, the named single-task lines included, so
-every such recipe opens on a variant called `default` in its dropdown and in the settings view; a
+every such recipe opens on a variant called `default` in its dropdown and in the Settings window; a
 recipe of several `####` variants, such as `Execute tasks` above, keeps the names written.
 Nothing renames what you stored or selected before under such a variant's old name, the
 recipe's name: a stored copy made under it no longer stands in for the variant, which shows again
@@ -544,7 +549,7 @@ a `####` sub-heading, only the blocks beneath its sub-headings are read, a block
 the first sub-heading included in none; a sub-heading with no fence beneath it is a variant of no
 line, and of a variant name repeated within one recipe only the first is read. Headings inside a fence are lines, not headings. The
 pane lists recipes from two files, the shipped file and your own file, and reads both in this
-same form. A recipe's default is the variant picked for it in the settings view (see Variants
+same form. A recipe's default is the variant picked for it in the Settings window (see Variants
 above), and while none is picked its first variant: the looped run's named single-task lines run
 the default, and the recipe button on a mission's page and each button that runs a recipe by its
 fixed name run the variant selected in the dropdown beside it, the default until you select
@@ -607,13 +612,13 @@ is named, so a button says which variant a click runs: `Execute tasks` on its sh
 `Normal difficulty` variant reads `Normal difficulty` beneath its name, and a recipe of one
 variant, such as `First run` or `Prepare tasks`, reads `default`. The button lists
 no harness, model, or effort; those stay readable in its hover text, which shows the variant's
-lines as written, and in the settings view (see Variants above).
+lines as written, and in the Settings window (see Variants above).
 
 Beside each recipe's button, or its non-runnable entry, stands a dropdown of the recipe's
 variants, drawn as its arrow alone, since the button beside it already names the variant
 selected. Opened, it lists the variants in the recipe's order, the shipped ones first, each by its
 bare name, those of your own recipe file and your variant store carrying no mark of their own;
-the settings view says where each comes from. It offers only the variants the page can draw: a
+the Settings window says where each comes from. It offers only the variants the page can draw: a
 variant holding a placeholder the page cannot fill, or no line, is left out of it, and a recipe none of whose variants the page can draw
 is not listed. The dropdown stands on the variant selected, and the button's label, its hover
 text, and a click all follow it: a click runs the variant the dropdown shows, and picking another
@@ -662,11 +667,11 @@ the mission's path, the question's Short Title, and the Alternative Id, in a map
 pick on one alternative leaves every other alternative's button, on that card and on every
 other, where it stood, and a click runs the variant its own button stands on. For **New mission** and **Define mission**, which belong
 to no mission, it is remembered once per project, as a map from recipe name to variant name. A
-remembered selection always wins over the default picked in the settings view, and picking a new
+remembered selection always wins over the default picked in the Settings window, and picking a new
 default leaves it standing. With nothing remembered, or with the remembered variant left out of
 the dropdown, the button stands on the default when the dropdown offers it and otherwise on the
 first variant offered. When the remembered variant is gone from the recipe, deleted or renamed in
-the settings view or taken out of your own recipe file, the selection is dropped and the button
+the Settings window or taken out of your own recipe file, the selection is dropped and the button
 falls back to the recipe's current default; a variant left out only because its harness is
 disabled keeps its selection, which comes back once the harness is enabled again.
 
@@ -688,7 +693,7 @@ one copy against the other, and a change to the shipped recipes is made in
 section, the `## Recipes` heading, are recipes, listed in the file's order with no heading of
 their own on the page, and the notes on running the `agy` lines stand as prose at the top of the
 recipe section. Each chain is shipped once, not once per harness: a line is moved onto the other
-harness from its harness dropdown in the settings view (see Variants above), so no recipe is
+harness from its harness dropdown in the Settings window (see Variants above), so no recipe is
 grouped into one copy per harness. Three shipped recipes hold `####` variants:
 `Requirements iteration` (`default` and `Mixed-agent (Gemini reviews, Claude annotates)`),
 `Prepare and Execute tasks`, and `Execute tasks` (each `Normal difficulty` and
@@ -815,8 +820,8 @@ Stage: execute tasks
 A click on a looped recipe (one whose last line is the slot line `<single-task line>`) runs
 nothing yet: it shows a preview on the mission's page listing each remaining task with the
 single-task line the rule file gives it. Every recipe whose default variant holds exactly one
-headless line with `<Task Title>`, shipped, your own, or stored in the settings view, counts as a
-named single-task line, named by its `###` heading or the name the settings view gave it. In the
+headless line with `<Task Title>`, shipped, your own, or stored in the Settings window, counts as a
+named single-task line, named by its `###` heading or the name the Settings window gave it. In the
 preview you may
 override any task's line by picking another named line. **Start run** then starts the loop,
 which before each task re-reads the top remaining heading of `TASKS_TODO.md`, runs the recipe's
