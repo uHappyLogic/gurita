@@ -1,48 +1,4 @@
 <open-questions>
-  <open-question id="Window of ended mission">
-    <question>A mission&apos;s window can still be open when its mission stops being live, as when finishing the mission removes its directory. What happens to that window then?</question>
-    <recommendation option="Ended notice, rebinds">Nothing closes under the person: the window says what happened in the place they were looking and offers no action against a directory that is gone, a mission hidden for a moment by a branch switch or a run&apos;s own git work returns to its window, and the rule needs no tie to the run bookkeeping.</recommendation>
-    <alternative id="Ended notice, rebinds">
-      The window stays open and replaces the mission&apos;s page with one fixed notice that the mission is no longer live, drawing no workflow diagram, recipe, pane, or action button; the person closes it. If a later live read lists the path again (a reverted finish, a branch switched back), the window draws that mission&apos;s page again.
-      <advantage>Nothing disappears under the person: the outcome is stated in the place they were looking, no action can be started against a directory that is gone, and a mission that comes back simply returns to its own window.</advantage>
-      <drawback>Ended windows pile up in the editor area until closed by hand, and the extension must keep tracking a path no live read lists, so a window can exist with no side-bar row behind it.</drawback>
-    </alternative>
-    <alternative id="Close at once">
-      The extension disposes the mission&apos;s window as soon as a live read no longer lists its path, with no notification, whether or not a run of that mission is still going. The window is the mission&apos;s, so it ends with the mission.
-      <advantage>The simplest rule, and it keeps the editor area in step with the side-bar tree: every open mission window belongs to a live mission, so no window ever needs a state for a mission that is gone.</advantage>
-      <drawback>Finishing is usually started from the mission&apos;s own window, so the window that launched the finish run closes while that run&apos;s terminal is still showing, and the person is not told why it went beyond the mission&apos;s row leaving the side-bar. A branch switch or a hand rename that only hides a mission for a moment closes its window too.</drawback>
-    </alternative>
-    <alternative id="Close at once with notice">
-      The extension disposes the mission&apos;s window as soon as a live read no longer lists its path, and shows one VS Code information notification naming the mission and saying it is no longer live, whether or not a run of that mission is still going.
-      <advantage>Keeps every open window tied to a live mission, as closing at once does, while telling the person why a window they may have been looking at disappeared.</advantage>
-      <drawback>Adds a notification on every finish, the expected outcome of the workflow, and on every branch switch that hides a mission, which is noise once the person knows the rule; the finish run&apos;s own window still closes under its running terminal.</drawback>
-    </alternative>
-    <alternative id="Close once its run ends">
-      A mission window whose mission is no longer live closes silently, at once when no run of that mission is going and otherwise when that run stops being noted as running (its terminal dismissed, as `RunningRuns` notes it today), its page meanwhile staying as last drawn with every action disabled as during any run.
-      <advantage>A finish run ends with its own window still standing beside its terminal until the person is done with it, and the editor area is still left holding only live missions&apos; windows afterwards.</advantage>
-      <drawback>Ties the window&apos;s lifetime to the run bookkeeping in `src/runs.ts`, one more listener path to keep right and test against the stubbed `vscode` module; a mission that vanished with no run going still closes with no word.</drawback>
-    </alternative>
-    <alternative id="Ended notice with record">
-      The window stays open and replaces the mission&apos;s page with a notice that the mission is no longer live, beneath which, when the bundled `missions.py summary` reads the mission as finished, it shows the finish date and the summary bullets of its `Mission-finish:` commit, and otherwise the bare notice; no action button is drawn and the person closes it. If a later live read lists the path again, the window draws that mission&apos;s page again.
-      <advantage>Turns the end of a mission into a readable close: the person sees what the finished mission recorded, read through the tool that already holds that record, rather than a blank state.</advantage>
-      <drawback>Adds a read the extension makes nowhere today (`summary` against git history), a second content shape to draw and test, and a failure path of its own when that read fails; the piling up of ended windows and the tracking of a non-live path remain.</drawback>
-    </alternative>
-    <alternative id="Ended notice, detached">
-      The window stays open and replaces the mission&apos;s page with one fixed notice that the mission is no longer live, with no action button, and is detached for good: if the path is listed live again later, this window keeps the notice and the person opens the mission afresh from the side-bar.
-      <advantage>A window&apos;s binding to its mission changes only one way, so the extension forgets an ended mission at once and never has to reconcile a stale window with a mission that reappeared.</advantage>
-      <drawback>After a reverted finish or a branch switched back, the person is left with a dead window beside the live mission and must close one and open another, and two windows standing for one path can confuse.</drawback>
-    </alternative>
-    <alternative id="Frozen last page">
-      The window stays open showing the mission&apos;s page exactly as last drawn, its diagram, recipes, and panes unchanged but every action button disabled, under a note that the mission is no longer live; the person closes it. If a later live read lists the path again, the page is redrawn live.
-      <advantage>The person keeps the last view of the mission&apos;s questions and tasks to read after it ended, which a bare notice throws away, with no new read needed to show it.</advantage>
-      <drawback>A page drawn for a directory that no longer exists can be mistaken for a live one if the note is missed, and keeping it means holding the last-read mission state per window past the mission&apos;s life; ended windows pile up as with any window that stays.</drawback>
-    </alternative>
-    <alternative id="No special handling">
-      Nothing is done for the ended mission&apos;s window: it keeps whatever it last drew, its buttons still enabled, and any click on them is refused by the check of every click against the latest read that exists today; it redraws if the path is listed live again.
-      <advantage>No new state, notice, or lifecycle rule to build or test; the existing click check already prevents a run against a mission that is gone.</advantage>
-      <drawback>The window looks fully live while it is not, every click on it fails, and the person learns the mission ended only by a refusal or by noticing its row left the side-bar.</drawback>
-    </alternative>
-  </open-question>
   <open-question id="Command Palette commands">
     <question>The extension contributes two commands today: `gurita.openMissionPane` (Gurita: Open Mission Pane), its only entry point, and `gurita.refreshMissionPane`. Once the activity-bar view is the entry point and the one mission pane no longer exists, which commands does the extension offer in the Command Palette, and do the two existing ones stay, change, or go?</question>
     <recommendation option="Focus plus refresh">Both old ids name a pane that no longer exists, and at version 0.1.0, installed by hand, no binding is worth a permanent misnomer; refresh is the one action worth running without the side bar in view, since git state is not watched, and every other action stays in the entry point the goal names, one click away once the generated focus command shows the view.</recommendation>
