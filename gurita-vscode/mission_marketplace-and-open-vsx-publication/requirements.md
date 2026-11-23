@@ -114,6 +114,8 @@ No Marketplace publisher, Open VSX namespace, or token for either is recorded as
 
 - **Windows installs.** The package stays universal and installable on every platform, and the README states the limit. The extension gains a check at activation: on native Windows (the platform is `win32` and the window is not a remote one) it shows one message saying it runs only on macOS, Linux, or through Remote-WSL, and leaves its view, windows, and runner inert instead of letting them run. In a Remote-WSL window the extension runs on the Linux side, so the check never fires there.
 
+- **Target Open VSX forks.** The extension means to reach four editors that read Open VSX and carry an agent of their own: VSCodium, Cursor, Windsurf, and Antigravity. The engine floor is the oldest of their four bases, looked up when the change is made, and `@types/vscode` is re-pinned to the newest typings not above it. Other Open VSX readers (Kiro, Trae, Theia, code-server, Gitpod) are not named and are reached only where their base meets that floor.
+
 ### Root documents
 
 - **Root documents mention.** After the first publication the root `README.md` gains a short subsection with links to both listings and to `gurita-vscode/README.md`, and `CONTRIBUTING.md`'s `## Development` gains a pointer: the extension under `gurita-vscode/` has a build and test loop of its own (Node 22 through nvm, independent of the host build and `VERSION`), documented in its README, and is released through its own maintainer-only skill rather than `/release-plugin`. `docs/` stays untouched.
