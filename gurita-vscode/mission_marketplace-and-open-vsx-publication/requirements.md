@@ -51,6 +51,7 @@ No Marketplace publisher, Open VSX namespace, or token for either is recorded as
 ### Release skill
 
 - **Publish site and tokens.** The extension's release skill builds and publishes from the maintainer's machine, running the pinned `vsce publish` and an `ovsx publish` in its own shell, and starts no GitHub Actions workflow. Both tokens are kept as environment variables named `VSCE_PAT` and `OVSX_PAT`, the names both command-line tools read without a flag, exported from the maintainer's shell profile so that every session started from that shell has them, and the skill passes no token on any command line. The skill checks that both variables are set and prints how to set them when one is missing. Nothing is stored in the repository or on GitHub.
+- **Release skill name.** The extension's release skill is `.claude/skills/release-vscode-extension/SKILL.md`, run as `/release-vscode-extension`, with `name: release-vscode-extension`: the verb `release` and the object `vscode-extension`, which names the editor family. `/release-plugin` keeps its name.
 
 ### Listing README
 
