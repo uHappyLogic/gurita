@@ -82,5 +82,9 @@ No Marketplace publisher, Open VSX namespace, or token for either is recorded as
 
 - **Issue and question links.** The manifest's `homepage` names `https://github.com/uHappyLogic/gurita/tree/main/gurita-vscode#readme`. The mission adds an extension bug form under `.github/ISSUE_TEMPLATE/`, asking for the extension's own version, the editor and its version, and the platform; `bugs` names it directly through `https://github.com/uHappyLogic/gurita/issues/new?template=<form>.yml`, and the form also appears in the issue chooser. `qna` names `https://github.com/uHappyLogic/gurita/discussions/new?category=q-a`.
 
+### Package and platforms
+
+- **Engine floor for forks.** The published package lowers `engines.vscode` to the oldest VS Code base among the Open VSX forks the extension means to reach, looked up when the change is made. `@types/vscode` is re-pinned exactly to the newest published typings not above that floor, and the extension is compiled and tested against them. The floor then stays fixed until a change needs a newer API.
+
 ## Out of Scope
 
