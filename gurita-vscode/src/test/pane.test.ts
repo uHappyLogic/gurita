@@ -1221,12 +1221,13 @@ test("a pick in a line's harness dropdown rewrites the line onto the picked harn
     shown = await pick({ type: 'replaceLineHarness', recipe: 'First run', variant: copy, line: 0, harness: 'claude' });
     assert.strictEqual(shown.variants[3].lines[0], shippedLines[0], 'the way back gives the shipped line');
 
-    // A named single-task line is rewritten as a variant's line is, keeping its name.
+    // A named single-task line is rewritten as a variant's line is, custom 1 added under the line's name.
     shown = await pick({ type: 'replaceLineHarness', recipe: 'Single task (Antigravity)', variant: { name: 'default', origin: 'shipped' }, line: 0, harness: 'claude' });
     const line = shown.lines.find((each) => each.name === 'Single task (Antigravity)');
     assert.ok(line !== undefined);
-    assert.strictEqual(line.line, 'claude -p "/gurita:complete-task --mission <path> <Task Title>" --model "fable" --effort high;');
-    assert.deepStrictEqual(line.editor, { harness: 'claude', model: 'fable', effort: 'high' });
+    assert.deepStrictEqual(line.variants.map((each) => [each.name, each.origin, each.isDefault]), [['default', 'shipped', true], ['custom 1', 'stored', false]]);
+    assert.deepStrictEqual(line.variants[1].lines, ['claude -p "/gurita:complete-task --mission <path> <Task Title>" --model "fable" --effort high;']);
+    assert.deepStrictEqual(line.variants[1].editors, [{ harness: 'claude', model: 'fable', effort: 'high' }]);
 
     // The harness the line runs on, Codex, a harness not named, a line without both flags, or a message not in form writes and posts nothing.
     const before = fs.readFileSync(store, 'utf8');
@@ -1254,6 +1255,8 @@ test("a pick in a line's harness dropdown rewrites the line onto the picked harn
 
 /** A mission no earlier test holds a run for. */
 const LAMBDA = 'pkg/mission_lambda/';
+/** The missions the line-edit test starts its looped runs on, one per run, since a running mission refuses another. */
+const LAMBDA_LOOPS = [1, 2, 3, 4, 5].map((each) => `pkg/mission_lambda_${each}/`);
 
 /** The own file of the line-edit test: a named single-task line of its own beside the recipes of the recipe-list test. */
 const LINE_OWN_TEXT = `${OWN_TEXT}
@@ -1265,18 +1268,23 @@ claude -p "/gurita:complete-task --mission <path> <Task Title>" --model "sonnet"
 
 interface ListedLine {
   name: string;
-  variant: { name: string; origin: string; copies?: { name: string; origin: string; recipe?: string } };
-  line: string;
-  editor: { harness: string; model: string; effort?: string } | null;
-  row: PostedRow;
+  variants: (EditedVariant & { copies?: { name: string; origin: string; recipe?: string } })[];
+  hidden: { name: string; origin: string }[];
   reset?: { recipe: string; original: { name: string; origin: string } };
 }
 
 /** Waits until the extension has posted the single-task lines beyond the first `from`, and returns them as read. */
-async function postedLines(from: number): Promise<{ lines: ListedLine[]; hidden: { name: string; original: { name: string; origin: string } }[] }> {
-  const message = (await postedOf('singleTaskLines', from)) as { lines: { state: string; lines?: ListedLine[]; hidden?: [] } };
+async function postedLines(from: number): Promise<{ lines: ListedLine[] }> {
+  const message = (await postedOf('singleTaskLines', from)) as { lines: { state: string; lines?: ListedLine[] } };
   assert.strictEqual(message.lines.state, 'read', JSON.stringify(message.lines));
-  return { lines: message.lines.lines as ListedLine[], hidden: message.lines.hidden ?? [] };
+  return { lines: message.lines.lines as ListedLine[] };
+}
+
+/** The variant of a listed line the looped run passes as its `--line`, its default. */
+function lineDefault(line: ListedLine): ListedLine['variants'][number] {
+  const found = line.variants.find((each) => each.isDefault);
+  assert.ok(found !== undefined, `the line ${line.name} has a default`);
+  return found;
 }
 
 test("the settings view lists the named single-task lines and carries out each line edit through the store, the looped run's names following", async () => {
@@ -1284,7 +1292,7 @@ test("the settings view lists the named single-task lines and carries out each l
   const fakeHome = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-home-'));
   process.env.HOME = fakeHome;
   try {
-    const root = project(LAMBDA);
+    const root = project(LAMBDA, ...LAMBDA_LOOPS);
     const files = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-recipes-'));
     fs.writeFileSync(path.join(files, 'shipped_recipes.md'), HARNESS_SHIPPED_TEXT);
     fs.writeFileSync(path.join(files, 'recipes.md'), LINE_OWN_TEXT);
@@ -1302,8 +1310,9 @@ test("the settings view lists the named single-task lines and carries out each l
     const AGY = 'Single task (Antigravity)';
     const ccLine = 'claude -p "/gurita:complete-task --mission <path> <Task Title>" --model "opus" --effort high;';
     const agyLine = 'agy -p "/gurita:complete-task --mission <path> <Task Title>" --model "claude-opus-5-5" --effort high;';
-    /** Each listed line by its name, its origin, and the line it holds. */
-    const rows = (listed: { lines: ListedLine[] }) => listed.lines.map((each) => [each.name, each.variant.origin, each.line]);
+    /** Each listed line that has a variant by its name, its default's origin, and the line its default holds. */
+    const rows = (listed: { lines: ListedLine[] }) =>
+      listed.lines.filter((each) => each.variants.length > 0).map((each) => [each.name, lineDefault(each).origin, lineDefault(each).lines[0]]);
     /** Sends `message` and returns the line list posted after it, checking the variant list and the pages are posted again too. */
     const edit = async (message: unknown) => {
       const from = posted.length;
@@ -1321,6 +1330,25 @@ test("the settings view lists the named single-task lines and carries out each l
       assert.strictEqual((preview.result as { state: string }).state, 'read');
       return preview.names;
     };
+    /** Previews and starts the looped run on the next mission no run holds yet, and returns its `--line` arguments, each as NAME=LINE. */
+    const loopLines = async () => {
+      const mission = LAMBDA_LOOPS.shift();
+      assert.ok(mission !== undefined, 'a mission is left for the run');
+      const from = posted.length;
+      send({ type: 'previewLoop', mission, recipe: 'Execute tasks one at a time', variant: 'default' });
+      assert.strictEqual(((await postedOf('preview', from)).result as { state: string }).state, 'read');
+      const count = created.length;
+      send({ type: 'startLoop', mission, recipe: 'Execute tasks one at a time', overrides: {} });
+      assert.strictEqual(created.length, count + 1);
+      const args = created[created.length - 1].args;
+      return args.flatMap((arg, index) => (arg === '--line' ? [`${args[index + 1]}=${args[index + 2]}`] : []));
+    };
+    /** The line of the name `name` in a posted list. */
+    const lineOf = (listed: { lines: ListedLine[] }, name: string): ListedLine => {
+      const found = listed.lines.find((each) => each.name === name);
+      assert.ok(found !== undefined, `the line ${name} is listed`);
+      return found;
+    };
 
     await entryAfter({ type: 'ready' }, LAMBDA, 'First run');
     let from = posted.length;
@@ -1330,16 +1358,21 @@ test("the settings view lists the named single-task lines and carries out each l
       [CC, 'shipped', ccLine],
       [AGY, 'shipped', agyLine],
       ['My own line', 'own', 'claude -p "/gurita:complete-task --mission <path> <Task Title>" --model "sonnet" --effort medium;'],
-    ], 'the shipped lines and the own one, each with its line');
-    assert.deepStrictEqual(listed.lines.map((each) => each.editor), [
-      { harness: 'claude', model: 'opus', effort: 'high' },
-      { harness: 'antigravity', model: 'claude-opus-5-5', effort: 'high' },
-      { harness: 'claude', model: 'sonnet', effort: 'medium' },
+    ], 'the shipped lines and the own one, each with its default');
+    assert.deepStrictEqual(listed.lines.map((each) => each.variants.map((variant) => [variant.name, variant.isDefault])), [
+      [['default', true]],
+      [['default', true]],
+      [['default', true]],
+    ], 'each line lists its default variant beneath its name');
+    assert.deepStrictEqual(listed.lines.map((each) => each.variants[0].editors), [
+      [{ harness: 'claude', model: 'opus', effort: 'high' }],
+      [{ harness: 'antigravity', model: 'claude-opus-5-5', effort: 'high' }],
+      [{ harness: 'claude', model: 'sonnet', effort: 'medium' }],
     ]);
-    assert.deepStrictEqual(listed.lines.map((each) => each.row), [
-      { skill: 'complete-task', interactive: false, harness: 'claude' },
-      { skill: 'complete-task', interactive: false, harness: 'antigravity' },
-      { skill: 'complete-task', interactive: false, harness: 'claude' },
+    assert.deepStrictEqual(listed.lines.map((each) => each.variants[0].rows), [
+      [{ skill: 'complete-task', interactive: false, harness: 'claude' }],
+      [{ skill: 'complete-task', interactive: false, harness: 'antigravity' }],
+      [{ skill: 'complete-task', interactive: false, harness: 'claude' }],
     ], 'each line is posted with its row');
     assert.ok(!fs.existsSync(store), 'opening the view writes nothing');
 
@@ -1369,24 +1402,59 @@ test("the settings view lists the named single-task lines and carries out each l
     assert.deepStrictEqual(rows(listed), [
       [CC, 'shipped', ccLine],
       ['Agy line', 'stored', agyLine],
-      ['My own line', 'own', listed.lines[2].line],
+      ['My own line', 'own', rows(listed)[2][2]],
       ['Single task (Sonnet)', 'stored', ccLine],
     ]);
-    const renamed = listed.lines[1];
+    const renamed = lineOf(listed, 'Agy line');
     assert.deepStrictEqual(renamed.reset, { recipe: AGY, original: { name: 'default', origin: 'shipped' } });
     assert.deepStrictEqual(await previewNames(), [CC, 'Agy line', 'My own line', 'Single task (Sonnet)'], 'the renamed line keeps its place');
 
     // A model or effort pick on the renamed line changes the stored copy in place.
-    listed = await edit({ type: 'replaceLineValue', recipe: 'Agy line', variant: renamed.variant, line: 0, kind: 'effort', value: 'medium' });
-    assert.strictEqual(listed.lines[1].line, agyLine.replace('--effort high', '--effort medium'));
+    listed = await edit({ type: 'replaceLineValue', recipe: 'Agy line', variant: renamed.variants[0], line: 0, kind: 'effort', value: 'medium' });
+    assert.deepStrictEqual(lineOf(listed, 'Agy line').variants.map((each) => [each.name, each.lines[0]]), [['Agy line', agyLine.replace('--effort high', '--effort medium')]]);
     assert.strictEqual(stored().variants.length, 2);
-    listed = await edit({ type: 'replaceLineValue', recipe: CC, variant: { name: 'default', origin: 'shipped' }, line: 0, kind: 'model', value: 'fable' });
-    assert.deepStrictEqual(rows(listed)[0], [CC, 'stored', ccLine.replace('"opus"', '"fable"')], 'a shipped line gets a stored copy under its name');
 
-    // Delete: a stored copy of a shipped line leaves the store and hides it, listed with its reset.
-    listed = await edit({ type: 'deleteLine', line: CC, variant: listed.lines[0].variant });
+    // A pick on a shipped line's default adds custom 1 under the same line name, which the looped run passes only once it is the default.
+    const fableLine = ccLine.replace('"opus"', '"fable"');
+    listed = await edit({ type: 'replaceLineValue', recipe: CC, variant: { name: 'default', origin: 'shipped' }, line: 0, kind: 'model', value: 'fable' });
+    assert.deepStrictEqual(lineOf(listed, CC).variants.map((each) => [each.name, each.origin, each.isDefault, each.lines[0]]), [
+      ['default', 'shipped', true, ccLine],
+      ['custom 1', 'stored', false, fableLine],
+    ], 'the shipped default stays listed and the default, custom 1 beneath it');
+    assert.deepStrictEqual(stored().variants[2], { recipe: CC, name: 'custom 1', lines: [fableLine], from: { name: 'default', origin: 'shipped' } });
+    assert.ok((await loopLines()).includes(`${CC}=${ccLine}`), 'until it is made the default, the looped run passes the shipped line');
+
+    // Make default: the looped run passes custom 1 as the line's --line, under the line's name.
+    listed = await edit({ type: 'pickDefault', recipe: CC, variant: { name: 'custom 1', origin: 'stored' } });
+    assert.deepStrictEqual(lineOf(listed, CC).variants.map((each) => each.isDefault), [false, true]);
+    assert.deepStrictEqual(stored().defaults, [{ recipe: CC, name: 'custom 1', origin: 'stored' }]);
+    assert.deepStrictEqual(await previewNames(), [CC, 'Agy line', 'My own line', 'Single task (Sonnet)'], 'the override list keeps the line name');
+    assert.deepStrictEqual(await loopLines(), [
+      `${CC}=${fableLine}`,
+      `Agy line=${agyLine.replace('--effort high', '--effort medium')}`,
+      `My own line=${rows(listed)[2][2]}`,
+      `Single task (Sonnet)=${ccLine}`,
+    ], "made the default, custom 1 is the line the looped run passes as the line's --line");
+
+    // A variant of a line is renamed as any recipe's variant is, its box refusing a name the line's other variants carry, the pick following it.
+    typedValues.push('Fable');
+    listed = await edit({ type: 'renameVariant', recipe: CC, variant: { name: 'custom 1', origin: 'stored' } });
+    box = inputBoxes[2];
+    assert.strictEqual(box.value, 'custom 1');
+    assert.ok(box.validateInput !== undefined && box.validateInput('default') !== undefined);
+    assert.deepStrictEqual(lineOf(listed, CC).variants.map((each) => [each.name, each.isDefault]), [['default', false], ['Fable', true]]);
+    assert.ok((await loopLines()).includes(`${CC}=${fableLine}`));
+
+    // Deleting the picked variant drops the pick, the line falling back to its first variant.
+    listed = await edit({ type: 'deleteVariant', recipe: CC, variant: { name: 'Fable', origin: 'stored' } });
+    assert.deepStrictEqual(lineOf(listed, CC).variants.map((each) => [each.name, each.isDefault]), [['default', true]]);
+    assert.deepStrictEqual(stored().defaults, []);
+    assert.ok((await loopLines()).includes(`${CC}=${ccLine}`));
+
+    // Delete: the line-level delete hides a shipped line, which stays listed with its hidden variant for its reset.
+    listed = await edit({ type: 'deleteLine', line: CC, variant: lineDefault(lineOf(listed, CC)) });
     assert.deepStrictEqual(rows(listed).map((each) => each[0]), ['Agy line', 'My own line', 'Single task (Sonnet)']);
-    assert.deepStrictEqual(listed.hidden, [{ name: CC, original: { name: 'default', origin: 'shipped' } }]);
+    assert.deepStrictEqual([lineOf(listed, CC).variants, lineOf(listed, CC).hidden], [[], [{ name: 'default', origin: 'shipped' }]]);
     assert.deepStrictEqual(await previewNames(), ['Agy line', 'My own line', 'Single task (Sonnet)']);
     listed = await edit({ type: 'deleteLine', line: 'My own line', variant: { name: 'default', origin: 'own' } });
     assert.deepStrictEqual(stored().hidden, [{ recipe: CC, name: 'default', origin: 'shipped' }, { recipe: 'My own line', name: 'default', origin: 'own' }]);
@@ -1401,18 +1469,11 @@ test("the settings view lists the named single-task lines and carries out each l
       ['My own line', 'own'],
       ['Single task (Sonnet)', 'stored'],
     ]);
-    assert.deepStrictEqual(listed.hidden, []);
+    assert.deepStrictEqual(listed.lines.map((each) => each.hidden), [[], [], [], []]);
 
     // The looped run passes every named line, the stored one included, as one --line.
     assert.deepStrictEqual(await previewNames(), [CC, AGY, 'My own line', 'Single task (Sonnet)']);
-    const count = created.length;
-    send({ type: 'startLoop', mission: LAMBDA, recipe: 'Execute tasks one at a time', overrides: {} });
-    assert.strictEqual(created.length, count + 1);
-    const args = created[created.length - 1].args;
-    assert.deepStrictEqual(
-      args.flatMap((arg, index) => (arg === '--line' ? [`${args[index + 1]}=${args[index + 2]}`] : [])),
-      [`${CC}=${ccLine}`, `${AGY}=${agyLine}`, `My own line=${listed.lines[2].line}`, `Single task (Sonnet)=${ccLine}`],
-    );
+    assert.deepStrictEqual(await loopLines(), [`${CC}=${ccLine}`, `${AGY}=${agyLine}`, `My own line=${rows(listed)[2][2]}`, `Single task (Sonnet)=${ccLine}`]);
 
     // A dismissed box, a line the list does not hold, a chain named as a line, or a message not in form writes and posts nothing.
     const before = fs.readFileSync(store, 'utf8');

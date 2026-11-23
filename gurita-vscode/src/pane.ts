@@ -117,13 +117,17 @@
 // first listed effort otherwise; a Codex line keeps its harness, and a pick of the harness the
 // line runs on, or on a line the list read afresh gives no such dropdown, writes nothing. The view
 // also edits the named single-task lines:
-// every opening posts them, shipped and own alike, each with its one line, line editor, and row,
-// and the shipped and own lines a hiding record hides; a click of a line's duplicate, rename, delete, or
-// reset control is carried out through the store's line edits, a new name asked for in VS Code's
-// own input box, whose validation refuses an empty name and one any recipe or line carries, and a
-// pick in its dropdowns as a variant's line pick is. A stored line reaches the merged recipe list
-// under its name, so the looped run's lines, the rule file, and the override list see it as any
-// named line. Every edit posts the variant and line lists and the harness lists
+// every opening posts them, shipped and own alike, each under its name with its single-task
+// variants beneath it, its `default` and its customs, posted as a recipe's variants are, and the
+// variants a hiding record hides. A click of a variant's duplicate, rename, delete, default, or
+// reset control, or a pick in its dropdowns, is carried out as on any recipe's variant, so a
+// harness, model, or effort pick on a shipped or own line adds `custom N` under the same line
+// name, and the default picked is the variant the looped run passes as the line's `--line`. A
+// click of the line's own duplicate, rename, delete, or reset control is carried out through the
+// store's line edits on its default variant, a new name asked for in VS Code's own input box, whose
+// validation refuses an empty name and one any recipe or line carries. A stored line reaches the
+// merged recipe list under its name, so the looped run's lines, the rule file, and the override
+// list see it as any named line. Every edit posts the variant and line lists and the harness lists
 // again, and the pages with their recipes re-read, or the failure state again while it stands, so
 // the mission pages' dropdowns and the fixed-name buttons' dropdowns and labels show it at once.
 // The
@@ -187,6 +191,7 @@ import {
 import { ReadVariantRef, readVariantStore, variantStoreFile } from './variantStore';
 import {
   LineEditor,
+  SettingsLine,
   SettingsLines,
   SettingsRecipe,
   VariantTarget,
@@ -1294,7 +1299,7 @@ async function editVariant(
     void vscode.window.showErrorMessage(`The variants could not be read: ${read.cause}`);
     return;
   }
-  const listed = read.recipes.find((each) => each.name === recipe);
+  const listed = read.recipes.find((each) => each.name === recipe) ?? listedLine(context, recipe);
   const index = listed?.variants.findIndex((each) => isTarget(each, named)) ?? -1;
   if (listed === undefined || index < 0 || (edit === 'resetVariantLines' && listed.variants[index].from === undefined)) {
     return;
@@ -1332,6 +1337,12 @@ async function editVariant(
     );
   }
   await postVariantEdit(context, target);
+}
+
+/** The named single-task line of the name `name` the line list read afresh holds, its variants edited as a recipe's are. */
+function listedLine(context: vscode.ExtensionContext, name: string): SettingsLine | undefined {
+  const lines = readLineList(context);
+  return lines.state === 'read' ? lines.lines.find((each) => each.name === name) : undefined;
 }
 
 /**
@@ -1425,7 +1436,7 @@ async function editLineValue(
 
 /**
  * The line editor the lists read afresh give line `line` of the variant `named` of `recipe`: a
- * listed variant's line, or the one line of a named single-task line of that name.
+ * listed variant's line, or the line of a variant of the named single-task line of that name.
  */
 function listedEditor(
   context: vscode.ExtensionContext,
@@ -1434,11 +1445,8 @@ function listedEditor(
   named: VariantTarget,
   line: number,
 ): LineEditor | null | undefined {
-  const lines = readLineList(context);
-  return (
-    read.recipes.find((each) => each.name === recipe)?.variants.find((each) => isTarget(each, named))?.editors[line] ??
-    (lines.state === 'read' && line === 0 ? lines.lines.find((each) => each.name === recipe && isTarget(each.variant, named))?.editor : undefined)
-  );
+  const listed = read.recipes.find((each) => each.name === recipe) ?? listedLine(context, recipe);
+  return listed?.variants.find((each) => isTarget(each, named))?.editors[line];
 }
 
 /** The harnesses a line's harness dropdown picks between, by key, each with the command its lines open with. */
@@ -1571,7 +1579,7 @@ async function editLine(
     void vscode.window.showErrorMessage(`The single-task lines could not be read: ${read.cause}`);
     return;
   }
-  if (!read.lines.some((each) => each.name === line && isTarget(each.variant, named))) {
+  if (!read.lines.some((each) => each.name === line && each.variants.some((variant) => isTarget(variant, named)))) {
     return;
   }
   let name: string | undefined;
@@ -1630,10 +1638,10 @@ async function resetStoredLine(context: vscode.ExtensionContext, target: vscode.
     void vscode.window.showErrorMessage(`The single-task lines could not be read: ${read.cause}`);
     return;
   }
-  const offered = [
-    ...read.lines.flatMap((each) => (each.reset === undefined ? [] : [{ name: each.reset.recipe, original: each.reset.original }])),
-    ...read.hidden,
-  ];
+  const offered = read.lines.flatMap((each) => [
+    ...(each.reset === undefined ? [] : [{ name: each.reset.recipe, original: each.reset.original }]),
+    ...each.hidden.map((original) => ({ name: each.name, original })),
+  ]);
   if (!offered.some((each) => each.name === line && each.original.name === ref.name && each.original.origin === ref.origin)) {
     return;
   }
@@ -2041,6 +2049,8 @@ function pageShell(webview: vscode.Webview, script: vscode.Uri): string {
   .value-list li.value-empty { opacity: 0.7; }
   .variant-recipe h5 { margin: 0.6em 0 0.2em; font-size: 1em; }
   .variant-recipe .variant-note { margin: 0 0 0.2em; opacity: 0.8; }
+  .single-task-line .line-heading { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0.6em; }
+  .single-task-line .line-actions { margin-left: auto; display: flex; gap: 0.3em; font-weight: normal; }
   .variant-list { list-style: none; margin: 0; padding: 0; }
   .variant-list li.variant { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0.6em; padding: 0.15em 0; }
   .variant-list .variant-origin { opacity: 0.8; }

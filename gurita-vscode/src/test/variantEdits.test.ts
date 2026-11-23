@@ -281,9 +281,11 @@ test('a harness pick on a shipped or own variant adds a custom N holding the lin
     refused(() => replaceLineHarness(file, base(), 'Variants', OWN_CC, 0, 'agy', { models: ['x'], efforts: [] }), /offers no effort/);
     assert.strictEqual(fs.readFileSync(file, 'utf8'), before, 'a refused pick writes nothing');
     replaceLineHarness(file, base(), 'Single task (Claude Code)', { name: 'default', origin: 'shipped' }, 0, 'agy', agy);
-    const line = byName(readBack(file), 'Single task (Claude Code)').variants[0];
+    const taskVariants = byName(readBack(file), 'Single task (Claude Code)').variants;
+    assert.deepStrictEqual(taskVariants.map((each) => each.name), ['default', 'custom 1'], "a single-task line's pick adds custom 1 under the line's name");
+    const line = taskVariants[1];
     assert.deepStrictEqual(line.lines, ['agy -p "/gurita:complete-task --mission <path> <Task Title>" --model "claude-opus-5-5" --effort high;']);
-    assert.ok(line.singleTask, 'a rewritten single-task line stays a named single-task line');
+    assert.ok(line.singleTask, 'a rewritten single-task line stays a single-task variant');
   });
 });
 

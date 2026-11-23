@@ -38,13 +38,15 @@
 // with the row it is drawn as (`lineRow`): a line of a known harness whose first command runs a
 // `gurita:` skill is drawn as the skill's name, marked interactive when the line is not headless,
 // with its harness beside it, and every other line keeps its text. The named single-task lines
-// are listed apart, by `settingsLines`, and edited as variants are, a line being named by its
-// recipe: a duplicate is a stored line of a new name, a rename of a shipped or own line writes a
-// stored copy of the new name standing in for it in its place, a line edit of a shipped or own
-// line writes a stored copy of its name holding the changed line in its place, a delete hides it,
-// a reset shows it again, and a new name may be no name a recipe or line carries, since the looped
-// run, the rule file, and the override list name a line by it alone. This module imports nothing
-// from `vscode`.
+// are listed apart, by `settingsLines`, each under its name with its single-task variants beneath
+// it, its `default` and its customs, listed and edited exactly as a recipe's variants are: a line
+// edit of a shipped or own variant adds a `custom N` under the same line name, and the default
+// picked decides which variant the looped run passes as the line's `--line`. The line itself, a
+// line being named by its recipe, is edited by the line edits on its default variant: a duplicate
+// is a stored line of a new name, a rename of a shipped or own line writes a stored copy of the new
+// name standing in for it in its place, a delete hides it, a reset shows it again, and a new name
+// may be no name a recipe or line carries, since the looped run, the rule file, and the override
+// list name a line by it alone. This module imports nothing from `vscode`.
 
 import { HARNESSES, Harness as CheckedHarness } from './harnessCheck';
 import { HarnessOffer, LineValues, SwitchableHarness, readLine, readSkill, replaceEffort, replaceModel, rewriteHarness } from './lineValues';
@@ -281,25 +283,44 @@ export function settingsRecipes(base: readonly Recipe[], store: VariantStore, fi
     if (shown === undefined || defaultVariant(shown).singleTask) {
       continue;
     }
-    const standing = recipe === undefined ? undefined : defaultVariant(recipe);
-    const variants = (recipe?.variants ?? []).map((variant): SettingsVariant => {
-      const source = variant.stored ? variantSource(variant) : undefined;
-      const resettable = source !== undefined && sourceLines(base, store, name, source) !== undefined;
-      return {
-        ...variantTarget(variant),
-        lines: [...variant.lines],
-        editors: variant.lines.map((line) => lineEditor(line) ?? null),
-        rows: variant.lines.map((line) => lineRow(line) ?? null),
-        isDefault: variant === standing,
-        ...(resettable ? { from: source } : {}),
-      };
-    });
-    const hidden = resettableVariants(store, name).filter(
-      (ref) => !variants.some((variant) => variant.copies !== undefined && sameCopies(variant.copies, ref)),
-    );
-    listed.push({ name, group: shown.group, fixed: fixed.includes(name), variants, hidden });
+    const variants = settingsVariants(base, store, name, recipe, recipe?.variants ?? []);
+    listed.push({ name, group: shown.group, fixed: fixed.includes(name), variants, hidden: hiddenVariants(store, name, variants) });
   }
   return listed;
+}
+
+/**
+ * The variants `variants` of the overlaid recipe `recipe`, named `name`, as the settings view lists
+ * them: each with its lines, their editors and rows, whether it is the recipe's default, and, for a
+ * stored one, the variant it was made from while that variant's lines can still be read.
+ */
+function settingsVariants(
+  base: readonly Recipe[],
+  store: VariantStore,
+  name: string,
+  recipe: Recipe | undefined,
+  variants: readonly Variant[],
+): SettingsVariant[] {
+  const standing = recipe === undefined ? undefined : defaultVariant(recipe);
+  return variants.map((variant): SettingsVariant => {
+    const source = variant.stored ? variantSource(variant) : undefined;
+    const resettable = source !== undefined && sourceLines(base, store, name, source) !== undefined;
+    return {
+      ...variantTarget(variant),
+      lines: [...variant.lines],
+      editors: variant.lines.map((line) => lineEditor(line) ?? null),
+      rows: variant.lines.map((line) => lineRow(line) ?? null),
+      isDefault: variant === standing,
+      ...(resettable ? { from: source } : {}),
+    };
+  });
+}
+
+/** The shipped and own variants of the recipe `name` a hiding record hides and no listed stored copy stands in for. */
+function hiddenVariants(store: VariantStore, name: string, variants: readonly SettingsVariant[]): ReadVariantRef[] {
+  return resettableVariants(store, name).filter(
+    (ref) => !variants.some((variant) => variant.copies !== undefined && sameCopies(variant.copies, ref)),
+  );
 }
 
 /** The store and the recipe list it gives, read afresh, with the one recipe an edit names. */
@@ -451,16 +472,13 @@ export function deleteVariant(storeFile: string, base: readonly Recipe[], recipe
  * Stores `lines`, the lines of the listed variant `variant` of `recipe` with one line changed: a
  * stored variant's lines are changed in the store, keeping its name; a shipped or own variant is
  * left as it is and a stored variant named `custom N` (`customVariantName`), made from it and
- * holding the lines, is added after the recipe's others, neither picked nor selected; and a shipped
- * or own named single-task line gets a stored copy of its name, holding the lines, standing in for
- * it, the name the looped run takes it by.
+ * holding the lines, is added after the recipe's others, neither picked nor selected. A named
+ * single-task line is a recipe like any other here, so its `custom N` stands under the same line
+ * name, and the looped run takes it only once it is picked as the line's default.
  */
 function storeLines(store: VariantStore, base: readonly Recipe[], recipe: Recipe, variant: Variant, lines: string[]): void {
-  const origin = variantOrigin(variant);
   if (variant.stored) {
     record(store, recipe.name, variant).lines = lines;
-  } else if (defaultVariant(recipe).singleTask) {
-    store.variants.push({ recipe: recipe.name, name: variant.name, lines, copies: { name: variant.name, origin: origin as 'shipped' | 'own' } });
   } else {
     store.variants.push({ recipe: recipe.name, name: customVariantName(recipe, base, store), lines, from: sourceRef(variant, recipe.name, recipe.name) });
   }
@@ -603,101 +621,90 @@ export function resetVariant(storeFile: string, recipeName: string, original: Re
 }
 
 /**
- * One named single-task line as the settings view lists it: the line's name, its recipe's name,
- * the variant the line is, its one line with the line editor it gets, and, for a stored copy of a
- * shipped or own line, the original a reset shows again, named with the recipe it belongs to.
+ * One named single-task line as the settings view lists it: the line's name, the one the looped
+ * run, the rule file, and the override list use, its single-task variants beneath it, each listed
+ * as a recipe's variant is, its `default` and the `custom N` a line edit adds included, the default
+ * marked, the variants a hiding record hides, and, where one of its variants is the stored copy a
+ * line rename made of another line, that line, which the line's reset shows again.
  */
 export interface SettingsLine {
   /** The line's name, its recipe's `###` heading or the name the store gives it. */
   name: string;
   group: Recipe['group'];
-  /** The variant of the recipe the line is. */
-  variant: VariantTarget;
-  /** The line as written. */
-  line: string;
-  editor: LineEditor | null;
-  /** The row the line is drawn as, null when it is drawn as its text. */
-  row: LineRow | null;
-  /** Whether it is the variant the looped run takes for the name, its recipe's default. */
-  isDefault: boolean;
-  /** The shipped or own line a stored copy stands in for, which its reset shows again. */
+  /** Its single-task variants in the recipe's order, the default the one the looped run passes as the line's `--line`. */
+  variants: SettingsVariant[];
+  /** The shipped and own variants of the line a hiding record hides and no stored copy stands in for, each a reset shows again. */
+  hidden: ReadVariantRef[];
+  /** The shipped or own line of another name a stored copy among its variants stands in for, which the line's reset shows again. */
   reset?: { recipe: string; original: ReadVariantRef };
 }
 
-/** A shipped or own single-task line a hiding record hides and no stored copy stands in for, which a reset shows again. */
-export interface HiddenLine {
-  /** The recipe the hidden line belongs to, its name. */
-  name: string;
-  original: ReadVariantRef;
-}
-
-/** The named single-task lines the settings view lists, and the shipped and own lines deleted there. */
+/** The named single-task lines the settings view lists. */
 export interface SettingsLines {
   lines: SettingsLine[];
-  hidden: HiddenLine[];
 }
 
-/** The original a listed stored copy of a line stands in for, named with the recipe it belongs to. */
-function lineOriginal(recipe: string, variant: Variant): { recipe: string; original: ReadVariantRef } | undefined {
-  if (variant.copies === undefined) {
+/**
+ * The line of another name a renamed line's stored copy among `variants` stands in for, named with
+ * the recipe it belongs to: the first such copy's, undefined when none is one.
+ */
+function lineOriginal(recipe: string, variants: readonly Variant[]): { recipe: string; original: ReadVariantRef } | undefined {
+  const copy = variants.find((variant) => variant.copies?.recipe !== undefined && variant.copies.recipe !== recipe);
+  if (copy?.copies?.recipe === undefined) {
     return undefined;
   }
-  return { recipe: variant.copies.recipe ?? recipe, original: { name: variant.copies.name, origin: variant.copies.origin } };
+  return { recipe: copy.copies.recipe, original: { name: copy.copies.name, origin: copy.copies.origin } };
 }
 
 /**
  * The named single-task lines the settings view lists, out of `base`, the list the two Markdown
  * files yield, with the store `store`, read from `file`, laid over it: every recipe whose default
- * is a single-task line, in the merged order, the lines only the store holds after them, each
- * single-task variant of it listed as one line with its editor, the default marked. A shipped and an
- * own line are listed alike, an own one as an own item. The shipped and own lines a hiding record
- * hides, and no stored copy stands in for, are listed apart, for their resets.
+ * is a single-task line, in the merged order, the lines only the store holds after them, each with
+ * its single-task variants as `settingsRecipes` lists a recipe's, the default marked, and the
+ * shipped and own variants a hiding record hides. A shipped and an own line are listed alike, an
+ * own one as an own item, and a line every variant of which is hidden stays listed, so its
+ * variants can be reset.
  */
 export function settingsLines(base: readonly Recipe[], store: VariantStore, file: string): SettingsLines {
   const overlaid = overlayVariantStore(base, store, file);
-  const lines: SettingsLine[] = [];
+  // The overlaid order, a renamed line in its original's place, with each base recipe the overlay
+  // dropped, every variant of it hidden, put back before the first listed base recipe after it.
+  const held = new Set(overlaid.map((recipe) => recipe.name));
+  const ordered: string[] = [];
+  let next = 0;
   for (const recipe of overlaid) {
-    const standing = defaultVariant(recipe);
-    if (!standing.singleTask) {
-      continue;
-    }
-    for (const variant of recipe.variants.filter((each) => each.singleTask)) {
-      const reset = lineOriginal(recipe.name, variant);
-      lines.push({
-        name: recipe.name,
-        group: recipe.group,
-        variant: variantTarget(variant),
-        line: variant.lines[0],
-        editor: lineEditor(variant.lines[0]) ?? null,
-        row: lineRow(variant.lines[0]) ?? null,
-        isDefault: variant === standing,
-        ...(reset === undefined ? {} : { reset }),
-      });
-    }
-  }
-  const hidden: HiddenLine[] = [];
-  for (const recipe of base) {
-    const shown = overlaid.find((each) => each.name === recipe.name) ?? recipe;
-    if (!defaultVariant(shown).singleTask) {
-      continue;
-    }
-    for (const each of store.hidden) {
-      const original = recipe.variants.find((variant) => variant.name === each.name && variantOrigin(variant) === each.origin);
-      if (
-        each.recipe !== recipe.name ||
-        original === undefined ||
-        !original.singleTask ||
-        hidden.some((kept) => kept.name === recipe.name && kept.original.name === each.name && kept.original.origin === each.origin) ||
-        lines.some(
-          (line) => line.reset?.recipe === recipe.name && line.reset.original.name === each.name && line.reset.original.origin === each.origin,
-        )
-      ) {
-        continue;
+    const at = base.findIndex((each) => each.name === recipe.name);
+    for (; at >= 0 && next < at; next += 1) {
+      if (!held.has(base[next].name)) {
+        ordered.push(base[next].name);
       }
-      hidden.push({ name: recipe.name, original: { name: each.name, origin: each.origin } });
+    }
+    if (at >= 0) {
+      next = Math.max(next, at + 1);
+    }
+    ordered.push(recipe.name);
+  }
+  for (; next < base.length; next += 1) {
+    if (!held.has(base[next].name)) {
+      ordered.push(base[next].name);
     }
   }
-  return { lines, hidden };
+  const lines: SettingsLine[] = [];
+  for (const name of ordered) {
+    const recipe = overlaid.find((each) => each.name === name);
+    const shown = recipe ?? base.find((each) => each.name === name);
+    if (shown === undefined || !defaultVariant(shown).singleTask) {
+      continue;
+    }
+    const variants = settingsVariants(base, store, name, recipe, (recipe?.variants ?? []).filter((each) => each.singleTask));
+    const hidden = hiddenVariants(store, name, variants);
+    if (variants.length === 0 && hidden.length === 0) {
+      continue;
+    }
+    const reset = lineOriginal(name, recipe?.variants ?? []);
+    lines.push({ name, group: shown.group, variants, hidden, ...(reset === undefined ? {} : { reset }) });
+  }
+  return { lines };
 }
 
 /** Every name a recipe or line carries, in the files or the store, which no new line may take. */

@@ -9,7 +9,9 @@ import {
   VariantEditError,
   VariantTarget,
   deleteLine,
+  deleteVariant,
   duplicateLine,
+  pickDefault,
   renameLine,
   replaceLineValue,
   resetLine,
@@ -61,22 +63,22 @@ function namedLines(file: string): [string, string][] {
 test('the settings view lists every named single-task line, shipped and own alike, each with its line editor', () => {
   const listed = settingsLines(base(), emptyVariantStore(), '/home/x/.gurita/variants.json');
   assert.deepStrictEqual(
-    listed.lines.map((each) => [each.name, each.variant.name, each.variant.origin, each.group, each.isDefault, each.editor]),
+    listed.lines.map((each) => [each.name, each.group, each.variants.map((variant) => [variant.name, variant.origin, variant.isDefault, variant.editors])]),
     [
-      [CC, 'default', 'shipped', 'shipped', true, { harness: 'claude', model: 'opus', effort: 'high' }],
-      [AGY, 'default', 'shipped', 'shipped', true, null],
-      [AGY, 'default', 'own', 'shipped', false, null],
-      ['My own line', 'default', 'own', 'own', true, { harness: 'claude', model: 'sonnet', effort: 'medium' }],
+      [CC, 'shipped', [['default', 'shipped', true, [{ harness: 'claude', model: 'opus', effort: 'high' }]]]],
+      [AGY, 'shipped', [['default', 'shipped', true, [null]], ['default', 'own', false, [null]]]],
+      ['My own line', 'own', [['default', 'own', true, [{ harness: 'claude', model: 'sonnet', effort: 'medium' }]]]],
     ],
-    'the own variant joining a shipped line is listed as an own item, not the one the run takes',
+    'each line lists its variants beneath its name, the own variant joining a shipped line as an own item, not the one the run takes',
   );
+  const variants = listed.lines.flatMap((each) => each.variants);
   assert.deepStrictEqual(
-    listed.lines.map((each) => each.row),
-    listed.lines.map((each) => lineRow(each.line) ?? null),
+    variants.map((each) => each.rows),
+    variants.map((each) => each.lines.map((line) => lineRow(line) ?? null)),
     'each line is posted with the row its text gives',
   );
-  assert.deepStrictEqual(listed.lines[0].row, { skill: 'complete-task', interactive: false, harness: 'claude' });
-  assert.deepStrictEqual(listed.hidden, []);
+  assert.deepStrictEqual(listed.lines[0].variants[0].rows, [{ skill: 'complete-task', interactive: false, harness: 'claude' }]);
+  assert.deepStrictEqual(listed.lines.map((each) => each.hidden), [[], [], []]);
   const recipes = settingsRecipes(base(), emptyVariantStore(), '/home/x/.gurita/variants.json', []).map((recipe) => recipe.name);
   assert.ok(![CC, AGY, 'My own line'].some((name) => recipes.includes(name)), 'the variant list still leaves the named single-task lines out');
 });
@@ -126,7 +128,7 @@ test('a renamed shipped line shows in singleTaskLines under its new name in its 
     assert.deepStrictEqual(listed.lines[0].reset, { recipe: CC, original: { name: 'default', origin: 'shipped' } });
 
     // Renamed again, the stored copy is renamed in the store, still standing in for the shipped line.
-    renameLine(file, base(), 'Opus line', listed.lines[0].variant, 'Opus high');
+    renameLine(file, base(), 'Opus line', listed.lines[0].variants[0], 'Opus high');
     assert.deepStrictEqual(namedLines(file)[0], ['Opus high', CC_LINE]);
     assert.strictEqual(readVariantStore(file).variants.length, 1);
 
@@ -137,21 +139,42 @@ test('a renamed shipped line shows in singleTaskLines under its new name in its 
   });
 });
 
-test("a line's model or effort change writes a stored copy under the line's name, which a rename then carries", () => {
+test("a line's model or effort change adds custom 1 under the line's name, which the looped run passes once it is made the default", () => {
   withStore((file) => {
     replaceLineValue(file, base(), CC, SHIPPED_CC, 0, 'model', 'sonnet');
     const changed = CC_LINE.replace('"opus"', '"sonnet"');
-    assert.deepStrictEqual(namedLines(file)[0], [CC, changed]);
-    const copy = settingsLines(base(), readVariantStore(file), file).lines[0];
-    assert.deepStrictEqual([copy.variant.origin, copy.reset], ['stored', { recipe: CC, original: { name: 'default', origin: 'shipped' } }]);
-    replaceLineValue(file, base(), CC, copy.variant, 0, 'effort', 'xhigh');
-    renameLine(file, base(), CC, copy.variant, 'Sonnet xhigh');
-    assert.deepStrictEqual(namedLines(file)[0], ['Sonnet xhigh', changed.replace('--effort high', '--effort xhigh')]);
-    assert.deepStrictEqual(readVariantStore(file).variants.map((each) => [each.recipe, each.copies]), [
-      ['Sonnet xhigh', { name: 'default', origin: 'shipped', recipe: CC }],
+    assert.deepStrictEqual(readVariantStore(file).variants, [
+      { recipe: CC, name: 'custom 1', lines: [changed], from: { name: 'default', origin: 'shipped' } },
     ]);
-    resetLine(file, CC, { name: 'default', origin: 'shipped' });
+    let line = settingsLines(base(), readVariantStore(file), file).lines[0];
+    assert.deepStrictEqual(
+      [line.name, line.variants.map((each) => [each.name, each.origin, each.isDefault, each.lines[0]])],
+      [CC, [['default', 'shipped', true, CC_LINE], ['custom 1', 'stored', false, changed]]],
+      'the shipped default stays listed and the default, custom 1 beneath it',
+    );
+    assert.deepStrictEqual(line.variants[1].from, { name: 'default', origin: 'shipped' }, 'custom 1 can be reset to the default');
+    assert.deepStrictEqual(namedLines(file)[0], [CC, CC_LINE], 'until it is made the default, the looped run passes the default');
+
+    pickDefault(file, base(), CC, line.variants[1]);
+    assert.deepStrictEqual(namedLines(file)[0], [CC, changed], 'made the default, custom 1 is the line the looped run passes under its name');
+    line = settingsLines(base(), readVariantStore(file), file).lines[0];
+    assert.deepStrictEqual(line.variants.map((each) => each.isDefault), [false, true]);
+
+    // A further pick changes custom 1 in place; one on the shipped default adds custom 2.
+    replaceLineValue(file, base(), CC, line.variants[1], 0, 'effort', 'xhigh');
+    replaceLineValue(file, base(), CC, SHIPPED_CC, 0, 'effort', 'medium');
+    line = settingsLines(base(), readVariantStore(file), file).lines[0];
+    assert.deepStrictEqual(line.variants.map((each) => [each.name, each.lines[0]]), [
+      ['default', CC_LINE],
+      ['custom 1', changed.replace('--effort high', '--effort xhigh')],
+      ['custom 2', CC_LINE.replace('--effort high', '--effort medium')],
+    ]);
+    assert.deepStrictEqual(namedLines(file)[0], [CC, changed.replace('--effort high', '--effort xhigh')]);
+
+    // Deleting the picked custom 1 drops the pick, the line falling back to its first variant.
+    deleteVariant(file, base(), CC, line.variants[1]);
     assert.deepStrictEqual(namedLines(file)[0], [CC, CC_LINE]);
+    assert.deepStrictEqual(readVariantStore(file).defaults, []);
   });
 });
 
@@ -160,7 +183,11 @@ test('a deleted line leaves singleTaskLines, a shipped or own one listed for its
     deleteLine(file, base(), CC, SHIPPED_CC);
     assert.deepStrictEqual(readVariantStore(file).hidden, [{ recipe: CC, name: 'default', origin: 'shipped' }]);
     assert.deepStrictEqual(namedLines(file).map((each) => each[0]), [AGY, 'My own line']);
-    assert.deepStrictEqual(settingsLines(base(), readVariantStore(file), file).hidden, [{ name: CC, original: { name: 'default', origin: 'shipped' } }]);
+    assert.deepStrictEqual(
+      settingsLines(base(), readVariantStore(file), file).lines.map((each) => [each.name, each.variants.length, each.hidden]),
+      [[CC, 0, [{ name: 'default', origin: 'shipped' }]], [AGY, 2, []], ['My own line', 1, []]],
+      'a deleted line stays listed in its place with no variant, its hidden variant listed for its reset',
+    );
 
     deleteLine(file, base(), 'My own line', { name: 'default', origin: 'own' });
     assert.deepStrictEqual(namedLines(file).map((each) => each[0]), [AGY]);
@@ -171,7 +198,7 @@ test('a deleted line leaves singleTaskLines, a shipped or own one listed for its
     // A renamed line deleted hides the line it stood in for; a deleted duplicate leaves the store.
     renameLine(file, base(), CC, SHIPPED_CC, 'Opus line');
     const renamed = settingsLines(base(), readVariantStore(file), file).lines[0];
-    deleteLine(file, base(), 'Opus line', renamed.variant);
+    deleteLine(file, base(), 'Opus line', renamed.variants[0]);
     assert.deepStrictEqual(readVariantStore(file).variants, []);
     assert.deepStrictEqual(readVariantStore(file).hidden, [{ recipe: CC, name: 'default', origin: 'shipped' }]);
     assert.deepStrictEqual(namedLines(file).map((each) => each[0]), [AGY, 'My own line']);

@@ -358,27 +358,21 @@ declare function acquireVsCodeApi(): VsCodeApi;
   /** The recipes and variants the settings view edits, or the cause they could not be read. */
   type VariantsRead = { state: 'read'; recipes: SettingsRecipe[] } | { state: 'failed'; cause: string };
 
-  /** One named single-task line as the settings view lists it. */
+  /** One named single-task line as the settings view lists it, its variants beneath it. */
   interface SettingsLine {
     /** The line's name, the one the looped run, the rule file, and the override list use. */
     name: string;
     group: RecipeGroup;
-    /** The variant of its recipe the line is. */
-    variant: { name: string; origin: VariantOrigin; copies?: ReadVariantRef };
-    line: string;
-    editor: LineEditor | null;
-    /** The row the line is drawn as, null when it is drawn as its text. */
-    row?: LineRow | null;
-    /** Whether the looped run takes it for the name. */
-    isDefault: boolean;
-    /** The shipped or own line a stored copy stands in for, which its reset shows again. */
+    /** Its single-task variants, its `default` and its customs, the default the one the looped run passes. */
+    variants: SettingsVariant[];
+    /** The shipped and own variants of the line a hiding record hides. */
+    hidden: ReadVariantRef[];
+    /** The shipped or own line of another name a renamed line stands in for, which its reset shows again. */
     reset?: { recipe: string; original: ReadVariantRef };
   }
 
-  /** The named single-task lines the settings view edits, the deleted shipped and own ones apart, or the cause they could not be read. */
-  type LinesRead =
-    | { state: 'read'; lines: SettingsLine[]; hidden: { name: string; original: ReadVariantRef }[] }
-    | { state: 'failed'; cause: string };
+  /** The named single-task lines the settings view edits, or the cause they could not be read. */
+  type LinesRead = { state: 'read'; lines: SettingsLine[] } | { state: 'failed'; cause: string };
 
   type PaneMessage =
     | { type: 'live'; missions: Mission[]; running: string[]; buttons?: FixedButtons }
@@ -432,7 +426,6 @@ declare function acquireVsCodeApi(): VsCodeApi;
   const FIXED_NOTE = 'Run by a button outside the recipe list, which runs this default until another variant is selected beside it.';
   const LINES_HEADING = 'Single-task lines';
   const LINES_FAILURE_LINE = 'The single-task lines could not be read.';
-  const NOT_RUN_MARK = 'Not run';
   /** The mark beside a skill row whose line is not headless. */
   const INTERACTIVE_MARK = 'interactive';
   /** Each of a harness's two lists, with its kind, its label, and its add control's label. */
@@ -1036,65 +1029,16 @@ declare function acquireVsCodeApi(): VsCodeApi;
       }
       const list = element('ul', undefined, 'variant-list');
       recipe.variants.forEach((variant, variantIndex) => {
-        const item = element('li', undefined, variant.isDefault ? 'variant default' : 'variant');
-        item.dataset.variant = variant.name;
-        item.dataset.origin = variant.origin;
-        const name = element('span', variant.name, 'variant-name');
-        name.title = variant.lines.join('\n');
-        item.append(name, element('span', originLabel(variant.origin, variant.copies), 'variant-origin'));
-        if (variant.isDefault) {
-          item.append(element('span', DEFAULT_MARK, 'variant-default'));
-        }
-        const actions = element('span', undefined, 'variant-actions');
-        const control = (label: string, key: string, hover: string, message: Record<string, unknown>): void => {
-          const each = button(label, 'action', () => vscode.postMessage(message));
-          each.title = hover;
-          each.dataset.focus = `variant-${key}-${recipeIndex}-${variantIndex}`;
-          actions.append(each);
-        };
-        const named = variantTarget(variant);
-        control(DUPLICATE_LABEL, 'duplicate', `Type a name and add a copy of ${variant.name} to ${recipe.name}`, {
-          type: 'duplicateVariant',
-          recipe: recipe.name,
-          variant: named,
-        });
-        control(RENAME_LABEL, 'rename', `Type a new name for ${variant.name}`, { type: 'renameVariant', recipe: recipe.name, variant: named });
-        control(DELETE_LABEL, 'delete', `Take ${variant.name} out of ${recipe.name}`, { type: 'deleteVariant', recipe: recipe.name, variant: named });
-        if (!variant.isDefault) {
-          control(PICK_DEFAULT_LABEL, 'default', `Make ${variant.name} the variant ${recipe.name} runs by default`, {
-            type: 'pickDefault',
-            recipe: recipe.name,
-            variant: named,
-          });
-        }
-        if (variant.origin === 'stored' && variant.from !== undefined) {
-          control(RESET_LABEL, 'reset', `Return the lines of ${variant.name} to those of ${variant.from.name}, keeping its name`, {
-            type: 'resetVariantLines',
-            recipe: recipe.name,
-            variant: named,
-          });
-        }
-        item.append(actions, drawLines(recipe.name, variant, `${recipeIndex}-${variantIndex}`));
-        list.append(item);
+        list.append(drawVariantItem(recipe.name, variant, `variant-%-${recipeIndex}-${variantIndex}`, `${recipeIndex}-${variantIndex}`));
       });
       recipe.hidden.forEach((hidden, hiddenIndex) => {
-        const item = element('li', undefined, 'variant deleted');
-        item.dataset.variant = hidden.name;
-        item.dataset.origin = hidden.origin;
-        item.append(
-          element('span', hidden.name, 'variant-name'),
-          element('span', originLabel(hidden.origin), 'variant-origin'),
-          element('span', DELETED_MARK, 'variant-deleted'),
+        list.append(
+          drawHiddenItem(hidden, `variant-reset-${recipeIndex}-hidden-${hiddenIndex}`, {
+            type: 'resetVariant',
+            recipe: recipe.name,
+            original: { name: hidden.name, origin: hidden.origin },
+          }),
         );
-        const actions = element('span', undefined, 'variant-actions');
-        const reset = button(RESET_LABEL, 'action', () =>
-          vscode.postMessage({ type: 'resetVariant', recipe: recipe.name, original: { name: hidden.name, origin: hidden.origin } }),
-        );
-        reset.title = `Show ${hidden.name} again as its file holds it`;
-        reset.dataset.focus = `variant-reset-${recipeIndex}-hidden-${hiddenIndex}`;
-        actions.append(reset);
-        item.append(actions);
-        list.append(item);
       });
       block.append(list);
       part.append(block);
@@ -1102,22 +1046,84 @@ declare function acquireVsCodeApi(): VsCodeApi;
     return part;
   }
 
-  /** Where a single-task line comes from, as the settings view names it, a stored copy naming the line it stands in for. */
-  function lineOriginLabel(line: SettingsLine): string {
-    const copies = line.variant.copies;
-    if (line.variant.origin === 'stored' && copies !== undefined && line.reset !== undefined) {
-      return `stored copy of ${copies.origin === 'own' ? 'your' : 'the shipped'} line ${line.reset.recipe}`;
+  /**
+   * One listed variant of the recipe `recipe` in the settings view: its name, where it comes from,
+   * whether it is the default, its duplicate, rename, delete, and default controls, a stored
+   * variant's reset control too, returning its lines to those of the variant it was made from, and
+   * beneath them its line editor. `key` names each control's focus key, its `%` standing for the
+   * control, and `focus` the line editor's.
+   */
+  function drawVariantItem(recipe: string, variant: SettingsVariant, key: string, focus: string): HTMLElement {
+    const item = element('li', undefined, variant.isDefault ? 'variant default' : 'variant');
+    item.dataset.variant = variant.name;
+    item.dataset.origin = variant.origin;
+    const name = element('span', variant.name, 'variant-name');
+    name.title = variant.lines.join('\n');
+    item.append(name, element('span', originLabel(variant.origin, variant.copies), 'variant-origin'));
+    if (variant.isDefault) {
+      item.append(element('span', DEFAULT_MARK, 'variant-default'));
     }
-    return originLabel(line.variant.origin, copies);
+    const actions = element('span', undefined, 'variant-actions');
+    const control = (label: string, which: string, hover: string, message: Record<string, unknown>): void => {
+      const each = button(label, 'action', () => vscode.postMessage(message));
+      each.title = hover;
+      each.dataset.focus = key.replace('%', which);
+      actions.append(each);
+    };
+    const named = variantTarget(variant);
+    control(DUPLICATE_LABEL, 'duplicate', `Type a name and add a copy of ${variant.name} to ${recipe}`, {
+      type: 'duplicateVariant',
+      recipe,
+      variant: named,
+    });
+    control(RENAME_LABEL, 'rename', `Type a new name for ${variant.name}`, { type: 'renameVariant', recipe, variant: named });
+    control(DELETE_LABEL, 'delete', `Take ${variant.name} out of ${recipe}`, { type: 'deleteVariant', recipe, variant: named });
+    if (!variant.isDefault) {
+      control(PICK_DEFAULT_LABEL, 'default', `Make ${variant.name} the variant ${recipe} runs by default`, {
+        type: 'pickDefault',
+        recipe,
+        variant: named,
+      });
+    }
+    if (variant.origin === 'stored' && variant.from !== undefined) {
+      control(RESET_LABEL, 'reset', `Return the lines of ${variant.name} to those of ${variant.from.name}, keeping its name`, {
+        type: 'resetVariantLines',
+        recipe,
+        variant: named,
+      });
+    }
+    item.append(actions, drawLines(recipe, variant, focus));
+    return item;
+  }
+
+  /** One shipped or own variant a hiding record hides, marked deleted, with the reset control alone, posting `reset`. */
+  function drawHiddenItem(hidden: ReadVariantRef, focus: string, reset: Record<string, unknown>): HTMLElement {
+    const item = element('li', undefined, 'variant deleted');
+    item.dataset.variant = hidden.name;
+    item.dataset.origin = hidden.origin;
+    item.append(
+      element('span', hidden.name, 'variant-name'),
+      element('span', originLabel(hidden.origin), 'variant-origin'),
+      element('span', DELETED_MARK, 'variant-deleted'),
+    );
+    const actions = element('span', undefined, 'variant-actions');
+    const each = button(RESET_LABEL, 'action', () => vscode.postMessage(reset));
+    each.title = `Show ${hidden.name} again as its file holds it`;
+    each.dataset.focus = focus;
+    actions.append(each);
+    item.append(actions);
+    return item;
   }
 
   /**
    * The settings view's part of single-task line edits: the cause the lines could not be read, or
-   * each named single-task line with its name, where it comes from, its Duplicate, Rename, and
-   * Delete controls, a stored copy's Reset control too, and beneath it its one line with the line
-   * editor it gets; after them each shipped or own line a hiding record hides, with its Reset
-   * control alone. Every control posts its edit; the list is redrawn only from what the extension
-   * posts.
+   * each named single-task line under its name, the one the looped run, the rule file, and the
+   * override list use, with the line's Duplicate, Rename, and Delete controls, acting on its default
+   * variant, and a renamed line's Reset control too, showing the line it stands in for again; beneath
+   * it its variants, its `default` and its customs, each drawn with the controls and line editor
+   * any recipe's variant gets, Make default choosing the variant the looped run passes as the line's
+   * `--line`, and after them each variant a hiding record hides, with its Reset control alone.
+   * Every control posts its edit; the list is redrawn only from what the extension posts.
    */
   function drawSingleTaskLines(): HTMLElement {
     const part = element('div', undefined, 'line-edits');
@@ -1133,31 +1139,25 @@ declare function acquireVsCodeApi(): VsCodeApi;
       part.append(box);
       return part;
     }
-    const list = element('ul', undefined, 'variant-list');
     read.lines.forEach((line, lineIndex) => {
-      const item = element('li', undefined, 'variant single-task-line');
-      item.dataset.line = line.name;
-      item.dataset.variant = line.variant.name;
-      item.dataset.origin = line.variant.origin;
-      const name = element('span', line.variant.name === line.name ? line.name : `${line.name} — ${line.variant.name}`, 'variant-name');
-      name.title = line.line;
-      item.append(name, element('span', lineOriginLabel(line), 'variant-origin'));
-      if (!line.isDefault) {
-        const mark = element('span', NOT_RUN_MARK, 'variant-default');
-        mark.title = `The looped run takes another variant of ${line.name}`;
-        item.append(mark);
-      }
-      const actions = element('span', undefined, 'variant-actions');
+      const block = element('div', undefined, 'variant-recipe single-task-line');
+      block.dataset.line = line.name;
+      const heading = element('h5', undefined, 'line-heading');
+      heading.append(element('span', line.name, 'line-name'));
+      const standing = line.variants.find((each) => each.isDefault);
+      const actions = element('span', undefined, 'line-actions');
       const control = (label: string, key: string, hover: string, message: Record<string, unknown>): void => {
         const each = button(label, 'action', () => vscode.postMessage(message));
         each.title = hover;
         each.dataset.focus = `line-${key}-${lineIndex}`;
         actions.append(each);
       };
-      const named = variantTarget(line.variant);
-      control(DUPLICATE_LABEL, 'duplicate', `Type a name and add a copy of the line ${line.name}`, { type: 'duplicateLine', line: line.name, variant: named });
-      control(RENAME_LABEL, 'rename', `Type a new name for the line ${line.name}`, { type: 'renameLine', line: line.name, variant: named });
-      control(DELETE_LABEL, 'delete', `Take the line ${line.name} out of the named single-task lines`, { type: 'deleteLine', line: line.name, variant: named });
+      if (standing !== undefined) {
+        const named = variantTarget(standing);
+        control(DUPLICATE_LABEL, 'duplicate', `Type a name and add a copy of the line ${line.name}`, { type: 'duplicateLine', line: line.name, variant: named });
+        control(RENAME_LABEL, 'rename', `Type a new name for the line ${line.name}`, { type: 'renameLine', line: line.name, variant: named });
+        control(DELETE_LABEL, 'delete', `Take the line ${line.name} out of the named single-task lines`, { type: 'deleteLine', line: line.name, variant: named });
+      }
       if (line.reset !== undefined) {
         control(RESET_LABEL, 'reset', `Remove this stored copy and show ${line.reset.recipe} again as its file holds it`, {
           type: 'resetLine',
@@ -1165,37 +1165,27 @@ declare function acquireVsCodeApi(): VsCodeApi;
           original: { name: line.reset.original.name, origin: line.reset.original.origin },
         });
       }
-      const variant: SettingsVariant = {
-        ...line.variant,
-        lines: [line.line],
-        editors: [line.editor],
-        rows: [line.row ?? null],
-        isDefault: line.isDefault,
-      };
-      item.append(actions, drawLines(line.name, variant, `single-${lineIndex}`));
-      list.append(item);
+      heading.append(actions);
+      block.append(heading);
+      if (line.reset !== undefined) {
+        block.append(element('p', `Renamed from the ${line.reset.original.origin === 'own' ? 'own' : 'shipped'} line ${line.reset.recipe}`, 'variant-note'));
+      }
+      const list = element('ul', undefined, 'variant-list');
+      line.variants.forEach((variant, variantIndex) => {
+        list.append(drawVariantItem(line.name, variant, `line-variant-%-${lineIndex}-${variantIndex}`, `single-${lineIndex}-${variantIndex}`));
+      });
+      line.hidden.forEach((hidden, hiddenIndex) => {
+        list.append(
+          drawHiddenItem(hidden, `line-reset-${lineIndex}-hidden-${hiddenIndex}`, {
+            type: 'resetLine',
+            line: line.name,
+            original: { name: hidden.name, origin: hidden.origin },
+          }),
+        );
+      });
+      block.append(list);
+      part.append(block);
     });
-    read.hidden.forEach((hidden, hiddenIndex) => {
-      const item = element('li', undefined, 'variant deleted');
-      item.dataset.line = hidden.name;
-      item.dataset.variant = hidden.original.name;
-      item.dataset.origin = hidden.original.origin;
-      item.append(
-        element('span', hidden.original.name === hidden.name ? hidden.name : `${hidden.name} — ${hidden.original.name}`, 'variant-name'),
-        element('span', originLabel(hidden.original.origin), 'variant-origin'),
-        element('span', DELETED_MARK, 'variant-deleted'),
-      );
-      const actions = element('span', undefined, 'variant-actions');
-      const reset = button(RESET_LABEL, 'action', () =>
-        vscode.postMessage({ type: 'resetLine', line: hidden.name, original: { name: hidden.original.name, origin: hidden.original.origin } }),
-      );
-      reset.title = `Show the line ${hidden.name} again as its file holds it`;
-      reset.dataset.focus = `line-reset-hidden-${hiddenIndex}`;
-      actions.append(reset);
-      item.append(actions);
-      list.append(item);
-    });
-    part.append(list);
     return part;
   }
 

@@ -2350,99 +2350,188 @@ const AGY_TASK_LINE = 'agy -p "/gurita:complete-task --mission <path> <Task Titl
 const CODEX_TASK_LINE = "codex exec '$gurita:complete-task --mission <path> <Task Title>';";
 const TASK_ROW = { skill: 'complete-task', interactive: false, harness: 'claude' };
 
-/** A line list as the extension posts it: a shipped line, a renamed one, an own one joining a shipped line, a duplicate, and a deleted one. */
+/** One variant of a line as the extension posts it, holding the one line `line` with its editor and row. */
+function lineVariant(
+  name: string,
+  origin: string,
+  line: string,
+  editor: { harness: string; model: string; effort?: string } | null,
+  row: { skill: string; interactive: boolean; harness: string } | null,
+  isDefault: boolean,
+  more: Record<string, unknown> = {},
+): Record<string, unknown> {
+  return { name, origin, lines: [line], editors: [editor], rows: [row], isDefault, ...more };
+}
+
+const CUSTOM_TASK_LINE = TASK_LINE.replace('"opus"', '"fable"');
+const RENAMED_COPY = { name: 'default', origin: 'shipped', recipe: 'Single task (Antigravity)' };
+
+/**
+ * A line list as the extension posts it: a shipped line with its default and a custom 1 picked as
+ * the default, a renamed one, an own one, a duplicate, and a line whose one variant was deleted.
+ */
 const LINES = {
   type: 'singleTaskLines',
   lines: {
     state: 'read',
     lines: [
-      { name: 'Single task (Claude Code)', group: 'shipped', variant: { name: 'default', origin: 'shipped' }, line: TASK_LINE, editor: { harness: 'claude', model: 'opus', effort: 'high' }, row: TASK_ROW, isDefault: true },
+      {
+        name: 'Single task (Claude Code)',
+        group: 'shipped',
+        variants: [
+          lineVariant('default', 'shipped', TASK_LINE, { harness: 'claude', model: 'opus', effort: 'high' }, TASK_ROW, false),
+          lineVariant('custom 1', 'stored', CUSTOM_TASK_LINE, { harness: 'claude', model: 'fable', effort: 'high' }, TASK_ROW, true, {
+            from: { name: 'default', origin: 'shipped' },
+          }),
+        ],
+        hidden: [],
+      },
       {
         name: 'Agy line',
         group: 'shipped',
-        variant: { name: 'Agy line', origin: 'stored', copies: { name: 'default', origin: 'shipped', recipe: 'Single task (Antigravity)' } },
-        line: AGY_TASK_LINE,
-        editor: { harness: 'antigravity', model: 'claude-opus-5-5', effort: 'high' },
-        row: { skill: 'complete-task', interactive: false, harness: 'antigravity' },
-        isDefault: true,
+        variants: [
+          lineVariant('Agy line', 'stored', AGY_TASK_LINE, { harness: 'antigravity', model: 'claude-opus-5-5', effort: 'high' }, { skill: 'complete-task', interactive: false, harness: 'antigravity' }, true, {
+            copies: RENAMED_COPY,
+            from: RENAMED_COPY,
+          }),
+        ],
+        hidden: [],
         reset: { recipe: 'Single task (Antigravity)', original: { name: 'default', origin: 'shipped' } },
       },
-      { name: 'My own line', group: 'own', variant: { name: 'default', origin: 'own' }, line: CODEX_TASK_LINE, editor: null, row: { skill: 'complete-task', interactive: false, harness: 'codex' }, isDefault: true },
-      { name: 'Single task (Sonnet)', group: 'own', variant: { name: 'Single task (Sonnet)', origin: 'stored' }, line: TASK_LINE, editor: { harness: 'claude', model: 'opus', effort: 'high' }, row: TASK_ROW, isDefault: true },
+      {
+        name: 'My own line',
+        group: 'own',
+        variants: [lineVariant('default', 'own', CODEX_TASK_LINE, null, { skill: 'complete-task', interactive: false, harness: 'codex' }, true)],
+        hidden: [],
+      },
+      {
+        name: 'Single task (Sonnet)',
+        group: 'own',
+        variants: [lineVariant('Single task (Sonnet)', 'stored', TASK_LINE, { harness: 'claude', model: 'opus', effort: 'high' }, TASK_ROW, true)],
+        hidden: [],
+      },
+      { name: 'Single task (Old)', group: 'shipped', variants: [], hidden: [{ name: 'default', origin: 'shipped' }] },
     ],
-    hidden: [{ name: 'Single task (Old)', original: { name: 'default', origin: 'shipped' } }],
   },
 };
 
-/** Each line the settings view's Single-task lines part draws: its texts, its controls' labels, and its line editor's dropdowns. */
-function singleLineRows(page: Page): [string[], string[], string[]][] {
+/** The settings view's Single-task lines part. */
+function linesPart(page: Page): FakeElement {
   const view = settingsView(page);
   assert.ok(view !== undefined, 'the settings view is drawn');
   const part = view.all().find((each) => each.has('line-edits'));
   assert.ok(part !== undefined, 'the view holds a single-task lines part');
-  return part
-    .all()
-    .filter((item) => item.has('variant'))
-    .map((item): [string[], string[], string[]] => [
-      item.all().filter((each) => each.tagName !== 'select' && ['variant-name', 'variant-origin', 'variant-default', 'variant-deleted', ...ROW_PARTS].some((name) => each.has(name))).map((each) => each.textContent),
-      item.all().filter((each) => each.tagName === 'button').map((each) => each.textContent),
-      item.all().filter((each) => each.tagName === 'select').map((each) => each.className),
-    ]);
+  return part;
 }
 
-test('the settings view lists every named single-task line the extension posts with its edit controls and line editor, a deleted one with its reset alone', () => {
+/** Each line the settings view's Single-task lines part draws: its name, its own controls' labels, and its variants as `singleLineRows` reads them. */
+function singleLines(page: Page): [string, string[], [string[], string[], string[]][]][] {
+  return linesPart(page)
+    .all()
+    .filter((block) => block.has('single-task-line'))
+    .map((block): [string, string[], [string[], string[], string[]][]] => {
+      const heading = block.all().find((each) => each.has('line-heading'));
+      assert.ok(heading !== undefined);
+      return [
+        heading.all().find((each) => each.has('line-name'))?.textContent ?? '',
+        heading.all().filter((each) => each.tagName === 'button').map((each) => each.textContent),
+        block
+          .all()
+          .filter((item) => item.has('variant'))
+          .map((item): [string[], string[], string[]] => [
+            item.all().filter((each) => each.tagName !== 'select' && ['variant-name', 'variant-origin', 'variant-default', 'variant-deleted', ...ROW_PARTS].some((name) => each.has(name))).map((each) => each.textContent),
+            item.all().filter((each) => each.tagName === 'button').map((each) => each.textContent),
+            item.all().filter((each) => each.tagName === 'select').map((each) => each.className),
+          ]),
+      ];
+    });
+}
+
+/** Each variant row the settings view's Single-task lines part draws, across every line. */
+function singleLineRows(page: Page): [string[], string[], string[]][] {
+  return singleLines(page).flatMap((line) => line[2]);
+}
+
+test("the settings view lists every named single-task line under its name, its default and customs beneath it with a recipe variant's controls, a deleted one with its reset alone", () => {
   const page = loadPage();
   page.send(live([]));
   named(page, 'Settings').click();
   assert.ok(texts(page).includes('Single-task lines'));
-  assert.deepStrictEqual(singleLineRows(page), [], 'nothing is drawn before the extension posts the lines');
+  assert.deepStrictEqual(singleLines(page), [], 'nothing is drawn before the extension posts the lines');
   page.send(harnessListsMessage(LISTS));
   page.send(LINES);
-  const edits = ['Duplicate', 'Rename', 'Delete'];
+  const lineEdits = ['Duplicate', 'Rename', 'Delete'];
+  const variantEdits = ['Duplicate', 'Rename', 'Delete'];
   const both = ['line-harness', 'line-model', 'line-effort'];
-  assert.deepStrictEqual(singleLineRows(page), [
-    [['Single task (Claude Code) — default', 'shipped', 'complete-task'], edits, both],
-    [['Agy line', 'stored copy of the shipped line Single task (Antigravity)', 'complete-task'], [...edits, 'Reset'], both],
-    [['My own line — default', 'yours', 'complete-task', 'Codex'], edits, []],
-    [['Single task (Sonnet)', 'stored', 'complete-task'], edits, both],
-    [['Single task (Old) — default', 'shipped', 'Deleted'], ['Reset'], []],
-  ], 'a line without both flags is shown read-only, and no line carries a Make default control');
+  assert.deepStrictEqual(singleLines(page), [
+    ['Single task (Claude Code)', lineEdits, [
+      [['default', 'shipped', 'complete-task'], [...variantEdits, 'Make default'], both],
+      [['custom 1', 'stored', 'Default', 'complete-task'], [...variantEdits, 'Reset'], both],
+    ]],
+    ['Agy line', [...lineEdits, 'Reset'], [
+      [['Agy line', 'stored copy of the shipped variant default', 'Default', 'complete-task'], [...variantEdits, 'Reset'], both],
+    ]],
+    ['My own line', lineEdits, [[['default', 'yours', 'Default', 'complete-task', 'Codex'], variantEdits, []]]],
+    ['Single task (Sonnet)', lineEdits, [[['Single task (Sonnet)', 'stored', 'Default', 'complete-task'], variantEdits, both]]],
+    ['Single task (Old)', [], [[['default', 'shipped', 'Deleted'], ['Reset'], []]]],
+  ], "each line's heading keeps its own Duplicate, Rename, and Delete, and every variant beneath it gets a recipe variant's controls and line editor");
   const view = settingsView(page);
   assert.ok(view !== undefined);
   assert.deepStrictEqual(view.all().filter((each) => ['input', 'textarea'].includes(each.tagName)), [], 'nothing is typed on the page');
 });
 
-test('each line control posts its edit, naming the line as listed, and the list changes only when the extension posts it again', () => {
+test("each line and line-variant control posts its edit, the line's own controls naming its default, and the list changes only when the extension posts it again", () => {
   const page = loadPage();
   page.send({ type: 'liveFailure', cause: 'Error: no repository' });
   named(page, 'Settings').click();
   page.send(harnessListsMessage({ ...LISTS, antigravity: { models: ['claude-opus-5-5'], efforts: ['medium', 'high'] } }));
   page.send(LINES);
   const count = page.posted.length;
-  for (const key of ['line-duplicate-0', 'line-rename-1', 'line-delete-1', 'line-reset-1', 'line-delete-3', 'line-reset-hidden-0']) {
+  for (const key of [
+    'line-duplicate-0',
+    'line-rename-1',
+    'line-delete-1',
+    'line-reset-1',
+    'line-delete-3',
+    'line-reset-4-hidden-0',
+    'line-variant-default-0-0',
+    'line-variant-rename-0-1',
+    'line-variant-reset-0-1',
+    'line-variant-duplicate-2-0',
+    'line-variant-delete-0-1',
+  ]) {
     const found = page.root.querySelector(`[data-focus="${key}"]`);
     assert.ok(found !== null, `no control ${key}`);
     found.click();
   }
-  focused(page, 'line-model-single-0-0').change('fable');
-  focused(page, 'line-effort-single-1-0').change('medium');
-  focused(page, 'line-harness-single-1-0').change('claude');
-  assert.strictEqual(page.root.querySelector('[data-focus="line-harness-single-2-0"]'), null, 'a Codex line has no harness dropdown');
-  const renamed = { name: 'Agy line', origin: 'stored', copies: { name: 'default', origin: 'shipped', recipe: 'Single task (Antigravity)' } };
+  focused(page, 'line-model-single-0-0-0').change('fable');
+  focused(page, 'line-effort-single-1-0-0').change('medium');
+  focused(page, 'line-harness-single-1-0-0').change('claude');
+  focused(page, 'line-model-single-0-1-0').change('opus');
+  assert.strictEqual(page.root.querySelector('[data-focus="line-harness-single-2-0-0"]'), null, 'a Codex line has no harness dropdown');
+  assert.strictEqual(page.root.querySelector('[data-focus="line-variant-default-0-1"]'), null, 'the default carries no Make default control');
+  const custom = { name: 'custom 1', origin: 'stored' };
+  const renamed = { name: 'Agy line', origin: 'stored', copies: RENAMED_COPY };
   assert.deepStrictEqual(page.posted.slice(count), [
-    { type: 'duplicateLine', line: 'Single task (Claude Code)', variant: { name: 'default', origin: 'shipped' } },
+    { type: 'duplicateLine', line: 'Single task (Claude Code)', variant: custom },
     { type: 'renameLine', line: 'Agy line', variant: renamed },
     { type: 'deleteLine', line: 'Agy line', variant: renamed },
     { type: 'resetLine', line: 'Single task (Antigravity)', original: { name: 'default', origin: 'shipped' } },
     { type: 'deleteLine', line: 'Single task (Sonnet)', variant: { name: 'Single task (Sonnet)', origin: 'stored' } },
     { type: 'resetLine', line: 'Single task (Old)', original: { name: 'default', origin: 'shipped' } },
+    { type: 'pickDefault', recipe: 'Single task (Claude Code)', variant: { name: 'default', origin: 'shipped' } },
+    { type: 'renameVariant', recipe: 'Single task (Claude Code)', variant: custom },
+    { type: 'resetVariantLines', recipe: 'Single task (Claude Code)', variant: custom },
+    { type: 'duplicateVariant', recipe: 'My own line', variant: { name: 'default', origin: 'own' } },
+    { type: 'deleteVariant', recipe: 'Single task (Claude Code)', variant: custom },
     { type: 'replaceLineValue', recipe: 'Single task (Claude Code)', variant: { name: 'default', origin: 'shipped' }, line: 0, kind: 'model', value: 'fable' },
     { type: 'replaceLineValue', recipe: 'Agy line', variant: renamed, line: 0, kind: 'effort', value: 'medium' },
     { type: 'replaceLineHarness', recipe: 'Agy line', variant: renamed, line: 0, harness: 'claude' },
+    { type: 'replaceLineValue', recipe: 'Single task (Claude Code)', variant: custom, line: 0, kind: 'model', value: 'opus' },
   ]);
-  assert.strictEqual(singleLineRows(page).length, 5, 'nothing changes until the extension posts it');
-  page.send({ ...LINES, lines: { ...LINES.lines, lines: LINES.lines.lines.slice(0, 1), hidden: [] } });
-  assert.deepStrictEqual(singleLineRows(page).map((row) => row[0][0]), ['Single task (Claude Code) — default']);
+  assert.strictEqual(singleLineRows(page).length, 6, 'nothing changes until the extension posts it');
+  page.send({ ...LINES, lines: { ...LINES.lines, lines: LINES.lines.lines.slice(0, 1) } });
+  assert.deepStrictEqual(singleLines(page).map((line) => line[0]), ['Single task (Claude Code)']);
 });
 
 test('single-task lines that could not be read are named in the settings view, with no control drawn', () => {
@@ -2452,5 +2541,5 @@ test('single-task lines that could not be read are named in the settings view, w
   page.send({ type: 'singleTaskLines', lines: { state: 'failed', cause: 'The variant store /home/x/.gurita/variants.json is not JSON.' } });
   assert.ok(texts(page).includes('The single-task lines could not be read.'));
   assert.ok(texts(page).includes('The variant store /home/x/.gurita/variants.json is not JSON.'));
-  assert.deepStrictEqual(singleLineRows(page), []);
+  assert.deepStrictEqual(singleLines(page), []);
 });

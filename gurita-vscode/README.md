@@ -46,7 +46,7 @@ Every Node command runs under Node 22 through nvm, in a subshell, from the repos
   the harnesses it enables and disables, with their model and effort lists, and the variant
   edits it makes, the line editor's harness, model, and effort picks, with the `custom N` variants they
   add and the resets of stored variants, among them, and its single-task line
-  edits, with the looped run's names following them, are tested against a stub of the `vscode`
+  edits, with the looped run's names and the variant a line's **Make default** picks following them, are tested against a stub of the `vscode`
   module,
   and the page script against a small stand-in for the DOM. Nothing runs inside an editor.
 - `npm run package` runs `vsce package`, which first runs the `vscode:prepublish` script: the
@@ -356,33 +356,49 @@ and on the mission pages.
 Under **Single-task lines** the view lists the named single-task lines the looped run takes,
 read afresh every time the view opens: the shipped ones and those of your own recipe file alike,
 in the order the looped run's preview offers them, with the lines only your store holds last.
-Each line shows its name, followed by the name of the variant it is (`default` for a line of one
-block, as every shipped line is) where that differs from the line's name, its line in the name's
-hover text, where it comes from (`shipped`,
-`yours`, `stored` for a duplicate, or `stored copy of` the line it stands in for), and beneath it
-its one line with the line editor described above, so a line running a `gurita:` skill is drawn
-as that skill's name (`complete-task`) with its harness on the right, and a line carrying both
-`--model` and `--effort` gets its harness, model, and effort dropdowns. Where one of your own variants joins a shipped
-line of the same name it is listed too, marked **Not run**, since the looped run takes the line's
-default. A line has no **Make default** control. The other controls are those a variant has,
-carried out in `~/.gurita/variants.json` and never in the shipped file or your own recipe file:
+Each line is headed by its name, the one `task_line_rules.txt` and the preview's override list use,
+and beneath it stand its variants: its `default` (the one variant of a line of one block, as every
+shipped line is), any variant of your own recipe file joining a shipped line of the same name, and
+the `custom N` variants and duplicates you add, each shown as a recipe's variant is under
+**Variants**: its name, its line in the name's hover text, where it comes from, **Default** on the
+variant the looped run takes, and its line editor, so a line running a `gurita:` skill is drawn as
+that skill's name (`complete-task`) with its harness on the right, and a line carrying both
+`--model` and `--effort` gets its harness, model, and effort dropdowns. Every variant has the
+controls a recipe's variant has, carried out in `~/.gurita/variants.json` and never in the shipped
+file or your own recipe file:
+
+- A pick in a variant's harness, model, or effort dropdown works as it does on any recipe's
+  variant: on a shipped line or one of your own, `default` included, the variant is left untouched
+  and a stored `custom N` holding the changed line is added beneath it under the same line name,
+  neither made the default nor run until you make it so; on a stored variant the line is changed in
+  place. A line rewritten onto the other harness stays a single-task variant of the same line.
+- **Make default**, on every variant but the default, decides which variant the looped run passes
+  as that line's `--line`, under the line's name, so a rule naming the line runs the variant you
+  made the default; deleting the picked default drops the pick, and the line falls back to its
+  first variant.
+- **Duplicate**, **Rename**, **Delete**, and **Reset** on a variant work as under **Variants**: a
+  duplicate is a further variant of the same line, a rename names the variant within the line and
+  leaves the line's name alone, a deleted shipped or own variant is listed as **Deleted** with a
+  **Reset** control alone, and a stored variant's **Reset** returns its line to that of the variant
+  it was made from.
+
+The line's own heading keeps its own **Duplicate**, **Rename**, and **Delete**, acting on the line
+as the looped run takes it, its default:
 
 - **Duplicate** asks for the new line's name and adds a stored line of that name holding the same
   line, listed after the others.
 - **Rename** asks for the new name, the box opening with the current name filled in. A shipped
   line or one of your own recipe file gets a stored copy of the new name standing in for it in its
-  place; a stored line, a stored copy included, is renamed in the store.
-- **Delete** takes the line out. A shipped line or one of your own gets a record hiding it and is
-  then listed as **Deleted** with a **Reset** control alone; a stored duplicate leaves the store;
-  a stored copy leaves it and hides the line it stood in for.
-- **Reset**, where a stored copy or a hiding record stands for a shipped line or one of your own,
-  removes them, so the line shows again under its own name as its file holds it.
-- A pick in the line's harness, model, or effort dropdown writes a stored copy holding the
-  changed line under the line's name, or changes a stored line in the store; a line rewritten onto
-  the other harness stays a named single-task line under its name.
+  place, with a **Reset** on the heading that removes the copy and shows the line again under its
+  own name; a stored line, a stored copy included, is renamed in the store.
+- **Delete** takes the line out. A shipped line or one of your own gets a record hiding it, and is
+  then listed under its name with its variant marked **Deleted** and a **Reset** control alone that
+  shows it again as its file holds it; a stored duplicate leaves the store; a stored copy leaves it
+  and hides the line it stood in for.
 
-A name is asked for in VS Code's own input box, which refuses an empty name and one any recipe or
-line already carries, since the looped run, the rule file, and the preview's override list name a
+A line's name is asked for in VS Code's own input box, which refuses an empty name and one any
+recipe or line already carries (a variant's name, as under **Variants**, only one another variant
+of the same line carries), since the looped run, the rule file, and the preview's override list name a
 line by it alone. A stored line reaches the recipe list under its name exactly as a written one
 does, so the looped run passes it as one `--line`, the rule file can name it, and the override
 list offers it; the runner and the rule file are unchanged. A rule naming a line you renamed or
