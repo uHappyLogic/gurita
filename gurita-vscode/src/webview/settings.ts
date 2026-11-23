@@ -17,7 +17,12 @@
 // own plugin settings; the window adds no control of its own to enable it. When Claude Code's or
 // Codex's Gurita copy or its marketplace named `gurita` comes from a source other than the
 // harness's distribution repository, the window states the source found and the CLI commands
-// that would switch the harness to that repository. Its check-again
+// that would switch the harness to that repository. Every harness whose check found its CLI and an
+// installed Gurita copy gets an Update control, whether or not the copy's version is older than the
+// packaged one, and none whose copy is disabled or comes from another source: a click posts the
+// update to the extension at once, with no confirmation, on Claude Code over every scope a copy
+// applying to the project was detected at, and the control is drawn disabled while an install or
+// update run is going. Its check-again
 // control, disabled while a check runs and while an install or update run is going, asks the
 // extension to run the check afresh. While the extension posts an install or update run as going,
 // the window says beneath the harnesses which harness it installs or updates the plugin on, its
@@ -238,6 +243,10 @@ declare function acquireVsCodeApi(): VsCodeApi;
   ];
   /** The harnesses a line's harness dropdown picks between, by key: a Codex line keeps its harness. */
   const LINE_HARNESSES = ['claude', 'antigravity'];
+  /** The control that updates a harness's installed Gurita copy. */
+  const UPDATE_LABEL = 'Update';
+  /** Claude Code's scopes, in the order an update takes them. */
+  const CLAUDE_SCOPES = ['user', 'project', 'local'];
   const ENABLED_LABEL = 'Enabled';
   const DISABLED_LABEL = 'Disabled';
   const ENABLE_LABEL = 'Enable';
@@ -353,6 +362,43 @@ declare function acquireVsCodeApi(): VsCodeApi;
   }
 
   /**
+   * The scopes an update of a harness's copy acts at, when the window offers one: an update is
+   * offered for a harness whose check found its CLI and an installed Gurita copy, whether or not
+   * that copy's version is older than the packaged one, and for none whose copy is disabled or comes
+   * from another source. On Claude Code it acts at every scope a copy applying to the project was
+   * detected at, in the order user, project, local, and is offered only when one was; Antigravity
+   * and Codex take no scope. Undefined when no update is offered.
+   */
+  function updateScopes(outcome: HarnessOutcome): string[] | undefined {
+    if (outcome.failed === 'cli' || outcome.failed === 'plugin' || outcome.disabled === true || outcome.source !== undefined) {
+      return undefined;
+    }
+    if (outcome.key !== 'claude') {
+      return [];
+    }
+    const detected = outcome.scopes ?? [];
+    const scopes = CLAUDE_SCOPES.filter((scope) => detected.includes(scope));
+    return scopes.length === 0 ? undefined : scopes;
+  }
+
+  /**
+   * A harness's Update control, which starts the update at once, with no confirmation, by posting
+   * it to the extension, on Claude Code over `scopes`; drawn disabled while an install or update
+   * run is going.
+   */
+  function drawUpdate(outcome: HarnessOutcome, scopes: string[], going: boolean): HTMLButtonElement {
+    const update = button(UPDATE_LABEL, 'action', () =>
+      vscode.postMessage({ type: 'runPlugin', harness: outcome.key, action: 'update', ...(outcome.key === 'claude' ? { scopes } : {}) }),
+    );
+    const at = scopes.length === 0 ? '' : ` at ${scopes.length === 1 ? `${scopes[0]} scope` : `${scopes.slice(0, -1).join(', ')} and ${scopes[scopes.length - 1]} scopes`}`;
+    update.title = `Update the Gurita plugin on ${outcome.name} to the latest published release${at}`;
+    update.disabled = going;
+    update.dataset.harness = outcome.key;
+    update.dataset.focus = `update-${outcome.key}`;
+    return update;
+  }
+
+  /**
    * A harness's enabled state and the one control that disables it while enabled and enables it
    * while disabled, posted to the extension, which stores the state and posts it again.
    */
@@ -372,9 +418,10 @@ declare function acquireVsCodeApi(): VsCodeApi;
 
   /**
    * The window's harness part: that the check runs or could not be run, then each harness
-   * with what its checks gave, when they gave anything, and whether it is enabled, with its enable
-   * or disable control, the install or update run going, when one is, and the check-again
-   * control, disabled while a check runs or a run is going.
+   * with what its checks gave, when they gave anything, its Update control where one is offered,
+   * and whether it is enabled, with its enable or disable control, the install or update run going,
+   * when one is, and the check-again control, disabled while a check runs or a run is going, as the
+   * Update controls are while a run is going.
    */
   function drawHarnesses(): HTMLElement {
     const part = element('div', undefined, 'harnesses');
@@ -395,6 +442,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
       box.append(element('p', SETTINGS_FAILURE_LINE), element('pre', settings.cause));
       part.append(box);
     }
+    const run = pluginRun;
     const list = element('ul', undefined, 'harness-list');
     for (const [key, name] of HARNESSES) {
       const outcome = check?.state === 'checked' ? check.harnesses.find((each) => each.key === key) : undefined;
@@ -412,6 +460,10 @@ declare function acquireVsCodeApi(): VsCodeApi;
           shown.dataset.scopes = (outcome.scopes ?? []).join(' ');
           item.append(shown);
         }
+        const updated = updateScopes(outcome);
+        if (updated !== undefined) {
+          item.append(drawUpdate(outcome, updated, run !== undefined));
+        }
       }
       if (settings?.state === 'read') {
         item.append(drawEnabled(key, outcome?.name ?? name, settings.enabled[key] !== false));
@@ -423,7 +475,6 @@ declare function acquireVsCodeApi(): VsCodeApi;
       list.append(item);
     }
     part.append(list);
-    const run = pluginRun;
     if (run !== undefined) {
       const name = HARNESSES.find(([key]) => key === run.harness)?.[1] ?? run.harness;
       const going = element('p', `${run.action === 'install' ? 'Installing' : 'Updating'} the Gurita plugin on ${name}… ${RUN_TERMINAL_NOTE}`, 'plugin-run');

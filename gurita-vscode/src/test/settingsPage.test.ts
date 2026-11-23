@@ -241,7 +241,12 @@ test('the window says a disabled Antigravity or Codex copy must be enabled in th
     ['antigravity', undefined],
     ['codex', undefined],
   ], 'no scopes line for a harness with no scopes');
-  assert.deepStrictEqual(drawnButtons(), before, 'no enable control of its own is added for a disabled copy');
+  assert.deepStrictEqual(updateControls(page).map(([harness]) => harness), ['claude'], 'a disabled copy loses its Update control');
+  assert.deepStrictEqual(
+    drawnButtons().filter((each) => each !== 'Update'),
+    before.filter((each) => each !== 'Update'),
+    'no enable control of its own is added for a disabled copy',
+  );
 
   send({ failed: 'plugin' }, { failed: 'plugin', detail: 'the listing did not finish' });
   assert.deepStrictEqual(harnessRows(page).slice(1), [
@@ -327,12 +332,144 @@ test('the window states the other source a Claude Code or Codex copy comes from 
   assert.deepStrictEqual(harnessScopeLines(page)[0], ['claude', 'In effect at project scope; also installed at user scope.'], 'the scopes line is unchanged');
   const drawn = settingsView(page)?.all().filter((each) => each.has('harness-source')) ?? [];
   assert.deepStrictEqual(drawn.map((each) => each.dataset.source), ['the directory /work/gurita', 'the local directory /work/gurita/hosts/codex']);
-  assert.deepStrictEqual(drawnButtons(), before, 'no control is added for another source');
+  assert.deepStrictEqual(
+    drawnButtons().filter((each) => each !== 'Update'),
+    before.filter((each) => each !== 'Update'),
+    'no control is added for another source',
+  );
+  assert.deepStrictEqual(updateControls(page), [['antigravity', false]], 'a copy from another source gets no Update control');
 
   const rules = stylesheetRules();
   const source = rules.filter((rule) => rule.selectors.includes('.harness-list .harness-source'));
   assert.strictEqual(source.length, 1, 'one rule lays the source out');
   assert.strictEqual(source[0].declarations.get('flex-basis'), '100%', 'the source stands on a line of its own beneath the row');
+});
+
+/** Each Update control the window draws under Harnesses: the harness it stands beside, and whether it is drawn disabled. */
+function updateControls(page: Page): [string, boolean][] {
+  const view = settingsView(page);
+  assert.ok(view !== undefined, 'the window is drawn');
+  return view
+    .all()
+    .filter((each) => each.tagName === 'li' && each.dataset.harness !== undefined)
+    .flatMap((row) =>
+      row
+        .all()
+        .filter((each) => each.tagName === 'button' && each.textContent === 'Update')
+        .map((each): [string, boolean] => {
+          assert.strictEqual(each.dataset.harness, row.dataset.harness, 'the control names the harness of its row');
+          return [row.dataset.harness as string, each.disabled];
+        }),
+    );
+}
+
+/** The Update control drawn beside the harness `key`. */
+function updateControl(page: Page, key: string): FakeElement {
+  const found = buttons(page).filter((each) => each.textContent === 'Update' && each.dataset.harness === key);
+  assert.strictEqual(found.length, 1, `one Update control beside ${key}`);
+  return found[0];
+}
+
+test('an Update control is drawn for every harness whose check found its CLI and an installed copy, whatever its version, and none for a missing CLI, no copy, a disabled copy, or a copy from another source', () => {
+  const page = loadSettings();
+  const send = (claude: Record<string, unknown>, antigravity: Record<string, unknown>, codex: Record<string, unknown>) =>
+    page.send({
+      type: 'harnessCheck',
+      check: {
+        state: 'checked',
+        harnesses: [
+          { key: 'claude', name: 'Claude Code', cli: 'claude', packaged: '2.0.0', ...claude },
+          { key: 'antigravity', name: 'Antigravity', cli: 'agy', packaged: '2.0.0', ...antigravity },
+          { key: 'codex', name: 'Codex', cli: 'codex', packaged: '2.0.0', ...codex },
+        ],
+      },
+    });
+  assert.deepStrictEqual(updateControls(page), [], 'none while no check result is posted');
+  page.send({ type: 'harnessCheck', check: { state: 'running' } });
+  assert.deepStrictEqual(updateControls(page), [], 'none while the check runs');
+
+  send({ installed: '2.0.0', scopes: ['user'] }, { installed: '2.1.0' }, { failed: 'version', installed: '1.9.0' });
+  assert.deepStrictEqual(
+    updateControls(page),
+    [
+      ['claude', false],
+      ['antigravity', false],
+      ['codex', false],
+    ],
+    'the same enabled control for the packaged version, a newer one, and an older one',
+  );
+  assert.strictEqual(updateControl(page, 'claude').title, 'Update the Gurita plugin on Claude Code to the latest published release at user scope');
+  assert.strictEqual(updateControl(page, 'antigravity').title, 'Update the Gurita plugin on Antigravity to the latest published release');
+  assert.ok(updateControl(page, 'codex').has('action'), 'drawn with the shared push button look');
+  assert.deepStrictEqual(
+    harnessRows(page).map(([, , lines]) => lines[1]),
+    [
+      'Every check passes: Gurita 2.0.0 is installed, the packaged version.',
+      'Every check passes: Gurita 2.1.0 is installed, newer than the packaged 2.0.0.',
+      'Installed version older than the packaged one: installed 1.9.0, packaged 2.0.0.',
+    ],
+    'the check line still says whether the versions differ',
+  );
+
+  send({ failed: 'cli' }, { failed: 'plugin' }, { failed: 'plugin', detail: 'the listing did not finish' });
+  assert.deepStrictEqual(updateControls(page), [], 'none for a CLI not found or no copy installed');
+
+  send({ failed: 'plugin', scopes: ['local', 'user'], disabled: true }, { failed: 'plugin', disabled: true }, { failed: 'plugin', disabled: true });
+  assert.deepStrictEqual(updateControls(page), [], 'none for a disabled copy, Claude Code\'s winning one included');
+
+  const other = (repository: string) => ({ found: 'the directory /work/gurita', repository, commands: ['remove', 'add', 'install'] });
+  send(
+    { installed: '2.0.0', scopes: ['user'], source: other('uHappyLogic/gurita-claude') },
+    { installed: '2.0.0' },
+    { installed: '2.0.0', source: other('uHappyLogic/gurita-codex') },
+  );
+  assert.deepStrictEqual(updateControls(page), [['antigravity', false]], 'none for a copy from another source');
+
+  page.send({ type: 'harnessCheck', check: { state: 'failed', cause: 'python3: not found' } });
+  assert.deepStrictEqual(updateControls(page), [], 'none when the check could not run');
+});
+
+test('a click on Update posts the update at once, on Claude Code over every detected scope, and the control is drawn disabled while an install or update run is going', () => {
+  const page = loadSettings();
+  page.send({
+    type: 'harnessCheck',
+    check: {
+      state: 'checked',
+      harnesses: [
+        { key: 'claude', name: 'Claude Code', cli: 'claude', installed: '2.0.0', packaged: '2.0.0', scopes: ['local', 'user', 'project'] },
+        { key: 'antigravity', name: 'Antigravity', cli: 'agy', failed: 'version', installed: '1.9.0', packaged: '2.0.0' },
+        { key: 'codex', name: 'Codex', cli: 'codex', installed: '2.0.0', packaged: '2.0.0' },
+      ],
+    },
+  });
+  assert.strictEqual(
+    updateControl(page, 'claude').title,
+    'Update the Gurita plugin on Claude Code to the latest published release at user, project and local scopes',
+  );
+  for (const [key, posted] of [
+    ['claude', { type: 'runPlugin', harness: 'claude', action: 'update', scopes: ['user', 'project', 'local'] }],
+    ['antigravity', { type: 'runPlugin', harness: 'antigravity', action: 'update' }],
+    ['codex', { type: 'runPlugin', harness: 'codex', action: 'update' }],
+  ] as const) {
+    const count = page.posted.length;
+    updateControl(page, key).click();
+    assert.deepStrictEqual(page.posted.slice(count), [posted], `one click on ${key}'s Update posts the update, asking nothing first`);
+  }
+
+  page.send({ type: 'pluginRun', run: { harness: 'codex', action: 'update', scopes: [] } });
+  assert.deepStrictEqual(
+    updateControls(page),
+    [
+      ['claude', true],
+      ['antigravity', true],
+      ['codex', true],
+    ],
+    'every Update control is drawn disabled while a run is going',
+  );
+  page.send({ type: 'pluginRun', run: { harness: 'claude', action: 'install', scopes: ['project'] } });
+  assert.ok(updateControls(page).every(([, disabled]) => disabled), 'an install going disables them too');
+  page.send({ type: 'pluginRun', run: null });
+  assert.ok(updateControls(page).every(([, disabled]) => !disabled), 'enabled again once no run goes');
 });
 
 test("the window's check again control asks for the check afresh, and a check that could not run shows its cause", () => {
@@ -384,7 +521,11 @@ function enabledRows(page: Page): [string, string | undefined, string | undefine
     .map((each) => [
       each.dataset.harness as string,
       each.all().find((child) => child.has('harness-state'))?.textContent,
-      each.all().find((child) => child.tagName === 'button')?.textContent,
+      each
+        .all()
+        .find((child) => child.has('harness-enabled'))
+        ?.all()
+        .find((child) => child.tagName === 'button')?.textContent,
     ]);
 }
 
@@ -1177,7 +1318,7 @@ test('every push button the window draws carries one class of the one shared loo
     assert.strictEqual(PUSH_CLASSES.filter((kind) => each.has(kind)).length, 1, `${name} carries exactly one push button class`);
     seen.add(name);
   }
-  for (const name of ['Duplicate', 'Rename', 'Delete', 'Make default', 'Reset', 'Disable', 'Enable', 'Remove', 'Add model', 'Add effort', 'Check again']) {
+  for (const name of ['Duplicate', 'Rename', 'Delete', 'Make default', 'Reset', 'Disable', 'Enable', 'Remove', 'Add model', 'Add effort', 'Check again', 'Update']) {
     assert.ok(seen.has(name), `${name} is drawn as a push button`);
   }
   const rules = stylesheetRules();

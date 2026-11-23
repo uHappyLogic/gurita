@@ -408,6 +408,19 @@ shows one line saying so, with the cause beneath it.
 
 ### Installing and updating the plugin
 
+Beside every harness whose check found its CLI and an installed Gurita copy, the window draws an
+**Update** control. It is offered whether or not the installed version differs from the packaged
+one, the check line beside it still saying which, and it is drawn the same, enabled, either way.
+No **Update** is drawn for a harness whose CLI was not found or that holds no copy, for a copy
+installed but disabled, Claude Code's copy in effect included, or for a copy whose plugin or `gurita`
+marketplace comes from another source, whose switching commands the window states instead. A
+click starts the update at once, with no confirmation, the click itself being your consent. On
+Claude Code the update acts at every scope a copy applying to the project was detected at, the
+`user` scope and the `project` and `local` scopes recorded for the project root, taken in the
+order user, project, local, and you choose nothing about scope; Antigravity and Codex take none.
+While any install or update run is going, every **Update** control is drawn disabled, as
+**Check again** is.
+
 An install or update of the Gurita plugin that the window starts runs in a terminal of its own,
 opened and shown as a recipe run's terminal is. The terminal's own process is the packaged
 `install_plugin.py`, beside `runner.py`, run with `python3` at the project root (the home

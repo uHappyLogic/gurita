@@ -88,6 +88,8 @@ const terminals: StubTerminal[] = [];
 const closeListeners: ((terminal: unknown) => void)[] = [];
 /** Every notification the extension showed, in order, by kind. */
 const notifications: { kind: 'information' | 'warning' | 'error'; message: string }[] = [];
+/** Every input box and quick pick the extension opened, in order. */
+const prompts: string[] = [];
 
 /** Closes `terminal` with the exit status `code`, as the editor does when its process ends. */
 function closeTerminal(terminal: StubTerminal, code: number | undefined): void {
@@ -202,8 +204,14 @@ const stub = {
       notifications.push({ kind: 'error', message });
       return Promise.resolve(undefined);
     },
-    showInputBox: () => Promise.resolve(undefined),
-    showQuickPick: () => Promise.resolve(undefined),
+    showInputBox: () => {
+      prompts.push('input box');
+      return Promise.resolve(undefined);
+    },
+    showQuickPick: () => {
+      prompts.push('quick pick');
+      return Promise.resolve(undefined);
+    },
   },
 };
 
@@ -628,6 +636,36 @@ test('a second run is refused while one is going, its terminal revealed, and a c
   closeTerminal(terminals[next], 0);
   await until(() => pluginRuns.pluginRunGoing() === undefined, 'that run ends');
   await checkSettled();
+});
+
+test("an Update click's request starts the update at once with no confirmation, on Claude Code over every detected scope it names", async () => {
+  await checkSettled();
+  const window = openWindow();
+  for (const [request, args, name] of [
+    [
+      { type: 'runPlugin', harness: 'claude', action: 'update', scopes: ['user', 'project', 'local'] },
+      ['claude', 'update', '--project', root, '--scope', 'user', '--scope', 'project', '--scope', 'local', '--wait'],
+      'Gurita: update on Claude Code (user, project, local)',
+    ],
+    [{ type: 'runPlugin', harness: 'antigravity', action: 'update' }, ['antigravity', 'update', '--project', root, '--wait'], 'Gurita: update on Antigravity'],
+  ] as const) {
+    const from = window.posted.length;
+    const created = terminals.length;
+    const told = notifications.length;
+    const asked = prompts.length;
+    sendSettings(request);
+    await until(() => terminals.length === created + 1 && runNotes(window, from).length > 0, 'the update starts');
+    const terminal = terminals[created];
+    assert.deepStrictEqual(terminal.options.shellArgs, ['/extension/install_plugin.py', ...args], 'the update acts at every scope named');
+    assert.strictEqual(terminal.options.name, name);
+    assert.strictEqual(terminal.shows, 1, 'its terminal is shown');
+    assert.deepStrictEqual(prompts.slice(asked), [], 'no input box or quick pick is opened first');
+    assert.deepStrictEqual(notifications.slice(told), [], 'no confirmation or other notification is shown first');
+    const runs = checkRuns();
+    closeTerminal(terminal, 0);
+    await until(() => pluginRuns.pluginRunGoing() === undefined && checkRuns() === runs + 1, 'the update ends');
+    await checkSettled();
+  }
 });
 
 test('a run request naming no harness, action, or scopes the install script takes starts nothing', async () => {
