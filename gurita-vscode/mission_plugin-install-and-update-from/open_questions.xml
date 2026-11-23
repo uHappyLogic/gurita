@@ -7,6 +7,41 @@
   </open-question>
   <open-question id="Version comparison baseline">
     <question>Installing the latest published release can leave a copy whose version differs from the one the extension was packaged from, which the harness check today reports as a failed check. Once the Settings window can install and update, which version is an installed copy compared with: the packaged version as today, the latest published version read from the distribution repository, or both? And if the latest published version is read, is it read with every harness check or only when the person asks?</question>
+    <alternative id="Packaged equality as today">
+      The installed copy is compared with the packaged version (`bundled/plugin_version.txt`) alone, by the exact string equality `src/harnessCheck.ts` uses now, a differing version, newer or older, still counting as the failed `version` check. The latest published version is never read, so the check stays offline and unchanged.
+      <advantage>Nothing in the check, its script, its tests, or its README section changes, the extension still contacts no network on a check, and it keeps the stance the overlapping marketplace-publication mission states, that the check comparing with the packaged version stays as it is.</advantage>
+      <drawback>An install or update from the window that fetches a release newer than the package leaves the harness reported as failed immediately after a successful install, so the window&apos;s own action produces the failure the question describes, and the window can never tell the person whether a newer release exists.</drawback>
+    </alternative>
+    <alternative id="Packaged as floor">
+      The installed copy is compared with the packaged version alone, but as a minimum rather than an equality: a copy older than the packaged version fails the `version` check, a copy equal to or newer than it passes. The latest published version is never read, and the check stays offline.
+      <advantage>A copy brought up to the latest release by the window no longer shows as failed, while an outdated copy that may lack what the packaged extension expects still does, all without any network read or new latency in the check.</advantage>
+      <drawback>The check needs a version ordering it does not have today (it compares strings only), and it still cannot tell the person whether a newer release is published, so an up-to-date-looking copy may be behind the distribution repository; it also departs from the marketplace-publication mission&apos;s stated premise that the check stays as it is.</drawback>
+    </alternative>
+    <alternative id="Version shown, no comparison">
+      The installed copy&apos;s version is shown without being compared with anything: neither the packaged version nor the latest published version counts toward the check, which fails only on a missing CLI or a missing or disabled plugin. Nothing reads a distribution repository.
+      <advantage>The simplest check that can never report a window-made install as failed, staying offline and dropping the version branch rather than adding ordering or network code.</advantage>
+      <drawback>The check loses every version signal: an old copy that no longer matches what the extension&apos;s recipes expect passes silently, and nothing tells the person an update is available, leaving Update a blind control.</drawback>
+    </alternative>
+    <alternative id="Latest only, every check">
+      The packaged version no longer enters the comparison; the installed copy is compared with the latest published version read from the harness&apos;s distribution repository, and that read runs as part of every harness check, the first opening of the window in a session and every Check again alike.
+      <advantage>The comparison matches exactly what Install and Update fetch, so a freshly installed copy reads as current and an outdated one is reported each time the window shows the check, with no extra control to learn.</advantage>
+      <drawback>Every check now contacts the network for each harness, adding latency inside the 120-second limit and a new failure mode offline or under rate limits that must not read as a failed install, and the compatibility signal between the extension and the plugin is lost; what counts as latest depends on the ref the published-release question settles.</drawback>
+    </alternative>
+    <alternative id="Latest only, on request">
+      The packaged version no longer enters the comparison, and the ordinary harness check reports the installed version without a version verdict; the latest published version is read only when the person asks, through a control of its own in the Settings window, and the installed copy is compared with it then.
+      <advantage>The routine check stays offline and as fast as today, and the network is contacted only on an explicit request, while the comparison the person does ask for is with the release Update would actually fetch.</advantage>
+      <drawback>Until the person asks, nothing flags an outdated or incompatible copy, the window gains one more control and a second, separately kept result, and whether Update is offered before any request is made depends on how the update-availability question settles.</drawback>
+    </alternative>
+    <alternative id="Both, latest every check">
+      The installed copy is compared with both versions on every harness check: with the packaged version as a floor, a copy older than it failing the check, and with the latest published version read from the distribution repository, a copy older than that shown as having an update available rather than as a failure.
+      <advantage>The two comparisons answer two different things, compatibility with this extension and currency against the published release, so a window-made install of a newer release passes while both an incompatible copy and an outdated one are told apart on every view.</advantage>
+      <drawback>It carries both costs at once: a version ordering the check lacks today and a network read for every harness on every check, with offline and rate-limit outcomes to tell apart from install failures, plus a second verdict per harness for the page to draw and the tests to cover.</drawback>
+    </alternative>
+    <alternative id="Both, latest on request">
+      The ordinary harness check compares the installed copy with the packaged version as a floor, offline, a copy older than it failing; the latest published version is read only when the person asks, through a control of its own, and a copy older than it is then shown as having an update available.
+      <advantage>The routine check keeps its offline speed and gains a compatibility verdict that a window-made install no longer trips, while the published-release comparison is there on demand without making every check depend on the network.</advantage>
+      <drawback>It is the largest change to the window and the check: version ordering, a new control, and a second result kept beside the session-kept check, and an outdated but compatible copy goes unflagged until the person asks; how the update control behaves before that request depends on the update-availability question.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Update control availability">
     <question>For a harness that has a Gurita copy installed, is the Update control in the Settings window offered always, or only when the installed copy&apos;s version is found to differ from the version it is compared with?</question>
