@@ -1,28 +1,4 @@
 <open-questions>
-  <open-question id="Disabled Antigravity or Codex copy">
-    <question>The harness check counts an Antigravity or Codex Gurita copy that is installed but disabled as not installed. What does the Settings window offer for such a copy: Install, Update, or neither, saying instead that the copy must be enabled in the harness itself, as it does for a disabled Claude Code copy?</question>
-    <recommendation option="Neither, enable in harness">It gives all three harnesses the rule already recorded for a disabled Claude Code copy, so the window never installs or updates over a state the person set on purpose and never reports a success that leaves the harness still reading as without a copy.</recommendation>
-    <alternative id="Neither, enable in harness">
-      The harness check reports a disabled Antigravity or Codex copy as its own state, installed but disabled, beside the not-installed and installed states. For such a copy the window offers neither Install nor Update and adds no enable control; it says the copy is disabled and must be enabled in the harness itself, on Antigravity with `agy plugin enable gurita`, on Codex through its own plugin settings, matching what the window says for a disabled Claude Code copy.
-      <advantage>All three harnesses treat a disabled copy the same way, and the window never runs an install or update over a copy whose disabled state the person chose, so nothing it does can be mistaken for having fixed the copy or re-enable it behind the person&apos;s back.</advantage>
-      <drawback>The check&apos;s print and its copy selection for both harnesses change, with their tests, and a disabled copy that is also out of date cannot be brought up to date from the window until it is enabled, an extra trip to the harness.</drawback>
-    </alternative>
-    <alternative id="Install as not installed">
-      The harness check stays as it is: a disabled Antigravity `gurita` entry or a disabled Codex `gurita@gurita` entry is counted not installed, with no disabled state in the check&apos;s print. The Settings window treats such a harness exactly like one holding no copy, offering Install and no Update, and says nothing about the copy being disabled.
-      <advantage>Nothing in `harness_check.py`, its print, or the page&apos;s drawing changes, so the harness check and its tests stay exactly as the earlier mission left them and the window keeps one rule for every harness without a copy.</advantage>
-      <drawback>Install runs over a copy that is already there: on Antigravity it extracts a release into the disabled copy&apos;s own directory, on Codex it re-adds a plugin already installed, and whether either leaves the copy disabled is unobserved, so the person can click Install, see it succeed, and still find the harness reporting no copy, with nothing on the page telling them why. How each command behaves over a disabled copy depends on how the mission observes the commands.</drawback>
-    </alternative>
-    <alternative id="Update, marked disabled">
-      The harness check reports a disabled Antigravity or Codex copy as installed but disabled. The window offers Update for it, as for any installed copy, and no Install, and its line says the copy is disabled and must be enabled in the harness itself; no enable control is added.
-      <advantage>A disabled copy can still be brought to the latest release from the window, so it is current the moment the person enables it, and the line keeps the disabled state visible rather than hiding it as a missing copy.</advantage>
-      <drawback>It departs from the disabled Claude Code rule, which offers nothing at a disabled scope, so the window treats a disabled copy two ways depending on the harness; and whether an update leaves an Antigravity or Codex copy disabled, or re-enables it, is unobserved and depends on how the mission observes the commands and on the update steps chosen for each harness.</drawback>
-    </alternative>
-    <alternative id="Antigravity enable control">
-      The harness check reports a disabled Antigravity or Codex copy as installed but disabled, and the window offers neither Install nor Update for it. For Antigravity it adds one Enable control that runs `agy plugin enable gurita` in a terminal like an install, followed by the harness check afresh; for Codex, whose CLI has no enable command, it says the copy must be enabled in Codex itself.
-      <advantage>The commonest disabled case on a harness with an enable command is resolved with one click from the window, without the person having to know or type the harness&apos;s command.</advantage>
-      <drawback>It adds a control the goal does not name and the disabled Claude Code decision declined for its own harness, makes the three harnesses differ in what a disabled copy offers, and has the window change a state the person set on purpose in the harness.</drawback>
-    </alternative>
-  </open-question>
   <open-question id="Hands-on command verification">
     <question>No install, update, or marketplace command has yet been run against any harness, so what each prints, whether it prompts, and how long it takes are unknown, and the copies on the maintainer&apos;s machine are installed from the local checkout. How does the mission observe the commands before building on them: by running them against those real installations, by running them against a separate configuration home per harness, or not at all, relying on each CLI&apos;s help text?</question>
     <applied-principle>Check tier claims against the live environment</applied-principle>
