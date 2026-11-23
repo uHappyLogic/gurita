@@ -22,45 +22,6 @@
       <drawback>It adds a task and needs the release skill to have a way to stop before publishing, which it would carry only for this rehearsal, and the publication itself still stands on no list, with the off-the-list option&apos;s gap that nothing checks it happened before finish. A rehearsal reaching the token check depends on the axis the `Publish site and tokens` question owns.</drawback>
     </alternative>
   </open-question>
-  <open-question id="Root documents mention">
-    <question>The root `README.md`, `CONTRIBUTING.md`, and `docs/` do not mention the extension, by a decision of the mission that first built it. Once it is published, does any of them gain a mention of it with links to its listings, and which?</question>
-    <recommendation option="README and CONTRIBUTING">The reason the root documents stayed silent, an unpublished extension installed by hand, ends with the publication: the landing page is where a prospective user looks for how to install Gurita, and a contributor changing `gurita-vscode/` should learn from `CONTRIBUTING.md` that it has a build, test, and release path of its own, which only the context file records today.</recommendation>
-    <alternative id="README and CONTRIBUTING">
-      After the first publication, the root `README.md` gains the short subsection with links to both listings and to `gurita-vscode/README.md`. `CONTRIBUTING.md`&apos;s `## Development` gains a pointer: the extension under `gurita-vscode/` has a build and test loop of its own (Node 22 through nvm, independent of the host build and `VERSION`), documented in its README, and is released through its own maintainer-only skill rather than `/release-plugin`. `docs/` stays untouched.
-      <advantage>Covers both audiences the extension now has: users find it on the landing page, and contributors learn that a change under `gurita-vscode/` follows a different build, test, and release path. Today only `CLAUDE.md` records that path.</advantage>
-      <drawback>Adds contributor prose that has to follow the extension&apos;s tooling and release skill as they change. Its wording depends on how the sibling questions on the release skill and on CI for the extension settle.</drawback>
-    </alternative>
-    <alternative id="No mention">
-      Keep the first extension mission&apos;s decision as it stands: the root `README.md`, `CONTRIBUTING.md`, and `docs/` stay untouched by this mission, the two listings and `gurita-vscode/README.md` stay the extension&apos;s only documentation, and the root documents are left for a later mission to change, if any ever does.
-      <advantage>Costs nothing and reopens no recorded decision. The root documents stay about the plugin alone, the extension&apos;s documentation keeps one home, and a reader on a listing still reaches the repository through the manifest&apos;s `repository` entry.</advantage>
-      <drawback>A reader who arrives at the plugin&apos;s repository or reads its docs never learns that a published extension exists. The only path to it is a registry search, so the publication this mission is for stays almost invisible from the project&apos;s own landing page.</drawback>
-    </alternative>
-    <alternative id="README subsection">
-      After the first publication, the root `README.md` gains a short prose subsection, for example `### VS Code extension` under `## Installation` beside the three host subsections. In one or two sentences it says what the extension is, links to its Marketplace and Open VSX listings, and links to `gurita-vscode/README.md` for its use documentation. `CONTRIBUTING.md` and `docs/` stay untouched.
-      <advantage>Puts the extension where a prospective user already looks for how to install Gurita, at the cost of a few lines in one file. Everything else about it stays in the extension&apos;s own README.</advantage>
-      <drawback>Partly reverses the earlier one-README decision. The root README now carries listing URLs that must stay correct if the extension&apos;s identifier or listings ever change, and a contributor reading `CONTRIBUTING.md` still finds no word of the extension&apos;s separate build and release path.</drawback>
-    </alternative>
-    <alternative id="README badges">
-      After the first publication, the root `README.md`&apos;s centred badge row gains a Marketplace badge and an Open VSX badge, each showing the published version or install count and linking to its listing. No prose is added anywhere, and `CONTRIBUTING.md` and `docs/` stay untouched.
-      <advantage>The smallest visible mention, in a form the README already uses for its release, CI, and license badges. It changes no section of the README&apos;s text and shows at a glance that the extension is live and which version is.</advantage>
-      <drawback>A badge says nothing about what the extension does or how it relates to the plugin, so a reader has to click through to learn it. It also depends on a third-party badge service still supporting both registries, a dependency the README&apos;s existing GitHub-based badges do not have.</drawback>
-    </alternative>
-    <alternative id="README and docs">
-      After the first publication, the root `README.md` gains the short subsection with links to both listings and to `gurita-vscode/README.md`. `docs/ways-of-using.md` also gains a brief mention that the extension runs these headless chains as recipes from a VS Code side bar, with the same links. `CONTRIBUTING.md` stays untouched.
-      <advantage>Reaches the reader at the point where the extension is most useful: the ways-of-using page describes the chains it runs, so a reader typing those lines by hand learns that a published tool runs them.</advantage>
-      <drawback>Spreads listing links across two user-facing documents that must be kept in step. The ways-of-using page, so far purely about command lines, gains a pointer to a separate product whose recipe file (`gurita-vscode/shipped_recipes.md`) can drift from the page&apos;s chains.</drawback>
-    </alternative>
-    <alternative id="All root documents">
-      After the first publication, all three gain a mention: the root `README.md` gets the short subsection with links to both listings and to `gurita-vscode/README.md`, `docs/ways-of-using.md` gets the brief mention that the extension runs the chains as recipes, with the same links, and `CONTRIBUTING.md`&apos;s `## Development` gets the pointer to the extension&apos;s own build, test, and release path.
-      <advantage>Fully reverses the earlier decision now that the reason for it, an unpublished, hand-installed extension, no longer holds. Every root document a user or contributor reads acknowledges the extension where it bears.</advantage>
-      <drawback>The largest edit and the most surfaces to keep correct: listing links in two documents and contributor prose in a third. Some of the extension&apos;s description is repeated outside its own README, which the one-README decision existed to prevent.</drawback>
-    </alternative>
-    <alternative id="README and host READMEs">
-      After the first publication, the root `README.md` gains the short subsection with links to both listings and to `gurita-vscode/README.md`. The same subsection is added to each host&apos;s README template under `scripts/hosts/&lt;host&gt;/`, so the published distribution repositories carry it too once the next plugin release publishes them. `CONTRIBUTING.md` and `docs/` stay untouched.
-      <advantage>Reaches the readers most likely to want the extension: people who install the plugin from a distribution repository and may never open the root repository.</advantage>
-      <drawback>Goes beyond the three root documents the question names. It requires a host rebuild under the drift gate, it shows in the distribution repositories only after a plugin release, and it puts the same listing links in four READMEs.</drawback>
-    </alternative>
-  </open-question>
   <open-question id="Maintainer-only tasks">
     <question>The goal makes creating the Marketplace publisher and the Open VSX namespace and issuing the two tokens the mission&apos;s first tasks, but a task run is carried out by an agent that can do none of them. What does completing such a task consist of: who does what, and what does the task verify before it counts as done?</question>
     <alternative id="Gate task, existence check only">

@@ -96,5 +96,9 @@ No Marketplace publisher, Open VSX namespace, or token for either is recorded as
 
 - **Windows installs.** The package stays universal and installable on every platform, and the README states the limit. The extension gains a check at activation: on native Windows (the platform is `win32` and the window is not a remote one) it shows one message saying it runs only on macOS, Linux, or through Remote-WSL, and leaves its view, windows, and runner inert instead of letting them run. In a Remote-WSL window the extension runs on the Linux side, so the check never fires there.
 
+### Root documents
+
+- **Root documents mention.** After the first publication the root `README.md` gains a short subsection with links to both listings and to `gurita-vscode/README.md`, and `CONTRIBUTING.md`'s `## Development` gains a pointer: the extension under `gurita-vscode/` has a build and test loop of its own (Node 22 through nvm, independent of the host build and `VERSION`), documented in its README, and is released through its own maintainer-only skill rather than `/release-plugin`. `docs/` stays untouched.
+
 ## Out of Scope
 
