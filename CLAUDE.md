@@ -52,7 +52,7 @@ hosts/<host>/                    — committed build output, never hand-edited; 
 .claude/skills/release-plugin/   — maintainer-only release skill, outside core/ so no host renders it
 mission_<slug>/                  — this repo's own root-scoped missions (self-dogfooding), each directly at the root; a finished mission's directory is removed by its `Mission-finish: <path>` commit
 answer_decision_principles.md    — project-wide principle store, at the project root, read by recommend-procedure.md, written only by capture-mission-principle-updates
-ideas/                           — design drafts that precede any mission, versioned so they can be revised in the open; holds the benchmark draft, the VS Code extension draft, and vscode_extension_follow_up.md, the work its first version left out
+ideas/                           — design drafts that precede any mission, versioned so they can be revised in the open; holds the benchmark draft
 .github/workflows/drift-gate.yml — CI: --check then both pytest runs in one job; actions pinned to SHAs bumped by hand
 .github/workflows/traffic-badges.yml — daily traffic-badge workflow; its copies under scripts/hosts/ are kept in sync by hand (grep github-traffic-badge@)
 docs/                            — workflow.md (phase narrative, how skills commit, learning loop), skill-reference.md (one entry per skill), design-claims.md, ways-of-using.md (headless chains)
