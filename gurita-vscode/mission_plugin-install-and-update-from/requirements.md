@@ -64,6 +64,8 @@ Nothing in the extension installs or updates the plugin on any harness, and noth
 
 - **Install beside an existing copy.** While Claude Code holds a Gurita copy at one or more scopes that apply to the open project, the Settings window still offers Install for Claude Code, at every one of the three scopes (user, project, local) that holds no copy applying to the project, whether that scope is more or less specific than the copy that wins. A scope already holding an applying copy is not offered for Install, that copy being reached through Update. Copies at project or local scope recorded for other project roots do not count, since they do not apply to the open project.
 
+- **Update target scopes.** One click on Update acts on every scope at which a Gurita copy was detected for the open project: the user entry and each project or local entry whose `projectPath` equals the project root. The window runs one scoped update per such scope in one run (`claude plugin update gurita@gurita -s user`, then `-s project`, then `-s local`, as detected), and the person chooses nothing about scope.
+
 ### Running an install or update
 
 - **Install run form.** An install or update started from the Settings window runs in a terminal the extension opens and shows, as a recipe run does, so its output and any prompt are visible and answerable there. The extension also watches that terminal's process end, taking its exit status through the terminal or through a VS Code task run in the terminal panel, and the window then reports how the run ended, success or failure, beside the harness or in a notification.
