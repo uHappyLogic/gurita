@@ -52,5 +52,9 @@ Nothing in the extension installs or updates the plugin on any harness, and noth
 
 ## Decisions
 
+### Release fetched
+
+- **Published release ref.** The latest published release of a harness's distribution repository is the one GitHub marks as latest for it: the newest release that is neither a draft nor a prerelease, or one a maintainer marked as latest. The extension reads it through GitHub's `releases/latest` endpoint or the `/releases/latest` page redirect and passes that release's tag to the harness's install path as an explicit ref: to Codex as `uHappyLogic/gurita-codex@<tag>` or `--ref <tag>`, to Antigravity as `archive/refs/tags/<tag>.tar.gz`, and to Claude Code through a marketplace source that carries the ref. An update reads the latest release again and moves the harness to its tag.
+
 ## Out of Scope
 
