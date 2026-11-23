@@ -168,12 +168,61 @@ test('a left-out remembered variant or default gives way to the default when sti
   assert.deepStrictEqual(listed([], [['Review', 'Mixed']], picked('Antigravity'))[0], ['Review', ['Claude Code', 'Antigravity', 'Mixed'], 'Mixed'], 'enabled again, the remembered selection comes back');
 });
 
-test('disabling leaves the fixed-name buttons and the named single-task lines as they are', () => {
+test("disabling leaves a fixed-name button's variants on that harness out of its dropdown, a button so left with none standing with no variant, and the named single-task lines as they are", () => {
   const button = buttonRecipe(recipes(), BUTTON_RECIPES.answerWithRecommendation, ['path', 'Short Title']);
   assert.ok(button.state === 'found');
-  assert.match(button.variant.lines[0], /^agy /, 'the button runs its default whatever harness its line names');
+  assert.match(button.variant.lines[0], /^agy /, 'with every harness enabled the button offers its Antigravity line');
+  assert.deepStrictEqual(buttonRecipe(recipes(), BUTTON_RECIPES.answerWithRecommendation, ['path', 'Short Title'], undefined, ['claude']).state, 'found');
+  const left = buttonRecipe(recipes(), BUTTON_RECIPES.answerWithRecommendation, ['path', 'Short Title'], undefined, ['agy']);
+  assert.ok(left.state === 'disabled', 'its one variant on a disabled harness leaves the button with none');
+  assert.strictEqual(left.recipe.name, BUTTON_RECIPES.answerWithRecommendation);
+  assert.match(left.cause, /disabled harness/);
   assert.deepStrictEqual(
     singleTaskLines(recipes()).map((line) => line.name),
     ['Single task (Claude Code)', 'Single task (Antigravity)'],
   );
+});
+
+test("a fixed-name button's dropdown stands on the remembered variant, else the default, else the first offered, and offers only the variants it can run", () => {
+  const text = `## Recipes
+
+### ${BUTTON_RECIPES.discussQuestion}
+#### Claude Code
+\`\`\`
+claude "/gurita:discuss-open-question --mission <path> <Short Title>. <note>" --model "fable"; # interactive
+\`\`\`
+
+#### Antigravity
+\`\`\`
+agy -i "/gurita:discuss-open-question --mission <path> <Short Title>. <note>" --model "gemini-4-argon"; # interactive
+\`\`\`
+
+#### Unfillable
+\`\`\`
+claude "/gurita:discuss-open-question --mission <path> <Task Title>"; # interactive
+\`\`\`
+
+#### Mixed
+\`\`\`
+agy -p "/gurita:review-mission-requirements --mission <path>";
+claude "/gurita:discuss-open-question --mission <path> <Short Title>"; # interactive
+\`\`\`
+`;
+  const from = parseShippedRecipes(text, '/shipped.md');
+  const picked = (name: string) => from.map((recipe) => ({ ...recipe, picked: { name, origin: 'shipped' as const } }));
+  const offered = (list: Recipe[], remembered?: string, disabled: ('claude' | 'agy' | 'codex')[] = []): [string[], string] => {
+    const found = buttonRecipe(list, BUTTON_RECIPES.discussQuestion, ['path', 'Short Title', 'note'], remembered, disabled);
+    assert.ok(found.state === 'found');
+    assert.strictEqual(found.variant, found.variants[found.selected]);
+    return [found.variants.map((each) => each.name), found.variant.name];
+  };
+  const all = ['Claude Code', 'Antigravity', 'Mixed'];
+  assert.deepStrictEqual(offered(from), [all, 'Claude Code'], 'a variant the button cannot fill is not offered; nothing remembered, the first');
+  assert.deepStrictEqual(offered(picked('Antigravity')), [all, 'Antigravity'], 'the default picked');
+  assert.deepStrictEqual(offered(picked('Antigravity'), 'Mixed'), [all, 'Mixed'], 'a remembered selection wins over the default');
+  assert.deepStrictEqual(offered(picked('Antigravity'), 'Gone'), [all, 'Antigravity'], 'a remembered variant the recipe lacks gives way to the default');
+  assert.deepStrictEqual(offered(picked('Antigravity'), 'Mixed', ['agy']), [['Claude Code'], 'Claude Code'], 'on a disabled harness the remembered one and the default give way to the first offered');
+  assert.deepStrictEqual(offered(picked('Antigravity'), 'Claude Code', ['claude']), [['Antigravity'], 'Antigravity']);
+  assert.deepStrictEqual(offered(picked('Unfillable')), [all, 'Claude Code'], 'a default the button cannot run gives way to the first offered');
+  assert.strictEqual(buttonRecipe(from, BUTTON_RECIPES.discussQuestion, ['path', 'Short Title', 'note'], undefined, ['claude', 'agy']).state, 'disabled');
 });

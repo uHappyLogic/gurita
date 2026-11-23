@@ -50,12 +50,21 @@
 // alone, carries that variant's lines as written in its hover text, and starts that variant's
 // chain for the page's mission when clicked, and a selected variant holding a placeholder the
 // extension does not know is shown as a non-runnable entry naming it and its file. The seven buttons
-// outside the recipe list, which run a recipe by its fixed name, carry no dropdown, and each shows
-// what it runs in the recipe list's form, as the extension posts it with the pages and with the
-// failure state: its name with the distinct harnesses, models, and efforts of its recipe's
-// default, the one picked in the settings view, with that variant's lines as written in its hover
-// text, and its name alone, with a hover text saying what it does, when the recipe could not be
-// read or run, a variant none of whose lines is readable also showing its name alone.
+// outside the recipe list, which run a recipe by its fixed name, take the recipe list's pick
+// mechanics, as the extension posts them, the five on a mission's page with that mission and the
+// two mission-starting buttons with the pages and with the failure state: a dropdown beside each
+// offers the variants the button can run, a person's own marked as theirs, and stands on the one
+// selected, the one remembered for the recipe, per mission for the buttons on a mission's page and
+// once per project for the two mission-starting buttons, else the recipe's default, a question
+// card holding one dropdown beside its Alternatives heading shared by its answer-with-alternative
+// buttons; picking another posts it with the button, and its mission for a button on a mission's
+// page, to the extension, which remembers it and posts the page again. Each button shows its name
+// with the distinct harnesses, models, and efforts of the variant selected, with that variant's
+// lines as written in its hover text, its click posting that variant's name; a button the
+// extension posts with no variant, every one it could run having a line on a disabled harness,
+// stays drawn but disabled, with no dropdown, and one posted with nothing, its recipe not read or
+// not one it can run, shows its name alone with a hover text saying what it does, as does a
+// variant none of whose lines is readable.
 // A looped recipe's button asks the extension for its preview instead, drawn on the page beneath
 // the recipes: every remaining task with the line the rules give it or as unresolved, naming the
 // missing line, and above them what the runner said about a missing or unreadable rule file,
@@ -79,7 +88,7 @@
 // mission is running, as the extension posts when a run starts, when its terminal closes, and with
 // every redraw, that mission's page draws every action button on it disabled, its recipe buttons,
 // its question card's buttons, its preview's start button, and its New task button, and its
-// workflow diagram's filled block pulses; the recipe dropdowns, the tabs, the refresh control, the question view's
+// workflow diagram's filled block pulses; the recipe dropdowns and the fixed-name buttons' dropdowns, the tabs, the refresh control, the question view's
 // previous and next buttons and dependency links, the preview's close button, the other missions'
 // pages, the two pane headers, the two mission-starting buttons, and the settings control stay
 // enabled, and the left and right arrow keys move the question view only while its pane is shown.
@@ -182,6 +191,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
     defaultPane?: MissionPane;
     /** The recipe list its page shows, the recipes that fit its step, or the cause the recipes could not be read. */
     recipes: RecipePart;
+    /** What the fixed-name buttons on its page run, which their dropdowns, labels, and hover text show. */
+    buttons?: FixedButtons;
   }
 
   type RecipeGroup = 'shipped' | 'own';
@@ -224,11 +235,14 @@ declare function acquireVsCodeApi(): VsCodeApi;
     | 'defineMission'
     | 'discussTask';
 
-  /** What a fixed-name button runs, as the extension posts it: its default variant's lines and their values. */
-  interface FixedButtonEntry {
-    lines: string[];
-    values: VariantValues;
-  }
+  /**
+   * What a fixed-name button runs, as the extension posts it: the variants its dropdown offers and
+   * the one selected, with that variant's lines and their values; or no variant, every one it could
+   * run having a line on a disabled harness, the button drawn disabled.
+   */
+  type FixedButtonEntry =
+    | { state: 'offered'; lines: string[]; values: VariantValues; variants: PageVariantChoice[]; selected: number }
+    | { state: 'disabled'; cause: string };
 
   /** What each fixed-name button runs, by the button; a button whose recipe cannot be read or run is left out. */
   type FixedButtons = Partial<Record<FixedButton, FixedButtonEntry>>;
@@ -391,7 +405,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
   const RESET_LABEL = 'Reset';
   const DEFAULT_MARK = 'Default';
   const DELETED_MARK = 'Deleted';
-  const FIXED_NOTE = 'Run by a button outside the recipe list, which runs this default.';
+  const FIXED_NOTE = 'Run by a button outside the recipe list, which runs this default until another variant is selected beside it.';
   const LINES_HEADING = 'Single-task lines';
   const LINES_FAILURE_LINE = 'The single-task lines could not be read.';
   const NOT_RUN_MARK = 'Not run';
@@ -456,8 +470,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
   let drawn: 'nothing' | 'live' | 'failure' = 'nothing';
   /** Each mission's preview, by its path, while it stands on the page. */
   const previews = new Map<string, Preview>();
-  /** What each fixed-name button runs, as the extension last posted it with the pages or the failure state. */
-  let fixed: FixedButtons = {};
+  /** What the two mission-starting buttons run, as the extension last posted it with the pages or the failure state. */
+  let startingButtons: FixedButtons = {};
   /** Whether the settings view stands beneath the tab row in place of the mission page or the failure state. */
   let settingsShown = false;
   /** The harness check the extension last posted, drawn by the settings view; undefined until one is posted. */
@@ -508,21 +522,84 @@ declare function acquireVsCodeApi(): VsCodeApi;
   }
 
   /**
-   * A fixed-name button, in the form the recipe list's buttons take: its name, then the values its
-   * recipe's default variant carries, as the extension posts them, when any is readable, with that
-   * variant's lines as written in its hover text, and its name alone with `hover` as its hover text
-   * when its recipe could not be read or run. Drawn disabled while `busy`, when given.
+   * A fixed-name button, in the form the recipe list's buttons take: its name, then the values the
+   * variant selected in its dropdown carries, as the extension posts `entry`, when any is readable,
+   * with that variant's lines as written in its hover text; its name alone with `hover` as its
+   * hover text when nothing is posted, its recipe not read or not one it can run; and its name
+   * alone, drawn disabled, with the cause beneath `hover` in its hover text, when it offers no
+   * variant, every one it could run having a line on a disabled harness. A click hands `onClick`
+   * the selected variant's name, none while nothing is posted. Drawn disabled while `busy` too,
+   * when given.
    */
-  function fixedButton(key: FixedButton, label: string, hover: string, className: string, busy: boolean | undefined, onClick: () => void): HTMLButtonElement {
-    const node = busy === undefined ? button('', className, onClick) : action('', className, busy, onClick);
+  function fixedButton(
+    entry: FixedButtonEntry | undefined,
+    label: string,
+    hover: string,
+    className: string,
+    busy: boolean | undefined,
+    onClick: (variant: string | undefined) => void,
+  ): HTMLButtonElement {
+    const variant = entry?.state === 'offered' ? entry.variants[entry.selected]?.name : undefined;
+    const node = busy === undefined ? button('', className, () => onClick(variant)) : action('', className, busy, () => onClick(variant));
     node.append(element('span', label, 'recipe-name'));
-    const entry = fixed[key];
-    const values = entry === undefined ? '' : valuesLabel(entry.values);
-    if (values !== '') {
-      node.append(element('span', values, 'recipe-values'));
+    if (entry?.state === 'offered') {
+      const values = valuesLabel(entry.values);
+      if (values !== '') {
+        node.append(element('span', values, 'recipe-values'));
+      }
+      node.title = entry.lines.join('\n');
+    } else if (entry?.state === 'disabled') {
+      node.disabled = true;
+      node.title = `${hover}\n${entry.cause}`;
+    } else {
+      node.title = hover;
     }
-    node.title = entry === undefined ? hover : entry.lines.join('\n');
     return node;
+  }
+
+  /**
+   * The dropdown beside a fixed-name button, or beside the alternatives of a question's card for
+   * their answer-with-alternative buttons, which share it: one option per variant `entry` offers,
+   * in order, a variant of the person's own marked as theirs, standing on the selected one, and
+   * none while the button offers no variant or nothing is posted for it. Picking another posts it
+   * to the extension with the button and, for a button on a mission's page, its mission, and the
+   * extension remembers it and posts the page again.
+   */
+  function fixedDropdown(key: FixedButton, entry: FixedButtonEntry | undefined, label: string, mission?: string): HTMLSelectElement | undefined {
+    if (entry?.state !== 'offered') {
+      return undefined;
+    }
+    const choice = element('select', undefined, 'recipe-variant');
+    choice.setAttribute('aria-label', `The variant of ${label}`);
+    choice.dataset.focus = `button-variant-${key}`;
+    variantOptions(choice, entry.variants, entry.selected);
+    choice.addEventListener('change', () => {
+      const variant = entry.variants[Number(choice.value)];
+      if (variant !== undefined) {
+        vscode.postMessage({ type: 'selectButtonVariant', button: key, mission, variant: variant.name });
+      }
+    });
+    return choice;
+  }
+
+  /** A fixed-name button with its dropdown beside it, as `fixedButton` and `fixedDropdown` draw them. */
+  function fixedEntry(
+    key: FixedButton,
+    entry: FixedButtonEntry | undefined,
+    label: string,
+    hover: string,
+    className: string,
+    busy: boolean | undefined,
+    mission: string | undefined,
+    onClick: (variant: string | undefined) => void,
+  ): HTMLElement {
+    const item = element('span', undefined, 'recipe-entry');
+    item.append(fixedButton(entry, label, hover, className, busy, onClick));
+    const dropdown = fixedDropdown(key, entry, label, mission);
+    if (dropdown !== undefined) {
+      item.append(dropdown);
+    }
+    return item;
   }
 
   function save(): void {
@@ -1067,11 +1144,11 @@ declare function acquireVsCodeApi(): VsCodeApi;
     const refresh = button('Refresh', 'control', () => vscode.postMessage({ type: 'refresh' }));
     refresh.title = 'Re-read the live missions and their documents';
     const starting = element('div', undefined, 'starting');
-    const discuss = fixedButton('discussGoal', 'New mission', 'Type a goal and open an interactive discussion of it', 'recipe', undefined, () =>
-      vscode.postMessage({ type: 'missionButton', button: 'discussGoal' }),
+    const discuss = fixedEntry('discussGoal', startingButtons.discussGoal, 'New mission', 'Type a goal and open an interactive discussion of it', 'recipe', undefined, undefined, (variant) =>
+      vscode.postMessage({ type: 'missionButton', button: 'discussGoal', variant }),
     );
-    const define = fixedButton('defineMission', 'Define mission', 'Type a goal and its scope and define the mission', 'recipe', undefined, () =>
-      vscode.postMessage({ type: 'missionButton', button: 'defineMission' }),
+    const define = fixedEntry('defineMission', startingButtons.defineMission, 'Define mission', 'Type a goal and its scope and define the mission', 'recipe', undefined, undefined, (variant) =>
+      vscode.postMessage({ type: 'missionButton', button: 'defineMission', variant }),
     );
     starting.append(discuss, define);
     const settings = button(SETTINGS_LABEL, 'control', () => showSettings(true));
@@ -1187,8 +1264,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
     const actions = element('div', undefined, 'card-actions');
     for (const [kind, label, hover] of QUESTION_BUTTONS) {
       actions.append(
-        fixedButton(kind, label, hover, 'action', busy, () =>
-          vscode.postMessage({ type: 'questionButton', button: kind, mission: mission.path, question: question.id }),
+        fixedEntry(kind, mission.buttons?.[kind], label, hover, 'action', busy, mission.path, (variant) =>
+          vscode.postMessage({ type: 'questionButton', button: kind, mission: mission.path, question: question.id, variant }),
         ),
       );
     }
@@ -1210,15 +1287,22 @@ declare function acquireVsCodeApi(): VsCodeApi;
 
     if (question.alternatives.length > 0) {
       const part = element('div', undefined, 'slot');
-      part.append(element('h5', 'Alternatives'));
+      const alternativesHead = element('div', undefined, 'alternatives-head');
+      alternativesHead.append(element('h5', 'Alternatives'));
+      const shared = mission.buttons?.answerWithAlternative;
+      const dropdown = fixedDropdown('answerWithAlternative', shared, 'Answer with this alternative', mission.path);
+      if (dropdown !== undefined) {
+        alternativesHead.append(dropdown);
+      }
+      part.append(alternativesHead);
       for (const alternative of question.alternatives) {
         const picked = pick !== undefined && alternative.id === pick.option;
         const entry = element('div', undefined, picked ? 'alternative picked' : 'alternative');
         const line = element('div', undefined, 'alternative-head');
         line.append(element('h6', picked ? `${alternative.id} (picked)` : alternative.id));
         line.append(
-          fixedButton('answerWithAlternative', 'Answer with this alternative', `Record ${alternative.id} as the decision`, 'action', busy, () =>
-            vscode.postMessage({ type: 'alternativeButton', mission: mission.path, question: question.id, alternative: alternative.id }),
+          fixedButton(shared, 'Answer with this alternative', `Record ${alternative.id} as the decision`, 'action', busy, (variant) =>
+            vscode.postMessage({ type: 'alternativeButton', mission: mission.path, question: question.id, alternative: alternative.id, variant }),
           ),
         );
         entry.append(line);
@@ -1317,8 +1401,15 @@ declare function acquireVsCodeApi(): VsCodeApi;
     view.setAttribute('aria-label', 'Remaining tasks');
     const head = element('div', undefined, 'controls');
     head.append(
-      fixedButton('discussTask', 'New task', 'Type an issue and open an interactive discussion of it into tasks for this mission', 'action', busy, () =>
-        vscode.postMessage({ type: 'taskButton', mission: mission.path }),
+      fixedEntry(
+        'discussTask',
+        mission.buttons?.discussTask,
+        'New task',
+        'Type an issue and open an interactive discussion of it into tasks for this mission',
+        'action',
+        busy,
+        mission.path,
+        (variant) => vscode.postMessage({ type: 'taskButton', mission: mission.path, variant }),
       ),
     );
     view.append(head);
@@ -1396,12 +1487,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
     const choice = element('select', undefined, 'recipe-variant');
     choice.setAttribute('aria-label', `The variant of ${recipe.name}`);
     choice.dataset.focus = `variant-${recipe.name}`;
-    recipe.variants.forEach((variant, index) => {
-      const option = element('option', variant.own ? `${variant.name}${OWN_VARIANT_MARK}` : variant.name);
-      option.value = String(index);
-      option.selected = index === recipe.selected;
-      choice.append(option);
-    });
+    variantOptions(choice, recipe.variants, recipe.selected);
     choice.addEventListener('change', () => {
       const variant = recipe.variants[Number(choice.value)];
       if (variant !== undefined) {
@@ -1409,6 +1495,16 @@ declare function acquireVsCodeApi(): VsCodeApi;
       }
     });
     return choice;
+  }
+
+  /** Appends to `choice` one option per variant of `variants`, in order, a variant of the person's own marked as theirs, the one at `selected` selected. */
+  function variantOptions(choice: HTMLSelectElement, variants: PageVariantChoice[], selected: number): void {
+    variants.forEach((variant, index) => {
+      const option = element('option', variant.own ? `${variant.name}${OWN_VARIANT_MARK}` : variant.name);
+      option.value = String(index);
+      option.selected = index === selected;
+      choice.append(option);
+    });
   }
 
   /** One run of a mission page's recipe entries, in the order given, each with its variant dropdown beside it. */
@@ -1625,7 +1721,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
     if (message.type === 'live') {
       missions = message.missions;
       running = new Set(message.running ?? []);
-      fixed = message.buttons ?? {};
+      startingButtons = message.buttons ?? {};
       drawn = 'live';
       for (const mission of [...previews.keys()]) {
         if (!missions.some((each) => each.path === mission)) {
@@ -1634,7 +1730,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
       }
       draw();
     } else if (message.type === 'liveFailure') {
-      fixed = message.buttons ?? {};
+      startingButtons = message.buttons ?? {};
       drawn = 'failure';
       picked = undefined;
       drawFailure(message.cause);

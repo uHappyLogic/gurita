@@ -649,7 +649,7 @@ test("the button's label and hover text follow the selected variant, and a click
   assert.deepStrictEqual(page.posted[page.posted.length - 1], { type: 'runRecipe', mission: ALPHA, recipe: 'Execute tasks', variant: 'Antigravity' });
 });
 
-test('no dropdown stands beside any of the buttons outside the recipe list, and the dropdowns stay enabled while a run goes', () => {
+test('no dropdown stands beside a fixed-name button posted with nothing, and the recipe dropdowns stay enabled while a run goes', () => {
   const page = loadPage();
   page.send(live([ALPHA]));
   eachPane(page, () => {
@@ -680,12 +680,39 @@ const FIXED_BUTTONS: [string, string, string][] = [
   ['Answer with this alternative', 'answerWithAlternative', 'Record keep as the decision'],
 ];
 
-/** What each fixed-name button runs, as the extension posts it, every button on one line of `model` at `effort`. */
-function fixedButtons(model: string, effort: string): Record<string, { lines: string[]; values: { harnesses: string[]; models: string[]; efforts: string[] } }> {
+/** The two mission-starting buttons, posted with the pages and the failure state rather than with a mission. */
+const STARTING_KEYS = ['discussGoal', 'defineMission'];
+
+/**
+ * A live message for Alpha and Beta, the two mission-starting buttons of `entries` posted with the pages
+ * and the other five with each mission, every mission built by `build`.
+ */
+function liveButtons(entries: Record<string, unknown>, running: string[] = [], build: (missionPath: string, title: string) => unknown = mission): unknown {
+  const starting = Object.fromEntries(Object.entries(entries).filter(([key]) => STARTING_KEYS.includes(key)));
+  const onPage = Object.fromEntries(Object.entries(entries).filter(([key]) => !STARTING_KEYS.includes(key)));
+  return {
+    type: 'live',
+    missions: [
+      { ...(build(ALPHA, 'Alpha') as object), buttons: onPage },
+      { ...(build(BETA, 'Beta') as object), buttons: onPage },
+    ],
+    running,
+    buttons: starting,
+  };
+}
+
+/** What each fixed-name button runs, as the extension posts it, every button on one line of `model` at `effort`, offering one variant named by its key. */
+function fixedButtons(model: string, effort: string): Record<string, unknown> {
   return Object.fromEntries(
     FIXED_BUTTONS.map(([, key]) => [
       key,
-      { lines: [`claude -p "/gurita:${key} --mission <path>" --model "${model}" --effort ${effort};`], values: { harnesses: ['claude'], models: [model], efforts: [effort] } },
+      {
+        state: 'offered',
+        lines: [`claude -p "/gurita:${key} --mission <path>" --model "${model}" --effort ${effort};`],
+        values: { harnesses: ['claude'], models: [model], efforts: [effort] },
+        variants: [{ name: key, own: false }],
+        selected: 0,
+      },
     ]),
   );
 }
@@ -704,9 +731,9 @@ function fixedShown(page: Page): Record<string, [string[], string]> {
   return shown;
 }
 
-test("every fixed-name button shows its name with its default's distinct harnesses, models, and efforts, and its lines in its hover text, following the default posted", () => {
+test("every fixed-name button shows its name with its selected variant's distinct harnesses, models, and efforts, and its lines in its hover text, following what is posted", () => {
   const page = loadPage();
-  page.send({ ...(live([]) as object), buttons: fixedButtons('fable', 'xhigh') });
+  page.send(liveButtons(fixedButtons('fable', 'xhigh')));
   const expected = (model: string, effort: string) =>
     Object.fromEntries(
       FIXED_BUTTONS.map(([label, key]) => [
@@ -717,7 +744,7 @@ test("every fixed-name button shows its name with its default's distinct harness
   assert.deepStrictEqual(fixedShown(page), expected('fable', 'xhigh'), 'all seven buttons, with either pane shown');
 
   // A default picked in the settings view reaches every button with the pages posted again.
-  page.send({ ...(live([]) as object), buttons: fixedButtons('opus', 'high') });
+  page.send(liveButtons(fixedButtons('opus', 'high')));
   assert.deepStrictEqual(fixedShown(page), expected('opus', 'high'));
 
   // A variant of several lines shows each list once, in first-appearance order, and its lines as written.
@@ -725,16 +752,16 @@ test("every fixed-name button shows its name with its default's distinct harness
     'agy -i "/gurita:discuss-open-question --mission <path> <Short Title>. <note>" --model "gemini-4-argon" --effort medium; # interactive',
     'claude -p "/gurita:recommend-all-open-questions --mission <path>" --model "opus" --effort high;',
   ];
-  page.send({
-    ...(live([]) as object),
-    buttons: {
+  const one = (name: string) => ({ variants: [{ name, own: false }], selected: 0 });
+  page.send(
+    liveButtons({
       ...fixedButtons('opus', 'high'),
-      discussQuestion: { lines: mixed, values: { harnesses: ['agy', 'claude'], models: ['gemini-4-argon', 'opus'], efforts: ['medium', 'high'] } },
-      defineMission: { lines: ['echo <goal> <scope>'], values: { harnesses: [], models: [], efforts: [] } },
+      discussQuestion: { state: 'offered', lines: mixed, values: { harnesses: ['agy', 'claude'], models: ['gemini-4-argon', 'opus'], efforts: ['medium', 'high'] }, ...one('Mixed') },
+      defineMission: { state: 'offered', lines: ['echo <goal> <scope>'], values: { harnesses: [], models: [], efforts: [] }, ...one('Echo') },
       answerQuestion: undefined,
       discussTask: undefined,
-    },
-  });
+    }),
+  );
   const shown = fixedShown(page);
   assert.deepStrictEqual(shown.Discuss, [['Discuss', 'agy, claude · gemini-4-argon, opus · medium, high'], mixed.join('\n')]);
   assert.deepStrictEqual(shown['Define mission'], [['Define mission'], 'echo <goal> <scope>'], 'a variant of no readable line shows the name alone');
@@ -749,20 +776,184 @@ test("every fixed-name button shows its name with its default's distinct harness
   );
 
   // The failure state's two mission-starting buttons follow what it is posted with.
-  page.send({ type: 'liveFailure', cause: 'boom', buttons: fixedButtons('sonnet', 'medium') });
+  page.send({ type: 'liveFailure', cause: 'boom', buttons: { discussGoal: fixedButtons('sonnet', 'medium').discussGoal, defineMission: fixedButtons('sonnet', 'medium').defineMission } });
   assert.deepStrictEqual(recipeParts(named(page, 'New mission')), ['New mission', 'claude · sonnet · medium']);
   assert.strictEqual(named(page, 'Define mission').title, 'claude -p "/gurita:defineMission --mission <path>" --model "sonnet" --effort medium;');
 
-  // A click still posts what it posted before, and a run disables the mission's fixed-name buttons alone.
-  page.send({ ...(live([]) as object), buttons: fixedButtons('fable', 'xhigh') });
+  // A click posts the variant selected with what it posted before, and a run disables the mission's fixed-name buttons alone.
+  page.send(liveButtons(fixedButtons('fable', 'xhigh')));
   named(page, 'Discuss').click();
   named(page, 'New mission').click();
   assert.deepStrictEqual(page.posted.slice(-2), [
-    { type: 'questionButton', button: 'discussQuestion', mission: ALPHA, question: 'Pane Layout' },
-    { type: 'missionButton', button: 'discussGoal' },
+    { type: 'questionButton', button: 'discussQuestion', mission: ALPHA, question: 'Pane Layout', variant: 'discussQuestion' },
+    { type: 'missionButton', button: 'discussGoal', variant: 'discussGoal' },
   ]);
-  page.send({ ...(live([ALPHA]) as object), buttons: fixedButtons('fable', 'xhigh') });
+  page.send(liveButtons(fixedButtons('fable', 'xhigh'), [ALPHA]));
   assertRunning(page);
+});
+
+/** A live mission whose question view's first card carries two alternatives, keep and drop. */
+function twoAlternatives(missionPath: string, title: string): unknown {
+  const built = mission(missionPath, title) as { questions: { questions: { alternatives: unknown[] }[] } };
+  built.questions.questions[0].alternatives = [
+    { id: 'keep', text: 'Keep it.', advantages: [], drawbacks: [] },
+    { id: 'drop', text: 'Drop it.', advantages: [], drawbacks: [] },
+  ];
+  return built;
+}
+
+/** The dropdown drawn beside the button labelled `label`, in the entry holding it, or undefined when none stands there. */
+function dropdownBeside(page: Page, label: string): FakeElement | undefined {
+  const drawn = named(page, label);
+  const entry = page.root.all().find((each) => each.has('recipe-entry') && each.children.includes(drawn));
+  return entry?.children.find((child): child is FakeElement => child instanceof FakeElement && child.tagName === 'select');
+}
+
+test('a dropdown beside each fixed-name button offers its variants and stands on the one selected, its pick, the label, and a click following it', () => {
+  const page = loadPage();
+  const models = ['fable', 'opus'];
+  /** Each button offering a shipped Fable and an own Opus variant, standing on the one at `selected`. */
+  const offered = (selected: number) =>
+    Object.fromEntries(
+      FIXED_BUTTONS.map(([, key]) => [
+        key,
+        {
+          state: 'offered',
+          lines: [`claude -p "/gurita:${key}" --model "${models[selected]}" --effort high;`],
+          values: { harnesses: ['claude'], models: [models[selected]], efforts: ['high'] },
+          variants: [
+            { name: 'Fable', own: false },
+            { name: 'Opus', own: true },
+          ],
+          selected,
+        },
+      ]),
+    );
+  page.send(liveButtons(offered(1), [], twoAlternatives));
+  const besides: Record<string, [string, string, boolean][]> = {};
+  eachPane(page, (pane) => {
+    for (const [label] of FIXED_BUTTONS.filter(([label]) => label !== 'Answer with this alternative')) {
+      if (pane === 'tasks' && ['Discuss', 'Answer', 'Answer with recommendation'].includes(label)) {
+        continue;
+      }
+      if (pane === 'questions' && label === 'New task') {
+        continue;
+      }
+      const dropdown = dropdownBeside(page, label);
+      assert.ok(dropdown !== undefined, `a dropdown stands beside ${label}`);
+      assert.strictEqual(dropdown.getAttribute('aria-label'), `The variant of ${label}`);
+      besides[label] = options(dropdown);
+      assert.deepStrictEqual(recipeParts(named(page, label)), [label, 'claude · opus · high'], `${label} shows the variant selected`);
+    }
+  });
+  const selectedOpus: [string, string, boolean][] = [
+    ['Fable', '0', false],
+    ['Opus (yours)', '1', true],
+  ];
+  assert.deepStrictEqual(
+    besides,
+    Object.fromEntries(FIXED_BUTTONS.filter(([label]) => label !== 'Answer with this alternative').map(([label]) => [label, selectedOpus])),
+  );
+
+  // The question card holds one dropdown for its answer-with-alternative buttons, beside its Alternatives heading.
+  const shared = page.root.all().filter((each) => each.tagName === 'select' && each.getAttribute('aria-label') === 'The variant of Answer with this alternative');
+  assert.strictEqual(shared.length, 1, 'one dropdown per question card');
+  const head = page.root.all().find((each) => each.has('alternatives-head'));
+  assert.ok(head !== undefined && head.children.includes(shared[0]), 'it stands beside the Alternatives heading');
+  assert.deepStrictEqual(options(shared[0]), selectedOpus);
+  const alternatives = buttons(page).filter((each) => shownName(each) === 'Answer with this alternative');
+  assert.strictEqual(alternatives.length, 2);
+  for (const each of alternatives) {
+    assert.deepStrictEqual(recipeParts(each), ['Answer with this alternative', 'claude · opus · high']);
+    assert.strictEqual(each.title, 'claude -p "/gurita:answerWithAlternative" --model "opus" --effort high;');
+  }
+
+  // A pick posts the variant with the button, and the mission for a button on a mission's page.
+  let count = page.posted.length;
+  (dropdownBeside(page, 'Discuss') as FakeElement).change('0');
+  shared[0].change('0');
+  (dropdownBeside(page, 'New mission') as FakeElement).change('0');
+  (dropdownBeside(page, 'Define mission') as FakeElement).change('1');
+  named(page, 'Remaining tasks').click();
+  (dropdownBeside(page, 'New task') as FakeElement).change('0');
+  assert.deepStrictEqual(page.posted.slice(count), [
+    { type: 'selectButtonVariant', button: 'discussQuestion', mission: ALPHA, variant: 'Fable' },
+    { type: 'selectButtonVariant', button: 'answerWithAlternative', mission: ALPHA, variant: 'Fable' },
+    { type: 'selectButtonVariant', button: 'discussGoal', variant: 'Fable' },
+    { type: 'selectButtonVariant', button: 'defineMission', variant: 'Opus' },
+    { type: 'selectButtonVariant', button: 'discussTask', mission: ALPHA, variant: 'Fable' },
+  ]);
+
+  // A click posts the variant selected.
+  count = page.posted.length;
+  named(page, 'New task').click();
+  named(page, 'Define mission').click();
+  named(page, 'Open questions').click();
+  named(page, 'Answer').click();
+  for (const each of buttons(page).filter((node) => shownName(node) === 'Answer with this alternative')) {
+    each.click();
+  }
+  assert.deepStrictEqual(page.posted.slice(count), [
+    { type: 'taskButton', mission: ALPHA, variant: 'Opus' },
+    { type: 'missionButton', button: 'defineMission', variant: 'Opus' },
+    { type: 'questionButton', button: 'answerQuestion', mission: ALPHA, question: 'Pane Layout', variant: 'Opus' },
+    { type: 'alternativeButton', mission: ALPHA, question: 'Pane Layout', alternative: 'keep', variant: 'Opus' },
+    { type: 'alternativeButton', mission: ALPHA, question: 'Pane Layout', alternative: 'drop', variant: 'Opus' },
+  ]);
+
+  // The pages posted again with another variant selected: the dropdowns, the labels, and a click follow it.
+  page.send(liveButtons(offered(0), [], twoAlternatives));
+  assert.deepStrictEqual(options(dropdownBeside(page, 'Discuss') as FakeElement).map(([, , picked]) => picked), [true, false]);
+  assert.deepStrictEqual(recipeParts(named(page, 'Discuss')), ['Discuss', 'claude · fable · high']);
+  assert.strictEqual(named(page, 'Discuss').title, 'claude -p "/gurita:discussQuestion" --model "fable" --effort high;');
+  count = page.posted.length;
+  named(page, 'Discuss').click();
+  assert.deepStrictEqual(page.posted.slice(count), [{ type: 'questionButton', button: 'discussQuestion', mission: ALPHA, question: 'Pane Layout', variant: 'Fable' }]);
+
+  // While a run goes the buttons are disabled and every dropdown stays enabled.
+  page.send(liveButtons(offered(1), [ALPHA], twoAlternatives));
+  assertRunning(page);
+  eachPane(page, () => {
+    for (const select of page.root.all().filter((each) => each.tagName === 'select')) {
+      assert.strictEqual(select.disabled, false);
+    }
+  });
+});
+
+test('a fixed-name button posted with no variant, every one left out for a disabled harness, stays drawn but disabled, with no dropdown', () => {
+  const page = loadPage();
+  const cause = 'Every variant of the recipe this button can run has a line on a disabled harness.';
+  const none = Object.fromEntries(FIXED_BUTTONS.map(([, key]) => [key, { state: 'disabled', cause }]));
+  page.send(liveButtons(none));
+  eachPane(page, () => {
+    for (const [label, , hover] of FIXED_BUTTONS) {
+      if (buttons(page).some((each) => shownName(each) === label)) {
+        const drawn = named(page, label);
+        assert.strictEqual(drawn.disabled, true, `${label} is disabled`);
+        assert.deepStrictEqual(recipeParts(drawn), [label], `${label} shows its name alone`);
+        assert.strictEqual(drawn.title, `${hover}\n${cause}`);
+        if (label !== 'Answer with this alternative') {
+          assert.strictEqual(dropdownBeside(page, label), undefined, `no dropdown stands beside ${label}`);
+        }
+      }
+    }
+    const section = page.root.all().find((each) => each.has('recipes')) as FakeElement;
+    assert.deepStrictEqual(
+      page.root.all().filter((each) => each.tagName === 'select'),
+      section.all().filter((each) => each.tagName === 'select'),
+      'only the recipe list holds dropdowns',
+    );
+  });
+  for (const text of ['review', 'Refresh', 'Settings']) {
+    assert.strictEqual(named(page, text).disabled, false, `${text} stays enabled`);
+  }
+
+  // The failure state draws its two mission-starting buttons the same way.
+  page.send({ type: 'liveFailure', cause: 'boom', buttons: { discussGoal: { state: 'disabled', cause }, defineMission: fixedButtons('sonnet', 'medium').defineMission } });
+  assert.strictEqual(named(page, 'New mission').disabled, true);
+  assert.strictEqual(dropdownBeside(page, 'New mission'), undefined);
+  assert.strictEqual(named(page, 'Define mission').disabled, false);
+  assert.ok(dropdownBeside(page, 'Define mission') !== undefined);
 });
 
 test("a mission's page draws the recipe failure posted with its mission", () => {
@@ -1700,7 +1891,10 @@ test('the settings view lists every recipe the extension posts with its variants
     ['discuss-mission-goal', [[['discuss-mission-goal', 'shipped', 'Default'], edits]]],
     ['Mine everywhere', [[['Mine everywhere', 'yours', 'Default'], edits]]],
   ]);
-  assert.ok(texts(page).includes('Run by a button outside the recipe list, which runs this default.'), 'a fixed-name button recipe says its default is what its button runs');
+  assert.ok(
+    texts(page).includes('Run by a button outside the recipe list, which runs this default until another variant is selected beside it.'),
+    'a fixed-name button recipe says its default is what its button runs while no other variant is selected',
+  );
   const fast = page.root.all().find((each) => each.has('variant-name') && each.textContent === 'Fast');
   assert.strictEqual(fast?.title, `${CLAUDE_LINE}\n${CLAUDE_LINE}`, "a variant's name carries its lines in its hover text");
   const view = settingsView(page);

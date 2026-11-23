@@ -25,9 +25,9 @@
 // variant of which is left out is dropped. A recipe's default is its picked variant, the store's
 // pick standing for it when it names a listed variant, a pick of a copied variant meaning the copy
 // standing in for it, and, while no picked default stands, its first variant in order, worked out
-// afresh at each read and never written: the buttons that run a recipe by its fixed name and the
-// looped run's named single-task lines take the default, and the mission page's button takes it
-// while no dropdown selection is remembered for the recipe on its mission. Each variant is
+// afresh at each read and never written: the looped run's named single-task lines take the
+// default, and the mission page's recipe buttons and the buttons that run a recipe by its fixed
+// name take it while no dropdown selection is remembered for the recipe. Each variant is
 // classified by its content alone: whether it is a single-task line, whether it is the looped
 // recipe, and which known and unknown placeholders it holds. A recipe may also declare the one step
 // of the workflow diagram it belongs to, by one `Stage: <step name>` line standing outside any fence
@@ -46,8 +46,9 @@
 // execution chain holding its `complete-all-tasks` line alone, while the button recipes and the
 // single-task lines declare nothing. A mission page also leaves out every variant with at least
 // one line on a harness the settings view disabled, a recipe so left with no variant losing its
-// button, while the buttons that run a recipe by its fixed name and the looped run's named
-// single-task lines keep every variant. This module imports nothing from `vscode`.
+// button and a button that runs a recipe by its fixed name so left standing with none, while the
+// looped run's named single-task lines keep every variant. This module imports nothing from
+// `vscode`.
 
 import * as fs from 'node:fs';
 import { Harness, VariantValues, readLine, variantValues } from './lineValues';
@@ -679,7 +680,7 @@ function onDisabledHarness(variant: Variant, disabled: readonly Harness[]): bool
  * has no value for, or no line, is left off silently, staying reachable by name for the button or
  * loop that fills it. A recipe every variant of which is left off is not listed, and neither is a
  * recipe one of the buttons outside the chains runs by its fixed name (`BUTTON_RECIPES`), whose
- * variant is its default alone. Each entry offers the variants the page draws in its dropdown and
+ * variants that button's own dropdown offers (`buttonRecipe`). Each entry offers the variants the page draws in its dropdown and
  * describes the one selected: the first carrying the remembered name, a remembered selection always
  * winning over the default, and otherwise the recipe's default when it is drawn, and otherwise its
  * first variant drawn, so a remembered variant left out for a disabled harness gives way without
@@ -746,28 +747,28 @@ export const BUTTON_RECIPES = {
   discussTask: 'discuss-new-task',
 } as const;
 
-/** The recipe a button runs, by its fixed name, with the variant it runs, or the cause it cannot be run. */
-export type ButtonRecipe = { state: 'found'; recipe: Recipe; variant: Variant } | { state: 'refused'; cause: string };
+/**
+ * The recipe a button runs, by its fixed name: the variants its dropdown offers and the one
+ * selected, which it runs; or, when every variant it could run has a line on a disabled harness,
+ * the recipe with no variant offered and the cause; or the cause it cannot be run at all.
+ */
+export type ButtonRecipe =
+  | { state: 'found'; recipe: Recipe; variant: Variant; variants: Variant[]; selected: number }
+  | { state: 'disabled'; recipe: Recipe; cause: string }
+  | { state: 'refused'; cause: string };
 
 /**
- * The recipe of the fixed name `name` in the merged list, its shipped variants and those an own
- * recipe of the same name adds, with the variant the button runs, its default, when the button can
- * run it: that variant holds a line, it is not the looped recipe, and every placeholder it holds
- * is one the button holds a value for, `fillable` naming them. Otherwise the cause it cannot be
- * run, naming the recipe and what is wrong with it.
+ * Why the button holding values for `fillable` cannot run `variant` of the recipe named `name`, or
+ * undefined when it can: the variant holds a line, it is not the looped recipe, and every
+ * placeholder it holds is one the button holds a value for.
  */
-export function buttonRecipe(recipes: Recipe[], name: string, fillable: readonly string[]): ButtonRecipe {
-  const recipe = recipes.find((entry) => entry.name === name);
-  if (recipe === undefined) {
-    return { state: 'refused', cause: `No recipe is named ${name}.` };
-  }
-  const variant = defaultVariant(recipe);
+function buttonRefusal(name: string, variant: Variant, fillable: readonly string[]): string | undefined {
   const where = `The recipe ${name} in ${variant.file}`;
   if (variant.lines.length === 0) {
-    return { state: 'refused', cause: `${where} holds no line.` };
+    return `${where} holds no line.`;
   }
   if (variant.looped) {
-    return { state: 'refused', cause: `${where} is a looped recipe.` };
+    return `${where} is a looped recipe.`;
   }
   const unfilled = [
     ...variant.unknownPlaceholders,
@@ -775,7 +776,47 @@ export function buttonRecipe(recipes: Recipe[], name: string, fillable: readonly
   ];
   if (unfilled.length > 0) {
     const named = unfilled.map((placeholder) => `<${placeholder}>`).join(', ');
-    return { state: 'refused', cause: `${where} holds ${unfilled.length === 1 ? 'a placeholder' : 'placeholders'} this button has no value for: ${named}.` };
+    return `${where} holds ${unfilled.length === 1 ? 'a placeholder' : 'placeholders'} this button has no value for: ${named}.`;
   }
-  return { state: 'found', recipe, variant };
+  return undefined;
+}
+
+/**
+ * The recipe of the fixed name `name` in the merged list, its shipped variants and those an own
+ * recipe of the same name adds, with the variants the button's dropdown offers: every variant the
+ * button can run, one holding a line, not the looped recipe, and holding only placeholders the
+ * button holds a value for, `fillable` naming them, in the recipe's order, a variant with at least
+ * one line on a harness `disabled` names left out. The variant selected, the one the button runs,
+ * is the first offered carrying the name `remembered` gives, the dropdown selection remembered for
+ * the recipe, a remembered selection always winning over the default, and otherwise the recipe's
+ * default when it is offered, and otherwise the first variant offered. A recipe of which the
+ * button can run some variant but every one is left out for a disabled harness is the recipe with
+ * no variant offered, the button standing with none; a recipe of no such name, or one no variant
+ * of which the button can run, is refused, the cause naming the recipe and what is wrong with its
+ * default.
+ */
+export function buttonRecipe(
+  recipes: Recipe[],
+  name: string,
+  fillable: readonly string[],
+  remembered?: string,
+  disabled: readonly Harness[] = [],
+): ButtonRecipe {
+  const recipe = recipes.find((entry) => entry.name === name);
+  if (recipe === undefined) {
+    return { state: 'refused', cause: `No recipe is named ${name}.` };
+  }
+  const runnable = recipe.variants.filter((variant) => buttonRefusal(name, variant, fillable) === undefined);
+  if (runnable.length === 0) {
+    return { state: 'refused', cause: buttonRefusal(name, defaultVariant(recipe), fillable) as string };
+  }
+  const variants = runnable.filter((variant) => !onDisabledHarness(variant, disabled));
+  if (variants.length === 0) {
+    return { state: 'disabled', recipe, cause: `Every variant of ${name} this button can run has a line on a disabled harness.` };
+  }
+  let selected = remembered === undefined ? -1 : variants.findIndex((variant) => variant.name === remembered);
+  if (selected < 0) {
+    selected = Math.max(0, variants.indexOf(defaultVariant(recipe)));
+  }
+  return { state: 'found', recipe, variant: variants[selected], variants, selected };
 }

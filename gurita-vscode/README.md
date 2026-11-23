@@ -41,8 +41,8 @@ Every Node command runs under Node 22 through nvm, in a subshell, from the repos
 - `npm test` compiles, then runs the unit tests of the recipe reader and the stage filter of a
   page's recipe list, the `open_questions.xml` parser, and the `TASKS_TODO.md` heading read,
   among others, with Node's built-in `node:test` over the compiled files under `out/test/`; the
-  run path, the pane's answer to a tab click, the recipe list it posts, with the variant
-  selection it remembers, the harness check it runs, with the check script's print stubbed, and
+  run path, the pane's answer to a tab click, the recipe list and the fixed-name buttons it
+  posts, with the variant selections it remembers, the harness check it runs, with the check script's print stubbed, and
   the harnesses it enables and disables, with their model and effort lists, and the variant
   edits it makes, the line editor's model and effort picks among them, and its single-task line
   edits, with the looped run's names following them, are tested against a stub of the `vscode`
@@ -102,7 +102,8 @@ from that root:
 - A row of tabs across the top, one per live mission, each showing the mission's title with its
   path as a tooltip, and at its end the two mission-starting buttons, **New mission** (runs the
   `discuss-mission-goal` recipe) and **Define mission** (runs the `define-mission-goal` recipe),
-  and last the **Settings** control, which opens the settings view (see below).
+  each with a dropdown of its recipe's variants beside it (see The buttons that run a recipe by
+  its fixed name), and last the **Settings** control, which opens the settings view (see below).
 - Under the selected tab, the mission's page: the workflow diagram, the recipe buttons of the
   recipes that fit the step its diagram fills, each with a dropdown of its variants beside it
   (see The recipes a page lists), and two
@@ -160,7 +161,7 @@ run at once in a terminal; every recipe button shows its lines, placeholders inc
 you click. While a run started for a mission is going, until you dismiss its terminal, that
 mission's page shows it: every action button on the page (the recipe buttons, the buttons on
 the question card and its alternatives, a preview's **Start run**, and **New task**) is
-disabled, and the workflow diagram's filled block pulses. The recipe dropdowns, the tabs, the **Open questions** and
+disabled, and the workflow diagram's filled block pulses. The recipe dropdowns and the dropdowns beside the buttons that run a recipe by its fixed name, the tabs, the **Open questions** and
 **Remaining tasks** headers, **Refresh**, the question view's **Previous** and **Next**, the
 other missions' pages, **New mission** and **Define mission**, and **Settings** stay enabled, and the page is
 drawn this way again whenever it is redrawn, after the pane was hidden and shown included.
@@ -234,9 +235,13 @@ nothing, and a recipe every variant of which is left out loses its button. Where
 selected for a recipe or its default is left out, the button stands on the default if that
 variant is still listed and otherwise on the first listed variant; the remembered selection is
 kept and comes back once the harness is enabled again. The buttons that run a recipe by its fixed
-name run their recipe's default as before, whatever harness its lines name, and the looped run is
-untouched: its preview's override list offers every named single-task line, the rule file chooses
-among all of them, and every one is passed to the runner.
+name (on the question card and its alternatives, **New task**, **New mission**, and **Define
+mission**) are reached the same way: such a variant leaves the dropdown beside the button and a
+click on it starts nothing, the button stands on its default or its first remaining variant as a
+recipe button does, and a button left with no variant stays drawn but disabled, with no dropdown
+beside it, until the harness is enabled again. The looped run is untouched: its preview's override
+list offers every named single-task line, the rule file chooses among all of them, and every one
+is passed to the runner.
 
 #### Model and effort lists
 
@@ -267,7 +272,8 @@ listed here but under **Single-task lines** below, and neither a recipe's stage 
 variant shows its name, its lines in the name's hover text, and where it comes from (`shipped`,
 `yours` for your own recipe file, `stored` for a duplicate, or `stored copy of` the variant it
 stands in for), and the recipe's default is marked **Default**. A button recipe carries a note
-that its default is the variant its button runs, since no dropdown stands beside those buttons.
+that its default is the variant its button runs until another variant is selected in the dropdown
+beside the button.
 
 Each variant has these controls, every one carried out in your per-user variant store,
 `~/.gurita/variants.json`, and never in the shipped file or your own recipe file:
@@ -284,8 +290,8 @@ Each variant has these controls, every one carried out in your per-user variant 
   for. Deleting the picked default drops the pick, and the recipe falls back to its first listed
   variant.
 - **Make default**, on every variant but the default, picks it as the recipe's default, the
-  variant a mission page's dropdown stands on while no selection is remembered for the recipe on
-  that mission, and the one the fixed-name buttons and the looped run's single-task lines run.
+  variant a mission page's dropdown, or the dropdown beside a fixed-name button, stands on while no
+  selection is remembered for the recipe, and the one the looped run's single-task lines run.
 - **Reset**, where a stored copy or a hiding record stands for a shipped variant or one of your
   own recipe file, removes the copy or the record, so the variant shows again as its file holds
   it.
@@ -294,8 +300,8 @@ A duplicate's name and a new name are each asked for in VS Code's own input box,
 value; the box refuses an empty name and one another variant of the recipe already carries, and
 the name is kept with its outer spaces trimmed. Pressing Escape changes nothing. Every edit is
 shown at once in the view and on the mission pages, whose recipe lists are read again, the
-fixed-name buttons' labels and hover text included, in the failure state too; those buttons also
-read their recipe afresh at every click, so they run the default their label shows. An edit that cannot be made, or a variant store that cannot be read or written,
+fixed-name buttons' dropdowns, labels, and hover text included, in the failure state too, so every
+button runs the variant its label shows. An edit that cannot be made, or a variant store that cannot be read or written,
 is told in an error notification and writes nothing. When the variants cannot be read, the view
 says so with the cause beneath it.
 
@@ -378,10 +384,10 @@ sub-heading with no fence beneath it is a variant of no line, and of a variant n
 within one recipe only the first is read. Headings inside a fence are lines, not headings. The
 pane lists recipes from two files, the shipped file and your own file, and reads both in this
 same form. A recipe's default is the variant picked for it in the settings view (see Variants
-above), and while none is picked its first variant: the buttons that run a recipe by its fixed
-name and the looped run's named single-task lines run the default, and the recipe button on a
-mission's page runs the variant selected in the dropdown beside it, the default until you select
-another (see The recipes a page lists).
+above), and while none is picked its first variant: the looped run's named single-task lines run
+the default, and the recipe button on a mission's page and each button that runs a recipe by its
+fixed name run the variant selected in the dropdown beside it, the default until you select
+another (see The recipes a page lists and The buttons that run a recipe by its fixed name).
 
 ### The stage line
 
@@ -461,20 +467,50 @@ draw, the dropdown stands on the default, or on the first variant drawn when the
 the default. When the remembered variant is gone from the recipe, taken out of your own recipe
 file for instance, the selection is dropped and the button falls back to the recipe's current
 default. Of variants sharing one name, a selection stands on the first. A click on a variant the
-page's last list did not show selected starts nothing. The buttons that run a recipe by its fixed
-name (on the question card and its alternatives, **New task**, **New mission**, and **Define
-mission**) carry no dropdown and always run their recipe's default, and their recipes are never
-listed on the page.
+page's last list did not show selected starts nothing. The recipes of the buttons that run a
+recipe by its fixed name are never listed on the page; those buttons carry their own dropdowns
+(see below).
 
-Each of those seven buttons shows what it runs in the same form as a recipe button: its name and,
-beneath it, the distinct harnesses, models, and efforts of its recipe's default, the variant picked
-in the settings view or, while none is picked, the first listed, with that variant's lines as
-written in its hover text, so **Define mission** on the shipped `define-mission-goal` reads
-`claude · sonnet · medium`. A default whose lines carry no readable value shows the name alone,
-and so does a button whose recipe cannot be read or run (no recipe of its name, or a default
-holding a placeholder the button has no value for), its hover text then saying what the button
-does. Disabling a harness does not change these labels, since it does not reach these buttons.
-The two mission-starting buttons are drawn this way in the failure state too.
+### The buttons that run a recipe by its fixed name
+
+Seven buttons run a recipe by its fixed name, whatever the step: **Discuss**, **Answer**, and
+**Answer with recommendation** on the question card, **Answer with this alternative** on each of
+its alternatives, **New task**, and the two mission-starting buttons, **New mission** and **Define
+mission**. They pick a variant as the recipe buttons do. Beside each stands a dropdown of its
+recipe's variants in the recipe's order, those of your own recipe file or your variant store
+marked `(yours)`; a question card holds one such dropdown, beside its **Alternatives** heading,
+shared by all its **Answer with this alternative** buttons. The dropdown offers only the variants
+the button can run: a variant holding a placeholder the button has no value for, a looped variant,
+one of no line, and one with at least one line on a disabled harness are left out of it.
+
+The dropdown stands on the variant selected, and the button's label, its hover text, and a click
+all follow it. Each button shows its name and, beneath it, the distinct harnesses, models, and
+efforts of the variant selected, in the recipe buttons' form, with that variant's lines as written
+in its hover text, so **Define mission** on the shipped `define-mission-goal` reads
+`claude · sonnet · medium`; a variant whose lines carry no readable value shows the name alone. A
+click runs the variant the dropdown shows, and only when the pane's last post of the button stood
+on that variant; picking another variant starts nothing, so these dropdowns stay enabled while a
+run is going.
+
+The variant you select is remembered in VS Code's storage for the open workspace (the extension's
+`workspaceState`). For the five buttons on a mission's page it is remembered per recipe on each
+mission, keyed by the mission's path, in the same map as the recipe buttons' selections, so every
+card of a mission shares its selection. For **New mission** and **Define mission**, which belong
+to no mission, it is remembered once per project, as a map from recipe name to variant name. A
+remembered selection always wins over the default picked in the settings view, and picking a new
+default leaves it standing. With nothing remembered, or with the remembered variant left out of
+the dropdown, the button stands on the default when the dropdown offers it and otherwise on the
+first variant offered. When the remembered variant is gone from the recipe, deleted or renamed in
+the settings view or taken out of your own recipe file, the selection is dropped and the button
+falls back to the recipe's current default; a variant left out only because its harness is
+disabled keeps its selection, which comes back once the harness is enabled again.
+
+A button whose every variant it could run is left out for a disabled harness stays drawn but
+disabled, its name alone, with no dropdown beside it and its hover text saying why. A button whose
+recipe cannot be read or run at all (no recipe of its name, or no variant the button can fill)
+shows its name alone with a hover text saying what the button does, and a click on it tells why
+in an error notification. The two mission-starting buttons and their dropdowns are drawn the same
+way in the failure state.
 
 ### The shipped recipe file
 
