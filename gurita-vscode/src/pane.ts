@@ -2145,7 +2145,12 @@ function nonce(): string {
  * the selected one underlined, with only the selected pane's content beneath them. It draws every
  * variant dropdown beside a button as its arrow alone, the selected name kept out of sight and
  * the opened list's options in the dropdown's colours, and the selected variant's name on its own
- * line beneath a button's name.
+ * line beneath a button's name. Every push button, the `recipe`, `action`, and `control` classes
+ * alike, takes one look in one shared rule: the theme's primary button colour, its hover colour,
+ * and a 1px outline in the contrast border colour, else the foreground colour, so it stands out
+ * against both the page and its own fill; the Settings control, while its view is shown, swaps to
+ * the secondary button colour with a focus-coloured ring around it. The mission tabs, the two pane
+ * headers, and the dependency links keep looks of their own.
  */
 function pageShell(webview: vscode.Webview, script: vscode.Uri): string {
   const token = nonce();
@@ -2184,9 +2189,11 @@ function pageShell(webview: vscode.Webview, script: vscode.Uri): string {
   .workflow.vertical .arrow { align-self: center; transform: rotate(90deg); }
   .notice { border-left: 3px solid var(--vscode-inputValidation-warningBorder); padding: 0.2em 0.8em; }
   .controls { display: flex; gap: 0.5em; margin-bottom: 0.5em; }
-  button.control { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: none; padding: 0.25em 0.8em; cursor: pointer; font: inherit; }
-  button.control:disabled { opacity: 0.5; cursor: default; }
-  .tabs button.control[aria-pressed="true"] { outline: 1px solid var(--vscode-focusBorder); }
+  button.recipe, button.action, button.control { background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: 1px solid var(--vscode-contrastBorder, var(--vscode-foreground)); padding: 0.3em 0.9em; cursor: pointer; font: inherit; }
+  button.recipe:hover:not(:disabled), button.action:hover:not(:disabled), button.control:hover:not(:disabled) { background: var(--vscode-button-hoverBackground); }
+  button.recipe:disabled, button.action:disabled, button.control:disabled { opacity: 0.5; cursor: default; }
+  button.action { white-space: nowrap; }
+  .tabs button.control[aria-pressed="true"] { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); outline: 2px solid var(--vscode-focusBorder); outline-offset: 2px; }
   .settings { margin-top: 1em; }
   .settings h4 { margin: 0.8em 0 0.3em; }
   .harness-list { list-style: none; margin: 0 0 0.5em; padding: 0; }
@@ -2217,9 +2224,6 @@ function pageShell(webview: vscode.Webview, script: vscode.Uri): string {
   .variant-lines .line-skill { font-family: var(--vscode-editor-font-family); }
   .variant-lines .line-interactive { opacity: 0.8; font-style: italic; }
   .variant-lines span.line-harness { opacity: 0.8; }
-  button.action { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: none; padding: 0.15em 0.6em; cursor: pointer; font: inherit; white-space: nowrap; }
-  button.action:hover:not(:disabled) { background: var(--vscode-button-secondaryHoverBackground); }
-  button.action:disabled, button.recipe:disabled { opacity: 0.5; cursor: default; }
   .pager { display: flex; align-items: center; gap: 0.8em; margin-bottom: 0.5em; }
   .pager .counter { font-variant-numeric: tabular-nums; min-width: 4em; text-align: center; }
   .card { border: 1px solid var(--vscode-panel-border); padding: 0.6em 0.8em; }
@@ -2246,8 +2250,6 @@ function pageShell(webview: vscode.Webview, script: vscode.Uri): string {
   .recipe-entry { display: inline-flex; align-items: stretch; gap: 0.2em; }
   select.recipe-variant { -webkit-appearance: none; appearance: none; box-sizing: border-box; width: 1.8em; min-width: 1.8em; padding: 0; cursor: pointer; font: inherit; color: transparent; border: 1px solid var(--vscode-dropdown-border); background-color: var(--vscode-dropdown-background); background-image: linear-gradient(45deg, transparent 50%, var(--vscode-dropdown-foreground) 50%), linear-gradient(135deg, var(--vscode-dropdown-foreground) 50%, transparent 50%); background-position: calc(50% - 0.2em) 55%, calc(50% + 0.2em) 55%; background-size: 0.4em 0.4em; background-repeat: no-repeat; }
   select.recipe-variant option { color: var(--vscode-dropdown-foreground); background: var(--vscode-dropdown-background); }
-  button.recipe { background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; padding: 0.3em 0.9em; cursor: pointer; font: inherit; }
-  button.recipe:hover:not(:disabled) { background: var(--vscode-button-hoverBackground); }
   button.recipe .recipe-variant-name, button.action .recipe-variant-name { display: block; font-size: 0.85em; opacity: 0.8; }
   .recipe-unknown { border: 1px dashed var(--vscode-inputValidation-warningBorder); padding: 0.3em 0.9em; opacity: 0.85; }
   .preview { border-top: 1px solid var(--vscode-panel-border); margin-top: 1em; }

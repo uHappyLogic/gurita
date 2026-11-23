@@ -2660,3 +2660,167 @@ test('single-task lines that could not be read are named in the settings view, w
   assert.ok(texts(page).includes('The variant store /home/x/.gurita/variants.json is not JSON.'));
   assert.deepStrictEqual(singleLines(page), []);
 });
+
+/** The pane's stylesheet as the page shell in `src/pane.ts` sets it, as its rules: each selector list split at its commas, with its declarations by property. */
+function stylesheetRules(): { selectors: string[]; declarations: Map<string, string> }[] {
+  const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'pane.ts'), 'utf8');
+  const sheet = /<style nonce="\$\{token\}">([\s\S]*?)<\/style>/.exec(source);
+  assert.ok(sheet !== null, 'the page shell holds the stylesheet');
+  return [...sheet[1].matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((rule) => ({
+    selectors: rule[1].split(',').map((selector) => selector.trim()),
+    declarations: new Map(
+      rule[2]
+        .split(';')
+        .map((declaration) => declaration.trim())
+        .filter((declaration) => declaration !== '')
+        .map((declaration): [string, string] => {
+          const colon = declaration.indexOf(':');
+          return [declaration.slice(0, colon).trim(), declaration.slice(colon + 1).trim()];
+        }),
+    ),
+  }));
+}
+
+/** The push button classes, every one drawn with the one shared look. */
+const PUSH_CLASSES = ['recipe', 'action', 'control'];
+
+/** The properties that make a button's look: its fill, text colour, border, and outline. */
+const LOOK = ['background', 'background-color', 'color', 'border', 'border-color', 'outline'];
+
+test('every push button the pane draws carries one class of the one shared look, the mission tabs, pane headers, and dependency links keeping their own', () => {
+  const page = loadPage();
+  const linked = {
+    ...(mission(ALPHA, 'Alpha') as Record<string, unknown>),
+    questions: {
+      state: 'read',
+      questions: ['Pane Layout', 'Tab Order'].map((id, index) => ({
+        id,
+        question: `What should ${id} be?`,
+        principles: [],
+        dependsOn: index === 0 ? [{ question: 'Tab Order', option: 'keep' }] : [],
+        recommendation: { option: 'keep', rationale: 'It works.' },
+        alternatives: [{ id: 'keep', text: 'Keep it.', advantages: [], drawbacks: [] }],
+      })),
+    },
+  };
+  page.send({ type: 'live', missions: [linked, mission(BETA, 'Beta')], running: [] });
+  const seen = new Map<string, FakeElement>();
+  const look = { tabs: [] as string[], headers: [] as string[], links: [] as string[] };
+  const collect = (): void => {
+    const tabs = page.root.all().find((each) => each.has('tab-list'));
+    assert.ok(tabs !== undefined);
+    const tabButtons = new Set(tabs.all().filter((each) => each.tagName === 'button'));
+    for (const each of buttons(page)) {
+      const name = shownName(each);
+      if (tabButtons.has(each)) {
+        look.tabs.push(name);
+      } else if (each.has('pane-tab')) {
+        look.headers.push(name);
+      } else if (each.has('link')) {
+        look.links.push(name);
+      } else {
+        assert.strictEqual(PUSH_CLASSES.filter((name) => each.has(name)).length, 1, `${name} carries exactly one push button class`);
+        seen.set(name, each);
+      }
+    }
+  };
+  named(page, 'Open questions').click();
+  collect();
+  named(page, 'Next').click();
+  collect();
+  named(page, 'Remaining tasks').click();
+  page.send({
+    type: 'preview',
+    mission: ALPHA,
+    recipe: 'complete',
+    lines: ['claude "/gurita:complete-task --mission <path> <Task Title>"'],
+    names: ['complete-task'],
+    result: { state: 'read', tasks: [{ state: 'resolved', name: 'complete-task', title: 'First Task' }] },
+  });
+  collect();
+  named(page, 'Settings').click();
+  page.send(CHECKED);
+  page.send(harnessSettings({ claude: true, antigravity: false, codex: true }));
+  page.send(harnessListsMessage(LISTS));
+  page.send(VARIANTS);
+  page.send(LINES);
+  collect();
+  for (const name of [
+    'review',
+    'complete',
+    'New mission',
+    'Define mission',
+    'Start run',
+    'Discuss',
+    'Answer',
+    'Answer with recommendation',
+    'Answer with this alternative',
+    'New task',
+    'Duplicate',
+    'Rename',
+    'Delete',
+    'Make default',
+    'Reset',
+    'Disable',
+    'Enable',
+    'Remove',
+    'Add model',
+    'Add effort',
+    'Refresh',
+    'Settings',
+    'Close settings',
+    'Check again',
+    'Previous',
+    'Next',
+    'Close preview',
+  ]) {
+    assert.ok(seen.has(name), `${name} is drawn as a push button`);
+  }
+  assert.ok(look.tabs.includes('Alpha') && look.headers.includes('Open questions') && look.links.includes('Tab Order'), 'the tabs, headers, and links were drawn');
+  assert.strictEqual(named(page, 'Settings').getAttribute('aria-pressed'), 'true');
+
+  const rules = stylesheetRules();
+  const push = PUSH_CLASSES.map((name) => `button.${name}`);
+  const shared = rules.filter((rule) => push.every((selector) => rule.selectors.includes(selector)) && rule.declarations.has('background'));
+  assert.strictEqual(shared.length, 1, 'one rule gives every push button class its look');
+  const [rule] = shared;
+  assert.deepStrictEqual(rule.selectors, push, 'the shared rule selects the push button classes and nothing else');
+  assert.strictEqual(rule.declarations.get('background'), 'var(--vscode-button-background)', "the theme's primary button colour");
+  assert.strictEqual(rule.declarations.get('color'), 'var(--vscode-button-foreground)');
+  const border = rule.declarations.get('border') ?? '';
+  assert.match(border, /^1px solid var\(--vscode-/, 'a solid outline drawn in a theme colour');
+  assert.ok(!/none|transparent|var\(--vscode-button-background\)|var\(--vscode-focusBorder\)/.test(border), 'the outline is not hidden or drawn in the fill colour');
+  const hover = rules.filter((each) => push.every((selector) => each.selectors.includes(`${selector}:hover:not(:disabled)`)));
+  assert.strictEqual(hover.length, 1, 'one hover rule for every push button class');
+  assert.strictEqual(hover[0].declarations.get('background'), 'var(--vscode-button-hoverBackground)');
+  assert.ok(
+    rules.some((each) => push.every((selector) => each.selectors.includes(`${selector}:disabled`))),
+    'one disabled rule for every push button class',
+  );
+
+  const pressed = '.tabs button.control[aria-pressed="true"]';
+  for (const each of rules) {
+    if (each === rule || each === hover[0]) {
+      continue;
+    }
+    for (const selector of each.selectors) {
+      const target = selector.split(/\s+/).pop() ?? '';
+      if (push.some((button) => target.startsWith(button)) && selector !== pressed) {
+        for (const property of LOOK) {
+          assert.ok(!each.declarations.has(property), `${selector} sets no ${property} of its own`);
+        }
+      }
+    }
+  }
+  const pressedRule = rules.find((each) => each.selectors.includes(pressed));
+  assert.ok(pressedRule !== undefined, 'the Settings control has a rule for while its view is shown');
+  assert.notStrictEqual(pressedRule.declarations.get('background'), rule.declarations.get('background'), 'pressed, it is filled differently');
+  assert.ok(pressedRule.declarations.has('outline'), 'pressed, it carries a ring of its own');
+  const tabRule = rules.find((each) => each.selectors.includes('.tab-list button'));
+  const headerRule = rules.find((each) => each.selectors.includes('.pane-tabs button'));
+  const linkRule = rules.find((each) => each.selectors.includes('button.link'));
+  for (const kept of [tabRule, headerRule, linkRule]) {
+    assert.ok(kept !== undefined);
+    assert.strictEqual(kept.declarations.get('background'), 'none', 'the tabs, headers, and links keep their unfilled look');
+  }
+});

@@ -157,6 +157,20 @@ from that root:
   of the question alone, and Escape starts nothing. After a run removes a question the view
   keeps its place in the list.
 
+Every push button the pane draws has one look: the theme's primary button colour, the one the
+recipe buttons carry, with a clearly visible 1px outline in the theme's contrast border colour,
+or its foreground colour where the theme sets none, so each button stands out against the page
+and its own fill alike. That covers the recipe buttons, **New mission**, **Define mission**,
+**Start run**, the question card's **Discuss**, **Answer**, and **Answer with recommendation**,
+every **Answer with this alternative**, **New task**, the settings view's edit controls
+(**Enable** and **Disable**, **Add model**, **Add effort**, and **Remove**, **Duplicate**, **Rename**, **Delete**,
+**Make default**, and **Reset**), and **Refresh**, **Settings**, **Close settings**, **Check
+again**, **Previous**, **Next**, and **Close preview**. A disabled button is drawn faded. While
+the settings view is shown, **Settings** is drawn in the theme's secondary button colour with a
+ring in the focus colour around it, so it stays distinguishable from the other buttons. The
+mission tabs, the two pane headers, and the links of a card's dependencies keep their own
+unfilled look.
+
 Every value a button needs (a goal, a scope typed as a path from the project root, an answer,
 an issue description, a discussion note) is typed into VS Code's own input box, one line per
 value. Only the discussion note may be left empty. A click on a recipe button starts its
