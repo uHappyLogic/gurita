@@ -81,5 +81,9 @@ The extension has no activity-bar container, side-bar view, tree data provider, 
 
 - **Three arms of the icon.** The icon's two side arms are short arms cut verbatim from `assets/banner.txt` as a mirrored pair curling inward, a short arm from the drawing's left half on the left and one from its right half on the right. The centre arm is none of the banner's eight: it is a new arm drawn by hand in the banner's characters and style at a larger character scale, with more rows and columns than the banner's ten-row long arm. The script composes the three arms at one common character scale, so the centre is larger by its own drawing and no arm is magnified. The centre arm's drawing is therefore a second hand-drawn source of the icon beside the banner's drawing.
 
+### Design drafts under `ideas/`
+
+- **Follow-up record removed with the draft.** `ideas/vscode_extension_follow_up.md` is removed by this mission alongside `ideas/vscode_extension.md`, so no document is left holding references to the draft and none of its citations is rewritten. Its record of deferred work (the drift-gate guards, the tests left out, the Codex print check, publication, shipped Codex recipes) then stands only in git history.
+
 ## Out of Scope
 
