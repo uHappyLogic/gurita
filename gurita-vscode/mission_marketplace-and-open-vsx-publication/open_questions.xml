@@ -65,6 +65,26 @@
   </open-question>
   <open-question id="Listing name and description">
     <question>Do the listings keep the manifest&apos;s display name, `Gurita for VS Code`, and its description, which speaks of the Gurita plugin&apos;s missions, questions, and recipes, as they stand, or are they reworded for a reader who does not know the plugin?</question>
+    <alternative id="Keep both as they stand">
+      The manifest&apos;s `displayName` stays `Gurita for VS Code` and its `description` stays &quot;A side-bar view and mission windows for the Gurita plugin&apos;s missions, questions, and recipes.&quot;; neither entry is touched by this mission, so the listings show exactly what the installed copy already shows in the Extensions view.
+      <advantage>No change and no wording to settle: the name already matches the README&apos;s title, the runner&apos;s docstring, and the activity-bar container `Gurita`, and both entries are plain manifest fields that a later release can reword once the live listings show how they read.</advantage>
+      <drawback>A reader who does not know the plugin learns from the search tile only that this serves &quot;the Gurita plugin&quot;, not what Gurita is, that it runs on Claude Code, Codex, or Antigravity, or that the extension does nothing without that plugin installed; the registries&apos; search also has only the bare words &quot;missions, questions, and recipes&quot; to match on, which say little out of context.</drawback>
+    </alternative>
+    <alternative id="Keep name, reword description">
+      The `displayName` stays `Gurita for VS Code`, and the `description` is rewritten as one sentence for a reader new to the plugin: it says what Gurita is (a plugin for Claude Code, Codex, and Antigravity that settles a mission&apos;s questions before handing its work to agents), what the extension adds (a side-bar view and windows over the plugin&apos;s missions, questions, and recipes), and that the plugin must be installed for it to do anything.
+      <advantage>Fixes the part a stranger actually lacks, the context under the name, while the brand name stays the one the README, the runner, and the plugin already use; the description is the line both registries show under the name and index for search, so the plugin&apos;s host names become matchable terms.</advantage>
+      <drawback>Search results and tiles truncate the description, so the explanation may be cut before the requirement on the plugin shows, and the name itself still says nothing about what the extension is for to someone skimming a list of titles.</drawback>
+    </alternative>
+    <alternative id="Reword both for a stranger">
+      The `displayName` becomes a self-explaining name that keeps `Gurita` and adds what it is, for example `Gurita: Mission Workflow for AI Coding Agents`, and the `description` is rewritten as in the reworded-description option: what Gurita is, the hosts it runs on, what the extension adds, and that the plugin must be installed. The README&apos;s title and opening, owned by the README siblings, are left to follow or not as they decide.
+      <advantage>Gives a reader who has never heard of Gurita a reason to click from the title alone, which is the one field every search result, tile, and Extensions-view row shows in full, and lets both fields carry search terms the current wording lacks.</advantage>
+      <drawback>The name no longer matches the README title, the runner&apos;s docstring, or how the repository names the extension unless those are changed too, a descriptive title is longer and more generic-sounding in a list of brand names, and any wording chosen for the first publication is what early installers and links see, so it is worth getting right before the first release rather than iterating.</drawback>
+    </alternative>
+    <alternative id="Reword name, keep description">
+      The `displayName` becomes a self-explaining name that keeps `Gurita` and adds what it is, as in the option rewording both, while the `description` stays &quot;A side-bar view and mission windows for the Gurita plugin&apos;s missions, questions, and recipes.&quot;
+      <advantage>Puts the explanation in the one field shown untruncated everywhere and leaves the description as the accurate, factual line beneath it, so the two read together as &quot;what Gurita is&quot; and &quot;what this extension shows of it&quot;.</advantage>
+      <drawback>The description still presupposes the plugin and names neither its hosts nor that it must be installed, so a reader who installs on the strength of the name finds out from the README, or from an empty side bar, that the extension is useless without it; and the name diverges from the README and runner as in the option rewording both.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Listing categories">
     <question>The manifest lists `Other` as its only category. Under which categories is the extension listed?</question>
