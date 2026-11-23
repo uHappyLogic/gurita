@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Verify Release Lookup and Antigravity Fetch Hands-On
-
-Before any code is built on them, read the latest release tag of each of the three distribution repositories through GitHub's `releases/latest` endpoint and through the `/releases/latest` page redirect, then, under an overridden `HOME`, download `uHappyLogic/gurita-antigravity`'s `archive/refs/tags/<tag>.tar.gz` with `urllib`, extract it with `tarfile`, stripped of its top directory, into `~/.gemini/config/plugins/gurita`, and read `agy plugin list --json` there. Record what each read and step printed or returned, its exit status, and its duration as dated facts in this mission's `## Relevant starting state`, the real installation left untouched. Done when the facts stand in `requirements.md` and the real installation's `agy plugin list --json` prints what it printed before.
-
----
-
 ## Verify Claude Code Plugin Commands Hands-On
 
 Run every Claude Code command the mission will use against a throwaway `CLAUDE_CONFIG_DIR` and a scratch project directory, fetching from the real `uHappyLogic/gurita-claude`: `claude plugin marketplace add --scope` at user, project, and local with a source carrying the release's tag, the same add again over an existing `gurita` declaration, `claude plugin install gurita@gurita --scope`, `claude plugin marketplace update gurita`, the scoped `claude plugin update gurita@gurita -s`, and the plugin and marketplace listings afterwards. Record each command's print, prompts, exit status, and duration, the source form that carries a ref, and the settings file each scope wrote, as dated facts in this mission's `## Relevant starting state`. Done when the facts stand in `requirements.md` and the real installation's `claude plugin list --json` prints what it printed before.
