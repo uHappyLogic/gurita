@@ -275,6 +275,26 @@
   </open-question>
   <open-question id="Windows installs">
     <question>The extension supports macOS and Linux, and Windows only through Remote-WSL, but the package names no target platform, so a listing would offer it on every platform. Does the published package restrict where it installs, or stay installable everywhere with the limit stated in its README?</question>
+    <alternative id="Universal package, README only">
+      The package stays universal, naming no target platform as today, so both registries offer it on every platform, native Windows included. Nothing in the code changes for Windows. The README the listings show states the support limit: macOS and Linux, and Windows only through Remote-WSL, where the extension runs on the Linux side (the manifest sets no `extensionKind`, so VS Code already runs it on the workspace side in a Remote-WSL window).
+      <advantage>Nothing changes beyond the README sentence the extension already carries: one VSIX per release is uploaded once to each registry, so the release skill stays as simple as it can be.</advantage>
+      <drawback>A native Windows user can install it from either Extensions view and only learns of the limit by reading the README or by watching the side-bar view, the runner, or the bundled missions tool fail (they assume `python3`, `git`, and a POSIX shell), with no sign from the extension itself of why.</drawback>
+    </alternative>
+    <alternative id="Universal package, activation guard">
+      The package stays universal and installable on every platform, and the README states the same limit, but the extension gains a check at activation: on native Windows (the platform is `win32` and the window is not a remote one), it shows one message saying it runs only on macOS, Linux, or through Remote-WSL, and leaves its view, windows, and runner inert instead of letting them run. In a Remote-WSL window the extension runs on the Linux side, so the check never fires there.
+      <advantage>A native Windows user who installs it is told plainly and at once what is wrong and how to get it working, while the release stays one universal VSIX uploaded once per registry.</advantage>
+      <drawback>It adds platform-specific code, and a message and inert state that must be tested on a platform this machine does not have, to an extension that otherwise names no platform; the listing still offers an install on native Windows that cannot do anything useful.</drawback>
+    </alternative>
+    <alternative id="Every non-Windows target">
+      The extension is published as platform-specific packages for every target `vsce` and Open VSX know except the two Windows ones: `linux-x64`, `linux-arm64`, `linux-armhf`, `alpine-x64`, `alpine-arm64`, `darwin-x64`, and `darwin-arm64`, all with the same version and the same contents, only the target in the manifest differing. Neither registry then offers it on native Windows, while in a Remote-WSL window VS Code installs the Linux package on the WSL side. The README still states the limit and the Remote-WSL path.
+      <advantage>The listing itself enforces the support limit: a native Windows user cannot install a package that would not work, and every non-Windows platform, including Alpine-based dev containers and 32-bit ARM, can install it.</advantage>
+      <drawback>Every release uploads seven packages to each registry instead of one, so the release skill publishes fourteen artifacts, a release can be left partly published within one registry as well as between the two, and the cost depends on how the sibling questions on a half-published release and the release pre-flight checks are settled; the Alpine and ARMHF targets are offered without ever having been tried.</drawback>
+    </alternative>
+    <alternative id="Mainstream non-Windows targets">
+      The extension is published as platform-specific packages for only the four mainstream non-Windows targets, `linux-x64`, `linux-arm64`, `darwin-x64`, and `darwin-arm64`, identical but for the target, leaving out the Windows targets and also `linux-armhf`, `alpine-x64`, and `alpine-arm64`. Neither registry offers it on native Windows or on the omitted platforms; a Remote-WSL window installs the `linux-x64` or `linux-arm64` package on the WSL side. The README states the limit and the Remote-WSL path.
+      <advantage>The listing enforces the limit while the release uploads four packages per registry rather than seven, and only platforms on which the extension&apos;s `python3`, `git`, and shell assumptions are commonly met are offered.</advantage>
+      <drawback>It still multiplies uploads and the room for a partly published release (contingent on the sibling questions on a half-published release and the release pre-flight checks), and it shuts out Alpine-based containers and 32-bit ARM Linux, where the extension would probably work, with no way for those users to install from a listing.</drawback>
+    </alternative>
   </open-question>
   <open-question id="First published version">
     <question>The manifest&apos;s version has read `0.1.0` since it was created, through three missions that changed the extension. Which version number does the first publication carry?</question>
