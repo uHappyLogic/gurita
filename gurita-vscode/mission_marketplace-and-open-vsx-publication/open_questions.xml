@@ -309,6 +309,36 @@
   </open-question>
   <open-question id="Release skill name">
     <question>What is the extension&apos;s release skill called, as the name of its directory under `.claude/skills/` and of its command?</question>
+    <alternative id="release-extension">
+      The skill is `.claude/skills/release-extension/SKILL.md`, run as `/release-extension`, with `name: release-extension`. Verb `release`, object the bare artifact kind `extension`. `/release-plugin` keeps its name.
+      <advantage>It has the same verb-object shape and length as `/release-plugin`, so the two maintainer skills complete and sort together under `/release-` and differ only in what they release. The repository ships exactly two artifact kinds, so `plugin` beside `extension` is unambiguous here.</advantage>
+      <drawback>`extension` does not name the editor, so a second editor extension would make the name ambiguous and need a rename. `release` also suggests the git-side release `/release-plugin` cuts (a tag, a GitHub release, notes), which reads wrong if the tag and GitHub-release siblings settle that an extension release makes none.</drawback>
+    </alternative>
+    <alternative id="release-vscode-extension">
+      The skill is `.claude/skills/release-vscode-extension/SKILL.md`, run as `/release-vscode-extension`, with `name: release-vscode-extension`. Verb `release`, object `vscode-extension`, naming the editor family. `/release-plugin` keeps its name.
+      <advantage>It keeps the shared `/release-` prefix and also says which editor the artifact is for, so the name stays unambiguous if another editor&apos;s extension is added later. It matches how the repository describes the work elsewhere (the &quot;VS Code extension&quot; in `CLAUDE.md`&apos;s layout).</advantage>
+      <drawback>It is three words against `/release-plugin`&apos;s two, so the two names are not parallel, and it is longer to type for no gain while the repository holds one extension. Like every `release-` name, it reads wrong if the siblings settle that an extension release makes no tag or GitHub release.</drawback>
+    </alternative>
+    <alternative id="release-gurita-vscode">
+      The skill is `.claude/skills/release-gurita-vscode/SKILL.md`, run as `/release-gurita-vscode`, with `name: release-gurita-vscode`. Verb `release`, object the package&apos;s own identifier, the manifest `name` and the directory `gurita-vscode/`. `/release-plugin` keeps its name.
+      <advantage>The command names exactly the thing it ships, the identifier in the manifest, the directory, the VSIX file name, and the published id `uhappylogic.gurita-vscode`, so there is no second name for the extension to learn or keep in sync.</advantage>
+      <drawback>`gurita` repeats what every name in this repository already implies, and the two skills then follow different schemes: one names an artifact kind (`plugin`), the other a package identifier. Renaming the package later would leave the skill&apos;s name stale.</drawback>
+    </alternative>
+    <alternative id="publish-extension">
+      The skill is `.claude/skills/publish-extension/SKILL.md`, run as `/publish-extension`, with `name: publish-extension`. Verb `publish`, object the bare artifact kind `extension`. `/release-plugin` keeps its name.
+      <advantage>`publish` is the verb of what the skill does (`vsce publish`, `ovsx publish` to the two registries) and of the goal&apos;s wording. It keeps an extension release clearly apart from the plugin&apos;s tag-and-distribution-repo release, so neither skill is mistaken for the other.</advantage>
+      <drawback>It breaks the shared `/release-` prefix, so the two maintainer release skills no longer sort or complete together and the parallel the goal draws (&quot;beside `/release-plugin`&quot;) is lost. `publish` understates the skill if the siblings settle that it also bumps the version, commits, tags, or creates a GitHub release.</drawback>
+    </alternative>
+    <alternative id="publish-vscode-extension">
+      The skill is `.claude/skills/publish-vscode-extension/SKILL.md`, run as `/publish-vscode-extension`, with `name: publish-vscode-extension`. Verb `publish`, object `vscode-extension`, naming the editor family. `/release-plugin` keeps its name.
+      <advantage>It is the most self-describing name: it says both that the skill pushes to registries and which editor&apos;s extension it pushes, so it stays unambiguous if more editors or more release kinds are added.</advantage>
+      <drawback>It is the longest name on offer. It shares neither the verb nor the shape of `/release-plugin`, and `publish` understates the skill if the siblings give it version, commit, tag, or GitHub-release steps.</drawback>
+    </alternative>
+    <alternative id="publish-gurita-vscode">
+      The skill is `.claude/skills/publish-gurita-vscode/SKILL.md`, run as `/publish-gurita-vscode`, with `name: publish-gurita-vscode`. Verb `publish`, object the package&apos;s own identifier `gurita-vscode`. `/release-plugin` keeps its name.
+      <advantage>It reads as the registry action on the package exactly as the registries name it, close to `vsce publish` run in `gurita-vscode/`, with one identifier for the extension everywhere.</advantage>
+      <drawback>It shares nothing with `/release-plugin`, neither verb nor naming scheme, and repeats `gurita`. A later rename of the package leaves it stale, and `publish` understates the skill if the siblings give it steps beyond the registries.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Release commit subject">
     <question>Does an extension release make a commit of its own, and under which subject, given that `/release-plugin` recognises its own interrupted run by a `HEAD` subject of exactly `Release: &lt;VERSION&gt;`?</question>
