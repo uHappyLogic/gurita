@@ -207,6 +207,15 @@ refreshes and re-reads until you swap back, and while it is open no mission tab 
 Like the rest of the page it holds buttons and dropdowns only: anything you type is asked for in
 VS Code's own input box.
 
+The view's parts stand one beneath the other under their headings: **Harnesses**, **Models and
+efforts**, **Variants**, and **Single-task lines**. Under **Variants** each recipe is headed by its
+name, and under **Single-task lines** each line by its name with the line's own controls beside
+it. Beneath each such heading every variant, a **Deleted** one included, is drawn as a card of its
+own: indented under the heading, with a vertical line down its left edge and space between one card
+and the next, the card holding the variant's name, where it comes from, its controls, and its line
+editor. The cards only set the recipes and lines apart from their variants; they change no control
+and nothing the view stores.
+
 #### The harness check
 
 Under **Harnesses** the view lists Claude Code, Antigravity, and Codex, each with the result of

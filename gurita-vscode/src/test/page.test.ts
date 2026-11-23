@@ -2824,3 +2824,63 @@ test('every push button the pane draws carries one class of the one shared look,
     assert.strictEqual(kept.declarations.get('background'), 'none', 'the tabs, headers, and links keep their unfilled look');
   }
 });
+
+test('each variant under Variants and Single-task lines, the deleted ones included, is drawn as a card of its own, indented under its heading with a line down its left edge and space between cards', () => {
+  const page = loadPage();
+  page.send(live([]));
+  named(page, 'Settings').click();
+  page.send(VARIANTS);
+  page.send(LINES);
+  const view = settingsView(page);
+  assert.ok(view !== undefined, 'the settings view is drawn');
+  const parts = view.all().filter((each) => each.has('variant-edits') || each.has('line-edits'));
+  assert.strictEqual(parts.length, 2, 'the Variants and Single-task lines parts are drawn');
+  const cards = { listed: 0, deleted: 0 };
+  for (const part of parts) {
+    const blocks = part.all().filter((each) => each.has('variant-recipe'));
+    assert.ok(blocks.length > 0);
+    for (const block of blocks) {
+      const children = block.children.filter((child): child is FakeElement => child instanceof FakeElement);
+      const heading = children.findIndex((child) => child.tagName === 'h5');
+      const list = children.findIndex((child) => child.has('variant-list'));
+      assert.ok(heading >= 0 && list > heading, 'the variant list stands beneath its recipe or line heading');
+      const items = children[list].children.filter((child): child is FakeElement => child instanceof FakeElement);
+      for (const item of items) {
+        assert.strictEqual(item.tagName, 'li');
+        assert.ok(item.has('variant') && item.has('variant-card'), `${item.dataset.variant} is drawn as a card`);
+        if (item.has('deleted')) {
+          cards.deleted += 1;
+        } else {
+          cards.listed += 1;
+        }
+      }
+    }
+  }
+  assert.ok(cards.listed > 0 && cards.deleted === 2, 'listed and deleted variants alike are cards, under both headings');
+  const cardItems = view.all().filter((each) => each.has('variant-card'));
+  assert.ok(cardItems.every((each) => each.has('variant')), 'nothing but a variant is a card');
+
+  const rules = stylesheetRules();
+  const ruleOf = (selector: string): Map<string, string> => {
+    const found = rules.filter((rule) => rule.selectors.includes(selector));
+    assert.strictEqual(found.length, 1, `one rule selects ${selector}`);
+    return found[0].declarations;
+  };
+  const card = ruleOf('.variant-list li.variant-card');
+  assert.match(card.get('border-left') ?? '', /^[1-9]\d*px solid var\(--vscode-[a-zA-Z]+\)$/, 'a solid line in a theme colour down the left edge');
+  const padding = (card.get('padding') ?? '').split(/\s+/);
+  assert.strictEqual(padding.length, 4);
+  assert.notStrictEqual(Number.parseFloat(padding[3]), 0, 'the card keeps its content off the line');
+  const list = ruleOf('.variant-list');
+  const margin = (list.get('margin') ?? '').split(/\s+/);
+  assert.strictEqual(margin.length, 4);
+  assert.ok(Number.parseFloat(margin[3]) > 0, 'the cards are indented under the heading');
+  assert.strictEqual(list.get('display'), 'flex');
+  assert.strictEqual(list.get('flex-direction'), 'column');
+  assert.ok(Number.parseFloat(list.get('gap') ?? '0') > 0, 'space between one card and the next');
+  for (const rule of rules) {
+    if (rule.selectors.some((selector) => selector.includes('variant-card'))) {
+      assert.deepStrictEqual(rule.selectors, ['.variant-list li.variant-card'], 'the card has one rule of its own');
+    }
+  }
+});

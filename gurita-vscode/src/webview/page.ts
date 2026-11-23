@@ -149,7 +149,9 @@
 // with where it comes from, its Duplicate, Rename, and Delete controls, a stored copy also its
 // Reset control, and its one line beneath with the line editor it gets, and each line a hiding
 // record hides with its Reset control alone, every control posted to the extension and the lines
-// redrawn only from what it posts.
+// redrawn only from what it posts. Under both headings each variant, a deleted one included, is
+// drawn as a card of its own, indented under its recipe's or line's heading, a line down its left
+// edge and space between it and the next; the cards change only how the view looks.
 
 interface VsCodeApi {
   postMessage(message: unknown): void;
@@ -1080,11 +1082,11 @@ declare function acquireVsCodeApi(): VsCodeApi;
    * One listed variant of the recipe `recipe` in the settings view: its name, where it comes from,
    * whether it is the default, its duplicate, rename, delete, and default controls, a stored
    * variant's reset control too, returning its lines to those of the variant it was made from, and
-   * beneath them its line editor. `key` names each control's focus key, its `%` standing for the
-   * control, and `focus` the line editor's.
+   * beneath them its line editor, drawn as a card of its own. `key` names each control's focus key,
+   * its `%` standing for the control, and `focus` the line editor's.
    */
   function drawVariantItem(recipe: string, variant: SettingsVariant, key: string, focus: string): HTMLElement {
-    const item = element('li', undefined, variant.isDefault ? 'variant default' : 'variant');
+    const item = element('li', undefined, variant.isDefault ? 'variant variant-card default' : 'variant variant-card');
     item.dataset.variant = variant.name;
     item.dataset.origin = variant.origin;
     const name = element('span', variant.name, 'variant-name');
@@ -1126,9 +1128,9 @@ declare function acquireVsCodeApi(): VsCodeApi;
     return item;
   }
 
-  /** One shipped or own variant a hiding record hides, marked deleted, with the reset control alone, posting `reset`. */
+  /** One shipped or own variant a hiding record hides, marked deleted, drawn as a card of its own with the reset control alone, posting `reset`. */
   function drawHiddenItem(hidden: ReadVariantRef, focus: string, reset: Record<string, unknown>): HTMLElement {
-    const item = element('li', undefined, 'variant deleted');
+    const item = element('li', undefined, 'variant variant-card deleted');
     item.dataset.variant = hidden.name;
     item.dataset.origin = hidden.origin;
     item.append(

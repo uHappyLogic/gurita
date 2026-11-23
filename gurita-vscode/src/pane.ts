@@ -2150,7 +2150,10 @@ function nonce(): string {
  * and a 1px outline in the contrast border colour, else the foreground colour, so it stands out
  * against both the page and its own fill; the Settings control, while its view is shown, swaps to
  * the secondary button colour with a focus-coloured ring around it. The mission tabs, the two pane
- * headers, and the dependency links keep looks of their own.
+ * headers, and the dependency links keep looks of their own. In the settings view each variant
+ * under Variants and Single-task lines, a deleted one included, is a card of its own: its list
+ * indented under the recipe's or line's heading, a vertical line down the card's left edge, and a
+ * gap between one card and the next.
  */
 function pageShell(webview: vscode.Webview, script: vscode.Uri): string {
   const token = nonce();
@@ -2211,8 +2214,9 @@ function pageShell(webview: vscode.Webview, script: vscode.Uri): string {
   .variant-recipe .variant-note { margin: 0 0 0.2em; opacity: 0.8; }
   .single-task-line .line-heading { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0.6em; }
   .single-task-line .line-actions { margin-left: auto; display: flex; gap: 0.3em; font-weight: normal; }
-  .variant-list { list-style: none; margin: 0; padding: 0; }
-  .variant-list li.variant { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0.6em; padding: 0.15em 0; }
+  .variant-list { list-style: none; margin: 0 0 0 1em; padding: 0; display: flex; flex-direction: column; gap: 0.5em; }
+  .variant-list li.variant { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0.6em; }
+  .variant-list li.variant-card { border-left: 2px solid var(--vscode-descriptionForeground); padding: 0.3em 0 0.3em 0.8em; }
   .variant-list .variant-origin { opacity: 0.8; }
   .variant-list .variant-default { font-weight: 600; }
   .variant-list li.deleted .variant-name { text-decoration: line-through; opacity: 0.7; }
