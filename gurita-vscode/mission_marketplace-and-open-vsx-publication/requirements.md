@@ -62,5 +62,9 @@ No Marketplace publisher, Open VSX namespace, or token for either is recorded as
 
 - **Listing verification.** Nothing is observed after publication. The extension counts as live on both registries once the release skill's two publish commands, `vsce publish` for the Marketplace and `ovsx publish` for Open VSX, have both exited successfully. The mission opens no listing page, queries no registry, and installs the published extension in no editor, VS Code or a fork, to confirm it.
 
+### Publisher and namespace
+
+- **Open VSX namespace ownership.** The mission claims ownership of the `uhappylogic` namespace on Open VSX, but only as far as filing the claim. The claim is filed with the first maintainer-only tasks, directly after the namespace is created, and that task counts as done once the claim's issue exists. The mission records nothing further about it and ends whether or not the claim has been granted: publication does not wait for the claim, and granting is left to Open VSX outside the mission.
+
 ## Out of Scope
 
