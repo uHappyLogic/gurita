@@ -26,7 +26,10 @@
 // beneath it, and while a successful read does not list a window's mission, that window stays open
 // and is answered with one fixed notice that the mission is no longer live, drawing no diagram,
 // recipe, pane, or action button; either window draws its mission's page again from the next read
-// that lists the path. Every click a window's page posts is checked against what the latest answer
+// that lists the path. Each window's editor tab is titled with its mission's title alone, every
+// colliding tab gaining its mission's scope after a separator while another live mission carries
+// the same title, re-titled on every successful live read, and carries one fixed built-in codicon
+// through a `ThemeIcon`, with no image file. Every click a window's page posts is checked against what the latest answer
 // posted to that window, for that window's own mission, so a click naming another mission, or one
 // reaching a window in the failure state or the no-longer-live notice, starts nothing.
 // The recipes are read with the per-user variant store laid over them. Each entry offers the
@@ -167,6 +170,12 @@ import { StartingButton, StartingOffer, variantValues } from './startingRows';
 
 /** The view type of every mission window. */
 export const MISSION_VIEW_TYPE = 'gurita.mission';
+
+/** The built-in codicon every mission window's editor tab carries, through a `ThemeIcon`, so no image file is made for it. */
+export const MISSION_WINDOW_ICON = 'rocket';
+
+/** What stands between a colliding mission window's title and its mission's scope on its editor tab. */
+export const TAB_SCOPE_SEPARATOR = ' — ';
 
 /** The hidden command a click on a mission's row in the side-bar view runs, opening or revealing that mission's window. */
 export const OPEN_MISSION_COMMAND = 'gurita.openMission';
@@ -510,11 +519,51 @@ export function postRunning(): void {
   }
 }
 
+/** The scope of the mission at `mission`, the directory holding its own directory, `.` for one standing at the root. */
+function missionScope(mission: string): string {
+  const parts = mission.replace(/\/+$/, '').split('/');
+  return parts.length > 1 ? parts.slice(0, -1).join('/') : '.';
+}
+
+/**
+ * The editor-tab title of each live mission in `live`, by its path: the mission's title alone, and
+ * while another live mission carries the same title, that title followed by the separator and the
+ * mission's scope, on every colliding tab.
+ */
+function tabTitles(live: readonly LiveMission[]): Map<string, string> {
+  const counts = new Map<string, number>();
+  for (const mission of live) {
+    counts.set(mission.title, (counts.get(mission.title) ?? 0) + 1);
+  }
+  return new Map(
+    live.map((mission) => [
+      mission.path,
+      (counts.get(mission.title) ?? 0) > 1 ? `${mission.title}${TAB_SCOPE_SEPARATOR}${missionScope(mission.path)}` : mission.title,
+    ]),
+  );
+}
+
+/**
+ * Re-titles the editor tab of every open mission window, shown or hidden, from the live missions
+ * `live` a successful read gave, as `tabTitles` titles them; a window whose mission the read does not
+ * list keeps the title it has.
+ */
+function retitleWindows(live: readonly LiveMission[]): void {
+  const titles = tabTitles(live);
+  for (const each of windows.values()) {
+    const title = titles.get(each.mission);
+    if (title !== undefined && each.panel.title !== title) {
+      each.panel.title = title;
+    }
+  }
+}
+
 /**
  * Opens the window of the mission at `mission`, or reveals it when one is already open, starting the
  * session's live read when nothing has started it yet: a webview panel of its own in the active
- * editor column, titled with the mission's title as the session's read lists it, else its path,
- * beside every other mission's window. A window created afresh is the active editor at once, and
+ * editor column, its tab titled as `tabTitles` titles the mission from the session's read, else with
+ * its path, and carrying the one fixed mission codicon, beside every other mission's window. Every
+ * successful live read re-titles the open windows' tabs. A window created afresh is the active editor at once, and
  * any window becoming the active editor later raises a view-state change, so each brings the
  * mission's run terminal forward, without taking the focus, while that run is going; a reveal of
  * the window already active changes nothing.
@@ -527,11 +576,12 @@ export function openMissionWindow(context: vscode.ExtensionContext, mission: str
     return;
   }
   const scripts = vscode.Uri.joinPath(context.extensionUri, 'out', 'webview');
-  const title = current?.live.find((each) => each.path === mission)?.title ?? mission;
+  const title = (current !== undefined ? tabTitles(current.live).get(mission) : undefined) ?? mission;
   const created = vscode.window.createWebviewPanel(MISSION_VIEW_TYPE, title, vscode.ViewColumn.Active, {
     enableScripts: true,
     localResourceRoots: [scripts],
   });
+  created.iconPath = new vscode.ThemeIcon(MISSION_WINDOW_ICON);
   const win: MissionWindow = { mission, panel: created };
   windows.set(mission, win);
   created.webview.html = pageShell(created.webview, vscode.Uri.joinPath(scripts, 'page.js'), title);
@@ -789,6 +839,7 @@ async function answer(context: vscode.ExtensionContext): Promise<void> {
         recipes: readRecipeList(context),
       };
       failure = undefined;
+      retitleWindows(read.missions);
     } else {
       current = undefined;
       failure = read.cause;

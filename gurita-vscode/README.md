@@ -180,7 +180,10 @@ state.
 A click on a mission's row in the side-bar view opens that mission's own window in the editor
 area, titled with the mission's title, or brings it forward when it is already open, so a mission
 never has two windows. Several missions' windows stand open at once, each showing that one
-mission's page with no tab row, and you close one as you close any editor tab. Besides the
+mission's page with no tab row, and you close one as you close any editor tab. Each window's
+editor tab shows the mission's title alone and the rocket codicon; while another live mission
+carries the same title, each of those tabs adds its mission's scope after a dash, such as
+`Shared title — lib`, and the tabs are re-titled on every re-read. Besides the
 side-bar view there is no entry point: the Command Palette offers no command opening a window,
 there is no status bar item or keybinding, no window opens by itself, and the windows do not
 survive a restart or a window reload, so open them again from the side-bar view after one.

@@ -39,7 +39,10 @@ const posted: unknown[] = [];
 /** A webview panel the stub's editor created: what its page's messages reach, its disposal, and its reveals. */
 interface StubPanel {
   viewType: string;
+  /** Its editor tab's title, as created and as the extension last set it. */
   title: string;
+  /** The icon its editor tab carries, as the extension last set it. */
+  iconPath?: unknown;
   visible: boolean;
   /** Whether it is the active editor. */
   active: boolean;
@@ -91,6 +94,11 @@ function notify(message: string): Promise<undefined> {
 
 const disposable = { dispose(): void {} };
 
+/** A built-in codicon as the stub's editor takes it, by its id. */
+class StubThemeIcon {
+  constructor(readonly id: string) {}
+}
+
 /** A file system watcher the stub's editor created: the listeners registered on it by event kind, and whether it was disposed. */
 interface StubWatcher {
   listeners: Record<'create' | 'change' | 'delete', ((uri: { fsPath: string }) => void)[]>;
@@ -114,6 +122,7 @@ const stub = {
     file: (fsPath: string) => ({ fsPath }),
   },
   ViewColumn: { Active: -1 },
+  ThemeIcon: StubThemeIcon,
   RelativePattern: class {
     constructor(
       readonly base: unknown,
@@ -152,6 +161,18 @@ const stub = {
       panels.push(record);
       activate(record, true);
       const panel = {
+        get title() {
+          return record.title;
+        },
+        set title(value: string) {
+          record.title = value;
+        },
+        get iconPath() {
+          return record.iconPath;
+        },
+        set iconPath(value: unknown) {
+          record.iconPath = value;
+        },
         get visible() {
           return record.visible;
         },
@@ -711,6 +732,85 @@ test("each open mission window is posted its own mission's page from the session
     pane.postRunning();
     assert.deepStrictEqual(zeta.posts.slice(from).map((message) => message.type), ['running']);
     assert.deepStrictEqual(reopened.posts.slice(twoFrom).map((message) => message.type), ['running']);
+  } finally {
+    process.env.HOME = home;
+  }
+});
+
+/** Three missions of the tab-title test: two in different scopes that come to share a title, and one whose title no other carries. */
+const CHI = 'lib/mission_chi/';
+const CHI_ROOT = 'mission_chi/';
+const PSI = 'app/mission_psi/';
+
+test("a mission window's tab is titled with its mission's title alone, every colliding tab gaining its scope while another live mission shares the title, re-titled on every live re-read, and carries one fixed codicon", async () => {
+  const home = process.env.HOME;
+  process.env.HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-home-'));
+  try {
+    const root = project(CHI, CHI_ROOT, PSI);
+    /** Gives the mission at `mission` the title `title` in its `requirements.md`. */
+    const retitle = (mission: string, title: string): void => {
+      fs.writeFileSync(path.join(root, mission, 'requirements.md'), `# ${title}\n\n## Goal\n\nA goal.\n`);
+    };
+    retitle(CHI, 'Shared title');
+    retitle(CHI_ROOT, 'Another title');
+    retitle(PSI, 'Lone title');
+    git(root, 'add', '.');
+    git(root, 'commit', '-q', '-m', 'Titles');
+    const files = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-recipes-'));
+    fs.writeFileSync(path.join(files, 'shipped_recipes.md'), SHIPPED_TEXT);
+    packaged.set('bundled/missions.py', path.join(__dirname, '..', '..', '..', 'core', 'tools', 'missions.py'));
+    packaged.set('bundled/shipped_recipes.md', path.join(files, 'shipped_recipes.md'));
+    workspace.folders = [{ uri: { fsPath: root } }];
+    workspace.settings = { ownRecipesFile: path.join(files, 'recipes.md') };
+    workspaceState.clear();
+    /** Refreshes and waits until every window among `missions` is posted its answer. */
+    const refreshed = async (...missions: string[]): Promise<void> => {
+      const from = missions.map((mission) => openWindow(mission).posts.length);
+      send({ type: 'refresh' });
+      for (const [index, mission] of missions.entries()) {
+        await windowPosted(mission, fs.existsSync(path.join(root, mission)) ? 'page' : 'notLive', from[index]);
+      }
+    };
+    const titles = (): string[] => [CHI, CHI_ROOT, PSI].map((mission) => (windowOf.get(mission) as StubPanel).title);
+
+    // A lone title: each tab carries its mission's title alone, and every one the fixed codicon.
+    const psi = openWindow(PSI);
+    await refreshed(PSI);
+    assert.strictEqual(psi.title, 'Lone title');
+    const [chi, chiRoot] = [openWindow(CHI), openWindow(CHI_ROOT)];
+    assert.deepStrictEqual(titles(), ['Shared title', 'Another title', 'Lone title'], "a window opened afresh is titled from the session's read");
+    for (const each of [chi, chiRoot, psi]) {
+      assert.ok(each.iconPath instanceof StubThemeIcon, 'every mission tab carries a built-in codicon through a ThemeIcon');
+      assert.strictEqual((each.iconPath as StubThemeIcon).id, pane.MISSION_WINDOW_ICON);
+    }
+    assert.strictEqual(pane.MISSION_WINDOW_ICON, 'rocket');
+
+    // Two live missions sharing one title: both colliding tabs gain their scope, the lone one does not.
+    retitle(CHI_ROOT, 'Shared title');
+    await refreshed(CHI, CHI_ROOT, PSI);
+    assert.deepStrictEqual(titles(), ['Shared title — lib', 'Shared title — .', 'Lone title'], 'a re-read re-titles the colliding tabs');
+    assert.strictEqual(pane.TAB_SCOPE_SEPARATOR, ' — ');
+
+    // A re-read that ends the collision: the title alone again.
+    retitle(CHI_ROOT, 'Another title');
+    await refreshed(CHI, CHI_ROOT, PSI);
+    assert.deepStrictEqual(titles(), ['Shared title', 'Another title', 'Lone title'], 'the re-read ending the collision drops the scope');
+
+    // The collision ended by a mission no longer live: the other tab drops its scope.
+    retitle(CHI_ROOT, 'Shared title');
+    await refreshed(CHI, CHI_ROOT, PSI);
+    assert.deepStrictEqual(titles(), ['Shared title — lib', 'Shared title — .', 'Lone title']);
+    fs.rmSync(path.join(root, CHI_ROOT), { recursive: true });
+    await refreshed(CHI, CHI_ROOT, PSI);
+    assert.strictEqual(chi.title, 'Shared title', 'a mission that stops being live ends the collision');
+
+    // A failed read re-titles nothing.
+    workspace.folders = undefined;
+    const from = chi.posts.length;
+    send({ type: 'refresh' });
+    await windowPosted(CHI, 'liveFailure', from);
+    assert.strictEqual(chi.title, 'Shared title');
+    workspace.folders = [{ uri: { fsPath: root } }];
   } finally {
     process.env.HOME = home;
   }
