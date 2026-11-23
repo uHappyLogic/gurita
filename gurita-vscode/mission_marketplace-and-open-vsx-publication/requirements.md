@@ -72,5 +72,9 @@ No Marketplace publisher, Open VSX namespace, or token for either is recorded as
 
 - **Listing icon design.** The listing icon shows the activity-bar icon's three arms as filled outlines in the same geometry, filled white or the activity bar's near-white `#d7dae0`, on a filled square in the banner's darker violet `#9333ea`.
 
+### Listing metadata
+
+- **Listing name and description.** The manifest's `displayName` stays `Gurita for VS Code`, and its `description` is rewritten as one sentence for a reader new to the plugin: it says what Gurita is (a plugin for Claude Code, Codex, and Antigravity that settles a mission's questions before handing its work to agents), what the extension adds (a side-bar view and windows over the plugin's missions, questions, and recipes), and that the plugin must be installed for it to do anything.
+
 ## Out of Scope
 
