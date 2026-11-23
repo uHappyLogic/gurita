@@ -1,48 +1,4 @@
 <open-questions>
-  <open-question id="Mission window tab title">
-    <question>Each mission opens in a window of its own in the editor area, several at once beside the Settings window, and an editor tab shows a title and optionally an icon. Today&apos;s tab row shows each mission&apos;s title with its path as a tooltip, and two missions in different scopes may carry the same title. What does a mission window&apos;s editor tab show so that several open missions can be told apart?</question>
-    <recommendation option="Title, scope on collision, fixed icon">A tab stays as short as the title the side-bar row shows and gains the scope only while another live mission carries the same title, the one case where the bare title fails; the title is re-read with every live read anyway, so re-titling adds one comparison, and a built-in codicon as the fixed icon marks mission windows among file editors with no image file and no light-theme variant to make.</recommendation>
-    <alternative id="Title, scope on collision, fixed icon">
-      The tab&apos;s title is the mission&apos;s title alone, with the scope appended after a separator only while another live mission carries the same title, on every colliding tab, re-titled on every live re-read. The panel&apos;s `iconPath` is one fixed icon on every mission tab, either a built-in codicon through a `ThemeIcon` or the generated activity-bar mark.
-      <advantage>Short tabs in the common case and unique ones when needed. The icon marks every mission window among the file editors.</advantage>
-      <drawback>Tab text shifts as other missions are defined and finished, and every re-read must recompute all open windows&apos; titles. Using the generated mark depends on how the sibling icon questions settle, and its single fill may need a light-theme variant.</drawback>
-    </alternative>
-    <alternative id="Title only, no icon">
-      The tab&apos;s title is the mission&apos;s title exactly as `missions.py live` reads it from its `requirements.md` heading, with no scope or path added in any case, and the panel sets no `iconPath`. The panel API offers a title and an icon only, with no separate tooltip, so the path that today&apos;s in-page tab row carries as a tooltip is not carried on the editor tab.
-      <advantage>The shortest tab and the least work. The title never changes while the mission stays live, and it matches the label the side-bar tree shows, so a person sees one name for the mission everywhere.</advantage>
-      <drawback>Two live missions in different scopes that carry the same title get identical tabs, and nothing on the tab tells them apart. A person then has to open each one to know which is which, which is exactly the case the question asks about. A mission tab also looks like any other untitled editor tab.</drawback>
-    </alternative>
-    <alternative id="Title only, fixed icon">
-      The tab&apos;s title is the mission&apos;s title exactly as read, with no scope or path added in any case. The panel&apos;s `iconPath` is one fixed icon, the same on every mission tab: either a built-in codicon through a `ThemeIcon`, which the installed API accepts and which needs no image file, or the generated activity-bar mark.
-      <advantage>Short, stable tabs that match the side-bar label. The icon marks each one as a Gurita mission window among the file editors around it, for one property set at creation.</advantage>
-      <drawback>The icon is the same on every mission tab, so it does nothing to separate two same-titled missions in different scopes, which stay indistinguishable. Using the generated mark depends on how the sibling icon questions settle (its pipeline and form). That mark&apos;s single `#d7dae0` fill may also need a light-theme variant before it reads well on a tab.</drawback>
-    </alternative>
-    <alternative id="Title with scope always, no icon">
-      The tab&apos;s title is always the mission&apos;s title followed by its scope, the directory holding the mission&apos;s directory, after a separator (for example `Activity bar view and per-mission windows · gurita-vscode/`, the root shown as a fixed token such as `.`). This applies whether or not another mission shares the title, and the panel sets no `iconPath`.
-      <advantage>Every tab is unique by construction, whatever else is live. The slug comes from the title, and a scope refuses the same slug twice, so title plus scope never repeats. The tab never changes while the mission stays live and needs no comparison with other missions.</advantage>
-      <drawback>Every tab is longer, and so every tab pays for a collision that is rare. In a project whose missions all stand in one scope, the suffix repeats on every tab and tells nothing, while still taking tab width. A mission tab is not visually marked as a Gurita window.</drawback>
-    </alternative>
-    <alternative id="Title with scope always, fixed icon">
-      The tab&apos;s title is always the mission&apos;s title followed by its scope after a separator, the root shown as a fixed token. The panel&apos;s `iconPath` is one fixed icon on every mission tab, either a built-in codicon through a `ThemeIcon` or the generated activity-bar mark.
-      <advantage>Every tab is unique by construction and stable for the mission&apos;s life. The icon also sets mission windows apart from the file editors among them at a glance.</advantage>
-      <drawback>It has the longest tabs of the title-based options: a repeated scope suffix on every tab in a single-scope project, plus an icon&apos;s width. Using the generated mark depends on how the sibling icon questions settle, and its single fill may need a light-theme variant.</drawback>
-    </alternative>
-    <alternative id="Title, scope on collision, no icon">
-      The tab&apos;s title is the mission&apos;s title alone, and the scope is appended after a separator only while another live mission carries the same title. In that case it goes on every tab of the colliding missions. Each window re-titles on every live re-read, so the suffix appears when a same-titled mission is defined and goes when one is finished. The panel sets no `iconPath`.
-      <advantage>Tabs stay as short as the bare title in the common case and become unique exactly when they would otherwise be identical. The extra text appears only where it tells missions apart.</advantage>
-      <drawback>A tab&apos;s text depends on which other missions are live. A tab changes under the person when an unrelated same-titled mission is defined or finished, and every live re-read has to recompute and set every open window&apos;s title. The rule is also one more piece of logic to test. A mission tab is not visually marked as a Gurita window.</drawback>
-    </alternative>
-    <alternative id="Path only, no icon">
-      The tab&apos;s title is the mission&apos;s repo-relative path exactly as the definition tool printed it, trailing slash included (for example `gurita-vscode/mission_activity-bar-view-and-per-mission/`), with no title shown. The panel sets no `iconPath`.
-      <advantage>It is unique always and stable, with no rule to compute. It is the same string every skill takes as `--mission` and every commit subject names, so the tab names the mission exactly as the rest of the workflow does.</advantage>
-      <drawback>Tabs are long and read as file paths rather than names. The `mission_` prefix and the slug repeat what the title says less readably, and several such tabs crowd the tab bar or are cut short. The tab also no longer matches the title the side-bar tree shows for the same mission.</drawback>
-    </alternative>
-    <alternative id="Path only, fixed icon">
-      The tab&apos;s title is the mission&apos;s repo-relative path exactly as printed, trailing slash included, with no title shown. The panel&apos;s `iconPath` is one fixed icon on every mission tab, either a built-in codicon through a `ThemeIcon` or the generated activity-bar mark.
-      <advantage>It is unique always and stable, and it names the mission as the workflow&apos;s commands and commits do. The icon keeps a path-titled tab from being mistaken for a file editor&apos;s tab.</advantage>
-      <drawback>It has the longest and least readable tabs of the set, and they do not match the side-bar label. Using the generated mark depends on how the sibling icon questions settle, and its single fill may need a light-theme variant.</drawback>
-    </alternative>
-  </open-question>
   <open-question id="Window of ended mission">
     <question>A mission&apos;s window can still be open when its mission stops being live, as when finishing the mission removes its directory. What happens to that window then?</question>
     <recommendation option="Ended notice, rebinds">Nothing closes under the person: the window says what happened in the place they were looking and offers no action against a directory that is gone, a mission hidden for a moment by a branch switch or a run&apos;s own git work returns to its window, and the rule needs no tie to the run bookkeeping.</recommendation>
