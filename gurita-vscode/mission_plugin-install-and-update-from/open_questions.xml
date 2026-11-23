@@ -32,35 +32,6 @@
       <drawback>The outcome is whatever each CLI happens to do, unobserved today and possibly different per harness: a re-add may fail on the taken name, replace the registration silently, or update from the checkout while the window says the latest release was installed, so the person cannot predict or understand what happened.</drawback>
     </alternative>
   </open-question>
-  <open-question id="Project scopes without project">
-    <question>Claude Code&apos;s project and local scopes belong to a project root. What does the Settings window offer for those two scopes when no workspace folder is open, so that the root it works from is the home directory?</question>
-    <recommendation option="User scope only">With no folder open there is no project for a project or local copy to belong to, and at the home directory a project-scope install would write the user settings file under another scope&apos;s name; offering the one scope that still means what it says needs no extra state, and opening a folder brings the other two back.</recommendation>
-    <alternative id="User scope only">
-      With no workspace folder open, the Settings window offers a Claude Code install at user scope alone: project and local are not among the scopes it offers, and nothing on the page mentions them until a folder is open. The home directory stays only the root the harness check runs from, as `settingsWindow.ts` already falls back to `os.homedir()`.
-      <advantage>No install can land in a project that is not one: at the home directory project scope would write `~/.claude/settings.json`, the file Claude Code&apos;s user scope also uses, and local scope would tie a copy to the home directory as if it were a project, so leaving both out removes the one case where the scopes stop meaning what they say.</advantage>
-      <drawback>The scope choice silently shrinks to one value, so a person who expected project or local is not told why they vanished or that opening a folder brings them back; how the narrowed choice is drawn depends on how the scope is picked on the page, which another question settles.</drawback>
-    </alternative>
-    <alternative id="Shown unavailable with reason">
-      With no workspace folder open, the Settings window still lists project and local beside user for a Claude Code install, but shows them unavailable, with a line saying that they need an open folder; only user scope can be installed until a folder is opened.
-      <advantage>The person sees that Claude Code supports three scopes and learns exactly what to do to reach the two that need a project, while nothing is ever installed against the home directory as a project root.</advantage>
-      <drawback>The page gains a disabled state and an explanatory line for a case that never arises when a folder is open, more to draw and test; whether an unavailable entry can be shown at all depends on the control the scope is picked with, which another question settles.</drawback>
-    </alternative>
-    <alternative id="Home as project root">
-      With no workspace folder open, the Settings window offers all three Claude Code scopes exactly as it does with a folder open, and a project or local install runs from the home directory as its project root, the same root the harness check already uses, so the copy is recorded against the home directory.
-      <advantage>One rule for every window state: the window uses the root it already computes, adds no special case to the page or the install, and what it installs at the home directory is what the check run from that same root then detects.</advantage>
-      <drawback>A project-scope install at the home directory writes `~/.claude/settings.json`, which is Claude Code&apos;s user settings file, so the project and user scopes collapse into one file and the person&apos;s user settings are edited under the name of a project install; a local-scope copy applies only to sessions started in the home directory itself, almost never what someone choosing local means.</drawback>
-    </alternative>
-    <alternative id="Local at home, project withheld">
-      With no workspace folder open, the Settings window offers user and local for a Claude Code install and leaves project out; a local install runs from the home directory as its root, writing `~/.claude/settings.local.json` and recording the home directory as its project.
-      <advantage>It keeps every scope that still names a file of its own at the home directory and drops only the one that would collide with the user settings file, so no install edits the user settings under another scope&apos;s name.</advantage>
-      <drawback>The rule is subtle and asymmetric, hard to explain on the page, and the local copy it allows still applies only to sessions started in the home directory, so it keeps a choice few people would want while making the scope list differ from the folder-open case in a non-obvious way.</drawback>
-    </alternative>
-    <alternative id="Ask for a project folder">
-      With no workspace folder open, the Settings window still offers project and local for a Claude Code install, but choosing either asks the person, through VS Code&apos;s own folder-choosing dialog, for the project directory the install is made for, and the install runs from that directory rather than from the home directory; user scope needs no folder.
-      <advantage>Every scope stays reachable without opening a folder, and project and local keep their real meaning, since the copy is always tied to a directory the person named as a project.</advantage>
-      <drawback>It installs into a project the window is not looking at: the harness check still runs from the home directory, so the copy it just made is not among the scopes the window detects and shows, and the page gains a folder-asking step used nowhere else, beside a choice the person could make by simply opening that folder.</drawback>
-    </alternative>
-  </open-question>
   <open-question id="Antigravity install mechanism">
     <question>Antigravity&apos;s documented install is a `curl` and `tar` pipeline that extracts the distribution repository&apos;s archive into `~/.gemini/config/plugins/gurita`, while `agy plugin install &lt;target&gt;` exists but has only been seen to accept a directory. Which does the Settings window&apos;s Antigravity install use?</question>
     <alternative id="Documented pipeline">
