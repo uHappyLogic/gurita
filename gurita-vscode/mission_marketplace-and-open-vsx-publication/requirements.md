@@ -102,5 +102,9 @@ No Marketplace publisher, Open VSX namespace, or token for either is recorded as
 
 - **Root documents mention.** After the first publication the root `README.md` gains a short subsection with links to both listings and to `gurita-vscode/README.md`, and `CONTRIBUTING.md`'s `## Development` gains a pointer: the extension under `gurita-vscode/` has a build and test loop of its own (Node 22 through nvm, independent of the host build and `VERSION`), documented in its README, and is released through its own maintainer-only skill rather than `/release-plugin`. `docs/` stays untouched.
 
+### CI
+
+- **CI for the extension.** The existing `drift-gate` job gains a Node setup (`actions/setup-node`, pinned to a SHA, Node 22) and then `npm ci`, `npm test`, and `npm run package` in `gurita-vscode/`; the last of these runs `vscode:prepublish`, which compiles, runs `scripts/bundle.js` from the checkout, and calls `vsce package`. The built VSIX is discarded, and CI stays one job with no path filter.
+
 ## Out of Scope
 
