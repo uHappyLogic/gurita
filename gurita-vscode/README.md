@@ -44,7 +44,7 @@ Every Node command runs under Node 22 through nvm, in a subshell, from the repos
   run path, the pane's answer to a tab click, the recipe list and the fixed-name buttons it
   posts, with the variant selections it remembers, the harness check it runs, with the check script's print stubbed, and
   the harnesses it enables and disables, with their model and effort lists, and the variant
-  edits it makes, the line editor's model and effort picks among them, and its single-task line
+  edits it makes, the line editor's harness, model, and effort picks among them, and its single-task line
   edits, with the looped run's names following them, are tested against a stub of the `vscode`
   module,
   and the page script against a small stand-in for the DOM. Nothing runs inside an editor.
@@ -310,21 +310,30 @@ Beneath each variant stands its line editor, one row per line. A line of a known
 (`specify-mission-starting-state`, not the whole
 `claude -p "/gurita:specify-mission-starting-state --mission <path>" …` line), with an
 `interactive` mark beside it when the line is not headless (when it carries the `# interactive`
-mark), and the line as written in its hover text; on the right of the row stand its harness as
-text (Claude Code, Antigravity, or Codex) and then its dropdowns. Every other line, a shell step,
+mark), and the line as written in its hover text; on the right of the row stand its harness
+(Claude Code, Antigravity, or Codex) and then its dropdowns. Every other line, a shell step,
 the slot line `<single-task line>`, or a command the extension does not know, is drawn as its
 text. Only a line of a known harness carrying both `--model` and `--effort`, a `claude` or `agy`
-line, gets a model dropdown and an effort dropdown; a `codex` line carrying `-m` gets its model
-dropdown alone, since Codex holds no effort list; every other line, a `claude` or `agy` line
-without both flags included, gets no dropdown and stays read-only. The rows are display only:
-no line, stored value, or mission page changes for them. The model dropdown offers the harness's model list and the
+line, gets a model dropdown and an effort dropdown, and its harness is a dropdown too, offering
+Claude Code and Antigravity and standing on the one the line runs on (on a line drawn as its
+text, it stands before the model dropdown); a `codex` line carrying `-m` gets its model dropdown
+alone, since Codex holds no effort list, and keeps its harness as text, Codex not being offered
+in the harness dropdown; every other line, a `claude` or `agy` line without both flags included,
+gets no dropdown and stays read-only, its harness shown as text. Drawing the rows changes no line,
+stored value, or mission page. The model dropdown offers the harness's model list and the
 effort dropdown its whole effort list, as **Models and efforts** holds them, whatever the line's
 model; each stands on the value the line carries, offered too when the list lacks it. A line
 given an effort its model lacks is accepted and stops when it is run, with the harness's own
 message, as a hand-written line does.
 
-A pick replaces the value the line already carries, in the quoting it was written in, and never
-inserts text into the line. It is written as the variant's stored copy in
+A model or effort pick replaces the value the line already carries, in the quoting it was written
+in, and inserts no text into the line. A harness pick rewrites the line onto the picked harness:
+the line keeps its prompt, its other flags, and its headless or interactive form, so
+`claude -p "…"` becomes `agy -p "…"`, an interactive `claude "…"` becomes `agy -i "…"`, and back;
+it takes the picked harness's first listed model, and it keeps its effort when that harness's
+effort list offers it, taking its first listed effort otherwise (a `claude` line at `xhigh` lands
+on `agy` at the first effort Antigravity's list holds, `medium` with the shipped lists). Both
+lists are those **Models and efforts** holds. A pick, of any of the three, is written as the variant's stored copy in
 `~/.gurita/variants.json`: a shipped variant or one of your own recipe file gets a stored copy
 holding the changed line, standing in for it in its place in the recipe's dropdown until you
 reset it, and a stored variant's line is changed in the store. Like every other edit, a pick is
@@ -339,7 +348,7 @@ Each line shows its name, its line in the name's hover text, where it comes from
 `yours`, `stored` for a duplicate, or `stored copy of` the line it stands in for), and beneath it
 its one line with the line editor described above, so a line running a `gurita:` skill is drawn
 as that skill's name (`complete-task`) with its harness on the right, and a line carrying both
-`--model` and `--effort` gets its model and effort dropdowns. Where one of your own variants joins a shipped
+`--model` and `--effort` gets its harness, model, and effort dropdowns. Where one of your own variants joins a shipped
 line of the same name it is listed too, marked **Not run**, since the looped run takes the line's
 default. A line has no **Make default** control. The other controls are those a variant has,
 carried out in `~/.gurita/variants.json` and never in the shipped file or your own recipe file:
@@ -354,8 +363,9 @@ carried out in `~/.gurita/variants.json` and never in the shipped file or your o
   a stored copy leaves it and hides the line it stood in for.
 - **Reset**, where a stored copy or a hiding record stands for a shipped line or one of your own,
   removes them, so the line shows again under its own name as its file holds it.
-- A pick in the line's model or effort dropdown writes a stored copy holding the changed line
-  under the line's name, or changes a stored line in the store.
+- A pick in the line's harness, model, or effort dropdown writes a stored copy holding the
+  changed line under the line's name, or changes a stored line in the store; a line rewritten onto
+  the other harness stays a named single-task line under its name.
 
 A name is asked for in VS Code's own input box, which refuses an empty name and one any recipe or
 line already carries, since the looped run, the rule file, and the preview's override list name a

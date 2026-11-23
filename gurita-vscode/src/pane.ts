@@ -105,7 +105,15 @@
 // inserting text into it, through the store's edit (`replaceLineValue`), a shipped or own variant
 // getting a stored copy holding the changed line in its place; a pick of a value the list does not
 // offer, of the value the line already carries, or on a line or variant the list read afresh does
-// not hold with that control writes nothing. The view also edits the named single-task lines:
+// not hold with that control writes nothing. A line with model and effort dropdowns also gets a
+// harness dropdown offering Claude Code and Antigravity, and a pick of the other of the two
+// rewrites the line onto it through the store's edit (`replaceLineHarness`), stored as a model or
+// effort pick is: the line keeps its prompt and its headless or interactive form (`claude -p
+// "…"` to `agy -p "…"`, `claude "…"` to `agy -i "…"`, and back), takes the picked harness's
+// first listed model, and keeps its effort where that harness's effort list offers it, taking its
+// first listed effort otherwise; a Codex line keeps its harness, and a pick of the harness the
+// line runs on, or on a line the list read afresh gives no such dropdown, writes nothing. The view
+// also edits the named single-task lines:
 // every opening posts them, shipped and own alike, each with its one line, line editor, and row,
 // and the shipped and own lines a hiding record hides; a click of a line's duplicate, rename, delete, or
 // reset control is carried out through the store's line edits, a new name asked for in VS Code's
@@ -175,6 +183,7 @@ import {
 } from './selections';
 import { ReadVariantRef, readVariantStore, variantStoreFile } from './variantStore';
 import {
+  LineEditor,
   SettingsLines,
   SettingsRecipe,
   VariantTarget,
@@ -186,6 +195,7 @@ import {
   pickDefault,
   renameLine,
   renameVariant,
+  replaceLineHarness,
   replaceLineValue,
   resetLine,
   resetVariant,
@@ -206,7 +216,7 @@ import {
   readHarnessStates,
   setHarnessEnabled,
 } from './harnessSettings';
-import { Harness, VariantValues, variantValues } from './lineValues';
+import { Harness, SwitchableHarness, VariantValues, variantValues } from './lineValues';
 import { FileEventKind, RefreshBatch, RefreshQueue, WATCHED_PATTERN, eventEffect } from './refresh';
 import { OPTIONAL_PLACEHOLDERS } from './placeholders';
 import { CHECK_SCRIPT, CheckResult, HARNESSES, PLUGIN_VERSION_FILE, readPackagedVersion, runHarnessCheck } from './harnessCheck';
@@ -250,6 +260,7 @@ type PageMessage =
   | { type: 'pickDefault'; recipe: string; variant: VariantTarget }
   | { type: 'resetVariant'; recipe: string; original: ReadVariantRef }
   | { type: 'replaceLineValue'; recipe: string; variant: VariantTarget; line: number; kind: string; value: string }
+  | { type: 'replaceLineHarness'; recipe: string; variant: VariantTarget; line: number; harness: string }
   | { type: 'duplicateLine'; line: string; variant: VariantTarget }
   | { type: 'renameLine'; line: string; variant: VariantTarget }
   | { type: 'deleteLine'; line: string; variant: VariantTarget }
@@ -519,6 +530,8 @@ export function openMissionPane(context: vscode.ExtensionContext): void {
         void resetStoredVariant(context, created, message.recipe, message.original);
       } else if (message?.type === 'replaceLineValue') {
         void editLineValue(context, created, message.recipe, message.variant, message.line, message.kind, message.value);
+      } else if (message?.type === 'replaceLineHarness') {
+        void editLineHarness(context, created, message.recipe, message.variant, message.line, message.harness);
       } else if (message?.type === 'duplicateLine' || message?.type === 'renameLine' || message?.type === 'deleteLine') {
         void editLine(context, created, message.type, message.line, message.variant);
       } else if (message?.type === 'resetLine') {
@@ -1375,12 +1388,7 @@ async function editLineValue(
     void vscode.window.showErrorMessage(`The variants could not be read: ${read.cause}`);
     return;
   }
-  const lines = readLineList(context);
-  const editor =
-    read.recipes.find((each) => each.name === recipe)?.variants.find((each) => isTarget(each, named))?.editors[line] ??
-    (lines.state === 'read' && line === 0
-      ? lines.lines.find((each) => each.name === recipe && isTarget(each.variant, named))?.editor
-      : undefined);
+  const editor = listedEditor(context, read, recipe, named, line);
   const current = editor === undefined || editor === null ? undefined : kind === 'model' ? editor.model : editor.effort;
   if (editor === undefined || editor === null || current === undefined || current === value) {
     return;
@@ -1399,6 +1407,97 @@ async function editLineValue(
     replaceLineValue(files.store, readRecipes(files.shipped, files.own), recipe, named, line, kind, value);
   } catch (error) {
     void vscode.window.showErrorMessage(`The ${kind} could not be changed: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  await postVariantEdit(context, target);
+}
+
+/**
+ * The line editor the lists read afresh give line `line` of the variant `named` of `recipe`: a
+ * listed variant's line, or the one line of a named single-task line of that name.
+ */
+function listedEditor(
+  context: vscode.ExtensionContext,
+  read: Extract<VariantsRead, { state: 'read' }>,
+  recipe: string,
+  named: VariantTarget,
+  line: number,
+): LineEditor | null | undefined {
+  const lines = readLineList(context);
+  return (
+    read.recipes.find((each) => each.name === recipe)?.variants.find((each) => isTarget(each, named))?.editors[line] ??
+    (lines.state === 'read' && line === 0 ? lines.lines.find((each) => each.name === recipe && isTarget(each.variant, named))?.editor : undefined)
+  );
+}
+
+/** The harnesses a line's harness dropdown picks between, by key, each with the command its lines open with. */
+const SWITCHABLE: readonly { key: HarnessKey; cli: SwitchableHarness }[] = [
+  { key: 'claude', cli: 'claude' },
+  { key: 'antigravity', cli: 'agy' },
+];
+
+/**
+ * Rewrites line `line` of the variant `variant` of the recipe `recipe` onto the harness `harness`,
+ * Claude Code or Antigravity, picked in the line's harness dropdown in the settings view, through
+ * the store's edit (`replaceLineHarness`): the line's prompt and its headless or interactive form
+ * kept, its model the picked harness's first listed model, and its effort kept where that
+ * harness's effort list offers it and otherwise the first listed, a shipped or own variant getting
+ * a stored copy holding the changed line in its place, as a model or effort pick does; then posts
+ * the variant list, the harness lists, and the pages again. Only a line the variant list read
+ * afresh gives model and effort controls on Claude Code or Antigravity is rewritten, and only onto
+ * the other of the two: anything else writes nothing. An edit the store refuses, a picked harness
+ * listing no model or no effort among them, or lists or a store that cannot be read or written, is
+ * told in an error notification.
+ */
+async function editLineHarness(
+  context: vscode.ExtensionContext,
+  target: vscode.WebviewPanel,
+  recipe: unknown,
+  variant: unknown,
+  line: unknown,
+  harness: unknown,
+): Promise<void> {
+  const named = variantTargetOf(variant);
+  const picked = SWITCHABLE.find((each) => each.key === harness);
+  if (
+    panel !== target ||
+    typeof recipe !== 'string' ||
+    named === undefined ||
+    typeof line !== 'number' ||
+    !Number.isInteger(line) ||
+    line < 0 ||
+    picked === undefined
+  ) {
+    return;
+  }
+  const read = readVariantList(context);
+  if (read.state === 'failed') {
+    void vscode.window.showErrorMessage(`The variants could not be read: ${read.cause}`);
+    return;
+  }
+  const editor = listedEditor(context, read, recipe, named, line);
+  if (
+    editor === undefined ||
+    editor === null ||
+    editor.effort === undefined ||
+    !SWITCHABLE.some((each) => each.key === editor.harness) ||
+    editor.harness === picked.key
+  ) {
+    return;
+  }
+  const lists = readListsOf(context);
+  if (lists.state === 'failed') {
+    void vscode.window.showErrorMessage(`The harness lists could not be read: ${lists.cause}`);
+    return;
+  }
+  if (panel !== target) {
+    return;
+  }
+  const offer = { models: lists.lists[picked.key].models, efforts: lists.lists[picked.key].efforts ?? [] };
+  try {
+    const files = recipeFiles(context);
+    replaceLineHarness(files.store, readRecipes(files.shipped, files.own), recipe, named, line, picked.cli, offer);
+  } catch (error) {
+    void vscode.window.showErrorMessage(`The harness could not be changed: ${error instanceof Error ? error.message : String(error)}`);
   }
   await postVariantEdit(context, target);
 }
@@ -1942,7 +2041,7 @@ function pageShell(webview: vscode.Webview, script: vscode.Uri): string {
   .variant-lines .line-label { flex: 1 1 20em; display: inline-flex; align-items: baseline; gap: 0.5em; overflow-wrap: anywhere; }
   .variant-lines .line-skill { font-family: var(--vscode-editor-font-family); }
   .variant-lines .line-interactive { opacity: 0.8; font-style: italic; }
-  .variant-lines .line-harness { opacity: 0.8; }
+  .variant-lines span.line-harness { opacity: 0.8; }
   button.action { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: none; padding: 0.15em 0.6em; cursor: pointer; font: inherit; white-space: nowrap; }
   button.action:hover:not(:disabled) { background: var(--vscode-button-secondaryHoverBackground); }
   button.action:disabled, button.recipe:disabled { opacity: 0.5; cursor: default; }

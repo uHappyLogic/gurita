@@ -13,6 +13,7 @@ import {
   lineRow,
   pickDefault,
   renameVariant,
+  replaceLineHarness,
   replaceLineValue,
   resetVariant,
   resettableVariants,
@@ -173,6 +174,42 @@ test('changing a line writes a stored copy holding the changed line in the varia
     assert.deepStrictEqual(byName(readBack(file), 'Variants').variants[0].lines, [
       'claude -p "/gurita:complete-all-tasks --mission <path>" --model "opus" --effort high;',
     ], 'a reset shows the shipped line again');
+  });
+});
+
+test('a harness pick writes a stored copy holding the line rewritten onto the picked harness, in the variant\'s place, as a model or effort pick does', () => {
+  withStore((file) => {
+    const agy = { models: ['claude-opus-5-5', 'gemini-4-argon'], efforts: ['medium', 'high'] };
+    replaceLineHarness(file, base(), 'Variants', SHIPPED_CC, 0, 'agy', agy);
+    replaceLineHarness(file, base(), 'Variants', SHIPPED_AGY, 0, 'claude', { models: ['fable', 'opus'], efforts: ['xhigh'] });
+    assert.deepStrictEqual(variants(file, 'Variants'), [
+      ['On Claude Code', 'stored'],
+      ['On Antigravity', 'stored'],
+      ['Empty variant', 'shipped'],
+      ['On Claude Code', 'own'],
+      ['Own variant', 'own'],
+    ], 'each stored copy stands in its shipped variant\'s place');
+    let listed = byName(readBack(file), 'Variants').variants;
+    assert.deepStrictEqual(listed[0].lines, ['agy -p "/gurita:complete-all-tasks --mission <path>" --model "claude-opus-5-5" --effort high;'], 'an offered effort is kept');
+    assert.deepStrictEqual(listed[0].copies, { name: 'On Claude Code', origin: 'shipped' });
+    assert.deepStrictEqual(listed[1].lines, ['claude -p "/gurita:complete-all-tasks --mission <path>" --model "fable" --effort xhigh;'], 'an effort not offered becomes the first listed');
+    replaceLineHarness(file, base(), 'Variants', variantTarget(listed[0]), 0, 'claude', { models: ['opus'], efforts: ['high'] });
+    listed = byName(readBack(file), 'Variants').variants;
+    assert.deepStrictEqual(listed[0].lines, ['claude -p "/gurita:complete-all-tasks --mission <path>" --model "opus" --effort high;'], 'the way back gives the shipped line');
+    assert.strictEqual(readVariantStore(file).variants.length, 2, "a stored copy's line is changed in the store");
+    const before = fs.readFileSync(file, 'utf8');
+    replaceLineHarness(file, base(), 'Variants', variantTarget(listed[0]), 0, 'claude', { models: ['fable'], efforts: ['xhigh'] });
+    assert.strictEqual(fs.readFileSync(file, 'utf8'), before, 'a line already on the picked harness writes nothing');
+    refused(() => replaceLineHarness(file, base(), 'Variants', OWN_VARIANT, 0, 'claude', agy), /no claude or agy line carrying both/);
+    refused(() => replaceLineHarness(file, base(), 'Chain', { name: 'Chain', origin: 'shipped' }, 0, 'agy', agy), /no claude or agy line carrying both/);
+    refused(() => replaceLineHarness(file, base(), 'Variants', OWN_CC, 1, 'agy', agy), /has no line 2/);
+    refused(() => replaceLineHarness(file, base(), 'Variants', OWN_CC, 0, 'agy', { models: [], efforts: ['high'] }), /offers no model/);
+    refused(() => replaceLineHarness(file, base(), 'Variants', OWN_CC, 0, 'agy', { models: ['x'], efforts: [] }), /offers no effort/);
+    assert.strictEqual(fs.readFileSync(file, 'utf8'), before, 'a refused pick writes nothing');
+    replaceLineHarness(file, base(), 'Single task (Claude Code)', { name: 'Single task (Claude Code)', origin: 'shipped' }, 0, 'agy', agy);
+    const line = byName(readBack(file), 'Single task (Claude Code)').variants[0];
+    assert.deepStrictEqual(line.lines, ['agy -p "/gurita:complete-task --mission <path> <Task Title>" --model "claude-opus-5-5" --effort high;']);
+    assert.ok(line.singleTask, 'a rewritten single-task line stays a named single-task line');
   });
 });
 

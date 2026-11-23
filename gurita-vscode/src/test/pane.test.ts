@@ -1123,6 +1123,100 @@ test("a pick in a line's dropdown replaces the value the line carries through th
 });
 
 /** A mission no earlier test holds a run for. */
+const SIGMA = 'pkg/mission_sigma/';
+
+test("a pick in a line's harness dropdown rewrites the line onto the picked harness through the store's edit, the redrawn row and the page's button following", async () => {
+  const home = process.env.HOME;
+  const fakeHome = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-home-'));
+  process.env.HOME = fakeHome;
+  try {
+    const root = project(SIGMA);
+    const files = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-recipes-'));
+    fs.writeFileSync(path.join(files, 'GURITA_USAGE.md'), HARNESS_SHIPPED_TEXT);
+    fs.writeFileSync(path.join(files, 'recipes.md'), OWN_TEXT);
+    packaged.set('bundled/missions.py', path.join(__dirname, '..', '..', '..', 'core', 'tools', 'missions.py'));
+    packaged.set('bundled/GURITA_USAGE.md', path.join(files, 'GURITA_USAGE.md'));
+    packaged.set('runner.py', path.join(__dirname, '..', '..', 'runner.py'));
+    workspace.folders = [{ uri: { fsPath: root } }];
+    workspace.settings = { ownRecipesFile: path.join(files, 'recipes.md') };
+    workspaceState.clear();
+    inputBoxes.length = 0;
+    const store = path.join(fakeHome, '.gurita', 'variants.json');
+    const stored = () => JSON.parse(fs.readFileSync(store, 'utf8'));
+    /** Sends `message` and returns the First run variants listed, the single-task lines, and the First run entry on SIGMA's page posted after it. */
+    const pick = async (message: unknown) => {
+      const from = posted.length;
+      send(message);
+      const recipes = await postedVariants(from);
+      const lines = await postedLines(from);
+      const live = (await postedOf('live', from)) as { missions: { path: string; recipes: { recipes: PostedEntry[] } }[] };
+      const entry = live.missions.find((each) => each.path === SIGMA)?.recipes.recipes.find((each) => each.name === 'First run');
+      assert.ok(entry !== undefined);
+      return { variants: recipes[0].variants as EditedVariant[], lines: lines.lines, entry };
+    };
+
+    await entryAfter({ type: 'ready' }, SIGMA, 'First run');
+    const from = posted.length;
+    send({ type: 'settingsOpened' });
+    const shippedLines = ((await postedVariants(from))[0].variants as EditedVariant[])[0].lines;
+
+    // Claude Code to Antigravity: the prompt and form kept, the first listed model, an effort not offered becoming the first listed.
+    let shown = await pick({ type: 'replaceLineHarness', recipe: 'First run', variant: { name: 'Claude Code', origin: 'shipped' }, line: 0, harness: 'antigravity' });
+    const onAgy = 'agy -p "/gurita:review-mission-requirements --mission <path>" --model "gemini-4-argon" --effort medium;';
+    assert.deepStrictEqual(stored().variants, [
+      { recipe: 'First run', name: 'Claude Code', lines: [onAgy, shippedLines[1], shippedLines[2]], copies: { name: 'Claude Code', origin: 'shipped' } },
+    ], 'a shipped variant gets a stored copy holding the rewritten line');
+    assert.deepStrictEqual(shown.variants.map((each) => [each.name, each.origin]), [['Claude Code', 'stored'], ['Antigravity', 'shipped'], ['First run', 'own']]);
+    assert.deepStrictEqual(shown.variants[0].editors[0], { harness: 'antigravity', model: 'gemini-4-argon', effort: 'medium' }, "the redrawn row's dropdowns stand on Antigravity");
+    assert.deepStrictEqual(shown.variants[0].rows[0], { skill: 'review-mission-requirements', interactive: false, harness: 'antigravity' });
+    assert.deepStrictEqual(shown.entry.lines, [onAgy, shippedLines[1], shippedLines[2]], "the page's button runs the rewritten line");
+    assert.deepStrictEqual((shown.entry as PostedEntry & { values?: unknown }).values, { harnesses: ['agy', 'claude'], models: ['gemini-4-argon', 'opus', 'fable'], efforts: ['medium', 'high', 'xhigh'] });
+
+    // An offered effort is kept, and the stored copy is changed in place.
+    const copy = { name: 'Claude Code', origin: 'stored', copies: { name: 'Claude Code', origin: 'shipped' } };
+    shown = await pick({ type: 'replaceLineHarness', recipe: 'First run', variant: copy, line: 1, harness: 'antigravity' });
+    assert.strictEqual(stored().variants.length, 1);
+    assert.strictEqual(stored().variants[0].lines[1], 'agy -p "/gurita:provide-alternatives-to-all-open-questions --mission <path>" --model "gemini-4-argon" --effort high;');
+
+    // Antigravity to Claude Code, and back again on the stored copy.
+    shown = await pick({ type: 'replaceLineHarness', recipe: 'First run', variant: { name: 'Antigravity', origin: 'shipped' }, line: 0, harness: 'claude' });
+    assert.strictEqual(shown.variants[1].lines[0], 'claude -p "/gurita:review-mission-requirements --mission <path>" --model "fable" --effort xhigh;');
+    assert.deepStrictEqual(shown.variants[1].editors[0], { harness: 'claude', model: 'fable', effort: 'xhigh' });
+    shown = await pick({ type: 'replaceLineHarness', recipe: 'First run', variant: copy, line: 0, harness: 'claude' });
+    assert.strictEqual(shown.variants[0].lines[0], shippedLines[0], 'the way back gives the shipped line');
+
+    // A named single-task line is rewritten as a variant's line is, keeping its name.
+    shown = await pick({ type: 'replaceLineHarness', recipe: 'Single task (Antigravity)', variant: { name: 'Single task (Antigravity)', origin: 'shipped' }, line: 0, harness: 'claude' });
+    const line = shown.lines.find((each) => each.name === 'Single task (Antigravity)');
+    assert.ok(line !== undefined);
+    assert.strictEqual(line.line, 'claude -p "/gurita:complete-task --mission <path> <Task Title>" --model "fable" --effort high;');
+    assert.deepStrictEqual(line.editor, { harness: 'claude', model: 'fable', effort: 'high' });
+
+    // The harness the line runs on, Codex, a harness not named, a line without both flags, or a message not in form writes and posts nothing.
+    const before = fs.readFileSync(store, 'utf8');
+    const quiet = posted.length;
+    send({ type: 'replaceLineHarness', recipe: 'First run', variant: copy, line: 0, harness: 'claude' });
+    send({ type: 'replaceLineHarness', recipe: 'First run', variant: copy, line: 0, harness: 'codex' });
+    send({ type: 'replaceLineHarness', recipe: 'First run', variant: copy, line: 0, harness: 'agy' });
+    send({ type: 'replaceLineHarness', recipe: 'First run', variant: { name: 'First run', origin: 'own' }, line: 0, harness: 'antigravity' });
+    send({ type: 'replaceLineHarness', recipe: 'discuss-mission-goal', variant: { name: 'discuss-mission-goal', origin: 'shipped' }, line: 0, harness: 'claude' });
+    send({ type: 'replaceLineHarness', recipe: 'First run', variant: copy, line: 3, harness: 'antigravity' });
+    send({ type: 'replaceLineHarness', recipe: 'First run', variant: copy, line: '0', harness: 'antigravity' });
+    send({ type: 'replaceLineHarness', recipe: 'Execute tasks one at a time', variant: { name: 'Execute tasks one at a time', origin: 'shipped' }, line: 0, harness: 'antigravity' });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    assert.deepStrictEqual(posted.slice(quiet), []);
+    assert.strictEqual(fs.readFileSync(store, 'utf8'), before);
+    assert.strictEqual(inputBoxes.length, 0, 'a pick asks for nothing in an input box');
+
+    assert.strictEqual(fs.readFileSync(path.join(files, 'recipes.md'), 'utf8'), OWN_TEXT, 'the own recipe file is never written');
+    assert.strictEqual(fs.readFileSync(path.join(files, 'GURITA_USAGE.md'), 'utf8'), HARNESS_SHIPPED_TEXT, 'the shipped file is never written');
+    assert.strictEqual(execFileSync('git', ['status', '--porcelain', '--ignored'], { cwd: root, encoding: 'utf8' }), '', "nothing is written into the project's tree");
+  } finally {
+    process.env.HOME = home;
+  }
+});
+
+/** A mission no earlier test holds a run for. */
 const LAMBDA = 'pkg/mission_lambda/';
 
 /** The own file of the line-edit test: a named single-task line of its own beside the recipes of the recipe-list test. */

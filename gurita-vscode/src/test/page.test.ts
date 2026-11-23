@@ -2019,8 +2019,13 @@ const EDITED_VARIANTS = {
   },
 };
 
-/** The parts a line row draws before its dropdowns: the line's text, or its skill's name, its interactive mark, and its harness. */
+/** The parts a line row draws as text: the line's text, or its skill's name, its interactive mark, and its harness where it is no dropdown. */
 const ROW_PARTS = ['line-text', 'line-skill', 'line-interactive', 'line-harness'];
+
+/** Whether `part` is one of the texts a line row draws, a dropdown never being one. */
+function rowText(part: FakeElement): boolean {
+  return part.tagName !== 'select' && ROW_PARTS.some((name) => part.has(name));
+}
 
 /** Each line the settings view's line editor draws: its texts, then each dropdown's class, its options, and the one it stands on. */
 function lineRows(page: Page): [string[], [string, string[], string | undefined][]][] {
@@ -2030,7 +2035,7 @@ function lineRows(page: Page): [string[], [string, string[], string | undefined]
     .all()
     .filter((each) => each.has('variant-line'))
     .map((each) => [
-      each.all().filter((part) => ROW_PARTS.some((name) => part.has(name))).map((part) => part.textContent),
+      each.all().filter(rowText).map((part) => part.textContent),
       each
         .all()
         .filter((part) => part.tagName === 'select')
@@ -2041,6 +2046,10 @@ function lineRows(page: Page): [string[], [string, string[], string | undefined]
     ]);
 }
 
+/** The harness dropdown of a line posted with model and effort dropdowns, standing on Claude Code or on Antigravity. */
+const CC_HARNESS: [string, string[], string] = ['line-harness', ['Claude Code', 'Antigravity'], 'Claude Code'];
+const AGY_HARNESS: [string, string[], string] = ['line-harness', ['Claude Code', 'Antigravity'], 'Antigravity'];
+
 test("the line editor draws each line as its row, and only a line with both --model and --effort gets the harness's model and whole effort lists, a Codex line its model alone", () => {
   const page = loadPage();
   page.send(live([]));
@@ -2048,15 +2057,16 @@ test("the line editor draws each line as its row, and only a line with both --mo
   page.send(harnessListsMessage(LISTS));
   page.send(EDITED_VARIANTS);
   assert.deepStrictEqual(lineRows(page), [
-    [['review-mission-requirements', 'Claude Code'], [['line-model', ['fable', 'opus'], 'fable'], ['line-effort', ['xhigh', 'high'], 'xhigh']]],
+    [['review-mission-requirements'], [CC_HARNESS, ['line-model', ['fable', 'opus'], 'fable'], ['line-effort', ['xhigh', 'high'], 'xhigh']]],
     [['provide-alternatives-to-all-open-questions', 'Claude Code'], []],
     [['echo <path>'], []],
     [['<single-task line>'], []],
-    [['review-mission-requirements', 'Antigravity'], [['line-model', ['gemini-4-argon'], 'gemini-4-argon'], ['line-effort', ['medium'], 'medium']]],
+    [['review-mission-requirements'], [AGY_HARNESS, ['line-model', ['gemini-4-argon'], 'gemini-4-argon'], ['line-effort', ['medium'], 'medium']]],
     [['finish-mission', 'Codex'], [['line-model', ['gpt-5.5'], 'gpt-5.5']]],
-  ], 'a line without both flags, a shell step, and the slot line draw no control; a value the list lacks is offered as the line carries it');
+  ], 'a line without both flags, a shell step, and the slot line draw no control; a value the list lacks is offered as the line carries it; a Codex line keeps its harness as text');
   page.send(harnessListsMessage({ ...LISTS, antigravity: { models: ['gemini-4-argon', 'claude-opus-5-5'], efforts: ['low', 'medium', 'high'] } }));
   assert.deepStrictEqual(lineRows(page)[4][1], [
+    AGY_HARNESS,
     ['line-model', ['gemini-4-argon', 'claude-opus-5-5'], 'gemini-4-argon'],
     ['line-effort', ['low', 'medium', 'high'], 'medium'],
   ], 'the dropdowns follow the lists the extension posts');
@@ -2087,7 +2097,7 @@ test("a pick in a line's dropdown posts the line, the kind, and the value, and t
     { type: 'replaceLineValue', recipe: 'First run', variant: { name: 'Claude Code', origin: 'shipped' }, line: 0, kind: 'model', value: 'opus' },
     { type: 'replaceLineValue', recipe: 'First run', variant: { name: 'Claude Code', origin: 'shipped' }, line: 0, kind: 'effort', value: 'high' },
   ], 'a pick of the value the line carries posts nothing');
-  assert.strictEqual(lineRows(page)[0][1][0][2], 'fable', 'nothing changes until the extension posts it');
+  assert.strictEqual(lineRows(page)[0][1][1][2], 'fable', 'nothing changes until the extension posts it');
   const copied = { ...EDITED_VARIANTS.variants.recipes[0].variants[0], name: 'Claude Code', origin: 'stored', copies: { name: 'Claude Code', origin: 'shipped' } };
   const opusLine = CLAUDE_LINE.replace('"fable"', '"opus"');
   page.send({
@@ -2102,7 +2112,7 @@ test("a pick in a line's dropdown posts the line, the kind, and the value, and t
       ],
     },
   });
-  assert.deepStrictEqual(lineRows(page)[0], [['review-mission-requirements', 'Claude Code'], [['line-model', ['fable', 'opus'], 'opus'], ['line-effort', ['xhigh', 'high'], 'xhigh']]]);
+  assert.deepStrictEqual(lineRows(page)[0], [['review-mission-requirements'], [CC_HARNESS, ['line-model', ['fable', 'opus'], 'opus'], ['line-effort', ['xhigh', 'high'], 'xhigh']]]);
   assert.strictEqual(lineHovers(page)[0], opusLine, 'the hover text shows the changed line as written');
   focused(page, 'line-effort-0-0-0').change('high');
   assert.deepStrictEqual(page.posted[page.posted.length - 1], {
@@ -2112,6 +2122,83 @@ test("a pick in a line's dropdown posts the line, the kind, and the value, and t
     line: 0,
     kind: 'effort',
     value: 'high',
+  }, 'a stored copy is named as listed');
+});
+
+test("a pick in a line's harness dropdown posts the line and the harness, a Codex line and a line without both flags getting none, and the row is redrawn only from what the extension posts", () => {
+  const page = loadPage();
+  page.send(live([]));
+  named(page, 'Settings').click();
+  page.send(harnessListsMessage(LISTS));
+  const summarize = 'claude -p "Summarize <path>" --model "opus" --effort high;';
+  page.send({
+    type: 'variants',
+    variants: {
+      state: 'read',
+      recipes: [
+        {
+          ...EDITED_VARIANTS.variants.recipes[0],
+          variants: [
+            ...EDITED_VARIANTS.variants.recipes[0].variants,
+            {
+              name: 'Plain',
+              origin: 'own',
+              lines: [summarize],
+              editors: [{ harness: 'claude', model: 'opus', effort: 'high' }],
+              rows: [null],
+              isDefault: false,
+            },
+          ],
+        },
+      ],
+    },
+  });
+  assert.deepStrictEqual(lineRows(page)[6], [[summarize], [CC_HARNESS, ['line-model', ['fable', 'opus'], 'opus'], ['line-effort', ['xhigh', 'high'], 'high']]], 'a line drawn as its text gets its harness dropdown before the model dropdown');
+  assert.strictEqual(page.root.querySelector('[data-focus="line-harness-0-0-1"]'), null, 'a line with --model alone has no harness dropdown');
+  assert.strictEqual(page.root.querySelector('[data-focus="line-harness-0-2-0"]'), null, 'a Codex line has no harness dropdown');
+  const count = page.posted.length;
+  focused(page, 'line-harness-0-0-0').change('antigravity');
+  focused(page, 'line-harness-0-1-0').change('antigravity');
+  focused(page, 'line-harness-0-1-0').change('claude');
+  focused(page, 'line-harness-0-1-0').change('codex');
+  assert.deepStrictEqual(page.posted.slice(count), [
+    { type: 'replaceLineHarness', recipe: 'First run', variant: { name: 'Claude Code', origin: 'shipped' }, line: 0, harness: 'antigravity' },
+    { type: 'replaceLineHarness', recipe: 'First run', variant: { name: 'Antigravity', origin: 'shipped' }, line: 0, harness: 'claude' },
+  ], 'a pick of the harness the line runs on, or of one not offered, posts nothing');
+  assert.deepStrictEqual(lineRows(page)[0][1][0], CC_HARNESS, 'nothing changes until the extension posts it');
+  const rewritten = 'agy -p "/gurita:review-mission-requirements --mission <path>" --model "gemini-4-argon" --effort xhigh;';
+  const first = EDITED_VARIANTS.variants.recipes[0].variants[0];
+  page.send({
+    type: 'variants',
+    variants: {
+      state: 'read',
+      recipes: [
+        {
+          ...EDITED_VARIANTS.variants.recipes[0],
+          variants: [
+            {
+              ...first,
+              origin: 'stored',
+              copies: { name: 'Claude Code', origin: 'shipped' },
+              lines: [rewritten, ...first.lines.slice(1)],
+              editors: [{ harness: 'antigravity', model: 'gemini-4-argon', effort: 'xhigh' }, null, null, null],
+              rows: [{ skill: 'review-mission-requirements', interactive: false, harness: 'antigravity' }, ...first.rows.slice(1)],
+            },
+            ...EDITED_VARIANTS.variants.recipes[0].variants.slice(1),
+          ],
+        },
+      ],
+    },
+  });
+  assert.deepStrictEqual(lineRows(page)[0], [['review-mission-requirements'], [AGY_HARNESS, ['line-model', ['gemini-4-argon'], 'gemini-4-argon'], ['line-effort', ['xhigh'], 'xhigh']]], "the row stands on the posted harness and offers that harness's lists");
+  assert.strictEqual(lineHovers(page)[0], rewritten, 'the hover text shows the rewritten line as written');
+  focused(page, 'line-harness-0-0-0').change('claude');
+  assert.deepStrictEqual(page.posted[page.posted.length - 1], {
+    type: 'replaceLineHarness',
+    recipe: 'First run',
+    variant: { name: 'Claude Code', origin: 'stored', copies: { name: 'Claude Code', origin: 'shipped' } },
+    line: 0,
+    harness: 'claude',
   }, 'a stored copy is named as listed');
 });
 
@@ -2169,14 +2256,15 @@ test("a line running a gurita: skill is drawn as the skill's bare name, an inter
       ],
     },
   });
-  const both = (model: string, models: string[], effort: string, efforts: string[]): [string, string[], string][] => [
+  const both = (harness: [string, string[], string], model: string, models: string[], effort: string, efforts: string[]): [string, string[], string][] => [
+    harness,
     ['line-model', models, model],
     ['line-effort', efforts, effort],
   ];
   assert.deepStrictEqual(lineRows(page), [
-    [['review-mission-requirements', 'Claude Code'], both('fable', ['fable', 'opus'], 'xhigh', ['xhigh', 'high'])],
-    [['recommend-all-open-questions', 'interactive', 'Claude Code'], both('fable', ['fable', 'opus'], 'xhigh', ['xhigh', 'high'])],
-    [['complete-all-tasks', 'interactive', 'Antigravity'], both('claude-opus-5-5', ['claude-opus-5-5'], 'high', ['high'])],
+    [['review-mission-requirements'], both(CC_HARNESS, 'fable', ['fable', 'opus'], 'xhigh', ['xhigh', 'high'])],
+    [['recommend-all-open-questions', 'interactive'], both(CC_HARNESS, 'fable', ['fable', 'opus'], 'xhigh', ['xhigh', 'high'])],
+    [['complete-all-tasks', 'interactive'], both(AGY_HARNESS, 'claude-opus-5-5', ['claude-opus-5-5'], 'high', ['high'])],
     [['echo <path>'], []],
     [['gemini -p "/gurita:finish-mission" --model "pro";'], []],
   ], 'a shell step and a command the extension does not know keep their text and draw no control');
@@ -2233,7 +2321,7 @@ function singleLineRows(page: Page): [string[], string[], string[]][] {
     .all()
     .filter((item) => item.has('variant'))
     .map((item): [string[], string[], string[]] => [
-      item.all().filter((each) => ['variant-name', 'variant-origin', 'variant-default', 'variant-deleted', ...ROW_PARTS].some((name) => each.has(name))).map((each) => each.textContent),
+      item.all().filter((each) => each.tagName !== 'select' && ['variant-name', 'variant-origin', 'variant-default', 'variant-deleted', ...ROW_PARTS].some((name) => each.has(name))).map((each) => each.textContent),
       item.all().filter((each) => each.tagName === 'button').map((each) => each.textContent),
       item.all().filter((each) => each.tagName === 'select').map((each) => each.className),
     ]);
@@ -2248,12 +2336,12 @@ test('the settings view lists every named single-task line the extension posts w
   page.send(harnessListsMessage(LISTS));
   page.send(LINES);
   const edits = ['Duplicate', 'Rename', 'Delete'];
-  const both = ['line-model', 'line-effort'];
+  const both = ['line-harness', 'line-model', 'line-effort'];
   assert.deepStrictEqual(singleLineRows(page), [
-    [['Single task (Claude Code)', 'shipped', 'complete-task', 'Claude Code'], edits, both],
-    [['Agy line', 'stored copy of the shipped line Single task (Antigravity)', 'complete-task', 'Antigravity'], [...edits, 'Reset'], both],
+    [['Single task (Claude Code)', 'shipped', 'complete-task'], edits, both],
+    [['Agy line', 'stored copy of the shipped line Single task (Antigravity)', 'complete-task'], [...edits, 'Reset'], both],
     [['My own line', 'yours', 'complete-task', 'Codex'], edits, []],
-    [['Single task (Sonnet)', 'stored', 'complete-task', 'Claude Code'], edits, both],
+    [['Single task (Sonnet)', 'stored', 'complete-task'], edits, both],
     [['Single task (Old)', 'shipped', 'Deleted'], ['Reset'], []],
   ], 'a line without both flags is shown read-only, and no line carries a Make default control');
   const view = settingsView(page);
@@ -2275,6 +2363,8 @@ test('each line control posts its edit, naming the line as listed, and the list 
   }
   focused(page, 'line-model-single-0-0').change('fable');
   focused(page, 'line-effort-single-1-0').change('medium');
+  focused(page, 'line-harness-single-1-0').change('claude');
+  assert.strictEqual(page.root.querySelector('[data-focus="line-harness-single-2-0"]'), null, 'a Codex line has no harness dropdown');
   const renamed = { name: 'Agy line', origin: 'stored', copies: { name: 'Single task (Antigravity)', origin: 'shipped', recipe: 'Single task (Antigravity)' } };
   assert.deepStrictEqual(page.posted.slice(count), [
     { type: 'duplicateLine', line: 'Single task (Claude Code)', variant: { name: 'Single task (Claude Code)', origin: 'shipped' } },
@@ -2285,6 +2375,7 @@ test('each line control posts its edit, naming the line as listed, and the list 
     { type: 'resetLine', line: 'Single task (Old)', original: { name: 'Single task (Old)', origin: 'shipped' } },
     { type: 'replaceLineValue', recipe: 'Single task (Claude Code)', variant: { name: 'Single task (Claude Code)', origin: 'shipped' }, line: 0, kind: 'model', value: 'fable' },
     { type: 'replaceLineValue', recipe: 'Agy line', variant: renamed, line: 0, kind: 'effort', value: 'medium' },
+    { type: 'replaceLineHarness', recipe: 'Agy line', variant: renamed, line: 0, harness: 'claude' },
   ]);
   assert.strictEqual(singleLineRows(page).length, 5, 'nothing changes until the extension posts it');
   page.send({ ...LINES, lines: { ...LINES.lines, lines: LINES.lines.lines.slice(0, 1), hidden: [] } });

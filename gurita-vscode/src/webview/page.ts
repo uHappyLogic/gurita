@@ -127,14 +127,19 @@
 // listed variant its line editor draws each line as the row the extension posts for it: a line of
 // a known harness running a `gurita:` skill as the skill's bare name, an `interactive` mark beside
 // it when the line is not headless, and the line as written in its hover text, followed on the
-// right by its harness's name as text, and every other line, a shell step, the slot line
+// right by its harness's name, and every other line, a shell step, the slot line
 // `<single-task line>`, and a command the extension does not know, as its text. Only a line the
 // extension posts with an editor, a `claude` or `agy` line carrying both `--model` and
 // `--effort`, gets a model and an effort dropdown after its harness, a Codex line carrying `-m` its
-// model dropdown alone, every other line staying read-only. The model dropdown offers the harness's model list and the effort
-// dropdown its whole effort list, whatever the line's model, as the extension last posted them,
-// each standing on the value the line carries, offered too when the list lacks it. A pick posts the
-// line, the kind, and the value to the extension, which replaces the value the line carries and
+// model dropdown alone, every other line staying read-only. A line with both dropdowns shows its
+// harness as a dropdown offering Claude Code and Antigravity, standing on the one it runs on, in
+// the harness's place on a skill row and before the model dropdown on a line drawn as its text; a
+// pick of the other posts the line and the harness to the extension, which rewrites the line onto
+// it and posts the variants again, and every other line keeps its harness as text. The model
+// dropdown offers the harness's model list and the effort dropdown its whole effort list, whatever
+// the line's model, as the extension last posted them, each standing on the value the line
+// carries, offered too when the list lacks it. A model or effort pick posts the line, the kind,
+// and the value to the extension, which replaces the value the line carries and
 // posts the variants again; the line is redrawn only from what it posts. Under Single-task lines
 // the view draws every named single-task line the extension posts, shipped and own alike: each
 // with where it comes from, its Duplicate, Rename, and Delete controls, a stored copy also its
@@ -437,6 +442,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
     ['antigravity', 'Antigravity'],
     ['codex', 'Codex'],
   ];
+  /** The harnesses a line's harness dropdown picks between, by key: a Codex line keeps its harness. */
+  const LINE_HARNESSES = ['claude', 'antigravity'];
   const ENABLED_LABEL = 'Enabled';
   const DISABLED_LABEL = 'Disabled';
   const ENABLE_LABEL = 'Enable';
@@ -925,15 +932,44 @@ declare function acquireVsCodeApi(): VsCodeApi;
   }
 
   /**
+   * The harness dropdown of a line posted with model and effort dropdowns, offering Claude Code and
+   * Antigravity and standing on the harness the line runs on; a pick of the other posts it for the
+   * line.
+   */
+  function harnessDropdown(recipe: string, variant: SettingsVariant, focus: string, lineIndex: number, current: string): HTMLSelectElement {
+    const choice = element('select', undefined, 'line-harness');
+    choice.setAttribute('aria-label', `The harness of line ${lineIndex + 1} of ${variant.name} in ${recipe}`);
+    choice.title = 'Pick the harness this line runs on';
+    choice.dataset.focus = `line-harness-${focus}-${lineIndex}`;
+    for (const [key, name] of HARNESSES.filter(([key]) => LINE_HARNESSES.includes(key))) {
+      const option = element('option', name);
+      option.value = key;
+      option.selected = key === current;
+      choice.append(option);
+    }
+    choice.addEventListener('change', () => {
+      if (choice.value !== current && LINE_HARNESSES.includes(choice.value)) {
+        vscode.postMessage({ type: 'replaceLineHarness', recipe, variant: variantTarget(variant), line: lineIndex, harness: choice.value });
+      }
+    });
+    return choice;
+  }
+
+  /**
    * A variant's line editor: a line posted with a row as its skill's name, its interactive mark
    * where it is not headless, and its harness, the line as written in its hover text, every other
    * line as its text; a line posted with an editor followed by its model dropdown and, where it
-   * gets one, its effort dropdown, every other line read-only.
+   * gets one, its effort dropdown, every other line read-only. A line with both dropdowns, on
+   * Claude Code or Antigravity, shows its harness as a dropdown picking between the two, in the
+   * place a skill row's harness stands and before the model dropdown on a line drawn as its text; a
+   * Codex line keeps its harness as text.
    */
   function drawLines(recipe: string, variant: SettingsVariant, focus: string): HTMLElement {
     const list = element('ul', undefined, 'variant-lines');
     variant.lines.forEach((line, lineIndex) => {
       const row = variant.rows?.[lineIndex];
+      const editor = variant.editors?.[lineIndex];
+      const switchable = editor !== undefined && editor !== null && editor.effort !== undefined && LINE_HARNESSES.includes(editor.harness);
       const item = element('li', undefined, row !== undefined && row !== null ? 'variant-line skill-line' : 'variant-line');
       if (row !== undefined && row !== null) {
         const label = element('span', undefined, 'line-label');
@@ -942,12 +978,17 @@ declare function acquireVsCodeApi(): VsCodeApi;
         if (row.interactive) {
           label.append(element('span', INTERACTIVE_MARK, 'line-interactive'));
         }
-        const harness = HARNESSES.find(([key]) => key === row.harness)?.[1] ?? row.harness;
-        item.append(label, element('span', harness, 'line-harness'));
+        item.append(label);
+        if (!switchable) {
+          const harness = HARNESSES.find(([key]) => key === row.harness)?.[1] ?? row.harness;
+          item.append(element('span', harness, 'line-harness'));
+        }
       } else {
         item.append(element('code', line, 'line-text'));
       }
-      const editor = variant.editors?.[lineIndex];
+      if (switchable) {
+        item.append(harnessDropdown(recipe, variant, focus, lineIndex, editor.harness));
+      }
       if (editor !== undefined && editor !== null) {
         item.append(lineDropdown(recipe, variant, focus, lineIndex, editor.harness, 'model', editor.model));
         if (editor.effort !== undefined) {

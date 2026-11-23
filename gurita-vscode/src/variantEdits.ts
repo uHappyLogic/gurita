@@ -20,8 +20,12 @@
 // `settingsRecipes`'s: every recipe but the named single-task lines, each with its listed
 // variants, its default marked, and the variants a hiding record hides, and each variant's lines
 // with the line editor each one gets (`lineEditor`): only a `claude` or `agy` line carrying both
-// `--model` and `--effort` gets model and effort controls, and a `codex` line carrying `-m` its
-// model control alone, every other line shown as its text, read-only. Each line is also posted
+// `--model` and `--effort` gets model and effort controls, and a harness control picking between
+// Claude Code and Antigravity, and a `codex` line carrying `-m` its model control alone, every
+// other line shown as its text, read-only. A harness pick (`replaceLineHarness`) rewrites the
+// line onto the picked harness as `rewriteHarness` in `lineValues.ts` does, with that harness's
+// lists as the settings view offers them, and stores the changed line as a model or effort pick
+// is stored. Each line is also posted
 // with the row it is drawn as (`lineRow`): a line of a known harness whose first command runs a
 // `gurita:` skill is drawn as the skill's name, marked interactive when the line is not headless,
 // with its harness beside it, and every other line keeps its text. The named single-task lines
@@ -32,7 +36,7 @@
 // file, and the override list name a line by it alone. This module imports nothing from `vscode`.
 
 import { HARNESSES, Harness as CheckedHarness } from './harnessCheck';
-import { LineValues, readLine, readSkill, replaceEffort, replaceModel } from './lineValues';
+import { HarnessOffer, LineValues, SwitchableHarness, readLine, readSkill, replaceEffort, replaceModel, rewriteHarness } from './lineValues';
 import {
   Recipe,
   Variant,
@@ -97,7 +101,8 @@ export function resettableVariants(store: VariantStore, recipe: string): ReadVar
 /**
  * The line editor one line of a variant gets in the settings view: the key of the harness whose
  * lists its dropdowns offer, the model the line carries, and the effort it carries, left out for a
- * Codex line, which gets its model control alone.
+ * Codex line, which gets its model control alone. A line posted with an effort, on Claude Code or
+ * Antigravity, also gets a harness control picking between those two.
  */
 export interface LineEditor {
   harness: CheckedHarness['key'];
@@ -351,6 +356,19 @@ export function deleteVariant(storeFile: string, base: readonly Recipe[], recipe
 }
 
 /**
+ * Stores `lines`, the lines of the listed variant `variant` of `recipe` with one line changed: a
+ * stored variant's lines are changed in the store, and a shipped or own variant gets a stored copy
+ * of its name, holding the lines, standing in for it.
+ */
+function storeLines(store: VariantStore, recipe: Recipe, variant: Variant, lines: string[]): void {
+  if (variant.stored) {
+    record(store, recipe.name, variant).lines = lines;
+  } else {
+    store.variants.push({ recipe: recipe.name, name: variant.name, lines, copies: { name: variant.name, origin: variantOrigin(variant) as 'shipped' | 'own' } });
+  }
+}
+
+/**
  * Replaces the model or the effort that line `index` of the variant `target` carries with `value`,
  * never inserting text into a line: a stored variant's line is changed in the store, and a shipped
  * or own variant gets a stored copy of its name, holding the changed line, standing in for it.
@@ -384,11 +402,51 @@ export function replaceLineValue(
   }
   const lines = [...variant.lines];
   lines[index] = changed;
-  if (variant.stored) {
-    record(store, recipe.name, variant).lines = lines;
-  } else {
-    store.variants.push({ recipe: recipe.name, name: variant.name, lines, copies: { name: variant.name, origin: variantOrigin(variant) as 'shipped' | 'own' } });
+  storeLines(store, recipe, variant, lines);
+  writeVariantStore(storeFile, store);
+}
+
+/**
+ * Rewrites line `index` of the variant `target` onto the harness `harness`, `claude` or `agy`, as
+ * `rewriteHarness` does with `offer`, that harness's model and effort lists: the line's prompt and
+ * its headless or interactive form kept, its model the first listed, and its effort kept where the
+ * list offers it and otherwise the first listed. The changed line is stored as a model or effort
+ * pick is stored. A line without a harness control (a Codex line, a line without both `--model`
+ * and `--effort`, a shell step), a line the variant lacks, and an offer listing no model or no
+ * effort are refused, nothing written; a line already on `harness` writes nothing.
+ */
+export function replaceLineHarness(
+  storeFile: string,
+  base: readonly Recipe[],
+  recipeName: string,
+  target: VariantTarget,
+  index: number,
+  harness: SwitchableHarness,
+  offer: HarnessOffer,
+): void {
+  const { store, recipe } = load(storeFile, base, recipeName);
+  const variant = find(recipe, target);
+  const line = variant.lines[index];
+  if (line === undefined) {
+    throw new VariantEditError(`The ${describe(target)} of the recipe ${recipe.name} has no line ${index + 1}.`);
   }
+  let changed: string | undefined;
+  try {
+    changed = rewriteHarness(line, harness, offer);
+  } catch (error) {
+    throw new VariantEditError(error instanceof Error ? error.message : String(error));
+  }
+  if (changed === undefined) {
+    throw new VariantEditError(
+      `Line ${index + 1} of the ${describe(target)} of the recipe ${recipe.name} is no claude or agy line carrying both a model and an effort.`,
+    );
+  }
+  if (changed === line) {
+    return;
+  }
+  const lines = [...variant.lines];
+  lines[index] = changed;
+  storeLines(store, recipe, variant, lines);
   writeVariantStore(storeFile, store);
 }
 

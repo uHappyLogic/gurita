@@ -1,6 +1,14 @@
 // The line-value module. It reads from a recipe line's text the harness the line runs on, the
-// line's model, and its effort, and it replaces a model or effort value a line already carries;
-// it never inserts text into a line. A line's harness is its first word when that word is
+// line's model, and its effort, it replaces a model or effort value a line already carries, and
+// it rewrites a `claude` or `agy` line carrying both `--model` and `--effort` onto the other of
+// the two harnesses (`rewriteHarness`); a model or effort pick inserts no text into a line. A
+// harness rewrite keeps the line's prompt and every other word as written and its headless or
+// interactive form: a headless line, its first command carrying `-p` or `--print`, only changes
+// its command word (`claude -p "…"` to `agy -p "…"` and back), an interactive `claude` line gains
+// `-i` directly after `agy` (`claude "…"` to `agy -i "…"`), and an `agy` line loses its `-i`
+// going back (`agy -i "…"` to `claude "…"`). The rewritten line takes the picked harness's first
+// listed model, and it keeps its effort when that harness's effort list offers it, taking the
+// list's first effort otherwise. A line's harness is its first word when that word is
 // `claude`, `agy`, or `codex`; any other line (a shell step, the slot line `<single-task line>`,
 // a command the extension does not know) has no harness and carries no value. On `claude` and
 // `agy` the model is the value of `--model` and the effort that of `--effort`; on `codex` the
@@ -224,6 +232,65 @@ export function replaceModel(line: string, model: string): string | undefined {
 /** The line with its effort replaced by `effort`, or undefined when the line carries no effort. */
 export function replaceEffort(line: string, effort: string): string | undefined {
   return replaceValue(line, 'effort', effort);
+}
+
+/** The two harnesses a line's harness can be picked between: a Codex line keeps its harness. */
+export const SWITCHABLE_HARNESSES = ['claude', 'agy'] as const;
+
+export type SwitchableHarness = (typeof SWITCHABLE_HARNESSES)[number];
+
+/** The model and effort lists of the harness a line is rewritten onto, in the order they are offered. */
+export interface HarnessOffer {
+  models: readonly string[];
+  efforts: readonly string[];
+}
+
+/** The line with its first command's command word, and the form flag it needs, rewritten for `harness`. */
+function switchCommand(line: string, harness: SwitchableHarness): string {
+  const command = words(line);
+  const first = command[0];
+  const rest = command.slice(1);
+  if (harness === 'agy') {
+    const headless = rest.some((word) => word.text === '-p' || word.text === '--print');
+    return line.slice(0, first.start) + (headless ? 'agy' : 'agy -i') + line.slice(first.end);
+  }
+  const interactive = rest.find((word) => word.text === '-i' && line.slice(word.start, word.end) === '-i');
+  if (interactive === undefined) {
+    return line.slice(0, first.start) + 'claude' + line.slice(first.end);
+  }
+  let after = interactive.end;
+  while (after < line.length && /[ \t]/.test(line[after])) {
+    after++;
+  }
+  return line.slice(0, first.start) + 'claude' + line.slice(first.end, interactive.start) + line.slice(after);
+}
+
+/**
+ * The `claude` or `agy` line `line`, carrying both `--model` and `--effort`, rewritten onto
+ * `harness`: its prompt, its other words, and its headless or interactive form kept, its model the
+ * first `offer` lists, and its effort kept when `offer` lists it and otherwise the first listed.
+ * A line already on `harness` is given back unchanged, and undefined is given for every other line
+ * (a Codex line, a line without both flags, a shell step, a command the extension does not know).
+ * An offer listing no model or no effort is refused.
+ */
+export function rewriteHarness(line: string, harness: SwitchableHarness, offer: HarnessOffer): string | undefined {
+  const read = readLine(line);
+  if (read === undefined || read.harness === 'codex' || read.model === undefined || read.effort === undefined) {
+    return undefined;
+  }
+  if (read.harness === harness) {
+    return line;
+  }
+  const model = offer.models[0];
+  if (model === undefined || model === '') {
+    throw new Error(`The ${harness} model list offers no model to rewrite a line with.`);
+  }
+  const effort = offer.efforts.includes(read.effort) ? read.effort : offer.efforts[0];
+  if (effort === undefined || effort === '') {
+    throw new Error(`The ${harness} effort list offers no effort to rewrite a line with.`);
+  }
+  const valued = replaceEffort(replaceModel(line, model) as string, effort) as string;
+  return switchCommand(valued, harness);
 }
 
 /** The distinct harnesses, models, and efforts a variant's lines carry, each in first-appearance order. */
