@@ -76,5 +76,7 @@ No Marketplace publisher, Open VSX namespace, or token for either is recorded as
 
 - **Listing name and description.** The manifest's `displayName` stays `Gurita for VS Code`, and its `description` is rewritten as one sentence for a reader new to the plugin: it says what Gurita is (a plugin for Claude Code, Codex, and Antigravity that settles a mission's questions before handing its work to agents), what the extension adds (a side-bar view and windows over the plugin's missions, questions, and recipes), and that the plugin must be installed for it to do anything.
 
+- **Listing categories.** The manifest's `categories` is replaced by `AI` as its only entry, one of the twenty categories the installed VS Code 1.143.0 recognizes, so both listings place the extension under AI and no longer under `Other`.
+
 ## Out of Scope
 

@@ -1,23 +1,4 @@
 <open-questions>
-  <open-question id="Listing categories">
-    <question>The manifest lists `Other` as its only category. Under which categories is the extension listed?</question>
-    <recommendation option="AI alone">The extension is tooling around coding agents, and AI is where a reader looking for such tooling browses, while `Other` is the catch-all few people browse and adds nothing beside a fitting category.</recommendation>
-    <alternative id="AI alone">
-      `categories` is replaced by `AI` as its only entry, one of the twenty categories the installed VS Code 1.143.0 recognizes (beside `Chat`, `Visualization`, `Other`, and the rest), so both listings place the extension under AI and no longer under `Other`.
-      <advantage>It puts the extension where a reader looking for tooling around Claude Code, Antigravity, and Codex browses, matching what the extension drives: side-bar and mission windows over a plugin for coding agents and a runner that chains their CLIs.</advantage>
-      <drawback>The AI category is crowded with assistants and model integrations, and the extension is neither, so a reader may expect it to provide an AI itself; and an editor whose category list predates `AI`, such as a fork built on an older VS Code, may show it uncategorized, which depends on the engine floor the package keeps.</drawback>
-    </alternative>
-    <alternative id="Other alone">
-      The manifest&apos;s `categories` stays as it stands, `Other` as its only entry, so both listings show the extension under the catch-all category and under no other.
-      <advantage>Nothing changes and the listing makes no claim about the extension&apos;s kind, so no reader browsing a specific category is led to expect something the extension is not.</advantage>
-      <drawback>`Other` is the category the Marketplace uses for whatever fits nowhere else, so a reader browsing or filtering by category for tooling around coding agents never meets the extension there, and discovery rests on search and the name and description alone.</drawback>
-    </alternative>
-    <alternative id="AI and Other">
-      `categories` lists `AI` first and keeps `Other` beside it, so both listings show the extension under AI and also under the catch-all category it holds today.
-      <advantage>It gains the AI placement while keeping the extension findable wherever `Other` is browsed or filtered, so no reader who would have found it under the existing category loses it.</advantage>
-      <drawback>The second category adds little, since `Other` is rarely browsed, and it carries AI&apos;s misreading risk all the same; it also says less clearly what the extension is than one fitting category would.</drawback>
-    </alternative>
-  </open-question>
   <open-question id="Preview flag">
     <question>Is the extension published marked as a preview, through the manifest&apos;s `preview` entry, or as a regular release?</question>
     <recommendation option="Regular release">The extension is a working tool its maintainer has installed and uses, a Preview badge has no rule that would ever retire it, and what a new reader needs to know, the plugin it depends on and the platforms it supports, is better said in words in the README.</recommendation>
