@@ -284,4 +284,25 @@
       <drawback>It exists only if the release publishes from a GitHub Actions workflow rather than from the maintainer&apos;s machine, an axis the Publish site and tokens question owns, and it adds an environment and its protection rule to the repository&apos;s settings, which nothing in the tree records or checks.</drawback>
     </alternative>
   </open-question>
+  <open-question id="Target Open VSX forks">
+    <question>The published package&apos;s `engines.vscode` floor is set to the oldest VS Code base among the Open VSX forks the extension means to reach, but nothing recorded names those forks. Which editors that read Open VSX does the extension mean to reach, for example VSCodium, Cursor, Windsurf, or Antigravity?</question>
+  </open-question>
+  <open-question id="Open VSX tool source">
+    <question>The extension&apos;s release skill runs `ovsx publish`, but `ovsx` is no dependency of the extension and is installed nowhere, while `@vscode/vsce` is a dev dependency pinned to an exact version. How does a release get the `ovsx` tool: as a dev dependency of `gurita-vscode/` pinned like `vsce`, fetched when the release runs, or installed by the maintainer outside the repository?</question>
+  </open-question>
+  <open-question id="Demo recording step">
+    <question>The listing README carries an animated GIF recorded by hand from VS Code and converted with a local tool, which no agent carrying out a task run can do. How does that recording enter the mission: as a task on the list, and then who does what and what the task verifies before it counts as done, or as a step the maintainer takes off the list before the first publication?</question>
+  </open-question>
+  <open-question id="Listing keywords">
+    <question>The manifest holds no `keywords` entry, which both registries read for search. Does the published manifest gain keywords, and if so which ones?</question>
+  </open-question>
+  <open-question id="Gallery banner">
+    <question>The manifest holds no `galleryBanner` entry, which sets the colour and the light or dark theme of the header band on the Marketplace listing page. Does the published manifest gain one, and if so with which colour and theme?</question>
+  </open-question>
+  <open-question id="Order with plugin-install mission">
+    <question>Another live mission in the same scope, `gurita-vscode/mission_plugin-install-and-update-from/`, has the extension&apos;s Settings window install and update the Gurita plugin on each harness. Does the first publication wait until that mission is finished, so that the listing README, the manifest description, and the demo recording describe an extension that installs the plugin itself, or does it go out without that feature, with the listing material describing the extension as it stands today?</question>
+  </open-question>
+  <open-question id="Build loop pointer conflict">
+    <question>Which conflicting decision stands: &quot;Listing README&quot; or &quot;Root documents&quot;? The &quot;Listing README file&quot; entry moves the README&apos;s Requirements, Building and packaging, and hand-install sections out of `gurita-vscode/README.md` into a new tracked file for building from the checkout and repoints `CLAUDE.md`&apos;s build pointers to that file; the &quot;Root documents mention&quot; entry has `CONTRIBUTING.md`&apos;s `## Development` gain a pointer saying the extension&apos;s build and test loop is documented in its README.</question>
+  </open-question>
 </open-questions>
