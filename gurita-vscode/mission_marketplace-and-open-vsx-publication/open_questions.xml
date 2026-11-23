@@ -326,6 +326,41 @@
   </open-question>
   <open-question id="Version source at release">
     <question>Does the extension&apos;s release skill take the version to release as an argument and write it into `package.json` and `package-lock.json` itself, as `/release-plugin` writes the plugin&apos;s, or does it release whatever version the manifest already holds after a bump made by hand?</question>
+    <alternative id="Argument written by npm version">
+      The skill takes the version as a required bare `MAJOR.MINOR.PATCH` argument, as `/release-plugin` does. After its checks pass it writes that version into `gurita-vscode/package.json` and `package-lock.json` with `npm version &lt;VERSION&gt; --no-git-tag-version`, run through the nvm Node 22 wrapper inside `gurita-vscode/`. npm makes no commit and no tag, and the skill writes the version before it packages and publishes.
+      <advantage>One argument gives the version the run validates, writes, packages, and publishes, so a release can never go out at a version nobody chose for it. npm keeps the manifest and both lock-file sites in step with no code of the project&apos;s own, and the call shape matches `/release-plugin`&apos;s.</advantage>
+      <drawback>The written version rests on npm&apos;s behaviour rather than on a tested tool of the repository&apos;s, and npm must already run through nvm. The skill must also recognise a re-run in which the manifest already holds the argument, after an interrupted or half-published release, and treat it as a resumption rather than a bump to refuse. The commit that carries the write is the release-commit sibling&apos;s to settle.</drawback>
+    </alternative>
+    <alternative id="Argument written by tracked script">
+      The skill takes the version as a required bare `MAJOR.MINOR.PATCH` argument and writes it into `package.json` and both version sites of `package-lock.json` through a new tracked script of the extension&apos;s own, for example under `gurita-vscode/scripts/`. Like `scripts/set_version.py`, the script renders every surface in memory first, writes all of them or none, touches no git, and is covered by a test. `scripts/set_version.py` itself stays the plugin&apos;s alone.
+      <advantage>It mirrors how the plugin&apos;s version is written: one tested script names every surface the extension&apos;s version lives in and writes them in lockstep, so a lock file left at the old version is caught by a test rather than found in a published package.</advantage>
+      <drawback>It adds code and a test to maintain for an edit npm already makes, and the script must locate the lock file&apos;s two root-package version sites itself without touching the dependency entries beside them. It shares the resumption handling a version argument needs on a re-run.</drawback>
+    </alternative>
+    <alternative id="Argument written by vsce publish">
+      The skill takes the version as a required bare `MAJOR.MINOR.PATCH` argument but writes nothing before publishing. It passes the argument to `vsce publish &lt;VERSION&gt; --no-git-tag-version`, which writes `package.json` and `package-lock.json` through npm as part of the Marketplace publish, and then publishes to Open VSX from the manifest as written. The tree is committed only after the publish.
+      <advantage>The registry tool owns both the bump and the publish, so the skill holds no version-writing step of its own and the written version is exactly the one the Marketplace accepted.</advantage>
+      <drawback>The manifest is changed only at publish time, after the confirmation and the package build, so the package the pre-flight built was built at the old version. A failure between the Marketplace publish and the Open VSX publish leaves an uncommitted manifest, which makes the half-published re-run harder. It also leaves to `vsce` a step whose commit and tag behaviour must be held off by a flag, which the release-commit and tag siblings depend on.</drawback>
+    </alternative>
+    <alternative id="Manifest version bumped by hand">
+      The skill takes no version argument. It releases whatever version `gurita-vscode/package.json` holds at `HEAD`. Before running it, the maintainer edits the manifest and lock file by hand, or runs `npm version` themselves, and commits the change as an ordinary commit. The skill writes no version anywhere and reads the release&apos;s version from the manifest.
+      <advantage>It is the smallest skill and keeps today&apos;s documented practice that the version is bumped by hand. A re-run after a half-published release needs no resumption logic for the version, because the manifest already holds the version being released.</advantage>
+      <drawback>Nothing makes the maintainer choose a version at release time, so a forgotten bump runs straight into a registry&apos;s refusal of an already-published version, and a mistaken bump is published as it stands. The lock file&apos;s two sites can drift from the manifest unless a check catches it. The call shape also differs from `/release-plugin`&apos;s, whose argument is the version.</drawback>
+    </alternative>
+    <alternative id="Argument checked against manifest">
+      The maintainer bumps and commits the manifest and lock file by hand before the run, as in the hand-bump option. The skill still takes a required bare `MAJOR.MINOR.PATCH` argument, but it uses the argument only as a confirmation: the run stops before anything is published unless `package.json` and both `package-lock.json` sites hold exactly that version. The skill writes no version itself.
+      <advantage>The maintainer states the intended version on the command line, as with `/release-plugin`, so a forgotten or mistyped bump stops the run before publishing. The skill still never edits a version file, and a re-run with the same argument is naturally a resumption.</advantage>
+      <drawback>Every release costs two steps, a hand bump and commit and then the run, and the version is typed twice. Its protection comes from the stop rather than from the skill making the bump, so the hand edit of the lock file stays a chore.</drawback>
+    </alternative>
+    <alternative id="Bump kind argument">
+      The skill takes a bump kind, `major`, `minor`, or `patch`, instead of a version literal. It computes the next version from the one `package.json` holds and writes it into `package.json` and `package-lock.json` itself, through `npm version &lt;kind&gt; --no-git-tag-version` or a tracked script, before packaging and publishing.
+      <advantage>The maintainer never types a version number, so a typo or a skipped or repeated number cannot reach a registry, and the next version always follows from the last one in the manifest.</advantage>
+      <drawback>The argument differs in form from `/release-plugin`&apos;s literal version. A re-run after a half-published release cannot pass the same argument again without bumping a second time, so resumption needs a separate form. Whether a single bump from the manifest&apos;s current `0.1.0` reaches the first publication&apos;s number depends on the first-published-version sibling.</drawback>
+    </alternative>
+    <alternative id="Optional version argument">
+      The skill accepts a bare `MAJOR.MINOR.PATCH` argument but does not require it. Given one, it writes that version into `package.json` and `package-lock.json` itself before packaging and publishing. Given none, it releases the version the manifest already holds, which may have been bumped and committed by hand.
+      <advantage>It serves both habits: a one-step release at a typed version, or a release of a bump already made and reviewed in its own commit. A re-run after a half-published release can simply omit the argument.</advantage>
+      <drawback>The skill has two paths to document and keep correct. A run without an argument loses the protection of a stated version, so a forgotten bump is caught only by a registry&apos;s refusal or by a check the pre-flight sibling may or may not include.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Release skill name">
     <question>What is the extension&apos;s release skill called, as the name of its directory under `.claude/skills/` and of its command?</question>
