@@ -78,5 +78,7 @@ No Marketplace publisher, Open VSX namespace, or token for either is recorded as
 
 - **Listing categories.** The manifest's `categories` is replaced by `AI` as its only entry, one of the twenty categories the installed VS Code 1.143.0 recognizes, so both listings place the extension under AI and no longer under `Other`.
 
+- **Preview flag.** The extension is published as a regular release. The manifest gains no `preview` entry, the extension goes out through the ordinary release channel on both registries, and neither listing carries a Preview badge. Nothing in the manifest or the release skill marks the extension's maturity beyond what its version number says.
+
 ## Out of Scope
 
