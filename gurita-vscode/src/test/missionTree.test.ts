@@ -37,8 +37,8 @@ interface StubProvider {
   getTreeItem(element: unknown): StubTreeItem;
   getChildren(element?: unknown): unknown[];
 }
-/** Every tree view the extension created, by the view id it named. */
-const treeViews: { id: string; provider: StubProvider }[] = [];
+/** Every tree view the extension created, by the view id it named, with the view object it was given. */
+const treeViews: { id: string; provider: StubProvider; view: { message?: string; dispose(): void } }[] = [];
 
 class StubTreeItem {
   id?: string;
@@ -118,8 +118,9 @@ const stub = {
   },
   window: {
     createTreeView(id: string, options: { treeDataProvider: StubProvider }) {
-      treeViews.push({ id, provider: options.treeDataProvider });
-      return { ...disposable, message: undefined };
+      const view: { message?: string; dispose(): void } = { ...disposable, message: undefined };
+      treeViews.push({ id, provider: options.treeDataProvider, view });
+      return view;
     },
     createTerminal(options: { name: string }): StubTerminal {
       const terminal = { name: options.name, show(): void {} };
@@ -224,7 +225,7 @@ workspace.folders = [{ uri: { fsPath: root } }];
 
 extension.activate(context);
 assert.strictEqual(treeViews.length, 1, 'activation creates one tree view');
-const { provider } = treeViews[0];
+const { provider, view } = treeViews[0];
 let redraws = 0;
 provider.onDidChangeTreeData(() => {
   redraws++;
@@ -312,6 +313,31 @@ test('a burst of file events and the refresh command each re-read and redraw the
   refresh();
   await until(() => redraws > again, 'the refresh redraws the tree');
   assert.strictEqual(item('Alpha mission').description, 'First review round · 0 questions · 0 tasks');
+});
+
+test('the view shows no mission live and a failed read through its message with no row, and a read with missions clears it', async () => {
+  assert.strictEqual(view.message, undefined, 'a read with missions shows no message');
+  const empty = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-tree-empty-')));
+  git(empty, 'init', '-q');
+  const refresh = commands.get('gurita.refreshMissionPane');
+  assert.ok(refresh !== undefined);
+  workspace.folders = [{ uri: { fsPath: empty } }];
+  refresh();
+  await until(() => view.message === missionTree.NO_MISSION_MESSAGE, 'the view shows that no mission is live');
+  assert.strictEqual(view.message, 'No mission is live.');
+  assert.deepStrictEqual(provider.getChildren(), [], 'no mission row is drawn with no mission live');
+  workspace.folders = undefined;
+  refresh();
+  await until(() => view.message !== missionTree.NO_MISSION_MESSAGE, 'the view shows the failed read');
+  assert.strictEqual(view.message, 'The live missions could not be read. No folder is open in this window.');
+  assert.deepStrictEqual(provider.getChildren(), [], 'no mission row is drawn while the read fails');
+  workspace.folders = [{ uri: { fsPath: root } }];
+  refresh();
+  await until(() => view.message === undefined, 'a read with missions clears the message');
+  assert.deepStrictEqual(
+    items().map((each) => each.label),
+    ['Alpha mission', 'Beta mission', 'Gamma mission', 'Delta mission'],
+  );
 });
 
 test("the manifest contributes the activity-bar container with the tracked icon, holding the one side-bar view", () => {

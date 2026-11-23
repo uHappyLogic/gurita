@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Side-Bar View Message With No Mission Row
-
-Show both states in which the side-bar view has no mission row to draw through the tree view's own `message` property (`TreeView.message`), the tree returning no mission row: today's line `No mission is live.` with no mission live, and today's failure line `The live missions could not be read.` followed by the cause as the read gave it when the live read fails, a successful read with missions clearing the message. Nothing is added to the manifest for either state, with no welcome content, context key, or placeholder row, and the view's other contents stay as they are; verified by tests of the message in the three states against the `vscode` stub, with `gurita-vscode/README.md` naming both lines.
-
----
-
 ## New Mission and Define Mission Tree Rows
 
 Add New mission and Define mission to the side-bar tree as two rows standing above the mission rows in every state of the view, each labelled with its control's name, its `description` showing the harness, model, and effort of the remembered variant, read from that variant's lines, and a click on the row running that variant, its goal, and for Define mission then its scope, asked for in VS Code's input box as today. An inline icon action on the row, also offered in its context menu, opens a QuickPick of the recipe's variants that changes the remembered selection, kept once per project as today, without starting a run, and the commands behind the rows and the action are hidden from the Command Palette through `menus.commandPalette` entries whose `when` is `false`. Verified by tests against the `vscode` stub of the two rows, a click's run, and a QuickPick pick, with `gurita-vscode/README.md` describing the rows.

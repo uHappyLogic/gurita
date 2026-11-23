@@ -7,7 +7,9 @@
 // row opens nothing. The view's first resolution, its first `getChildren` call, starts the
 // session's live read when no Gurita command has started it yet, and the tree is redrawn on every
 // re-read the session keeps and at every run's start and end. Until the read settles, and while it
-// fails, the tree holds no row.
+// fails, the tree holds no row. Each state in which it holds no mission row is shown through the
+// view's own `message`: `No mission is live.` with no mission live, and the failure line followed by
+// the cause as the read gave it while the read fails; a read with missions clears it.
 
 import * as vscode from 'vscode';
 import { MissionRow, missionRow } from './missionRows';
@@ -22,6 +24,27 @@ export const RUNNING_ICON = 'loading~spin';
 
 /** The icon of a mission row while no run of the mission is going. */
 export const MISSION_ICON = 'rocket';
+
+/** The view's message while the session's live read lists no mission. */
+export const NO_MISSION_MESSAGE = 'No mission is live.';
+
+/** The opening of the view's message while the session's live read fails, the cause following it. */
+export const FAILURE_MESSAGE = 'The live missions could not be read.';
+
+/**
+ * The view's message for the session's live read as it stands: the no-mission line, the failure
+ * line followed by the cause, or none while the read is pending or lists missions.
+ */
+export function viewMessage(): string | undefined {
+  const read = sessionRead();
+  if (read.state === 'failed') {
+    return `${FAILURE_MESSAGE} ${read.cause}`;
+  }
+  if (read.state === 'read' && read.missions.length === 0) {
+    return NO_MISSION_MESSAGE;
+  }
+  return undefined;
+}
 
 /** The side-bar view's tree, which `redraw` asks the editor to draw afresh. */
 export interface MissionTree {
@@ -49,7 +72,7 @@ export function rowItem(row: MissionRow): vscode.TreeItem {
 }
 
 /**
- * Creates the side-bar view's tree, redrawn on every re-read the session's live read keeps, and
+ * Creates the side-bar view's tree, its rows and its message redrawn on every re-read the session's live read keeps, and
  * returns it so the run listeners can redraw it at every run's start and end.
  */
 export function registerMissionTree(context: vscode.ExtensionContext): MissionTree {
@@ -65,7 +88,11 @@ export function registerMissionTree(context: vscode.ExtensionContext): MissionTr
       return missionRows();
     },
   };
-  const redraw = (): void => changed.fire();
-  context.subscriptions.push(changed, vscode.window.createTreeView(MISSIONS_VIEW, { treeDataProvider: provider }), onSessionRead(redraw));
+  const view = vscode.window.createTreeView(MISSIONS_VIEW, { treeDataProvider: provider });
+  const redraw = (): void => {
+    view.message = viewMessage();
+    changed.fire();
+  };
+  context.subscriptions.push(changed, view, onSessionRead(redraw));
   return { redraw };
 }

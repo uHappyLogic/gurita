@@ -120,6 +120,12 @@ redrawn on every re-read (after each burst of file events, each refresh, and eac
 and at every run's start and end. Until the first read settles, and while the live missions
 cannot be read, the tree holds no row.
 
+When the view has no mission row to draw it says why in its own message, with no placeholder row:
+with no mission live the message is `No mission is live.`, and while the live missions cannot be
+read it is `The live missions could not be read.` followed by the cause as the read gave it. A read
+that lists missions clears the message, and the view's other contents stay as they are in every
+state.
+
 ## Using the pane
 
 Open the pane with the command **Gurita: Open Mission Pane** (`gurita.openMissionPane`) from the
