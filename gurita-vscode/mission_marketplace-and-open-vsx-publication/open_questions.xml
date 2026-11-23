@@ -675,6 +675,31 @@
   </open-question>
   <open-question id="Bundled plugin state">
     <question>A package bundles the missions tool, the fixed console lines, and the plugin version from the checkout it is built from. From which state of the repository may an extension release be built: any `main`, or only one whose bundled sources (`core/tools/missions.py`, `docs/skill-reference.md`, `VERSION`) are those of a released plugin version?</question>
+    <alternative id="Any main, unchecked">
+      An extension release may be built from any `main`. The release skill makes no comparison between the bundled sources (`core/tools/missions.py`, `docs/skill-reference.md`, `VERSION`) and those of a plugin release, `scripts/bundle.js` stays as it is, and no rule about the bundled plugin state is written anywhere.
+      <advantage>Extension releases stay fully independent of the plugin&apos;s release cadence: an extension-only fix ships the moment it is ready, and nothing new is built, tested, or documented.</advantage>
+      <drawback>`VERSION` changes only in a `Release:` commit, so between plugin releases `main` can carry a changed missions tool or fixed-line table under the last released version number. A package built then bundles an unreleased tool and console lines labelled as that release, the harness check reports the versions as equal, and a user running the released plugin meets the mismatch at run time with nothing pointing at it. It holds today only because `core/` and `docs/skill-reference.md` happen to be unchanged since `2.0.0`.</drawback>
+    </alternative>
+    <alternative id="Any main, warned">
+      An extension release may be built from any `main`. Before it publishes, the release skill compares the three bundled sources with those at the tag named by `VERSION` (for example `git diff --quiet &lt;VERSION&gt; -- core/tools/missions.py docs/skill-reference.md VERSION`) and, if they differ, prints which ones differ. It then carries on and refuses nothing.
+      <advantage>The maintainer sees a mismatch before it goes public, but an extension release is never held back by unreleased plugin work, which may be harmless (a fixed line reworded, a missions-tool query the extension does not call).</advantage>
+      <drawback>A warning does not stop a mismatched package. Whether anyone reads it depends on whether the skill pauses before publishing, which the sibling question on pre-publish confirmation decides, and a package that went out mismatched cannot be republished under the same version.</drawback>
+    </alternative>
+    <alternative id="Released sources required">
+      An extension release may be built only from a `main` whose three bundled sources are byte-identical to those at the tag named by `VERSION`. The extension&apos;s own code may sit anywhere after that tag. The release skill checks this before it changes or publishes anything, and on a mismatch stops on a fixed line that names the differing files and the remedy: release the plugin first with `/release-plugin`, or wait. `scripts/bundle.js` and builds made by hand stay unrestricted.
+      <advantage>Every published package bundles exactly the missions tool and console lines of the plugin version it reports, so the harness check&apos;s version comparison is truthful, while extension-only changes still ship without waiting for a plugin release whenever `core/` and the reference are untouched.</advantage>
+      <drawback>While `main` holds unreleased changes to the missions tool or the fixed-line table, no extension release is possible at all, an urgent extension fix included, until a plugin release is cut. The check also adds one more condition to the release skill and to its tests.</drawback>
+    </alternative>
+    <alternative id="Sources read from the tag">
+      An extension release may be built from any `main`, but for a release build the three bundled sources are taken from the tag named by `VERSION` (through `git show &lt;VERSION&gt;:&lt;path&gt;`) rather than from the working tree. Either `scripts/bundle.js` gains a release mode or the release skill stages the files from the tag, and ordinary builds keep reading the checkout.
+      <advantage>A release is never blocked, and the package always carries a released plugin&apos;s tool and console lines that match the version it reports.</advantage>
+      <drawback>The extension code on `main` may already rely on a newer missions-tool query or fixed line than the tag holds, so the published package can fail at run time in a way no local build or test showed. There are also two bundling paths, so the package the maintainer tested is not the one that ships.</drawback>
+    </alternative>
+    <alternative id="Plugin release commits only">
+      An extension release may be built only from a commit that a plugin release tag points to, so the extension&apos;s own code and the bundled sources both come from a released plugin state. The release skill refuses any `HEAD` that does not carry the tag named by `VERSION`.
+      <advantage>The rule is the simplest to state and check, and the package, the plugin version, and the extension code all correspond to one released, tagged point in history.</advantage>
+      <drawback>Every extension release is tied to a plugin release, so an extension-only change cannot ship until a plugin release is cut. That undoes the separate version of its own the extension was given, and it pushes extension releases into `/release-plugin`&apos;s cadence and its tag lookup, which the sibling questions on extension tags and release notes are working to keep apart.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Release pre-flight checks">
     <question>Which conditions must hold before the extension&apos;s release skill changes or publishes anything, for example a clean tracked tree, `main` not behind `origin/main`, the extension&apos;s tests and the runner&apos;s tests passing, a package that builds, and tokens both registries still accept?</question>
