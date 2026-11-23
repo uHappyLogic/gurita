@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Config Changes Add Custom Variants
-
-In the settings view's variant edits (`gurita-vscode/src/variantEdits.ts`, with the store overlay in `src/recipes.ts`), changing a line's harness, model, or effort on a shipped or own variant leaves that variant untouched and listed and adds beside it a stored variant named `custom N`, N the lowest number starting from 1 that no variant of the recipe carries, neither selected nor made the default, while a stored variant is changed in place and keeps its name; this replaces the recorded behaviour of a line edit's stored copy standing in for the variant it copies. Every stored variant remembers the variant it was made from, a named duplicate included, and Reset on it returns its lines to that variant's while keeping its name and its entry; Rename stays as it is, on a `default` included, and a deleted variant is restored as today. It is verified by `variantEdits` and settings-view tests showing a `default` unchanged beside its `custom 1` after an edit, a second edit of `custom 1` keeping the name, and a Reset restoring the lines under the same name, with `gurita-vscode/README.md` matching.
-
----
-
 ## Single-Task Lines Carry Variants
 
 The settings view's Single-task lines part (`settingsLines` in `gurita-vscode/src/variantEdits.ts`, `drawSingleTaskLines` in `src/webview/page.ts`, `src/pane.ts`) lists each named single-task line with its `default` variant and its customs beneath it and gives those variants the same controls any recipe's variants get, a line's harness, model, or effort change adding `custom N` under the same line name, so that single-task lines are tuned through the settings view as every other recipe is. The line's heading stays the name `task_line_rules.txt` and the preview's override list use, Make default decides which variant the looped run passes as that line's `--line`, and the line-level Duplicate, Rename, and Delete stay as they are, the three shipped line headings, the rule file, and the runner unchanged. It is verified by a pane test where the loop passes a line's `custom 1` after it is made the default, with `gurita-vscode/README.md` matching.

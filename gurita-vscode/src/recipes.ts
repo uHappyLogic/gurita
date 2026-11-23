@@ -54,7 +54,7 @@
 
 import * as fs from 'node:fs';
 import { Harness, VariantValues, readLine, variantValues } from './lineValues';
-import { ReadVariantRef, StoredVariant, VariantOrigin, VariantRef, VariantStore, readVariantStore } from './variantStore';
+import { ReadVariantRef, SourceRef, StoredVariant, VariantOrigin, VariantRef, VariantStore, readVariantStore } from './variantStore';
 import type { WorkflowStep } from './workflow';
 
 /** The one heading of the shipped recipe file whose `###` blocks are recipes. */
@@ -120,6 +120,8 @@ export interface Variant {
   stored?: true;
   /** The shipped or own variant a stored copy stands in for. */
   copies?: ReadVariantRef;
+  /** The variant a stored variant was made from, whose lines a reset returns it to. */
+  from?: SourceRef;
 }
 
 export interface Recipe {
@@ -375,6 +377,7 @@ function storedVariant(stored: StoredVariant, file: string): Variant {
     ...variant(stored.name, stored.lines, true, file),
     stored: true,
     ...(stored.copies === undefined ? {} : { copies: { ...stored.copies } }),
+    ...(stored.from === undefined ? {} : { from: { ...stored.from } }),
   };
 }
 

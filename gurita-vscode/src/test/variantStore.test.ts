@@ -22,6 +22,7 @@ import {
   emptyVariantStore,
   parseVariantStore,
   readVariantStore,
+  serializeVariantStore,
   variantStoreFile,
 } from '../variantStore';
 
@@ -84,6 +85,23 @@ test('a store file is read with JSON.parse into its records, the harness part ke
   assert.deepStrictEqual(parseVariantStore('{}', STORE), emptyVariantStore(), 'a missing part holds nothing');
 });
 
+test('a stored variant remembers the variant it was made from, written back as read, its recipe kept only where it differs', () => {
+  const text = JSON.stringify({
+    variants: [
+      { recipe: 'A', name: 'custom 1', lines: ['echo one'], from: { name: 'default', origin: 'shipped' } },
+      { recipe: 'A', name: 'Copy', lines: ['echo two'], from: { name: 'custom 1', origin: 'stored', recipe: 'A' } },
+      { recipe: 'B', name: 'B', lines: ['echo three'], from: { name: 'default', origin: 'own', recipe: 'A' } },
+    ],
+  });
+  const store = parseVariantStore(text, STORE);
+  assert.deepStrictEqual(store.variants.map((each) => each.from), [
+    { name: 'default', origin: 'shipped' },
+    { name: 'custom 1', origin: 'stored' },
+    { name: 'default', origin: 'own', recipe: 'A' },
+  ]);
+  assert.deepStrictEqual(parseVariantStore(serializeVariantStore(store), STORE), store, 'the store is written back as read');
+});
+
 test('a missing store file holds nothing, and a store not in its form is refused naming the file', () => {
   const missing = path.join(os.tmpdir(), `gurita-no-such-variants-${process.pid}.json`);
   assert.deepStrictEqual(readVariantStore(missing), emptyVariantStore());
@@ -94,6 +112,8 @@ test('a missing store file holds nothing, and a store not in its form is refused
     '{"variants": [{"recipe": "A", "name": "B"}]}',
     '{"variants": [{"recipe": "A", "name": "B", "lines": [1]}]}',
     '{"variants": [{"recipe": "A", "name": "B", "lines": [], "copies": {"name": "C", "origin": "stored"}}]}',
+    '{"variants": [{"recipe": "A", "name": "B", "lines": [], "from": {"name": "C", "origin": "elsewhere"}}]}',
+    '{"variants": [{"recipe": "A", "name": "B", "lines": [], "from": {"origin": "shipped"}}]}',
     '{"hidden": [{"recipe": "A", "name": "B", "origin": "stored"}]}',
     '{"defaults": [{"recipe": "A", "name": "B", "origin": "elsewhere"}]}',
     '{"defaults": [{"recipe": "A", "origin": "shipped"}]}',

@@ -9,7 +9,11 @@
 //     stored copy, `"copies": { "name", "origin" }` naming the shipped or own variant it stands in
 //     for, `origin` being `shipped` or `own`, and, for a stored copy of a named single-task line
 //     renamed in the settings view, `"recipe"` in it too, naming the recipe the copied variant
-//     belongs to, the copy then standing in for it as a line of the copy's own recipe name;
+//     belongs to, the copy then standing in for it as a line of the copy's own recipe name, and,
+//     for a stored variant made from another variant, a duplicate or a `custom N` a line edit adds,
+//     `"from": { "name", "origin" }` naming the variant it was made from, `origin` being
+//     `shipped`, `own`, or `stored`, with `"recipe"` in it too where that variant belongs to
+//     another recipe, the variant whose lines a reset returns it to;
 //   `hidden` — the records that hide a variant, each `{ "recipe", "name", "origin" }`, `origin`
 //     being `shipped` or `own`;
 //   `defaults` — each recipe's picked default, `{ "recipe", "name", "origin" }`, `origin` being
@@ -50,6 +54,14 @@ export interface ReadVariantRef {
   recipe?: string;
 }
 
+/** The variant a stored variant was made from, named with its recipe where that is another one. */
+export interface SourceRef {
+  name: string;
+  origin: VariantOrigin;
+  /** The recipe the variant belongs to, named only where it differs from the stored variant's own. */
+  recipe?: string;
+}
+
 /** One stored variant: a further variant of its recipe, or, carrying `copies`, a stored copy. */
 export interface StoredVariant {
   recipe: string;
@@ -57,6 +69,8 @@ export interface StoredVariant {
   lines: string[];
   /** The shipped or own variant this stored copy stands in for, keeping its place. */
   copies?: ReadVariantRef;
+  /** The variant this stored variant was made from, whose lines a reset returns it to. */
+  from?: SourceRef;
 }
 
 /** One record hiding a shipped or own variant of a recipe. */
@@ -167,6 +181,24 @@ export function parseVariantStore(text: string, file: string): VariantStore {
         ...(copies.recipe === undefined || copies.recipe === stored.recipe ? {} : { recipe: copies.recipe as string }),
       };
     }
+    if (record.from !== undefined) {
+      const from = record.from;
+      if (
+        !isRecord(from) ||
+        typeof from.name !== 'string' ||
+        !isOrigin(from.origin, ['shipped', 'own', 'stored']) ||
+        (from.recipe !== undefined && typeof from.recipe !== 'string')
+      ) {
+        throw new VariantStoreError(
+          `The variant store ${file} holds a record ${index + 1} in "variants" whose "from" does not name a shipped, own, or stored variant.`,
+        );
+      }
+      stored.from = {
+        name: from.name,
+        origin: from.origin as VariantOrigin,
+        ...(from.recipe === undefined || from.recipe === stored.recipe ? {} : { recipe: from.recipe as string }),
+      };
+    }
     store.variants.push(stored);
   });
   part(parsed, 'hidden', file).forEach((raw, index) => {
@@ -217,6 +249,15 @@ export function serializeVariantStore(store: VariantStore): string {
               name: each.copies.name,
               origin: each.copies.origin,
               ...(each.copies.recipe === undefined || each.copies.recipe === each.recipe ? {} : { recipe: each.copies.recipe }),
+            },
+          }),
+      ...(each.from === undefined
+        ? {}
+        : {
+            from: {
+              name: each.from.name,
+              origin: each.from.origin,
+              ...(each.from.recipe === undefined || each.from.recipe === each.recipe ? {} : { recipe: each.from.recipe }),
             },
           }),
     })),

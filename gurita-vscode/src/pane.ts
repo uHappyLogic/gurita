@@ -91,8 +91,9 @@
 // the seven fixed-name button recipes, and the recipes and variants of the own recipe file alike,
 // each with its variants as the variant store lays them over the two Markdown files, its default
 // marked, and the variants a hiding record hides. A click of a variant's duplicate, rename,
-// delete, or default control, or of a reset control where a stored copy or a hiding record
-// stands, is carried out through the variant store's edits (`variantEdits.ts`); a duplicate's name
+// delete, or default control, or of a reset control, on a stored variant returning its lines to
+// those of the variant it was made from, its name and entry kept, and on a deleted variant showing
+// it again, is carried out through the variant store's edits (`variantEdits.ts`); a duplicate's name
 // and a rename are asked for in VS Code's own input box, one box per value as `askValues` asks, a
 // rename's box opening on the current name, and the box's validation refusing an empty name and
 // one the recipe's other variants carry. Each variant is posted with its lines and the line editor
@@ -103,7 +104,9 @@
 // its harness, every other line as its text. A pick in a line's dropdown, of a value the
 // harness's model list or its whole effort list offers, whatever the line's model, replaces the value the line carries, never
 // inserting text into it, through the store's edit (`replaceLineValue`), a shipped or own variant
-// getting a stored copy holding the changed line in its place; a pick of a value the list does not
+// left untouched and listed and a stored variant named `custom N`, N the lowest number from 1 that
+// no variant of the recipe carries, added beside it holding the changed line, neither selected
+// nor made the default, and a stored variant changed in place, keeping its name; a pick of a value the list does not
 // offer, of the value the line already carries, or on a line or variant the list read afresh does
 // not hold with that control writes nothing. A line with model and effort dropdowns also gets a
 // harness dropdown offering Claude Code and Antigravity, and a pick of the other of the two
@@ -199,6 +202,7 @@ import {
   replaceLineValue,
   resetLine,
   resetVariant,
+  resetVariantLines,
   settingsLines,
   settingsRecipes,
 } from './variantEdits';
@@ -259,6 +263,7 @@ type PageMessage =
   | { type: 'deleteVariant'; recipe: string; variant: VariantTarget }
   | { type: 'pickDefault'; recipe: string; variant: VariantTarget }
   | { type: 'resetVariant'; recipe: string; original: ReadVariantRef }
+  | { type: 'resetVariantLines'; recipe: string; variant: VariantTarget }
   | { type: 'replaceLineValue'; recipe: string; variant: VariantTarget; line: number; kind: string; value: string }
   | { type: 'replaceLineHarness'; recipe: string; variant: VariantTarget; line: number; harness: string }
   | { type: 'duplicateLine'; line: string; variant: VariantTarget }
@@ -523,7 +528,8 @@ export function openMissionPane(context: vscode.ExtensionContext): void {
         message?.type === 'duplicateVariant' ||
         message?.type === 'renameVariant' ||
         message?.type === 'deleteVariant' ||
-        message?.type === 'pickDefault'
+        message?.type === 'pickDefault' ||
+        message?.type === 'resetVariantLines'
       ) {
         void editVariant(context, created, message.type, message.recipe, message.variant);
       } else if (message?.type === 'resetVariant') {
@@ -1252,27 +1258,30 @@ async function askVariantName(prompt: string, taken: readonly string[], value?: 
 }
 
 /** The word a notification gives each variant edit. */
-const EDIT_VERBS: Record<'duplicateVariant' | 'renameVariant' | 'deleteVariant' | 'pickDefault' | 'resetVariant', string> = {
+const EDIT_VERBS: Record<'duplicateVariant' | 'renameVariant' | 'deleteVariant' | 'pickDefault' | 'resetVariant' | 'resetVariantLines', string> = {
   duplicateVariant: 'duplicated',
   renameVariant: 'renamed',
   deleteVariant: 'deleted',
   pickDefault: 'picked as the default',
   resetVariant: 'reset',
+  resetVariantLines: 'reset',
 };
 
 /**
  * Makes one edit of the settings view on the variant `variant` of the recipe `recipe`, as the
  * variant list read afresh lists it, through the variant store's edits: a duplicate under a name
  * and a rename to one, each asked for in VS Code's own input box, a rename's box opening on the
- * current name, a delete, or the pick of the variant as its recipe's default. A recipe or variant
- * the list does not hold, or a dismissed box, writes nothing; an edit the store refuses, or a store
+ * current name, a delete, the pick of the variant as its recipe's default, or the reset of a stored
+ * variant, returning its lines to those of the variant it was made from, its name kept. A recipe or
+ * variant the list does not hold, a reset of a variant it lists with no variant it was made from,
+ * or a dismissed box, writes nothing; an edit the store refuses, or a store
  * that cannot be read or written, is told in an error notification. Every edit made posts the
  * variant list, the harness lists, and the pages again, their recipes re-read.
  */
 async function editVariant(
   context: vscode.ExtensionContext,
   target: vscode.WebviewPanel,
-  edit: 'duplicateVariant' | 'renameVariant' | 'deleteVariant' | 'pickDefault',
+  edit: 'duplicateVariant' | 'renameVariant' | 'deleteVariant' | 'pickDefault' | 'resetVariantLines',
   recipe: unknown,
   variant: unknown,
 ): Promise<void> {
@@ -1287,7 +1296,7 @@ async function editVariant(
   }
   const listed = read.recipes.find((each) => each.name === recipe);
   const index = listed?.variants.findIndex((each) => isTarget(each, named)) ?? -1;
-  if (listed === undefined || index < 0) {
+  if (listed === undefined || index < 0 || (edit === 'resetVariantLines' && listed.variants[index].from === undefined)) {
     return;
   }
   const others = listed.variants.filter((_, each) => each !== index).map((each) => each.name);
@@ -1312,6 +1321,8 @@ async function editVariant(
       renameVariant(files.store, base, recipe, named, name as string);
     } else if (edit === 'deleteVariant') {
       deleteVariant(files.store, base, recipe, named);
+    } else if (edit === 'resetVariantLines') {
+      resetVariantLines(files.store, base, recipe, named);
     } else {
       pickDefault(files.store, base, recipe, named);
     }
@@ -1324,10 +1335,10 @@ async function editVariant(
 }
 
 /**
- * Resets the shipped or own variant `original` of the recipe `recipe`, removing the stored copy and
- * the hiding record standing for it, so it shows again as its file holds it, then posts the variant
- * list, the harness lists, and the pages again. A variant the list read afresh offers no reset for
- * writes nothing; a store that cannot be read or written is told in an error notification.
+ * Resets the deleted shipped or own variant `original` of the recipe `recipe`, removing the hiding
+ * record and any stored copy standing for it, so it shows again as its file holds it, then posts
+ * the variant list, the harness lists, and the pages again. A variant the list read afresh does
+ * not list as deleted writes nothing; a store that cannot be read or written is told in an error notification.
  */
 async function resetStoredVariant(context: vscode.ExtensionContext, target: vscode.WebviewPanel, recipe: unknown, original: unknown): Promise<void> {
   const ref = readVariantRefOf(original);
@@ -1340,7 +1351,7 @@ async function resetStoredVariant(context: vscode.ExtensionContext, target: vsco
     return;
   }
   const listed = read.recipes.find((each) => each.name === recipe);
-  const offered = [...(listed?.variants.flatMap((each) => (each.copies === undefined ? [] : [each.copies])) ?? []), ...(listed?.hidden ?? [])];
+  const offered = listed?.hidden ?? [];
   if (!offered.some((each) => each.name === ref.name && each.origin === ref.origin)) {
     return;
   }
@@ -1355,7 +1366,8 @@ async function resetStoredVariant(context: vscode.ExtensionContext, target: vsco
 /**
  * Replaces the model or the effort that line `line` of the variant `variant` of the recipe `recipe`
  * carries with `value`, picked in the line's dropdown in the settings view, through the store's
- * edit, a shipped or own variant getting a stored copy holding the changed line in its place, then
+ * edit, a shipped or own variant left as it is and a `custom N` holding the changed line added
+ * beside it, a stored variant changed in place, then
  * posts the variant list, the harness lists, and the pages again. Only a line the variant list read
  * afresh gives a control of `kind` is changed, and only to a value the harness's list of `kind`
  * offers: anything else, or the value the line already carries, writes nothing. An edit the store
@@ -1440,8 +1452,8 @@ const SWITCHABLE: readonly { key: HarnessKey; cli: SwitchableHarness }[] = [
  * Claude Code or Antigravity, picked in the line's harness dropdown in the settings view, through
  * the store's edit (`replaceLineHarness`): the line's prompt and its headless or interactive form
  * kept, its model the picked harness's first listed model, and its effort kept where that
- * harness's effort list offers it and otherwise the first listed, a shipped or own variant getting
- * a stored copy holding the changed line in its place, as a model or effort pick does; then posts
+ * harness's effort list offers it and otherwise the first listed, stored as a model or effort pick
+ * is, a shipped or own variant getting a `custom N` beside it; then posts
  * the variant list, the harness lists, and the pages again. Only a line the variant list read
  * afresh gives model and effort controls on Claude Code or Antigravity is rewritten, and only onto
  * the other of the two: anything else writes nothing. An edit the store refuses, a picked harness

@@ -1882,9 +1882,17 @@ const VARIANTS = {
         group: 'shipped',
         fixed: false,
         variants: [
-          { name: 'Gemini', origin: 'stored', copies: { name: 'Antigravity', origin: 'shipped' }, lines: [AGY_LINE], isDefault: true },
+          {
+            name: 'Gemini',
+            origin: 'stored',
+            copies: { name: 'Antigravity', origin: 'shipped' },
+            lines: [AGY_LINE],
+            isDefault: true,
+            from: { name: 'Antigravity', origin: 'shipped' },
+          },
           { name: 'default', origin: 'own', lines: [CLAUDE_LINE], isDefault: false },
           { name: 'Fast', origin: 'stored', lines: [CLAUDE_LINE, CLAUDE_LINE], isDefault: false },
+          { name: 'custom 1', origin: 'stored', lines: [CLAUDE_LINE], isDefault: false, from: { name: 'default', origin: 'own' } },
         ],
         hidden: [{ name: 'Claude Code', origin: 'shipped' }],
       },
@@ -1934,6 +1942,7 @@ test('the settings view lists every recipe the extension posts with its variants
         [['Gemini', 'stored copy of the shipped variant Antigravity', 'Default'], [...edits, 'Reset']],
         [['default', 'yours'], [...edits, 'Make default']],
         [['Fast', 'stored'], [...edits, 'Make default']],
+        [['custom 1', 'stored'], [...edits, 'Make default', 'Reset']],
         [['Claude Code', 'shipped', 'Deleted'], ['Reset']],
       ],
     ],
@@ -1961,10 +1970,14 @@ test('each variant control posts its edit, naming the variant as listed, and the
   named(page, 'Settings').click();
   page.send(VARIANTS);
   const count = page.posted.length;
-  for (const key of ['duplicate-0-0', 'rename-0-0', 'delete-0-0', 'reset-0-0', 'default-0-1', 'rename-0-2', 'reset-0-hidden-0', 'default-2-0']) {
+  for (const key of ['duplicate-0-0', 'rename-0-0', 'delete-0-0', 'reset-0-0', 'default-0-1', 'rename-0-2', 'reset-0-2', 'reset-0-3', 'reset-0-hidden-0', 'default-2-0']) {
     const found = page.root.querySelector(`[data-focus="variant-${key}"]`);
     if (key === 'default-2-0') {
       assert.strictEqual(found, null, 'the default carries no Make default control');
+      continue;
+    }
+    if (key === 'reset-0-2') {
+      assert.strictEqual(found, null, 'a stored variant posted with no variant it was made from carries no Reset control');
       continue;
     }
     assert.ok(found !== null, `no control ${key}`);
@@ -1975,17 +1988,18 @@ test('each variant control posts its edit, naming the variant as listed, and the
     { type: 'duplicateVariant', recipe: 'First run', variant: copy },
     { type: 'renameVariant', recipe: 'First run', variant: copy },
     { type: 'deleteVariant', recipe: 'First run', variant: copy },
-    { type: 'resetVariant', recipe: 'First run', original: { name: 'Antigravity', origin: 'shipped' } },
+    { type: 'resetVariantLines', recipe: 'First run', variant: copy },
     { type: 'pickDefault', recipe: 'First run', variant: { name: 'default', origin: 'own' } },
     { type: 'renameVariant', recipe: 'First run', variant: { name: 'Fast', origin: 'stored' } },
+    { type: 'resetVariantLines', recipe: 'First run', variant: { name: 'custom 1', origin: 'stored' } },
     { type: 'resetVariant', recipe: 'First run', original: { name: 'Claude Code', origin: 'shipped' } },
   ]);
-  assert.strictEqual(variantEditRows(page)[0][1].length, 4, 'nothing changes until the extension posts it');
+  assert.strictEqual(variantEditRows(page)[0][1].length, 5, 'nothing changes until the extension posts it');
   page.send({
     type: 'variants',
     variants: { state: 'read', recipes: [{ ...VARIANTS.variants.recipes[0], variants: VARIANTS.variants.recipes[0].variants.slice(1), hidden: [] }] },
   });
-  assert.deepStrictEqual(variantEditRows(page).map(([name, rows]) => [name, rows.map((row) => row[0][0])]), [['First run', ['default', 'Fast']]]);
+  assert.deepStrictEqual(variantEditRows(page).map(([name, rows]) => [name, rows.map((row) => row[0][0])]), [['First run', ['default', 'Fast', 'custom 1']]]);
   page.send({ type: 'live', missions: [mission(ALPHA, 'Alpha')], running: [ALPHA] });
   assert.strictEqual(page.root.querySelector('[data-focus="variant-delete-0-0"]')?.disabled, false, 'a running chain leaves the controls enabled');
 });

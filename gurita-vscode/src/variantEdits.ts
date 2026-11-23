@@ -1,24 +1,33 @@
 // The edits the settings view makes, each a function that reads the per-user variant store file
 // afresh, applies one edit to it, and writes the whole store back (`writeVariantStore`); the
 // extension is the store's only writer, and no edit reads or writes the person's own recipe file or
-// the shipped one. Each edit but the reset, which reads the store alone, is given the recipe list
-// the two Markdown files yield before the store is laid over it (`readRecipes` with no store
-// file), lays the store over it as the reader does, and names its variant as that list shows it,
-// by its name, where it comes from, and, for a stored copy, the variant it stands in for.
+// the shipped one. Each edit but the reset of a deleted variant, which reads the store alone, is
+// given the recipe list the two Markdown files yield before the store is laid over it
+// (`readRecipes` with no store file), lays the store over it as the reader does, and names its
+// variant as that list shows it, by its name, where it comes from, and, for a stored copy, the
+// variant it stands in for.
 //
-// A shipped or own variant is never changed in its file: changing one of its lines, or renaming
-// it, writes a stored copy that stands in for it and keeps its place in the recipe's order, and
-// deleting it writes a record hiding it; resetting it removes the copy or the record, and the
-// variant shows again as its file holds it. A stored variant is changed, renamed, or removed in the
-// store itself, and deleting a stored copy removes it and hides the variant it stood in for, so
-// the deleted variant stays gone until it is reset. A duplicate is a further stored variant, listed
-// after the recipe's others. A picked default is stored as the variant it names, a stored copy's
-// pick as the variant the copy stands in for; renaming the picked default carries the pick to the
-// new name, and only deleting the picked default drops the pick, the recipe then falling back to
-// its first listed variant. An edit that cannot be made is refused with a `VariantEditError`,
-// nothing written. The list the settings view draws its variant edits from is
+// A shipped or own variant is never changed in its file. Changing one of its lines, its harness,
+// model, or effort, leaves it untouched and listed and adds beside it, after the recipe's other
+// variants, a stored variant named `custom N` (`customVariantName`), N the lowest number from 1
+// that no variant of the recipe carries, holding the changed lines, neither picked as the default
+// nor selected; a stored variant's line is changed in place, the variant keeping its name. Renaming
+// a shipped or own variant writes a stored copy that stands in for it and keeps its place in the
+// recipe's order, and deleting it writes a record hiding it, which the reset of a deleted variant
+// (`resetVariant`) removes, the variant showing again as its file holds it. A stored variant is
+// renamed or removed in the store itself, and deleting a stored copy removes it and hides the
+// variant it stood in for, so the deleted variant stays gone until it is reset. A duplicate is a
+// further stored variant, listed after the recipe's others. Every stored variant remembers the
+// variant it was made from (`from`, a stored copy the variant it stands in for), and the reset of a
+// stored variant (`resetVariantLines`) returns its lines to that variant's as they now stand,
+// keeping its name and its entry in the store. A picked default is stored as the variant it names, a
+// stored copy's pick as the variant the copy stands in for; renaming the picked default carries the
+// pick to the new name, and only deleting the picked default drops the pick, the recipe then
+// falling back to its first listed variant. An edit that cannot be made is refused with a
+// `VariantEditError`, nothing written. The list the settings view draws its variant edits from is
 // `settingsRecipes`'s: every recipe but the named single-task lines, each with its listed
-// variants, its default marked, and the variants a hiding record hides, and each variant's lines
+// variants, its default marked, each stored one with the variant a reset returns it to, and the
+// variants a hiding record hides, and each variant's lines
 // with the line editor each one gets (`lineEditor`): only a `claude` or `agy` line carrying both
 // `--model` and `--effort` gets model and effort controls, and a harness control picking between
 // Claude Code and Antigravity, and a `codex` line carrying `-m` its model control alone, every
@@ -31,9 +40,11 @@
 // with its harness beside it, and every other line keeps its text. The named single-task lines
 // are listed apart, by `settingsLines`, and edited as variants are, a line being named by its
 // recipe: a duplicate is a stored line of a new name, a rename of a shipped or own line writes a
-// stored copy of the new name standing in for it in its place, a delete hides it, a reset shows it
-// again, and a new name may be no name a recipe or line carries, since the looped run, the rule
-// file, and the override list name a line by it alone. This module imports nothing from `vscode`.
+// stored copy of the new name standing in for it in its place, a line edit of a shipped or own
+// line writes a stored copy of its name holding the changed line in its place, a delete hides it,
+// a reset shows it again, and a new name may be no name a recipe or line carries, since the looped
+// run, the rule file, and the override list name a line by it alone. This module imports nothing
+// from `vscode`.
 
 import { HARNESSES, Harness as CheckedHarness } from './harnessCheck';
 import { HarnessOffer, LineValues, SwitchableHarness, readLine, readSkill, replaceEffort, replaceModel, rewriteHarness } from './lineValues';
@@ -48,7 +59,16 @@ import {
   sameCopies,
   variantOrigin,
 } from './recipes';
-import { ReadVariantRef, StoredVariant, VariantOrigin, VariantRef, VariantStore, readVariantStore, writeVariantStore } from './variantStore';
+import {
+  ReadVariantRef,
+  SourceRef,
+  StoredVariant,
+  VariantOrigin,
+  VariantRef,
+  VariantStore,
+  readVariantStore,
+  writeVariantStore,
+} from './variantStore';
 
 /** A variant as the recipe list shows it: its name, where it comes from, and, for a stored copy, the variant it stands in for. */
 export interface VariantTarget {
@@ -72,6 +92,56 @@ export function variantTarget(variant: Variant): VariantTarget {
     origin: variantOrigin(variant),
     ...(variant.copies === undefined ? {} : { copies: { ...variant.copies } }),
   };
+}
+
+/** The word a variant a line edit adds is named by, before its number: `custom 1`, `custom 2`, … */
+export const CUSTOM_VARIANT = 'custom';
+
+/**
+ * The name the variant a line edit adds to `recipe` takes: `custom N`, N the lowest number from 1
+ * that no variant of the recipe carries, whether listed, in its file, or in the store.
+ */
+export function customVariantName(recipe: Recipe, base: readonly Recipe[], store: VariantStore): string {
+  const taken = new Set([
+    ...recipe.variants.map((each) => each.name),
+    ...(base.find((each) => each.name === recipe.name)?.variants.map((each) => each.name) ?? []),
+    ...store.variants.filter((each) => each.recipe === recipe.name).map((each) => each.name),
+  ]);
+  let number = 1;
+  while (taken.has(`${CUSTOM_VARIANT} ${number}`)) {
+    number += 1;
+  }
+  return `${CUSTOM_VARIANT} ${number}`;
+}
+
+/** The variant a stored variant was made from: its `from`, or for a stored copy the variant it stands in for. */
+export function variantSource(variant: { from?: SourceRef; copies?: ReadVariantRef }): SourceRef | undefined {
+  if (variant.from !== undefined) {
+    return { ...variant.from };
+  }
+  return variant.copies === undefined ? undefined : { ...variant.copies };
+}
+
+/** The `from` a variant made from the listed variant `variant` of the recipe `recipe` records. */
+function sourceRef(variant: Variant, recipe: string, into: string): SourceRef {
+  return { name: variant.name, origin: variantOrigin(variant), ...(recipe === into ? {} : { recipe }) };
+}
+
+/**
+ * The lines of the variant `source` names, as they now stand, `recipe` the recipe of the stored
+ * variant made from it: a shipped or own variant's as its file holds them, hidden or stood in for
+ * included, and a stored variant's as the store holds them; undefined when it names none.
+ */
+export function sourceLines(base: readonly Recipe[], store: VariantStore, recipe: string, source: SourceRef): string[] | undefined {
+  const from = source.recipe ?? recipe;
+  if (source.origin === 'stored') {
+    const found = store.variants.find((each) => each.recipe === from && each.name === source.name && copiedRecipe(each) === undefined);
+    return found === undefined ? undefined : [...found.lines];
+  }
+  const found = base
+    .find((each) => each.name === from)
+    ?.variants.find((each) => each.name === source.name && variantOrigin(each) === source.origin);
+  return found === undefined ? undefined : [...found.lines];
 }
 
 /**
@@ -172,6 +242,8 @@ export interface SettingsVariant extends VariantTarget {
   rows: (LineRow | null)[];
   /** Whether it is its recipe's default, picked or, while no pick stands, its first listed variant. */
   isDefault: boolean;
+  /** For a stored variant, the variant it was made from, whose lines its reset returns it to, left out when none is listed or held. */
+  from?: SourceRef;
 }
 
 /** One recipe as the settings view lists it: its variants in order and the variants a hiding record hides. */
@@ -189,7 +261,8 @@ export interface SettingsRecipe {
 /**
  * The recipes the settings view lists, out of `base`, the list the two Markdown files yield, with
  * the store `store`, read from `file`, laid over it: every recipe in the merged order, the ones only
- * the store holds after them, each with its listed variants, its default marked, and the variants
+ * the store holds after them, each with its listed variants, its default marked, each stored one
+ * with the variant it was made from while that variant's lines can still be read, and the variants
  * hidden by a record. A recipe every variant of which is hidden stays listed, so its variants can
  * be reset. The named single-task lines, whose default holds one headless `<Task Title>` line, are
  * left out, and so is no recipe for its stage or for a disabled harness. `fixed` names the recipes
@@ -209,13 +282,18 @@ export function settingsRecipes(base: readonly Recipe[], store: VariantStore, fi
       continue;
     }
     const standing = recipe === undefined ? undefined : defaultVariant(recipe);
-    const variants = (recipe?.variants ?? []).map((variant) => ({
-      ...variantTarget(variant),
-      lines: [...variant.lines],
-      editors: variant.lines.map((line) => lineEditor(line) ?? null),
-      rows: variant.lines.map((line) => lineRow(line) ?? null),
-      isDefault: variant === standing,
-    }));
+    const variants = (recipe?.variants ?? []).map((variant): SettingsVariant => {
+      const source = variant.stored ? variantSource(variant) : undefined;
+      const resettable = source !== undefined && sourceLines(base, store, name, source) !== undefined;
+      return {
+        ...variantTarget(variant),
+        lines: [...variant.lines],
+        editors: variant.lines.map((line) => lineEditor(line) ?? null),
+        rows: variant.lines.map((line) => lineRow(line) ?? null),
+        isDefault: variant === standing,
+        ...(resettable ? { from: source } : {}),
+      };
+    });
     const hidden = resettableVariants(store, name).filter(
       (ref) => !variants.some((variant) => variant.copies !== undefined && sameCopies(variant.copies, ref)),
     );
@@ -290,19 +368,23 @@ function checkName(recipe: Recipe, name: string, except?: Variant): void {
   }
 }
 
-/** Duplicates the variant `target` under `name`, as a further stored variant listed after the recipe's others. */
+/**
+ * Duplicates the variant `target` under `name`, as a further stored variant listed after the
+ * recipe's others, remembering `target` as the variant it was made from.
+ */
 export function duplicateVariant(storeFile: string, base: readonly Recipe[], recipeName: string, target: VariantTarget, name: string): void {
   const { store, recipe } = load(storeFile, base, recipeName);
   const source = find(recipe, target);
   checkName(recipe, name);
-  store.variants.push({ recipe: recipe.name, name, lines: [...source.lines] });
+  store.variants.push({ recipe: recipe.name, name, lines: [...source.lines], from: sourceRef(source, recipe.name, recipe.name) });
   writeVariantStore(storeFile, store);
 }
 
 /**
  * Renames the variant `target` to `name`: a stored variant is renamed in the store, and a shipped
  * or own one gets a stored copy of that name standing in for it. A pick of the renamed variant
- * goes with it to the new name. Renaming a variant to the name it has writes nothing.
+ * goes with it to the new name, and so does every stored variant of the recipe made from a renamed
+ * stored one. Renaming a variant to the name it has writes nothing.
  */
 export function renameVariant(storeFile: string, base: readonly Recipe[], recipeName: string, target: VariantTarget, name: string): void {
   const { store, recipe } = load(storeFile, base, recipeName);
@@ -316,6 +398,16 @@ export function renameVariant(storeFile: string, base: readonly Recipe[], recipe
   if (variant.stored) {
     const stored = record(store, recipe.name, variant);
     store.variants = store.variants.filter((each) => each === stored || !isRecordOf(each, recipe.name, variant));
+    for (const each of store.variants) {
+      if (
+        each.from !== undefined &&
+        each.from.origin === 'stored' &&
+        each.from.name === variant.name &&
+        (each.from.recipe ?? each.recipe) === recipe.name
+      ) {
+        each.from.name = name;
+      }
+    }
     stored.name = name;
     renamed = { ...variant, name };
   } else {
@@ -357,22 +449,28 @@ export function deleteVariant(storeFile: string, base: readonly Recipe[], recipe
 
 /**
  * Stores `lines`, the lines of the listed variant `variant` of `recipe` with one line changed: a
- * stored variant's lines are changed in the store, and a shipped or own variant gets a stored copy
- * of its name, holding the lines, standing in for it.
+ * stored variant's lines are changed in the store, keeping its name; a shipped or own variant is
+ * left as it is and a stored variant named `custom N` (`customVariantName`), made from it and
+ * holding the lines, is added after the recipe's others, neither picked nor selected; and a shipped
+ * or own named single-task line gets a stored copy of its name, holding the lines, standing in for
+ * it, the name the looped run takes it by.
  */
-function storeLines(store: VariantStore, recipe: Recipe, variant: Variant, lines: string[]): void {
+function storeLines(store: VariantStore, base: readonly Recipe[], recipe: Recipe, variant: Variant, lines: string[]): void {
+  const origin = variantOrigin(variant);
   if (variant.stored) {
     record(store, recipe.name, variant).lines = lines;
+  } else if (defaultVariant(recipe).singleTask) {
+    store.variants.push({ recipe: recipe.name, name: variant.name, lines, copies: { name: variant.name, origin: origin as 'shipped' | 'own' } });
   } else {
-    store.variants.push({ recipe: recipe.name, name: variant.name, lines, copies: { name: variant.name, origin: variantOrigin(variant) as 'shipped' | 'own' } });
+    store.variants.push({ recipe: recipe.name, name: customVariantName(recipe, base, store), lines, from: sourceRef(variant, recipe.name, recipe.name) });
   }
 }
 
 /**
  * Replaces the model or the effort that line `index` of the variant `target` carries with `value`,
  * never inserting text into a line: a stored variant's line is changed in the store, and a shipped
- * or own variant gets a stored copy of its name, holding the changed line, standing in for it.
- * A line that carries no such value, or an empty value, is refused; a value the line already
+ * or own variant is left as it is, a `custom N` holding the changed line added beside it, as
+ * `storeLines` states. A line that carries no such value, or an empty value, is refused; a value the line already
  * carries writes nothing.
  */
 export function replaceLineValue(
@@ -402,7 +500,7 @@ export function replaceLineValue(
   }
   const lines = [...variant.lines];
   lines[index] = changed;
-  storeLines(store, recipe, variant, lines);
+  storeLines(store, base, recipe, variant, lines);
   writeVariantStore(storeFile, store);
 }
 
@@ -446,7 +544,36 @@ export function replaceLineHarness(
   }
   const lines = [...variant.lines];
   lines[index] = changed;
-  storeLines(store, recipe, variant, lines);
+  storeLines(store, base, recipe, variant, lines);
+  writeVariantStore(storeFile, store);
+}
+
+/**
+ * Resets the stored variant `target` of the recipe `recipeName`: its lines are returned to those of
+ * the variant it was made from (`variantSource`), as that variant's file or the store now holds
+ * them, the variant keeping its name, its place, and its entry in the store. A variant that is not
+ * stored, one that remembers no variant it was made from, and one whose source can no longer be
+ * read are refused; a variant whose lines already are its source's writes nothing.
+ */
+export function resetVariantLines(storeFile: string, base: readonly Recipe[], recipeName: string, target: VariantTarget): void {
+  const { store, recipe } = load(storeFile, base, recipeName);
+  const variant = find(recipe, target);
+  if (!variant.stored) {
+    throw new VariantEditError(`The ${describe(target)} of the recipe ${recipe.name} is no stored variant.`);
+  }
+  const stored = record(store, recipe.name, variant);
+  const source = variantSource(stored);
+  if (source === undefined) {
+    throw new VariantEditError(`The stored variant ${variant.name} of the recipe ${recipe.name} remembers no variant it was made from.`);
+  }
+  const lines = sourceLines(base, store, recipe.name, source);
+  if (lines === undefined) {
+    throw new VariantEditError(`The ${source.origin} variant ${source.name} that ${variant.name} was made from is no longer listed.`);
+  }
+  if (lines.length === stored.lines.length && lines.every((line, index) => line === stored.lines[index])) {
+    return;
+  }
+  stored.lines = lines;
   writeVariantStore(storeFile, store);
 }
 
@@ -458,7 +585,7 @@ export function pickDefault(storeFile: string, base: readonly Recipe[], recipeNa
 }
 
 /**
- * Resets the shipped or own variant `original` of the recipe `recipeName`: every stored copy
+ * Resets the deleted shipped or own variant `original` of the recipe `recipeName`: every stored copy
  * standing in for it and every record hiding it leaves the store, and it shows again as its file
  * holds it, in a recipe every variant of which was hidden too. A variant no copy or record stands
  * for is refused.
@@ -608,7 +735,7 @@ export function duplicateLine(storeFile: string, base: readonly Recipe[], lineNa
   const { store, recipe } = load(storeFile, base, lineName);
   const source = findLine(recipe, target);
   checkLineName(base, store, storeFile, name);
-  store.variants.push({ recipe: name, name, lines: [...source.lines] });
+  store.variants.push({ recipe: name, name, lines: [...source.lines], from: sourceRef(source, recipe.name, name) });
   writeVariantStore(storeFile, store);
 }
 

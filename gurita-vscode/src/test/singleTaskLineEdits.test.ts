@@ -84,7 +84,9 @@ test('the settings view lists every named single-task line, shipped and own alik
 test('a duplicated line shows in singleTaskLines over the merged list under its own name, holding the same line', () => {
   withStore((file) => {
     duplicateLine(file, base(), CC, SHIPPED_CC, 'Single task (Sonnet)');
-    assert.deepStrictEqual(readVariantStore(file).variants, [{ recipe: 'Single task (Sonnet)', name: 'Single task (Sonnet)', lines: [CC_LINE] }]);
+    assert.deepStrictEqual(readVariantStore(file).variants, [
+      { recipe: 'Single task (Sonnet)', name: 'Single task (Sonnet)', lines: [CC_LINE], from: { name: 'default', origin: 'shipped', recipe: CC } },
+    ], 'a duplicated line remembers the line it was made from');
     assert.deepStrictEqual(namedLines(file), [
       [CC, CC_LINE],
       [AGY, AGY_LINE],

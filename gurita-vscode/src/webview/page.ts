@@ -121,8 +121,9 @@
 // opening, the chains, the seven fixed-name button recipes, and the recipes and variants of the own
 // recipe file, the named single-task lines left out: each variant with where it comes from,
 // whether it is the recipe's default, and its Duplicate, Rename, Delete, and Make default
-// controls, a stored copy also its Reset control, and each variant a hiding record hides with its
-// Reset control alone. Each control posts its edit to the extension, which asks for a duplicate's
+// controls, a stored variant the extension posts with the variant it was made from also its Reset
+// control, which returns its lines to that variant's and keeps its name, and each variant a hiding
+// record hides with its Reset control alone, which shows it again. Each control posts its edit to the extension, which asks for a duplicate's
 // name or a new name in VS Code's own input box, writes the edit to the variant store, and posts
 // the variants and the pages again; the variants are redrawn only from what it posts. Beneath each
 // listed variant its line editor draws each line as the row the extension posts for it: a line of
@@ -326,6 +327,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
     /** The row each line is drawn as, in the lines' order, null for a line drawn as its text. */
     rows?: (LineRow | null)[];
     isDefault: boolean;
+    /** For a stored variant, the variant it was made from, whose lines its reset returns it to. */
+    from?: { name: string; origin: VariantOrigin; recipe?: string };
   }
 
   /** The row a line running a `gurita:` skill is drawn as: the skill, whether the line is interactive, and its harness's key. */
@@ -1004,7 +1007,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
   /**
    * The settings view's part of variant edits: the cause the variants could not be read, or each
    * recipe with its variants, each named with where it comes from and whether it is the default,
-   * and its duplicate, rename, delete, and default controls, a stored copy's reset control too, and
+   * and its duplicate, rename, delete, and default controls, a stored variant's reset control too,
+   * returning its lines to those of the variant it was made from, and
    * after them each variant a hiding record hides, with its reset control. Beneath each listed
    * variant stands its line editor. Every control posts its edit; the list is redrawn only from
    * what the extension posts.
@@ -1063,11 +1067,11 @@ declare function acquireVsCodeApi(): VsCodeApi;
             variant: named,
           });
         }
-        if (variant.copies !== undefined) {
-          control(RESET_LABEL, 'reset', `Remove this stored copy and show ${variant.copies.name} again as its file holds it`, {
-            type: 'resetVariant',
+        if (variant.origin === 'stored' && variant.from !== undefined) {
+          control(RESET_LABEL, 'reset', `Return the lines of ${variant.name} to those of ${variant.from.name}, keeping its name`, {
+            type: 'resetVariantLines',
             recipe: recipe.name,
-            original: { name: variant.copies.name, origin: variant.copies.origin },
+            variant: named,
           });
         }
         item.append(actions, drawLines(recipe.name, variant, `${recipeIndex}-${variantIndex}`));

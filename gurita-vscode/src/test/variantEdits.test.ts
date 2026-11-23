@@ -3,7 +3,7 @@ import * as assert from 'node:assert';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { Recipe, defaultVariant, mergeRecipes, parseOwnRecipes, parseShippedRecipes, readRecipes, variantOrigin } from '../recipes';
+import { Recipe, defaultVariant, mergeRecipes, overlayVariantStore, parseOwnRecipes, parseShippedRecipes, readRecipes, variantOrigin } from '../recipes';
 import {
   VariantEditError,
   VariantTarget,
@@ -16,6 +16,7 @@ import {
   replaceLineHarness,
   replaceLineValue,
   resetVariant,
+  resetVariantLines,
   resettableVariants,
   settingsRecipes,
   variantTarget,
@@ -141,64 +142,137 @@ test('renaming a shipped or own variant writes a stored copy standing in for it 
   });
 });
 
-test('changing a line writes a stored copy holding the changed line in the variant\'s place, the line changed only where it carries the value', () => {
+test("changing a line of a shipped or own variant leaves it listed and adds a custom N holding the changed line, a stored variant's line changed in place", () => {
   withStore((file) => {
     replaceLineValue(file, base(), 'Variants', SHIPPED_CC, 0, 'model', 'sonnet');
     replaceLineValue(file, base(), 'Variants', OWN_CC, 0, 'effort', 'medium');
     assert.deepStrictEqual(variants(file, 'Variants'), [
-      ['On Claude Code', 'stored'],
-      ['On Antigravity', 'shipped'],
-      ['Empty variant', 'shipped'],
-      ['On Claude Code', 'stored'],
-      ['Own variant', 'own'],
-    ], 'the copies of a shipped and an own variant of one name stand side by side');
+      ...SHIPPED_VARIANTS,
+      ['custom 1', 'stored'],
+      ['custom 2', 'stored'],
+    ], 'the edited variants stay listed, each custom added after the others under the lowest free number');
     const listed = byName(readBack(file), 'Variants').variants;
-    assert.deepStrictEqual(listed[0].lines, ['claude -p "/gurita:complete-all-tasks --mission <path>" --model "sonnet" --effort high;']);
-    assert.deepStrictEqual(listed[0].copies, { name: 'On Claude Code', origin: 'shipped' });
-    assert.deepStrictEqual(listed[3].lines, ['claude -p "/gurita:complete-all-tasks --mission <path>" --model "fable" --effort medium;']);
-    assert.deepStrictEqual(listed[3].copies, { name: 'On Claude Code', origin: 'own' });
-    replaceLineValue(file, base(), 'Variants', variantTarget(listed[0]), 0, 'effort', 'xhigh');
-    assert.deepStrictEqual(byName(readBack(file), 'Variants').variants[0].lines, [
+    assert.deepStrictEqual(listed[0].lines, ['claude -p "/gurita:complete-all-tasks --mission <path>" --model "opus" --effort high;'], 'the shipped variant is untouched');
+    assert.deepStrictEqual(listed[5].lines, ['claude -p "/gurita:complete-all-tasks --mission <path>" --model "sonnet" --effort high;']);
+    assert.strictEqual(listed[5].copies, undefined, 'a custom stands in for nothing');
+    assert.deepStrictEqual(listed[5].from, { name: 'On Claude Code', origin: 'shipped' }, 'a custom remembers the variant it was made from');
+    assert.deepStrictEqual(listed[6].lines, ['claude -p "/gurita:complete-all-tasks --mission <path>" --model "fable" --effort medium;']);
+    assert.deepStrictEqual(listed[6].from, { name: 'On Claude Code', origin: 'own' });
+    assert.deepStrictEqual(defaultOf(file, 'Variants'), ['On Claude Code', 'shipped'], 'no custom is made the default');
+    assert.deepStrictEqual(readVariantStore(file).defaults, [], 'no pick is written');
+    replaceLineValue(file, base(), 'Variants', variantTarget(listed[5]), 0, 'effort', 'xhigh');
+    assert.deepStrictEqual(variants(file, 'Variants').slice(5), [['custom 1', 'stored'], ['custom 2', 'stored']], 'a second edit of custom 1 keeps its name');
+    assert.deepStrictEqual(byName(readBack(file), 'Variants').variants[5].lines, [
       'claude -p "/gurita:complete-all-tasks --mission <path>" --model "sonnet" --effort xhigh;',
     ]);
-    assert.strictEqual(readVariantStore(file).variants.length, 2, "a stored copy's line is changed in the store");
+    assert.strictEqual(readVariantStore(file).variants.length, 2, "a stored variant's line is changed in the store");
     const before = fs.readFileSync(file, 'utf8');
-    replaceLineValue(file, base(), 'Variants', variantTarget(listed[3]), 0, 'model', 'fable');
+    replaceLineValue(file, base(), 'Variants', variantTarget(listed[6]), 0, 'model', 'fable');
     assert.strictEqual(fs.readFileSync(file, 'utf8'), before, 'a value the line already carries writes nothing');
     refused(() => replaceLineValue(file, base(), 'Single task (Antigravity)', { name: 'default', origin: 'shipped' }, 0, 'effort', 'high'), /carries no effort/);
     refused(() => replaceLineValue(file, base(), 'Variants', OWN_VARIANT, 0, 'model', 'o3'), /carries no model/);
     refused(() => replaceLineValue(file, base(), 'Variants', SHIPPED_AGY, 1, 'model', 'x'), /has no line 2/);
     refused(() => replaceLineValue(file, base(), 'Variants', SHIPPED_AGY, 0, 'model', ''), /An empty model/);
     assert.strictEqual(fs.readFileSync(file, 'utf8'), before, 'a refused change writes nothing');
-    resetVariant(file, 'Variants', { name: 'On Claude Code', origin: 'shipped' });
-    assert.deepStrictEqual(byName(readBack(file), 'Variants').variants[0].lines, [
-      'claude -p "/gurita:complete-all-tasks --mission <path>" --model "opus" --effort high;',
-    ], 'a reset shows the shipped line again');
+    deleteVariant(file, base(), 'Variants', variantTarget(listed[5]));
+    replaceLineValue(file, base(), 'Variants', SHIPPED_AGY, 0, 'model', 'gemini-4-argon');
+    assert.deepStrictEqual(variants(file, 'Variants').slice(5), [['custom 2', 'stored'], ['custom 1', 'stored']], 'a freed number is taken again');
   });
 });
 
-test('a harness pick writes a stored copy holding the line rewritten onto the picked harness, in the variant\'s place, as a model or effort pick does', () => {
+/** A shipped recipe file holding one recipe of one block, its variant named `default`. */
+const ONE_BLOCK = `## Recipes
+
+### First run
+\`\`\`
+claude -p "/gurita:review-mission-requirements --mission <path>" --model "fable" --effort xhigh;
+claude -p "/gurita:recommend-all-open-questions --mission <path>" --model "opus" --effort high;
+\`\`\`
+`;
+
+function oneBlock(): Recipe[] {
+  return parseShippedRecipes(ONE_BLOCK, 'one-block.md');
+}
+
+test("an edit of a default leaves it unchanged beside its custom 1, a second edit keeps the name, and a reset returns the lines under the same name", () => {
+  withStore((file) => {
+    const read = (): Recipe => byName(overlayVariantStore(oneBlock(), readVariantStore(file), file), 'First run');
+    const shipped = oneBlock()[0].variants[0].lines;
+    replaceLineValue(file, oneBlock(), 'First run', { name: 'default', origin: 'shipped' }, 0, 'model', 'sonnet');
+    let recipe = read();
+    assert.deepStrictEqual(recipe.variants.map((each) => [each.name, variantOrigin(each)]), [['default', 'shipped'], ['custom 1', 'stored']]);
+    assert.deepStrictEqual(recipe.variants[0].lines, shipped, 'the default is unchanged');
+    assert.strictEqual(defaultVariant(recipe).name, 'default', 'the default stays the default');
+    const custom = variantTarget(recipe.variants[1]);
+    assert.deepStrictEqual(custom, { name: 'custom 1', origin: 'stored' });
+    replaceLineValue(file, oneBlock(), 'First run', custom, 1, 'effort', 'medium');
+    replaceLineHarness(file, oneBlock(), 'First run', custom, 0, 'agy', { models: ['gemini-4-argon'], efforts: ['medium', 'high'] });
+    recipe = read();
+    assert.deepStrictEqual(recipe.variants.map((each) => each.name), ['default', 'custom 1'], 'every further edit of custom 1 keeps its name');
+    assert.deepStrictEqual(recipe.variants[1].lines, [
+      'agy -p "/gurita:review-mission-requirements --mission <path>" --model "gemini-4-argon" --effort medium;',
+      'claude -p "/gurita:recommend-all-open-questions --mission <path>" --model "opus" --effort medium;',
+    ]);
+    const listed = settingsRecipes(oneBlock(), readVariantStore(file), file, [])[0].variants;
+    assert.deepStrictEqual(listed.map((each) => [each.name, each.from]), [['default', undefined], ['custom 1', { name: 'default', origin: 'shipped' }]], 'a stored variant is listed with the variant its reset returns it to');
+    resetVariantLines(file, oneBlock(), 'First run', custom);
+    recipe = read();
+    assert.deepStrictEqual(recipe.variants.map((each) => [each.name, variantOrigin(each)]), [['default', 'shipped'], ['custom 1', 'stored']], 'the reset keeps the name and the entry');
+    assert.deepStrictEqual(recipe.variants[1].lines, shipped, "the reset returns the lines to the default's");
+    assert.strictEqual(readVariantStore(file).variants.length, 1);
+    const before = fs.readFileSync(file, 'utf8');
+    resetVariantLines(file, oneBlock(), 'First run', custom);
+    assert.strictEqual(fs.readFileSync(file, 'utf8'), before, 'a reset of lines already its source\'s writes nothing');
+    refused(() => resetVariantLines(file, oneBlock(), 'First run', { name: 'default', origin: 'shipped' }), /is no stored variant/);
+    renameVariant(file, oneBlock(), 'First run', { name: 'default', origin: 'shipped' }, 'Claude');
+    assert.deepStrictEqual(read().variants.map((each) => [each.name, variantOrigin(each)]), [['Claude', 'stored'], ['custom 1', 'stored']], 'a rename of a default stays a stored copy in its place');
+  });
+});
+
+test('a duplicate remembers the variant it was made from, its reset following a renamed stored source, and a source no longer held offers no reset', () => {
+  withStore((file) => {
+    duplicateVariant(file, base(), 'Variants', SHIPPED_AGY, 'Mine');
+    duplicateVariant(file, base(), 'Variants', { name: 'Mine', origin: 'stored' }, 'Mine again');
+    const stored = readVariantStore(file).variants;
+    assert.deepStrictEqual(stored.map((each) => [each.name, each.from]), [
+      ['Mine', { name: 'On Antigravity', origin: 'shipped' }],
+      ['Mine again', { name: 'Mine', origin: 'stored' }],
+    ]);
+    replaceLineValue(file, base(), 'Variants', { name: 'Mine', origin: 'stored' }, 0, 'effort', 'medium');
+    replaceLineValue(file, base(), 'Variants', { name: 'Mine again', origin: 'stored' }, 0, 'model', 'gemini-4-argon');
+    renameVariant(file, base(), 'Variants', { name: 'Mine', origin: 'stored' }, 'Medium');
+    assert.deepStrictEqual(readVariantStore(file).variants[1].from, { name: 'Medium', origin: 'stored' }, 'a rename of the source carries the reference');
+    resetVariantLines(file, base(), 'Variants', { name: 'Mine again', origin: 'stored' });
+    assert.deepStrictEqual(byName(readBack(file), 'Variants').variants.slice(5).map((each) => [each.name, each.lines]), [
+      ['Medium', ['agy -p "/gurita:complete-all-tasks --mission <path>" --model "claude-opus-5-5" --effort medium;']],
+      ['Mine again', ['agy -p "/gurita:complete-all-tasks --mission <path>" --model "claude-opus-5-5" --effort medium;']],
+    ], "a reset takes its source's lines as they now stand");
+    resetVariantLines(file, base(), 'Variants', { name: 'Medium', origin: 'stored' });
+    assert.deepStrictEqual(byName(readBack(file), 'Variants').variants[5].lines, ['agy -p "/gurita:complete-all-tasks --mission <path>" --model "claude-opus-5-5" --effort high;']);
+    deleteVariant(file, base(), 'Variants', { name: 'Medium', origin: 'stored' });
+    const listed = settingsRecipes(base(), readVariantStore(file), file, []).find((each) => each.name === 'Variants')?.variants ?? [];
+    assert.strictEqual(listed.find((each) => each.name === 'Mine again')?.from, undefined, 'a source no longer held offers no reset');
+    refused(() => resetVariantLines(file, base(), 'Variants', { name: 'Mine again', origin: 'stored' }), /no longer listed/);
+  });
+});
+
+test('a harness pick on a shipped or own variant adds a custom N holding the line rewritten onto the picked harness, as a model or effort pick does', () => {
   withStore((file) => {
     const agy = { models: ['claude-opus-5-5', 'gemini-4-argon'], efforts: ['medium', 'high'] };
     replaceLineHarness(file, base(), 'Variants', SHIPPED_CC, 0, 'agy', agy);
     replaceLineHarness(file, base(), 'Variants', SHIPPED_AGY, 0, 'claude', { models: ['fable', 'opus'], efforts: ['xhigh'] });
-    assert.deepStrictEqual(variants(file, 'Variants'), [
-      ['On Claude Code', 'stored'],
-      ['On Antigravity', 'stored'],
-      ['Empty variant', 'shipped'],
-      ['On Claude Code', 'own'],
-      ['Own variant', 'own'],
-    ], 'each stored copy stands in its shipped variant\'s place');
+    assert.deepStrictEqual(variants(file, 'Variants'), [...SHIPPED_VARIANTS, ['custom 1', 'stored'], ['custom 2', 'stored']], 'each shipped variant stays listed');
     let listed = byName(readBack(file), 'Variants').variants;
-    assert.deepStrictEqual(listed[0].lines, ['agy -p "/gurita:complete-all-tasks --mission <path>" --model "claude-opus-5-5" --effort high;'], 'an offered effort is kept');
-    assert.deepStrictEqual(listed[0].copies, { name: 'On Claude Code', origin: 'shipped' });
-    assert.deepStrictEqual(listed[1].lines, ['claude -p "/gurita:complete-all-tasks --mission <path>" --model "fable" --effort xhigh;'], 'an effort not offered becomes the first listed');
-    replaceLineHarness(file, base(), 'Variants', variantTarget(listed[0]), 0, 'claude', { models: ['opus'], efforts: ['high'] });
+    assert.deepStrictEqual(listed[5].lines, ['agy -p "/gurita:complete-all-tasks --mission <path>" --model "claude-opus-5-5" --effort high;'], 'an offered effort is kept');
+    assert.deepStrictEqual(listed[5].from, { name: 'On Claude Code', origin: 'shipped' });
+    assert.deepStrictEqual(listed[6].lines, ['claude -p "/gurita:complete-all-tasks --mission <path>" --model "fable" --effort xhigh;'], 'an effort not offered becomes the first listed');
+    replaceLineHarness(file, base(), 'Variants', variantTarget(listed[5]), 0, 'claude', { models: ['opus'], efforts: ['high'] });
     listed = byName(readBack(file), 'Variants').variants;
-    assert.deepStrictEqual(listed[0].lines, ['claude -p "/gurita:complete-all-tasks --mission <path>" --model "opus" --effort high;'], 'the way back gives the shipped line');
-    assert.strictEqual(readVariantStore(file).variants.length, 2, "a stored copy's line is changed in the store");
+    assert.deepStrictEqual(listed[5].name, 'custom 1', 'a stored variant keeps its name');
+    assert.deepStrictEqual(listed[5].lines, ['claude -p "/gurita:complete-all-tasks --mission <path>" --model "opus" --effort high;'], 'the way back gives the shipped line');
+    assert.strictEqual(readVariantStore(file).variants.length, 2, "a stored variant's line is changed in the store");
     const before = fs.readFileSync(file, 'utf8');
-    replaceLineHarness(file, base(), 'Variants', variantTarget(listed[0]), 0, 'claude', { models: ['fable'], efforts: ['xhigh'] });
+    replaceLineHarness(file, base(), 'Variants', variantTarget(listed[5]), 0, 'claude', { models: ['fable'], efforts: ['xhigh'] });
     assert.strictEqual(fs.readFileSync(file, 'utf8'), before, 'a line already on the picked harness writes nothing');
     refused(() => replaceLineHarness(file, base(), 'Variants', OWN_VARIANT, 0, 'claude', agy), /no claude or agy line carrying both/);
     refused(() => replaceLineHarness(file, base(), 'Chain', { name: 'default', origin: 'shipped' }, 0, 'agy', agy), /no claude or agy line carrying both/);
@@ -225,8 +299,9 @@ test('deleting a shipped or own variant writes a hiding record, a stored one lea
     duplicateVariant(file, base(), 'Variants', SHIPPED_CC, 'Spare');
     deleteVariant(file, base(), 'Variants', { name: 'Spare', origin: 'stored' });
     assert.deepStrictEqual(readVariantStore(file).variants, [], 'a deleted stored variant leaves the store');
-    replaceLineValue(file, base(), 'Variants', SHIPPED_CC, 0, 'model', 'sonnet');
+    renameVariant(file, base(), 'Variants', SHIPPED_CC, 'Renamed');
     const copy = byName(readBack(file), 'Variants').variants[0];
+    assert.deepStrictEqual(variantTarget(copy), { name: 'Renamed', origin: 'stored', copies: { name: 'On Claude Code', origin: 'shipped' } });
     deleteVariant(file, base(), 'Variants', variantTarget(copy));
     assert.deepStrictEqual(variants(file, 'Variants'), [['Empty variant', 'shipped'], ['On Claude Code', 'own']], 'a deleted copy hides what it stood in for');
     assert.deepStrictEqual(
@@ -264,7 +339,9 @@ test('a picked default is stored, replacing the pick standing, a stored copy pic
     assert.deepStrictEqual(defaultOf(file, 'Variants'), ['On Antigravity', 'shipped']);
     assert.deepStrictEqual(readVariantStore(file).defaults, [{ recipe: 'Variants', name: 'On Antigravity', origin: 'shipped' }]);
     replaceLineValue(file, base(), 'Variants', SHIPPED_AGY, 0, 'effort', 'medium');
-    assert.deepStrictEqual(defaultOf(file, 'Variants'), ['On Antigravity', 'stored'], 'the copy standing in for the pick is the default');
+    assert.deepStrictEqual(defaultOf(file, 'Variants'), ['On Antigravity', 'shipped'], 'a line edit leaves the pick on the edited variant, its custom not picked');
+    renameVariant(file, base(), 'Variants', SHIPPED_AGY, 'Antigravity');
+    assert.deepStrictEqual(defaultOf(file, 'Variants'), ['Antigravity', 'stored'], 'the copy standing in for the pick is the default');
     pickDefault(file, base(), 'Variants', SHIPPED_CC);
     pickDefault(file, base(), 'Variants', variantTarget(byName(readBack(file), 'Variants').variants[1]));
     assert.deepStrictEqual(readVariantStore(file).defaults, [{ recipe: 'Variants', name: 'On Antigravity', origin: 'shipped' }]);
@@ -314,7 +391,10 @@ test('an edit keeps the rest of the store as written, its harness part included,
     assert.deepStrictEqual(after.harnesses, { kept: ['as', 'read'] });
     assert.deepStrictEqual(after.hidden, before.hidden);
     assert.deepStrictEqual(after.defaults, before.defaults);
-    assert.deepStrictEqual(after.variants, [...before.variants, { recipe: 'Loop', name: 'Loop again', lines: ['source .env_fixture', '<single-task line>'] }]);
+    assert.deepStrictEqual(after.variants, [
+      ...before.variants,
+      { recipe: 'Loop', name: 'Loop again', lines: ['source .env_fixture', '<single-task line>'], from: { name: 'default', origin: 'shipped' } },
+    ]);
     renameVariant(file, base(), 'Chain', { name: 'Chain on Sonnet', origin: 'stored' }, 'Chain on Sonnet 2');
     assert.ok(
       !readVariantStore(file).variants.some((each) => each.recipe === 'Chain' && each.name === 'Chain on Sonnet'),

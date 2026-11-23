@@ -44,7 +44,8 @@ Every Node command runs under Node 22 through nvm, in a subshell, from the repos
   run path, the pane's answer to a tab click, the recipe list and the fixed-name buttons it
   posts, with the variant selections it remembers, the harness check it runs, with the check script's print stubbed, and
   the harnesses it enables and disables, with their model and effort lists, and the variant
-  edits it makes, the line editor's harness, model, and effort picks among them, and its single-task line
+  edits it makes, the line editor's harness, model, and effort picks, with the `custom N` variants they
+  add and the resets of stored variants, among them, and its single-task line
   edits, with the looped run's names following them, are tested against a stub of the `vscode`
   module,
   and the page script against a small stand-in for the DOM. Nothing runs inside an editor.
@@ -272,8 +273,9 @@ and the recipes and variants of your own recipe file, in the order the mission p
 with the recipes only your stored variants make up last. The named single-task lines are not
 listed here but under **Single-task lines** below, and neither a recipe's stage nor a disabled harness leaves anything out. Each
 variant shows its name, its lines in the name's hover text, and where it comes from (`shipped`,
-`yours` for your own recipe file, `stored` for a duplicate, or `stored copy of` the variant it
-stands in for), and the recipe's default is marked **Default**. A button recipe carries a note
+`yours` for your own recipe file, `stored` for a duplicate or a `custom N` a line edit added, or
+`stored copy of` the variant a rename made it stand in for), and the recipe's default is marked
+**Default**. A button recipe carries a note
 that its default is the variant its button runs until another variant is selected in the dropdown
 beside the button.
 
@@ -281,7 +283,7 @@ Each variant has these controls, every one carried out in your per-user variant 
 `~/.gurita/variants.json`, and never in the shipped file or your own recipe file:
 
 - **Duplicate** asks for the new variant's name and adds a copy of the variant's lines under it,
-  listed after the recipe's other variants.
+  listed after the recipe's other variants and remembering the variant it was made from.
 - **Rename** asks for the new name, the box opening with the current name filled in. A shipped
   variant or one of your own recipe file gets a stored copy of the new name standing in for it in
   its place; a stored variant is renamed in the store. When the variant is the picked default,
@@ -294,9 +296,11 @@ Each variant has these controls, every one carried out in your per-user variant 
 - **Make default**, on every variant but the default, picks it as the recipe's default, the
   variant a mission page's dropdown, or the dropdown beside a fixed-name button, stands on while no
   selection is remembered for the recipe, and the one the looped run's single-task lines run.
-- **Reset**, where a stored copy or a hiding record stands for a shipped variant or one of your
-  own recipe file, removes the copy or the record, so the variant shows again as its file holds
-  it.
+- **Reset**, on a stored variant, a duplicate, a `custom N`, or a stored copy alike, returns its
+  lines to those of the variant it was made from, as that variant's file or the store holds them
+  now, and keeps its name, its place, and its entry in the store; a stored variant whose source is
+  no longer listed, deleted from the store, has no **Reset**. On a variant listed as **Deleted**,
+  **Reset** removes the hiding record, so the variant shows again as its file holds it.
 
 A duplicate's name and a new name are each asked for in VS Code's own input box, one box per
 value; the box refuses an empty name and one another variant of the recipe already carries, and
@@ -335,11 +339,17 @@ the line keeps its prompt, its other flags, and its headless or interactive form
 it takes the picked harness's first listed model, and it keeps its effort when that harness's
 effort list offers it, taking its first listed effort otherwise (a `claude` line at `xhigh` lands
 on `agy` at the first effort Antigravity's list holds, `medium` with the shipped lists). Both
-lists are those **Models and efforts** holds. A pick, of any of the three, is written as the variant's stored copy in
-`~/.gurita/variants.json`: a shipped variant or one of your own recipe file gets a stored copy
-holding the changed line, standing in for it in its place in the recipe's dropdown until you
-reset it, and a stored variant's line is changed in the store. Like every other edit, a pick is
-shown at once in the view and on the mission pages.
+lists are those **Models and efforts** holds. A pick, of any of the three, is written to
+`~/.gurita/variants.json`. On a shipped variant or one of your own recipe file, `default`
+included, the variant is left untouched and listed, and a stored variant named `custom N` is
+added beside it, after the recipe's other variants, holding the changed lines, N the lowest number
+from 1 that no variant of the recipe carries (`custom 1`, then `custom 2`, a number freed by a
+delete taken again). The new variant is neither selected in any dropdown nor made the default, so
+every button runs what it ran before until you select it or make it the default, and it remembers
+the variant it was made from, which its **Reset** returns its lines to. On a stored variant, a
+`custom N` included, the line is changed in the store and the variant keeps its name, so a second
+pick on `custom 1` changes `custom 1`. Like every other edit, a pick is shown at once in the view
+and on the mission pages.
 
 #### Single-task lines
 
