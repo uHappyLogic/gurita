@@ -1,1 +1,53 @@
-<open-questions/>
+<open-questions>
+  <open-question id="Mission row layout">
+    <question>The side-bar view is a native VS Code tree listing every live mission, and each mission must show its title, the workflow step to run next, its count of open questions, its count of remaining tasks, and a marker while a run is going. A tree item offers a label, a description, a tooltip, an icon, and child rows. Which of these carries each of the five facts, and is a mission&apos;s row a leaf or does it expand into child rows?</question>
+  </open-question>
+  <open-question id="Side-bar controls and variants">
+    <question>The side-bar view is a native VS Code tree and must carry the four controls that belong to no mission: New mission, Define mission, Refresh, and Settings. On today&apos;s page New mission and Define mission are buttons whose label shows the harness, model, and effort of the variant they run, each with a dropdown beside it that selects among its recipe&apos;s variants, and a native tree view holds neither a labelled button nor a dropdown. Where in the side-bar view does each of the four controls sit, and how do New mission and Define mission there show the variant they will run and let a person select another?</question>
+  </open-question>
+  <open-question id="Side-bar view without missions">
+    <question>Today&apos;s mission pane shows the line `No mission is live.` when no mission is live, and one failure state naming the cause when the read of the live missions fails. Once the missions are listed in a native side-bar tree, how does that view show each of those two states, in which it has no mission row to draw?</question>
+  </open-question>
+  <open-question id="Open windows on failed read">
+    <question>When the read of the live missions fails, today&apos;s one mission pane replaces every page with a failure state naming the cause. Once each mission has a window of its own in the editor area, what do the mission windows already open show while that read fails?</question>
+  </open-question>
+  <open-question id="Unreadable step or count">
+    <question>Each mission&apos;s row in the side-bar tree shows the workflow step to run next and the counts of open questions and remaining tasks. The extension finds no next step when a read that choice needs failed, and holds a notice in place of a list when a mission&apos;s `open_questions.xml` or `TASKS_TODO.md` is missing or does not parse. What does a mission&apos;s row show in place of a step or a count that could not be read?</question>
+  </open-question>
+  <open-question id="Mission window tab title">
+    <question>Each mission opens in a window of its own in the editor area, several at once beside the Settings window, and an editor tab shows a title and optionally an icon. Today&apos;s tab row shows each mission&apos;s title with its path as a tooltip, and two missions in different scopes may carry the same title. What does a mission window&apos;s editor tab show so that several open missions can be told apart?</question>
+  </open-question>
+  <open-question id="Window of ended mission">
+    <question>A mission&apos;s window can still be open when its mission stops being live, as when finishing the mission removes its directory. What happens to that window then?</question>
+  </open-question>
+  <open-question id="Window restore after reload">
+    <question>The extension registers no `WebviewPanelSerializer`, so today&apos;s one mission pane does not survive a restart or a window reload and is opened again by its command. Once missions and Settings open in windows of their own from a side-bar view that VS Code restores by itself, do the mission windows and the Settings window that were open come back after a restart or reload, or does a person open them again from the side-bar?</question>
+  </open-question>
+  <open-question id="Command Palette commands">
+    <question>The extension contributes two commands today: `gurita.openMissionPane` (Gurita: Open Mission Pane), its only entry point, and `gurita.refreshMissionPane`. Once the activity-bar view is the entry point and the one mission pane no longer exists, which commands does the extension offer in the Command Palette, and do the two existing ones stay, change, or go?</question>
+  </open-question>
+  <open-question id="Read and watch lifetime">
+    <question>Today the extension reads the live missions and watches the mission files only while the mission pane exists, and while the pane is hidden a file event only marks it stale until it is shown again. With a side-bar tree listing every live mission and several mission windows open at once, from when until when does the extension read the missions and watch their files, and is a hidden side-bar view or a hidden window re-read on a file event or only once it is shown again?</question>
+  </open-question>
+  <open-question id="Run terminal reveal">
+    <question>Today a click on a mission&apos;s tab in the pane also brings that mission&apos;s run terminal forward. With the tab row gone, does any action in the side-bar tree or on a mission&apos;s window still bring that mission&apos;s run terminal forward, and which?</question>
+  </open-question>
+  <open-question id="Harness check lifetime">
+    <question>The harness check runs the first time the settings view is opened after the mission pane&apos;s panel is created, and its result is kept for that panel&apos;s lifetime and run again only by the check-again control. Once Settings is a window of its own and no single mission pane exists, when does the check first run, and for how long is its result kept before it runs again by itself?</question>
+  </open-question>
+  <open-question id="Three-arm derivation">
+    <question>The activity-bar icon is generated by a script from the README banner&apos;s drawing as three of its arms, a large one in the centre and a smaller one on each side. `assets/banner.txt` holds eight arms, all drawn at one character scale, a shorter and a longer kind whose heights differ by two of ten rows, and no drawing of three arms or of an arm at a larger scale exists. Which three of the eight arms does the script take, and how does the centre arm come to be larger than the two beside it?</question>
+  </open-question>
+  <open-question id="Icon mark form">
+    <question>The banner&apos;s SVG draws each character of the drawing as text in a system monospace font, in three colours, on a grid of 10 by 20 pixels per cell. The editor shows an activity-bar icon at 24 by 24 pixels in one fill colour. In what form does the icon script draw the three arms in the icon&apos;s SVG, and how much of each arm&apos;s detail (its brackets, suckers, and curl) does the icon keep at that size?</question>
+  </open-question>
+  <open-question id="Icon script pipeline">
+    <question>The banner&apos;s SVG is a tracked file regenerated by hand with `scripts/render_banner.py`, a stdlib-only Python script, and pinned to that script&apos;s output by `tests/test_banner.py`. The extension&apos;s other generated files are written into the git-ignored `gurita-vscode/bundled/` by the Node script `gurita-vscode/scripts/bundle.js` at every package. Where does the script that generates the activity-bar icon live and in which language, is the icon it writes a tracked file or a package-time output, and does a test pin the icon to the script&apos;s output?</question>
+  </open-question>
+  <open-question id="Follow-up draft references">
+    <question>The mission removes `ideas/vscode_extension.md`. `ideas/vscode_extension_follow_up.md` names that file in its opening as the design the first version was built from and cites it throughout as the draft. What happens to those references once the draft is removed?</question>
+  </open-question>
+  <open-question id="Checked VS Code facts">
+    <question>The mission removes `ideas/vscode_extension.md`, whose section What was checked of VS Code is the repository&apos;s only record of the webview-panel facts read from the editor&apos;s documentation. Does that record move into another file before the draft is removed, and into which, or does it leave the tree with the draft and stay only in git history?</question>
+  </open-question>
+</open-questions>
