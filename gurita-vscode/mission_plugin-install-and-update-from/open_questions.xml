@@ -32,36 +32,6 @@
       <drawback>The outcome is whatever each CLI happens to do, unobserved today and possibly different per harness: a re-add may fail on the taken name, replace the registration silently, or update from the checkout while the window says the latest release was installed, so the person cannot predict or understand what happened.</drawback>
     </alternative>
   </open-question>
-  <open-question id="Disabled Claude Code copy">
-    <question>When the Claude Code entry that wins for the open project is disabled, the harness check counts Gurita as not installed. How does the Settings window treat such a copy: is its scope shown as a detected scope, and is Install offered for a scope that already holds a disabled copy?</question>
-    <applied-principle>Check tier claims against the live environment</applied-principle>
-    <recommendation option="Shown disabled, no action">The window says why the check counts Gurita as not installed and names `claude plugin enable` as the fix, without running an install against an existing disabled entry, whose outcome nobody has seen, and without a control beyond the goal&apos;s Install and Update; a copy someone disabled on purpose is never turned back on by a click meant for something else.</recommendation>
-    <alternative id="Shown disabled, no action">
-      The disabled copy&apos;s scope is listed as a detected scope, marked disabled. No Install is offered at that scope and no enable control is added. The window says the copy is disabled and must be enabled in Claude Code itself (its `/plugin` menu or `claude plugin enable`).
-      <advantage>The window never runs a command against a state whose outcome has not been seen, stays within the goal&apos;s Install and Update controls, and still tells the person exactly why the check fails and what fixes it.</advantage>
-      <drawback>The person has to leave the window and use Claude Code to fix a state the window has just found, and a copy someone disabled on purpose and one disabled by accident look the same. The check also has to report scope and enabled state for each entry.</drawback>
-    </alternative>
-    <alternative id="Treat as absent">
-      A disabled Claude Code copy is treated exactly as no copy. Its scope is not listed among the detected scopes, the harness line keeps the check&apos;s &quot;plugin not installed&quot; result, and Install is offered at that scope as at any scope holding nothing. No new state, control, or message is added for disabled copies.
-      <advantage>Matches how the harness check already counts a disabled winner (a decision of the finished harness-settings mission) and adds no new state to the check&apos;s print or the page, so the window has one rule: a scope either has a usable copy or it gets Install.</advantage>
-      <drawback>The person is never told a copy already stands at that scope, and running `claude plugin install` against a scope whose entry already exists but is disabled has not been tried: it may say the plugin is already installed and leave it disabled, so the click seems to do nothing while the line still reads not installed. Whether this works depends on what the commands are found to do (the hands-on verification question), and how it combines with Install at other scopes depends on the install-beside-existing-copy question.</drawback>
-    </alternative>
-    <alternative id="Shown disabled, Install offered">
-      The disabled copy&apos;s scope is listed as a detected scope, marked disabled, so the window says why the check counts Gurita as not installed. Install stays offered at that scope and runs the same install command it runs at an empty scope. No enable control is added.
-      <advantage>The person sees that a copy stands at that scope and that it is disabled, and keeps a one-click action in the window while the controls stay limited to the goal&apos;s Install and Update.</advantage>
-      <drawback>Same unknown as treating it as absent: an install at a scope already holding a disabled entry may not enable it, so the Install offered may not fix the disabled state the window just reported. The check has to report scope and enabled state for each entry, not just the winner&apos;s result. Whether it works depends on the hands-on verification question.</drawback>
-    </alternative>
-    <alternative id="Shown disabled, Enable control">
-      The disabled copy&apos;s scope is listed as a detected scope, marked disabled. In place of Install, that scope gets an Enable control that runs `claude plugin enable gurita@gurita` at that scope (`-s user`, `project`, or `local`). No install is run there.
-      <advantage>One click fixes the actual cause, running Claude Code&apos;s own command for that state instead of an install whose effect on an existing entry is unknown, and the copy already in place is kept as it is.</advantage>
-      <drawback>Adds a control and a command beyond the install and update the goal describes. It is easy to confuse with the window&apos;s existing Enabled/Disabled switch, which controls Gurita&apos;s own use of the harness and not the plugin&apos;s state inside Claude Code. Its output and any prompts are unseen, so it depends on the hands-on verification question.</drawback>
-    </alternative>
-    <alternative id="Shown disabled, Install enables">
-      The disabled copy&apos;s scope is listed as a detected scope, marked disabled, and Install stays offered at that scope. At a disabled scope, Install runs `claude plugin enable gurita@gurita` at that scope, together with whatever install or update command is needed to bring the copy to the latest published release. The page keeps one Install control for every scope.
-      <advantage>The page has no new control, and one click always leaves the scope with a usable, enabled copy, whatever state it started in.</advantage>
-      <drawback>The control&apos;s label hides a command it runs and turns back on a copy someone may have disabled on purpose. Install becomes a composed sequence that differs by the state it finds, with more failure points to report. How the steps combine depends on the hands-on verification question and on how the update-control questions are settled.</drawback>
-    </alternative>
-  </open-question>
   <open-question id="Project scopes without project">
     <question>Claude Code&apos;s project and local scopes belong to a project root. What does the Settings window offer for those two scopes when no workspace folder is open, so that the root it works from is the home directory?</question>
     <recommendation option="User scope only">With no folder open there is no project for a project or local copy to belong to, and at the home directory a project-scope install would write the user settings file under another scope&apos;s name; offering the one scope that still means what it says needs no extra state, and opening a folder brings the other two back.</recommendation>
