@@ -9,7 +9,9 @@
 // removed; a flag with no value, or an empty one, carries nothing, and of a flag written twice the
 // last is the one read and replaced. Only the line's first command is read: its words end at the
 // first `;`, `&`, or `|`, or a `#` opening a word, standing outside quotes, so a flag written
-// inside the quoted prompt or after the line's closing `;` is never read. From a variant's lines
+// inside the quoted prompt or after the line's closing `;` is never read. The skill a line runs
+// is read from the same first command: the name after the first `/gurita:` or `$gurita:` opening a
+// word of its arguments or a part of one, the quoted prompt being one word. From a variant's lines
 // the module gives the three lists a recipe button shows: the distinct harnesses, the distinct
 // models, and the distinct efforts, each in the order of first appearance and independent of the
 // other two. This module imports nothing from `vscode`.
@@ -158,6 +160,27 @@ export function readLine(line: string): LineValues | undefined {
     }
   }
   return values;
+}
+
+/** A `gurita:` skill invocation at the start of a word or after a space within it, and the skill's name. */
+const SKILL = /(?:^|\s)[/$]gurita:([A-Za-z0-9][A-Za-z0-9_.-]*)/;
+
+/**
+ * The name of the `gurita:` skill a line's first command runs, or undefined for a line of no known
+ * harness and for one whose first command invokes no skill.
+ */
+export function readSkill(line: string): string | undefined {
+  const command = words(line);
+  if (harnessOf(command) === undefined) {
+    return undefined;
+  }
+  for (const word of command.slice(1)) {
+    const found = SKILL.exec(word.text);
+    if (found !== null) {
+      return found[1];
+    }
+  }
+  return undefined;
 }
 
 /** Writes `value` as a shell word in the quoting the replaced word used, quoting it where it needs it. */

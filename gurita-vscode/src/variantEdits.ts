@@ -21,7 +21,10 @@
 // variants, its default marked, and the variants a hiding record hides, and each variant's lines
 // with the line editor each one gets (`lineEditor`): only a `claude` or `agy` line carrying both
 // `--model` and `--effort` gets model and effort controls, and a `codex` line carrying `-m` its
-// model control alone, every other line shown as its text, read-only. The named single-task lines
+// model control alone, every other line shown as its text, read-only. Each line is also posted
+// with the row it is drawn as (`lineRow`): a line of a known harness whose first command runs a
+// `gurita:` skill is drawn as the skill's name, marked interactive when the line is not headless,
+// with its harness beside it, and every other line keeps its text. The named single-task lines
 // are listed apart, by `settingsLines`, and edited as variants are, a line being named by its
 // recipe: a duplicate is a stored line of a new name, a rename of a shipped or own line writes a
 // stored copy of the new name standing in for it in its place, a delete hides it, a reset shows it
@@ -29,8 +32,18 @@
 // file, and the override list name a line by it alone. This module imports nothing from `vscode`.
 
 import { HARNESSES, Harness as CheckedHarness } from './harnessCheck';
-import { LineValues, readLine, replaceEffort, replaceModel } from './lineValues';
-import { Recipe, Variant, copiedRecipe, defaultVariant, overlayVariantStore, pickedVariant, sameCopies, variantOrigin } from './recipes';
+import { LineValues, readLine, readSkill, replaceEffort, replaceModel } from './lineValues';
+import {
+  Recipe,
+  Variant,
+  copiedRecipe,
+  defaultVariant,
+  isHeadless,
+  overlayVariantStore,
+  pickedVariant,
+  sameCopies,
+  variantOrigin,
+} from './recipes';
 import { ReadVariantRef, StoredVariant, VariantOrigin, VariantRef, VariantStore, readVariantStore, writeVariantStore } from './variantStore';
 
 /** A variant as the recipe list shows it: its name, where it comes from, and, for a stored copy, the variant it stands in for. */
@@ -113,12 +126,45 @@ export function lineEditor(line: string): LineEditor | undefined {
   return read.effort === undefined ? undefined : { harness, model: read.model, effort: read.effort };
 }
 
+/**
+ * The row one line is drawn as in the settings view when it runs a `gurita:` skill on a known
+ * harness: the skill's name, whether the line is interactive rather than headless, and the key of
+ * the harness it runs on.
+ */
+export interface LineRow {
+  skill: string;
+  interactive: boolean;
+  harness: CheckedHarness['key'];
+}
+
+/**
+ * The row `line` is drawn as: for a `claude`, `agy`, or `codex` line whose first command runs a
+ * `gurita:` skill, the skill's name, whether the line is interactive, as a line carrying the
+ * `# interactive` mark is, and its harness; undefined for every other line, a shell step, the slot
+ * line `<single-task line>`, and a command the extension does not know included, which is drawn as
+ * its text.
+ */
+export function lineRow(line: string): LineRow | undefined {
+  const read = readLine(line);
+  const skill = readSkill(line);
+  if (read === undefined || skill === undefined) {
+    return undefined;
+  }
+  const harness = HARNESSES.find((each) => each.cli === read.harness)?.key;
+  if (harness === undefined) {
+    return undefined;
+  }
+  return { skill, interactive: !isHeadless(line), harness };
+}
+
 /** One variant as the settings view lists it, with what it may be reset to. */
 export interface SettingsVariant extends VariantTarget {
   /** The variant's lines as written. */
   lines: string[];
   /** The line editor each of its lines gets, in the lines' order, null for a line shown read-only. */
   editors: (LineEditor | null)[];
+  /** The row each of its lines is drawn as, in the lines' order, null for a line drawn as its text. */
+  rows: (LineRow | null)[];
   /** Whether it is its recipe's default, picked or, while no pick stands, its first listed variant. */
   isDefault: boolean;
 }
@@ -162,6 +208,7 @@ export function settingsRecipes(base: readonly Recipe[], store: VariantStore, fi
       ...variantTarget(variant),
       lines: [...variant.lines],
       editors: variant.lines.map((line) => lineEditor(line) ?? null),
+      rows: variant.lines.map((line) => lineRow(line) ?? null),
       isDefault: variant === standing,
     }));
     const hidden = resettableVariants(store, name).filter(
@@ -384,6 +431,8 @@ export interface SettingsLine {
   /** The line as written. */
   line: string;
   editor: LineEditor | null;
+  /** The row the line is drawn as, null when it is drawn as its text. */
+  row: LineRow | null;
   /** Whether it is the variant the looped run takes for the name, its recipe's default. */
   isDefault: boolean;
   /** The shipped or own line a stored copy stands in for, which its reset shows again. */
@@ -435,6 +484,7 @@ export function settingsLines(base: readonly Recipe[], store: VariantStore, file
         variant: variantTarget(variant),
         line: variant.lines[0],
         editor: lineEditor(variant.lines[0]) ?? null,
+        row: lineRow(variant.lines[0]) ?? null,
         isDefault: variant === standing,
         ...(reset === undefined ? {} : { reset }),
       });

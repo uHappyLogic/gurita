@@ -10,6 +10,7 @@ import {
   deleteVariant,
   duplicateVariant,
   lineEditor,
+  lineRow,
   pickDefault,
   renameVariant,
   replaceLineValue,
@@ -24,6 +25,7 @@ const FIXTURES = path.join(__dirname, '..', '..', 'src', 'test', 'fixtures', 're
 const SHIPPED = path.join(FIXTURES, 'shipped.md');
 const OWN = path.join(FIXTURES, 'own.md');
 const STORE = path.join(FIXTURES, 'store.json');
+const SNIPPETS = path.join(__dirname, '..', '..', '..', 'snippets', 'GURITA_USAGE.md');
 
 /** The recipe list the two Markdown files yield, before any store is laid over it. */
 function base(): Recipe[] {
@@ -342,4 +344,52 @@ test('only a claude or agy line carrying both --model and --effort gets model an
       assert.deepStrictEqual(variant.editors, variant.lines.map((line) => lineEditor(line) ?? null), `${recipe.name}: one editor or null per line`);
     }
   }
+});
+
+test("a line running a gurita: skill on a known harness is drawn as the skill's name, marked interactive when not headless, with its harness", () => {
+  assert.deepStrictEqual(
+    lineRow('claude -p "/gurita:specify-mission-starting-state --mission <path>" --dangerously-skip-permissions --model "fable" --effort xhigh;'),
+    { skill: 'specify-mission-starting-state', interactive: false, harness: 'claude' },
+  );
+  assert.deepStrictEqual(
+    lineRow('agy -i "/gurita:recommend-all-open-questions --mission <path>" --model "gemini-4-argon" --effort medium; # interactive'),
+    { skill: 'recommend-all-open-questions', interactive: true, harness: 'antigravity' },
+  );
+  assert.deepStrictEqual(lineRow("codex exec '$gurita:complete-task --mission <path> <Task Title>';"), {
+    skill: 'complete-task',
+    interactive: false,
+    harness: 'codex',
+  });
+  assert.deepStrictEqual(lineRow('claude -p "/gurita:finish-mission --mission <path>";'), { skill: 'finish-mission', interactive: false, harness: 'claude' }, 'a line without model or effort still gets its row');
+  for (const line of [
+    '<single-task line>',
+    'echo <path>',
+    'echo "/gurita:finish-mission"',
+    'gemini -p "/gurita:finish-mission --mission <path>" --model "pro" --effort high;',
+    'claude -p "Summarize the mission" --model "opus" --effort high;',
+    'claude --version; echo "/gurita:finish-mission"',
+  ]) {
+    assert.strictEqual(lineRow(line), undefined, `${line} keeps its text`);
+  }
+});
+
+test('every line of every shipped recipe gets the row its text gives, the slot line keeping its text', () => {
+  const shipped = parseShippedRecipes(fs.readFileSync(SNIPPETS, 'utf8'), SNIPPETS);
+  const listed = settingsRecipes(shipped, emptyVariantStore(), '/home/x/.gurita/variants.json', []);
+  for (const recipe of listed) {
+    for (const variant of recipe.variants) {
+      assert.deepStrictEqual(variant.rows, variant.lines.map((line) => lineRow(line) ?? null), `${recipe.name}: one row or null per line`);
+    }
+  }
+  const firstRun = listed.find((recipe) => recipe.name === 'First run');
+  assert.ok(firstRun !== undefined);
+  assert.deepStrictEqual(firstRun.variants[0].rows, [
+    { skill: 'specify-mission-starting-state', interactive: false, harness: 'claude' },
+    { skill: 'review-mission-requirements', interactive: false, harness: 'claude' },
+    { skill: 'provide-alternatives-to-all-open-questions', interactive: false, harness: 'claude' },
+    { skill: 'recommend-all-open-questions', interactive: true, harness: 'claude' },
+  ]);
+  const looped = listed.find((recipe) => recipe.name === 'Execute tasks one at a time');
+  assert.ok(looped !== undefined);
+  assert.deepStrictEqual(looped.variants[0].rows, [null], 'the slot line keeps its text');
 });

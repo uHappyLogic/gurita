@@ -98,14 +98,16 @@
 // one the recipe's other variants carry. Each variant is posted with its lines and the line editor
 // each gets: a `claude` or `agy` line carrying both `--model` and `--effort` gets model and effort
 // dropdowns, a Codex line carrying `-m` its model dropdown alone, and every other line is shown as
-// its text, read-only. A pick in a line's dropdown, of a value the harness's model list or its
-// whole effort list offers, whatever the line's model, replaces the value the line carries, never
+// its text, read-only, and the row each is drawn as (`lineRow`): a line of a known harness running
+// a `gurita:` skill as the skill's name, marked interactive when the line is not headless, with
+// its harness, every other line as its text. A pick in a line's dropdown, of a value the
+// harness's model list or its whole effort list offers, whatever the line's model, replaces the value the line carries, never
 // inserting text into it, through the store's edit (`replaceLineValue`), a shipped or own variant
 // getting a stored copy holding the changed line in its place; a pick of a value the list does not
 // offer, of the value the line already carries, or on a line or variant the list read afresh does
 // not hold with that control writes nothing. The view also edits the named single-task lines:
-// every opening posts them, shipped and own alike, each with its one line and line editor, and the
-// shipped and own lines a hiding record hides; a click of a line's duplicate, rename, delete, or
+// every opening posts them, shipped and own alike, each with its one line, line editor, and row,
+// and the shipped and own lines a hiding record hides; a click of a line's duplicate, rename, delete, or
 // reset control is carried out through the store's line edits, a new name asked for in VS Code's
 // own input box, whose validation refuses an empty name and one any recipe or line carries, and a
 // pick in its dropdowns as a variant's line pick is. A stored line reaches the merged recipe list
@@ -1937,6 +1939,10 @@ function pageShell(webview: vscode.Webview, script: vscode.Uri): string {
   .variant-lines { list-style: none; flex-basis: 100%; margin: 0.1em 0 0.3em; padding: 0 0 0 1em; }
   .variant-lines li.variant-line { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0.4em; padding: 0.1em 0; }
   .variant-lines .line-text { flex: 1 1 20em; overflow-wrap: anywhere; font-family: var(--vscode-editor-font-family); }
+  .variant-lines .line-label { flex: 1 1 20em; display: inline-flex; align-items: baseline; gap: 0.5em; overflow-wrap: anywhere; }
+  .variant-lines .line-skill { font-family: var(--vscode-editor-font-family); }
+  .variant-lines .line-interactive { opacity: 0.8; font-style: italic; }
+  .variant-lines .line-harness { opacity: 0.8; }
   button.action { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); border: none; padding: 0.15em 0.6em; cursor: pointer; font: inherit; white-space: nowrap; }
   button.action:hover:not(:disabled) { background: var(--vscode-button-secondaryHoverBackground); }
   button.action:disabled, button.recipe:disabled { opacity: 0.5; cursor: default; }

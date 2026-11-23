@@ -13,6 +13,7 @@ import {
   renameLine,
   replaceLineValue,
   resetLine,
+  lineRow,
   settingsLines,
   settingsRecipes,
 } from '../variantEdits';
@@ -69,6 +70,12 @@ test('the settings view lists every named single-task line, shipped and own alik
     ],
     'the own variant joining a shipped line is listed as an own item, not the one the run takes',
   );
+  assert.deepStrictEqual(
+    listed.lines.map((each) => each.row),
+    listed.lines.map((each) => lineRow(each.line) ?? null),
+    'each line is posted with the row its text gives',
+  );
+  assert.deepStrictEqual(listed.lines[0].row, { skill: 'complete-task', interactive: false, harness: 'claude' });
   assert.deepStrictEqual(listed.hidden, []);
   const recipes = settingsRecipes(base(), emptyVariantStore(), '/home/x/.gurita/variants.json', []).map((recipe) => recipe.name);
   assert.ok(![CC, AGY, 'My own line'].some((name) => recipes.includes(name)), 'the variant list still leaves the named single-task lines out');

@@ -305,12 +305,19 @@ button runs the variant its label shows. An edit that cannot be made, or a varia
 is told in an error notification and writes nothing. When the variants cannot be read, the view
 says so with the cause beneath it.
 
-Beneath each variant stands its line editor, which shows every line as its text. Only a line of
-a known harness carrying both `--model` and `--effort`, a `claude` or `agy` line, gets a model
-dropdown and an effort dropdown beside its text; a `codex` line carrying `-m` gets its model
+Beneath each variant stands its line editor, one row per line. A line of a known harness
+(`claude`, `agy`, or `codex`) that runs a `gurita:` skill is drawn as the skill's bare name
+(`specify-mission-starting-state`, not the whole
+`claude -p "/gurita:specify-mission-starting-state --mission <path>" …` line), with an
+`interactive` mark beside it when the line is not headless (when it carries the `# interactive`
+mark), and the line as written in its hover text; on the right of the row stand its harness as
+text (Claude Code, Antigravity, or Codex) and then its dropdowns. Every other line, a shell step,
+the slot line `<single-task line>`, or a command the extension does not know, is drawn as its
+text. Only a line of a known harness carrying both `--model` and `--effort`, a `claude` or `agy`
+line, gets a model dropdown and an effort dropdown; a `codex` line carrying `-m` gets its model
 dropdown alone, since Codex holds no effort list; every other line, a `claude` or `agy` line
-without both flags, a shell step, the slot line `<single-task line>`, or a command the extension
-does not know, stays read-only text. The model dropdown offers the harness's model list and the
+without both flags included, gets no dropdown and stays read-only. The rows are display only:
+no line, stored value, or mission page changes for them. The model dropdown offers the harness's model list and the
 effort dropdown its whole effort list, as **Models and efforts** holds them, whatever the line's
 model; each stands on the value the line carries, offered too when the list lacks it. A line
 given an effort its model lacks is accepted and stops when it is run, with the harness's own
@@ -330,8 +337,9 @@ read afresh every time the view opens: the shipped ones and those of your own re
 in the order the looped run's preview offers them, with the lines only your store holds last.
 Each line shows its name, its line in the name's hover text, where it comes from (`shipped`,
 `yours`, `stored` for a duplicate, or `stored copy of` the line it stands in for), and beneath it
-its one line with the line editor described above, so a line carrying both `--model` and
-`--effort` gets its model and effort dropdowns. Where one of your own variants joins a shipped
+its one line with the line editor described above, so a line running a `gurita:` skill is drawn
+as that skill's name (`complete-task`) with its harness on the right, and a line carrying both
+`--model` and `--effort` gets its model and effort dropdowns. Where one of your own variants joins a shipped
 line of the same name it is listed too, marked **Not run**, since the looped run takes the line's
 default. A line has no **Make default** control. The other controls are those a variant has,
 carried out in `~/.gurita/variants.json` and never in the shipped file or your own recipe file:

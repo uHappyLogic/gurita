@@ -124,10 +124,14 @@
 // Reset control alone. Each control posts its edit to the extension, which asks for a duplicate's
 // name or a new name in VS Code's own input box, writes the edit to the variant store, and posts
 // the variants and the pages again; the variants are redrawn only from what it posts. Beneath each
-// listed variant its line editor shows every line as its text, and only a line the extension posts
-// with an editor, a `claude` or `agy` line carrying both `--model` and `--effort`, gets a model
-// and an effort dropdown, a Codex line carrying `-m` its model dropdown alone, every other line
-// staying read-only text. The model dropdown offers the harness's model list and the effort
+// listed variant its line editor draws each line as the row the extension posts for it: a line of
+// a known harness running a `gurita:` skill as the skill's bare name, an `interactive` mark beside
+// it when the line is not headless, and the line as written in its hover text, followed on the
+// right by its harness's name as text, and every other line, a shell step, the slot line
+// `<single-task line>`, and a command the extension does not know, as its text. Only a line the
+// extension posts with an editor, a `claude` or `agy` line carrying both `--model` and
+// `--effort`, gets a model and an effort dropdown after its harness, a Codex line carrying `-m` its
+// model dropdown alone, every other line staying read-only. The model dropdown offers the harness's model list and the effort
 // dropdown its whole effort list, whatever the line's model, as the extension last posted them,
 // each standing on the value the line carries, offered too when the list lacks it. A pick posts the
 // line, the kind, and the value to the extension, which replaces the value the line carries and
@@ -313,7 +317,16 @@ declare function acquireVsCodeApi(): VsCodeApi;
     lines: string[];
     /** The line editor each line gets, in the lines' order, null for a line shown read-only. */
     editors?: (LineEditor | null)[];
+    /** The row each line is drawn as, in the lines' order, null for a line drawn as its text. */
+    rows?: (LineRow | null)[];
     isDefault: boolean;
+  }
+
+  /** The row a line running a `gurita:` skill is drawn as: the skill, whether the line is interactive, and its harness's key. */
+  interface LineRow {
+    skill: string;
+    interactive: boolean;
+    harness: string;
   }
 
   /** The dropdowns one line gets: the harness whose lists they offer, its model, and its effort where it gets an effort dropdown. */
@@ -345,6 +358,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
     variant: { name: string; origin: VariantOrigin; copies?: ReadVariantRef };
     line: string;
     editor: LineEditor | null;
+    /** The row the line is drawn as, null when it is drawn as its text. */
+    row?: LineRow | null;
     /** Whether the looped run takes it for the name. */
     isDefault: boolean;
     /** The shipped or own line a stored copy stands in for, which its reset shows again. */
@@ -409,6 +424,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
   const LINES_HEADING = 'Single-task lines';
   const LINES_FAILURE_LINE = 'The single-task lines could not be read.';
   const NOT_RUN_MARK = 'Not run';
+  /** The mark beside a skill row whose line is not headless. */
+  const INTERACTIVE_MARK = 'interactive';
   /** Each of a harness's two lists, with its kind, its label, and its add control's label. */
   const LISTS: ['model' | 'effort', string, string][] = [
     ['model', 'Models', 'Add model'],
@@ -908,14 +925,28 @@ declare function acquireVsCodeApi(): VsCodeApi;
   }
 
   /**
-   * A variant's line editor: every line as its text, a line posted with an editor followed by its
-   * model dropdown and, where it gets one, its effort dropdown, every other line read-only.
+   * A variant's line editor: a line posted with a row as its skill's name, its interactive mark
+   * where it is not headless, and its harness, the line as written in its hover text, every other
+   * line as its text; a line posted with an editor followed by its model dropdown and, where it
+   * gets one, its effort dropdown, every other line read-only.
    */
   function drawLines(recipe: string, variant: SettingsVariant, focus: string): HTMLElement {
     const list = element('ul', undefined, 'variant-lines');
     variant.lines.forEach((line, lineIndex) => {
-      const item = element('li', undefined, 'variant-line');
-      item.append(element('code', line, 'line-text'));
+      const row = variant.rows?.[lineIndex];
+      const item = element('li', undefined, row !== undefined && row !== null ? 'variant-line skill-line' : 'variant-line');
+      if (row !== undefined && row !== null) {
+        const label = element('span', undefined, 'line-label');
+        label.title = line;
+        label.append(element('code', row.skill, 'line-skill'));
+        if (row.interactive) {
+          label.append(element('span', INTERACTIVE_MARK, 'line-interactive'));
+        }
+        const harness = HARNESSES.find(([key]) => key === row.harness)?.[1] ?? row.harness;
+        item.append(label, element('span', harness, 'line-harness'));
+      } else {
+        item.append(element('code', line, 'line-text'));
+      }
       const editor = variant.editors?.[lineIndex];
       if (editor !== undefined && editor !== null) {
         item.append(lineDropdown(recipe, variant, focus, lineIndex, editor.harness, 'model', editor.model));
@@ -1088,7 +1119,13 @@ declare function acquireVsCodeApi(): VsCodeApi;
           original: { name: line.reset.original.name, origin: line.reset.original.origin },
         });
       }
-      const variant: SettingsVariant = { ...line.variant, lines: [line.line], editors: [line.editor], isDefault: line.isDefault };
+      const variant: SettingsVariant = {
+        ...line.variant,
+        lines: [line.line],
+        editors: [line.editor],
+        rows: [line.row ?? null],
+        isDefault: line.isDefault,
+      };
       item.append(actions, drawLines(line.name, variant, `single-${lineIndex}`));
       list.append(item);
     });

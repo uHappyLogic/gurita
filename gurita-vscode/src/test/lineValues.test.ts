@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import * as assert from 'node:assert';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { readLine, replaceEffort, replaceModel, variantValues } from '../lineValues';
+import { readLine, readSkill, replaceEffort, replaceModel, variantValues } from '../lineValues';
 import { Recipe, SLOT_LINE, parseShippedRecipes } from '../recipes';
 
 const SNIPPETS = path.join(__dirname, '..', '..', '..', 'snippets', 'GURITA_USAGE.md');
@@ -135,4 +135,14 @@ test('a variant none of whose lines is readable yields three empty lists', () =>
   assert.deepStrictEqual(shippedRecipe('Execute tasks one at a time').variants.map((variant) => variantValues(variant.lines)), [
     { harnesses: [], models: [], efforts: [] },
   ]);
+});
+
+test("the skill a line runs is read from its first command's arguments, a line of no known harness running none", () => {
+  assert.strictEqual(readSkill('claude -p "/gurita:specify-mission-starting-state --mission <path>" --model "fable" --effort xhigh;'), 'specify-mission-starting-state');
+  assert.strictEqual(readSkill('agy -i "/gurita:complete-all-tasks --mission <path>" --model "claude-opus-5-5" --effort high; # interactive'), 'complete-all-tasks');
+  assert.strictEqual(readSkill("codex exec '$gurita:complete-task --mission <path> <Task Title>';"), 'complete-task');
+  assert.strictEqual(readSkill('echo "/gurita:finish-mission"'), undefined, 'a shell step runs no skill');
+  assert.strictEqual(readSkill('<single-task line>'), undefined);
+  assert.strictEqual(readSkill('claude -p "Summarize" --model "opus";'), undefined);
+  assert.strictEqual(readSkill('claude --version; echo "/gurita:finish-mission"'), undefined, 'a skill after the closing `;` is not read');
 });

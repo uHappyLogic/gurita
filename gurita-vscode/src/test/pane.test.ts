@@ -1001,8 +1001,12 @@ test('the settings view lists every recipe with its variants and carries out eac
 /** A mission no earlier test holds a run for. */
 const KAPPA = 'pkg/mission_kappa/';
 
+/** The row a line running a `gurita:` skill is posted with. */
+type PostedRow = { skill: string; interactive: boolean; harness: string } | null;
+
 interface EditedVariant extends ListedVariant {
   editors: ({ harness: string; model: string; effort?: string } | null)[];
+  rows: PostedRow[];
 }
 
 test("a pick in a line's dropdown replaces the value the line carries through the store's edit, a shipped variant getting a stored copy in its place", async () => {
@@ -1048,6 +1052,15 @@ test("a pick in a line's dropdown replaces the value the line carries through th
       ['Antigravity', 'shipped', [{ harness: 'antigravity', model: 'gemini-4-argon', effort: 'medium' }]],
       ['First run', 'own', [null]],
     ], 'each line with both flags gets its editor, the own line carrying --model alone none');
+    assert.deepStrictEqual(listed.map((each) => [each.name, each.rows]), [
+      ['Claude Code', [
+        { skill: 'review-mission-requirements', interactive: false, harness: 'claude' },
+        { skill: 'provide-alternatives-to-all-open-questions', interactive: false, harness: 'claude' },
+        { skill: 'recommend-all-open-questions', interactive: false, harness: 'claude' },
+      ]],
+      ['Antigravity', [{ skill: 'review-mission-requirements', interactive: false, harness: 'antigravity' }]],
+      ['First run', [{ skill: 'review-mission-requirements', interactive: false, harness: 'claude' }]],
+    ], 'each line running a gurita: skill is posted with its row, the own line without an editor included');
 
     // A model pick on a shipped variant's line: a stored copy holding the changed line, in that variant's place.
     let shown = await pick({ type: 'replaceLineValue', recipe: 'First run', variant: { name: 'Claude Code', origin: 'shipped' }, line: 1, kind: 'model', value: 'fable' });
@@ -1125,6 +1138,7 @@ interface ListedLine {
   variant: { name: string; origin: string; copies?: { name: string; origin: string; recipe?: string } };
   line: string;
   editor: { harness: string; model: string; effort?: string } | null;
+  row: PostedRow;
   reset?: { recipe: string; original: { name: string; origin: string } };
 }
 
@@ -1192,6 +1206,11 @@ test("the settings view lists the named single-task lines and carries out each l
       { harness: 'antigravity', model: 'claude-opus-5-5', effort: 'high' },
       { harness: 'claude', model: 'sonnet', effort: 'medium' },
     ]);
+    assert.deepStrictEqual(listed.lines.map((each) => each.row), [
+      { skill: 'complete-task', interactive: false, harness: 'claude' },
+      { skill: 'complete-task', interactive: false, harness: 'antigravity' },
+      { skill: 'complete-task', interactive: false, harness: 'claude' },
+    ], 'each line is posted with its row');
     assert.ok(!fs.existsSync(store), 'opening the view writes nothing');
 
     // Duplicate: the name is asked for in one input box, which refuses an empty name and one a recipe or line carries.

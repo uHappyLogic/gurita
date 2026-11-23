@@ -1988,10 +1988,30 @@ const EDITED_VARIANTS = {
             origin: 'shipped',
             lines: [CLAUDE_LINE, MODEL_ONLY_LINE, 'echo <path>', '<single-task line>'],
             editors: [{ harness: 'claude', model: 'fable', effort: 'xhigh' }, null, null, null],
+            rows: [
+              { skill: 'review-mission-requirements', interactive: false, harness: 'claude' },
+              { skill: 'provide-alternatives-to-all-open-questions', interactive: false, harness: 'claude' },
+              null,
+              null,
+            ],
             isDefault: true,
           },
-          { name: 'Antigravity', origin: 'shipped', lines: [AGY_LINE], editors: [{ harness: 'antigravity', model: 'gemini-4-argon', effort: 'medium' }], isDefault: false },
-          { name: 'Codex', origin: 'own', lines: [CODEX_LINE], editors: [{ harness: 'codex', model: 'gpt-5.5' }], isDefault: false },
+          {
+            name: 'Antigravity',
+            origin: 'shipped',
+            lines: [AGY_LINE],
+            editors: [{ harness: 'antigravity', model: 'gemini-4-argon', effort: 'medium' }],
+            rows: [{ skill: 'review-mission-requirements', interactive: false, harness: 'antigravity' }],
+            isDefault: false,
+          },
+          {
+            name: 'Codex',
+            origin: 'own',
+            lines: [CODEX_LINE],
+            editors: [{ harness: 'codex', model: 'gpt-5.5' }],
+            rows: [{ skill: 'finish-mission', interactive: false, harness: 'codex' }],
+            isDefault: false,
+          },
         ],
         hidden: [],
       },
@@ -1999,15 +2019,18 @@ const EDITED_VARIANTS = {
   },
 };
 
-/** Each line the settings view's line editor draws: its text, then each dropdown's class, its options, and the one it stands on. */
-function lineRows(page: Page): [string, [string, string[], string | undefined][]][] {
+/** The parts a line row draws before its dropdowns: the line's text, or its skill's name, its interactive mark, and its harness. */
+const ROW_PARTS = ['line-text', 'line-skill', 'line-interactive', 'line-harness'];
+
+/** Each line the settings view's line editor draws: its texts, then each dropdown's class, its options, and the one it stands on. */
+function lineRows(page: Page): [string[], [string, string[], string | undefined][]][] {
   const view = settingsView(page);
   assert.ok(view !== undefined, 'the settings view is drawn');
   return view
     .all()
     .filter((each) => each.has('variant-line'))
     .map((each) => [
-      each.all().find((part) => part.has('line-text'))?.textContent as string,
+      each.all().filter((part) => ROW_PARTS.some((name) => part.has(name))).map((part) => part.textContent),
       each
         .all()
         .filter((part) => part.tagName === 'select')
@@ -2018,19 +2041,19 @@ function lineRows(page: Page): [string, [string, string[], string | undefined][]
     ]);
 }
 
-test("the line editor shows every line as its text, and only a line with both --model and --effort gets the harness's model and whole effort lists, a Codex line its model alone", () => {
+test("the line editor draws each line as its row, and only a line with both --model and --effort gets the harness's model and whole effort lists, a Codex line its model alone", () => {
   const page = loadPage();
   page.send(live([]));
   named(page, 'Settings').click();
   page.send(harnessListsMessage(LISTS));
   page.send(EDITED_VARIANTS);
   assert.deepStrictEqual(lineRows(page), [
-    [CLAUDE_LINE, [['line-model', ['fable', 'opus'], 'fable'], ['line-effort', ['xhigh', 'high'], 'xhigh']]],
-    [MODEL_ONLY_LINE, []],
-    ['echo <path>', []],
-    ['<single-task line>', []],
-    [AGY_LINE, [['line-model', ['gemini-4-argon'], 'gemini-4-argon'], ['line-effort', ['medium'], 'medium']]],
-    [CODEX_LINE, [['line-model', ['gpt-5.5'], 'gpt-5.5']]],
+    [['review-mission-requirements', 'Claude Code'], [['line-model', ['fable', 'opus'], 'fable'], ['line-effort', ['xhigh', 'high'], 'xhigh']]],
+    [['provide-alternatives-to-all-open-questions', 'Claude Code'], []],
+    [['echo <path>'], []],
+    [['<single-task line>'], []],
+    [['review-mission-requirements', 'Antigravity'], [['line-model', ['gemini-4-argon'], 'gemini-4-argon'], ['line-effort', ['medium'], 'medium']]],
+    [['finish-mission', 'Codex'], [['line-model', ['gpt-5.5'], 'gpt-5.5']]],
   ], 'a line without both flags, a shell step, and the slot line draw no control; a value the list lacks is offered as the line carries it');
   page.send(harnessListsMessage({ ...LISTS, antigravity: { models: ['gemini-4-argon', 'claude-opus-5-5'], efforts: ['low', 'medium', 'high'] } }));
   assert.deepStrictEqual(lineRows(page)[4][1], [
@@ -2079,7 +2102,8 @@ test("a pick in a line's dropdown posts the line, the kind, and the value, and t
       ],
     },
   });
-  assert.deepStrictEqual(lineRows(page)[0], [opusLine, [['line-model', ['fable', 'opus'], 'opus'], ['line-effort', ['xhigh', 'high'], 'xhigh']]]);
+  assert.deepStrictEqual(lineRows(page)[0], [['review-mission-requirements', 'Claude Code'], [['line-model', ['fable', 'opus'], 'opus'], ['line-effort', ['xhigh', 'high'], 'xhigh']]]);
+  assert.strictEqual(lineHovers(page)[0], opusLine, 'the hover text shows the changed line as written');
   focused(page, 'line-effort-0-0-0').change('high');
   assert.deepStrictEqual(page.posted[page.posted.length - 1], {
     type: 'replaceLineValue',
@@ -2091,9 +2115,89 @@ test("a pick in a line's dropdown posts the line, the kind, and the value, and t
   }, 'a stored copy is named as listed');
 });
 
+/** The hover text of each skill row the settings view draws, the line as written, or null for a line drawn as its text. */
+function lineHovers(page: Page): (string | null)[] {
+  const view = settingsView(page);
+  assert.ok(view !== undefined, 'the settings view is drawn');
+  return view
+    .all()
+    .filter((each) => each.has('variant-line'))
+    .map((each) => each.all().find((part) => part.has('line-label'))?.title ?? null);
+}
+
+const INTERACTIVE_LINE = 'claude "/gurita:recommend-all-open-questions --mission <path>" --model "fable" --effort xhigh; # interactive';
+const AGY_INTERACTIVE_LINE = 'agy -i "/gurita:complete-all-tasks --mission <path>" --model "claude-opus-5-5" --effort high; # interactive';
+
+test("a line running a gurita: skill is drawn as the skill's bare name, an interactive mark where it is not headless, the line in its hover text, and its harness and dropdowns on the right", () => {
+  const page = loadPage();
+  page.send(live([]));
+  named(page, 'Settings').click();
+  page.send(harnessListsMessage({ ...LISTS, antigravity: { models: ['claude-opus-5-5'], efforts: ['high'] } }));
+  page.send({
+    type: 'variants',
+    variants: {
+      state: 'read',
+      recipes: [
+        {
+          name: 'Mixed',
+          group: 'shipped',
+          fixed: false,
+          variants: [
+            {
+              name: 'One',
+              origin: 'shipped',
+              lines: [CLAUDE_LINE, INTERACTIVE_LINE, AGY_INTERACTIVE_LINE, 'echo <path>', 'gemini -p "/gurita:finish-mission" --model "pro";'],
+              editors: [
+                { harness: 'claude', model: 'fable', effort: 'xhigh' },
+                { harness: 'claude', model: 'fable', effort: 'xhigh' },
+                { harness: 'antigravity', model: 'claude-opus-5-5', effort: 'high' },
+                null,
+                null,
+              ],
+              rows: [
+                { skill: 'review-mission-requirements', interactive: false, harness: 'claude' },
+                { skill: 'recommend-all-open-questions', interactive: true, harness: 'claude' },
+                { skill: 'complete-all-tasks', interactive: true, harness: 'antigravity' },
+                null,
+                null,
+              ],
+              isDefault: true,
+            },
+          ],
+          hidden: [],
+        },
+      ],
+    },
+  });
+  const both = (model: string, models: string[], effort: string, efforts: string[]): [string, string[], string][] => [
+    ['line-model', models, model],
+    ['line-effort', efforts, effort],
+  ];
+  assert.deepStrictEqual(lineRows(page), [
+    [['review-mission-requirements', 'Claude Code'], both('fable', ['fable', 'opus'], 'xhigh', ['xhigh', 'high'])],
+    [['recommend-all-open-questions', 'interactive', 'Claude Code'], both('fable', ['fable', 'opus'], 'xhigh', ['xhigh', 'high'])],
+    [['complete-all-tasks', 'interactive', 'Antigravity'], both('claude-opus-5-5', ['claude-opus-5-5'], 'high', ['high'])],
+    [['echo <path>'], []],
+    [['gemini -p "/gurita:finish-mission" --model "pro";'], []],
+  ], 'a shell step and a command the extension does not know keep their text and draw no control');
+  assert.deepStrictEqual(lineHovers(page), [CLAUDE_LINE, INTERACTIVE_LINE, AGY_INTERACTIVE_LINE, null, null], 'each skill row carries its line as written in its hover text');
+  const view = settingsView(page);
+  assert.ok(view !== undefined);
+  const rows = view.all().filter((each) => each.has('variant-line'));
+  assert.ok(rows.slice(0, 3).every((row) => row.has('skill-line')) && rows.slice(3).every((row) => !row.has('skill-line')));
+  const order = (row: FakeElement) =>
+    row.children
+      .filter((child): child is FakeElement => child instanceof FakeElement)
+      .map((child) => (child.tagName === 'select' ? child.className : child.className.split(' ')[0]));
+  assert.deepStrictEqual(order(rows[1]), ['line-label', 'line-harness', 'line-model', 'line-effort'], 'the harness and the dropdowns follow the skill on the right');
+  assert.deepStrictEqual(order(rows[3]), ['line-text'], 'a line drawn as its text keeps it alone');
+  assert.strictEqual(texts(page).some((text) => text.includes('claude -p')), false, 'no skill row shows its whole command line');
+});
+
 const TASK_LINE = 'claude -p "/gurita:complete-task --mission <path> <Task Title>" --model "opus" --effort high;';
 const AGY_TASK_LINE = 'agy -p "/gurita:complete-task --mission <path> <Task Title>" --model "claude-opus-5-5" --effort high;';
 const CODEX_TASK_LINE = "codex exec '$gurita:complete-task --mission <path> <Task Title>';";
+const TASK_ROW = { skill: 'complete-task', interactive: false, harness: 'claude' };
 
 /** A line list as the extension posts it: a shipped line, a renamed one, an own one joining a shipped line, a duplicate, and a deleted one. */
 const LINES = {
@@ -2101,18 +2205,19 @@ const LINES = {
   lines: {
     state: 'read',
     lines: [
-      { name: 'Single task (Claude Code)', group: 'shipped', variant: { name: 'Single task (Claude Code)', origin: 'shipped' }, line: TASK_LINE, editor: { harness: 'claude', model: 'opus', effort: 'high' }, isDefault: true },
+      { name: 'Single task (Claude Code)', group: 'shipped', variant: { name: 'Single task (Claude Code)', origin: 'shipped' }, line: TASK_LINE, editor: { harness: 'claude', model: 'opus', effort: 'high' }, row: TASK_ROW, isDefault: true },
       {
         name: 'Agy line',
         group: 'shipped',
         variant: { name: 'Agy line', origin: 'stored', copies: { name: 'Single task (Antigravity)', origin: 'shipped', recipe: 'Single task (Antigravity)' } },
         line: AGY_TASK_LINE,
         editor: { harness: 'antigravity', model: 'claude-opus-5-5', effort: 'high' },
+        row: { skill: 'complete-task', interactive: false, harness: 'antigravity' },
         isDefault: true,
         reset: { recipe: 'Single task (Antigravity)', original: { name: 'Single task (Antigravity)', origin: 'shipped' } },
       },
-      { name: 'My own line', group: 'own', variant: { name: 'My own line', origin: 'own' }, line: CODEX_TASK_LINE, editor: null, isDefault: true },
-      { name: 'Single task (Sonnet)', group: 'own', variant: { name: 'Single task (Sonnet)', origin: 'stored' }, line: TASK_LINE, editor: { harness: 'claude', model: 'opus', effort: 'high' }, isDefault: true },
+      { name: 'My own line', group: 'own', variant: { name: 'My own line', origin: 'own' }, line: CODEX_TASK_LINE, editor: null, row: { skill: 'complete-task', interactive: false, harness: 'codex' }, isDefault: true },
+      { name: 'Single task (Sonnet)', group: 'own', variant: { name: 'Single task (Sonnet)', origin: 'stored' }, line: TASK_LINE, editor: { harness: 'claude', model: 'opus', effort: 'high' }, row: TASK_ROW, isDefault: true },
     ],
     hidden: [{ name: 'Single task (Old)', original: { name: 'Single task (Old)', origin: 'shipped' } }],
   },
@@ -2128,7 +2233,7 @@ function singleLineRows(page: Page): [string[], string[], string[]][] {
     .all()
     .filter((item) => item.has('variant'))
     .map((item): [string[], string[], string[]] => [
-      item.all().filter((each) => ['variant-name', 'variant-origin', 'variant-default', 'variant-deleted', 'line-text'].some((name) => each.has(name))).map((each) => each.textContent),
+      item.all().filter((each) => ['variant-name', 'variant-origin', 'variant-default', 'variant-deleted', ...ROW_PARTS].some((name) => each.has(name))).map((each) => each.textContent),
       item.all().filter((each) => each.tagName === 'button').map((each) => each.textContent),
       item.all().filter((each) => each.tagName === 'select').map((each) => each.className),
     ]);
@@ -2145,10 +2250,10 @@ test('the settings view lists every named single-task line the extension posts w
   const edits = ['Duplicate', 'Rename', 'Delete'];
   const both = ['line-model', 'line-effort'];
   assert.deepStrictEqual(singleLineRows(page), [
-    [['Single task (Claude Code)', 'shipped', TASK_LINE], edits, both],
-    [['Agy line', 'stored copy of the shipped line Single task (Antigravity)', AGY_TASK_LINE], [...edits, 'Reset'], both],
-    [['My own line', 'yours', CODEX_TASK_LINE], edits, []],
-    [['Single task (Sonnet)', 'stored', TASK_LINE], edits, both],
+    [['Single task (Claude Code)', 'shipped', 'complete-task', 'Claude Code'], edits, both],
+    [['Agy line', 'stored copy of the shipped line Single task (Antigravity)', 'complete-task', 'Antigravity'], [...edits, 'Reset'], both],
+    [['My own line', 'yours', 'complete-task', 'Codex'], edits, []],
+    [['Single task (Sonnet)', 'stored', 'complete-task', 'Claude Code'], edits, both],
     [['Single task (Old)', 'shipped', 'Deleted'], ['Reset'], []],
   ], 'a line without both flags is shown read-only, and no line carries a Make default control');
   const view = settingsView(page);
