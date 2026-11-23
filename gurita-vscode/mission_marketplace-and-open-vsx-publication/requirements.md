@@ -56,6 +56,8 @@ No Marketplace publisher, Open VSX namespace, or token for either is recorded as
 
 - **Version source at release.** The extension's release skill takes the version as a required bare `MAJOR.MINOR.PATCH` argument, as `/release-plugin` does. After its checks pass it writes that version into `gurita-vscode/package.json` and `package-lock.json` with `npm version <VERSION> --no-git-tag-version`, run through the nvm Node 22 wrapper inside `gurita-vscode/`, so npm makes no commit and no tag, and the version is written before the skill packages and publishes.
 
+- **Extension changelog.** The extension gets a changelog of its own, a tracked `gurita-vscode/CHANGELOG.md` holding one entry per extension release, newest first. It sits at the extension root, where `vsce package` picks it up by name with no flag, so the VSIX carries it and both the Marketplace and Open VSX show it on their changelog tabs. The root `CHANGELOG.md` stays the plugin's release notes only, and `/release-plugin` is not changed for it.
+
 ### Listing README
 
 - **Listing screenshots.** The README the listings show carries one animated GIF near its top showing the extension at work: a sample mission opened from the side-bar view and a recipe or looped task run progressing in a mission window. It is recorded by hand from VS Code and converted to GIF with a local tool, tracked in the repository under `gurita-vscode/`, referenced from the README by a relative path the packager resolves against the repository's raw files, and re-recorded when the flow it shows changes. The README carries no banner and no still screenshot.
