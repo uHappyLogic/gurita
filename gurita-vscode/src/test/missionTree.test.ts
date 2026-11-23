@@ -7,8 +7,8 @@ import * as path from 'node:path';
 // The side-bar view's tree, against a stub of the `vscode` module standing in for the editor: a
 // tree stand-in recording the view the extension creates and its data provider, the event
 // emitter, tree items, and theme icons, beside the file system watcher, the terminals, the
-// commands, the input boxes, the QuickPick, `workspaceState`, and the notifications the
-// extension's activation reaches.
+// mission windows a row's click opens, the commands, the input boxes, the QuickPick,
+// `workspaceState`, and the notifications the extension's activation reaches.
 const Module = require('node:module') as {
   _load: (request: string, parent: unknown, isMain: boolean) => unknown;
 };
@@ -29,6 +29,15 @@ interface StubTerminal {
 }
 const terminals: StubTerminal[] = [];
 let closeTerminal: ((terminal: StubTerminal) => void) | undefined;
+
+/** A webview panel the stub's editor created: its view type, its title, and its reveals. */
+interface StubPanel {
+  viewType: string;
+  title: string;
+  reveals: number;
+}
+/** Every webview panel the stub's editor created, in order. */
+const webviewPanels: StubPanel[] = [];
 
 /** The commands the extension registered, by id. */
 const commands = new Map<string, (...args: unknown[]) => unknown>();
@@ -137,6 +146,25 @@ const stub = {
     },
   },
   window: {
+    createWebviewPanel(viewType: string, title: string): unknown {
+      const record: StubPanel = { viewType, title, reveals: 0 };
+      webviewPanels.push(record);
+      return {
+        visible: true,
+        reveal(): void {
+          record.reveals++;
+        },
+        webview: {
+          html: '',
+          cspSource: 'stub-csp',
+          asWebviewUri: (uri: unknown) => ({ toString: () => `webview:${JSON.stringify(uri)}` }),
+          onDidReceiveMessage: () => disposable,
+          postMessage: () => Promise.resolve(true),
+        },
+        onDidChangeViewState: () => disposable,
+        onDidDispose: () => disposable,
+      };
+    },
     createTreeView(id: string, options: { treeDataProvider: StubProvider }) {
       const view: { message?: string; dispose(): void } = { ...disposable, message: undefined };
       treeViews.push({ id, provider: options.treeDataProvider, view });
@@ -173,6 +201,7 @@ Module._load = (request, parent, isMain) => (request === 'vscode' ? stub : load(
 const extension = require('../extension') as typeof import('../extension');
 const runs = require('../runs') as typeof import('../runs');
 const missionTree = require('../missionTree') as typeof import('../missionTree');
+const pane = require('../pane') as typeof import('../pane');
 const startingRows = require('../startingRows') as typeof import('../startingRows');
 const selections = require('../selections') as typeof import('../selections');
 Module._load = load;
@@ -319,10 +348,10 @@ test("the tree is created under the manifest's view id, and nothing is read befo
   }
 });
 
-test('each row is a leaf labelled with the title, described by the step and both counts, with the path and five facts in its tooltip and no command', () => {
+test("each row is a leaf labelled with the title, described by the step and both counts, with the path and five facts in its tooltip, its click running the open-mission command with its path", () => {
   const alpha = item('Alpha mission');
   assert.strictEqual(alpha.collapsibleState, stub.TreeItemCollapsibleState.None);
-  assert.strictEqual(alpha.command, undefined, 'a click on the row opens nothing');
+  assert.deepStrictEqual(alpha.command, { command: missionTree.OPEN_MISSION_COMMAND, title: 'Open Mission', arguments: [ALPHA] });
   assert.strictEqual(alpha.id, ALPHA);
   assert.strictEqual(alpha.description, 'First review round · 2 questions · 0 tasks');
   assert.strictEqual(
@@ -331,6 +360,39 @@ test('each row is a leaf labelled with the title, described by the step and both
   );
   assert.strictEqual(alpha.iconPath?.id, missionTree.MISSION_ICON);
   assert.strictEqual(item('Beta mission').description, 'Execute tasks · 0 questions · 1 task');
+});
+
+test("a click on a mission's row opens that mission's own window in the editor area, a second click revealing it, and several missions' windows open at once", () => {
+  const open = commands.get(missionTree.OPEN_MISSION_COMMAND);
+  assert.ok(open !== undefined, 'activation registers the open-mission command');
+  const count = webviewPanels.length;
+  const click = (label: string) => {
+    const row = item(label);
+    assert.ok(row.command !== undefined);
+    commands.get(row.command.command)?.(...(row.command.arguments ?? []));
+  };
+  click('Alpha mission');
+  assert.deepStrictEqual(
+    webviewPanels.slice(count).map((each) => [each.viewType, each.title]),
+    [[pane.MISSION_VIEW_TYPE, 'Alpha mission']],
+    "the click opens one window of the mission view type, titled with the mission's title",
+  );
+  click('Beta mission');
+  assert.deepStrictEqual(
+    webviewPanels.slice(count).map((each) => each.title),
+    ['Alpha mission', 'Beta mission'],
+    "another mission's click opens a window of its own beside the first",
+  );
+  click('Alpha mission');
+  assert.strictEqual(webviewPanels.length, count + 2, 'a click for a mission whose window is open creates no second window');
+  assert.strictEqual(webviewPanels[count].reveals, 1, 'it reveals the open window');
+  assert.strictEqual(webviewPanels[count + 1].reveals, 0);
+  assert.deepStrictEqual(pane.openMissionWindows(), [ALPHA, BETA]);
+  const before = terminals.length;
+  open?.();
+  open?.(42);
+  assert.strictEqual(webviewPanels.length, count + 2, 'the command opens nothing without a mission path');
+  assert.strictEqual(terminals.length, before, 'and a click starts no run');
 });
 
 test('a step or count that could not be read shows the placeholder in its own slot, with the cause in the hover text and no other icon', () => {
@@ -499,6 +561,22 @@ test("the manifest contributes the activity-bar container with the tracked icon,
   assert.deepStrictEqual(manifest.contributes.views, { gurita: [{ id: missionTree.MISSIONS_VIEW, name: 'Missions' }] });
   assert.ok(manifest.activationEvents.includes(`onView:${missionTree.MISSIONS_VIEW}`));
   assert.ok(fs.statSync(path.join(extensionRoot, 'media', 'activity-bar.svg')).isFile(), 'the container names a tracked icon file');
+});
+
+test('the manifest hides the command behind the mission rows, contributes no pane command, and offers the refresh command alone in the Command Palette', () => {
+  const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8'));
+  const contributed = manifest.contributes.commands.map((each: { command: string }) => each.command);
+  assert.ok(contributed.includes(missionTree.OPEN_MISSION_COMMAND), 'the open-mission command is contributed');
+  assert.ok(!contributed.includes('gurita.openMissionPane'), 'the pane command is removed');
+  assert.ok(!manifest.activationEvents.some((event: string) => event.includes('openMissionPane')), 'and so is its activation event');
+  const hidden = new Set(
+    manifest.contributes.menus.commandPalette.filter((entry: { when: string }) => entry.when === 'false').map((entry: { command: string }) => entry.command),
+  );
+  assert.deepStrictEqual(
+    contributed.filter((command: string) => !hidden.has(command)),
+    [missionTree.REFRESH_COMMAND],
+    'every contributed command but the refresh command is hidden from the Command Palette',
+  );
 });
 
 test('the manifest offers the variant action inline and in the context menu of the mission-starting rows, and hides the commands behind the rows from the Command Palette', () => {

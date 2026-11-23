@@ -4,12 +4,12 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { FakeElement, Page, loadScript, stylesheetRules } from './fakePage';
 
-// The pane's page script, compiled as the pane loads it, run against the small stand-in for the DOM
-// in `fakePage.ts`, so the drawn page can be walked.
+// A mission window's page script, compiled as each mission window loads it, run against the small
+// stand-in for the DOM in `fakePage.ts`, so the drawn page can be walked.
 
 /**
- * Loads the compiled page script into a fresh page, as the pane does each time it is shown, its
- * elements laid out to the widths `measure` gives.
+ * Loads the compiled page script into a fresh page, as a mission window does each time it is shown,
+ * its elements laid out to the widths `measure` gives.
  */
 function loadPage(measure?: (element: FakeElement) => number): Page {
   return loadScript('page.js', measure);
@@ -63,8 +63,14 @@ const RECIPES = {
   ],
 };
 
-function live(running: string[]): unknown {
-  return { type: 'live', missions: [mission(ALPHA, 'Alpha'), mission(BETA, 'Beta')], running };
+/** The message posting a mission window's page: its one mission `built`, with the paths of the missions with a running runner. */
+function pageOf(built: unknown, running: string[] = []): unknown {
+  return { type: 'page', mission: built, running };
+}
+
+/** The message posting Alpha's window its page, `running` the paths of the missions with a running runner. */
+function alphaPage(running: string[]): unknown {
+  return pageOf(mission(ALPHA, 'Alpha'), running);
 }
 
 function buttons(page: Page): FakeElement[] {
@@ -98,8 +104,8 @@ const ACTIONS: Record<PaneName, string[]> = {
 
 /** The buttons that stay enabled whatever runs, with each pane shown. */
 const STAYING: Record<PaneName, string[]> = {
-  questions: ['Alpha', 'Beta', 'Refresh', 'New mission', 'Define mission', 'Open questions', 'Remaining tasks', 'Next'],
-  tasks: ['Alpha', 'Beta', 'Refresh', 'New mission', 'Define mission', 'Open questions', 'Remaining tasks'],
+  questions: ['Open questions', 'Remaining tasks', 'Next'],
+  tasks: ['Open questions', 'Remaining tasks'],
 };
 
 /** Shows the Remaining tasks pane, then the Open questions pane, running `check` with each shown. */
@@ -144,49 +150,90 @@ test('the page posts a ready message on load', () => {
 
 test("a running mission's page disables its action buttons and pulses its filled block", () => {
   const page = loadPage();
-  page.send(live([ALPHA]));
+  page.send(alphaPage([ALPHA]));
   assertRunning(page);
 });
 
-test("every tab click posts its mission's path, the tab already selected included", () => {
+test('a page draws its one mission with no tab row, no refresh control, and no mission-starting button', () => {
   const page = loadPage();
-  page.send(live([]));
-  let count = page.posted.length;
-  named(page, 'Alpha').click();
-  assert.deepStrictEqual(page.posted.slice(count), [{ type: 'missionTab', mission: ALPHA }], 'the selected tab posts its path');
-  count = page.posted.length;
-  named(page, 'Beta').click();
-  assert.deepStrictEqual(page.posted.slice(count), [{ type: 'missionTab', mission: BETA }], 'an unselected tab posts its path');
-  const shownTab = page.root.all().filter((each) => each.getAttribute('role') === 'tab' && !each.has('pane-tab') && each.getAttribute('aria-selected') === 'true');
-  assert.deepStrictEqual(shownTab.map((each) => each.textContent), ['Beta'], 'the unselected tab clicked is shown');
-  count = page.posted.length;
-  named(page, 'Beta').click();
-  assert.deepStrictEqual(page.posted.slice(count), [{ type: 'missionTab', mission: BETA }], 'a second click on it posts again');
-});
-
-test("a running mission's tab stays enabled and posts its path, selected or not", () => {
-  const page = loadPage();
-  page.send(live([ALPHA, BETA]));
-  for (const [tab, missionPath] of [
-    ['Alpha', ALPHA],
-    ['Beta', BETA],
-    ['Beta', BETA],
-    ['Alpha', ALPHA],
-  ]) {
-    assert.strictEqual(named(page, tab).disabled, false, `${tab} stays enabled`);
-    const count = page.posted.length;
-    named(page, tab).click();
-    assert.deepStrictEqual(page.posted.slice(count), [{ type: 'missionTab', mission: missionPath }]);
+  page.send(alphaPage([]));
+  assert.deepStrictEqual(page.root.all().filter((each) => each.getAttribute('role') === 'tab' && !each.has('pane-tab')), [], 'no mission tab is drawn');
+  assert.deepStrictEqual(page.root.all().filter((each) => each.has('tabs') || each.has('tab-list') || each.has('ends')), [], 'and no tab row');
+  for (const text of ['Alpha', 'Refresh', 'New mission', 'Define mission', 'Settings']) {
+    assert.ok(!buttons(page).some((each) => shownName(each) === text), `no ${text} button is drawn`);
   }
+  assert.deepStrictEqual(page.root.all().filter((each) => each.has('page')).map((each) => each.getAttribute('aria-label')), ['Alpha'], "the mission's page is drawn alone");
+  assert.ok(page.root.all().some((each) => each.has('workflow')) && page.root.all().some((each) => each.has('panes')));
 });
 
-test("another mission's page is unaffected by a run it does not hold", () => {
+test("another mission's window is unaffected by a run it does not hold", () => {
   const page = loadPage();
-  page.send(live([ALPHA]));
-  named(page, 'Beta').click();
+  page.send(pageOf(mission(BETA, 'Beta'), [ALPHA]));
   assertIdle(page);
   named(page, 'review').click();
   assert.deepStrictEqual(page.posted[page.posted.length - 1], { type: 'runRecipe', mission: BETA, recipe: 'review', variant: 'review' });
+});
+
+test('the failure state replaces the whole page with the failure line and the cause, and the next page posted draws the page again', () => {
+  const page = loadPage();
+  page.send(alphaPage([]));
+  named(page, 'Remaining tasks').click();
+  page.send({ type: 'liveFailure', cause: 'Error: not a git repository' });
+  assert.deepStrictEqual(
+    page.root.children.map((each) => (each as FakeElement).className),
+    ['failure'],
+    'one failure section stands in place of the whole page',
+  );
+  assert.deepStrictEqual(
+    page.root.all().filter((each) => each.tagName === 'p' || each.tagName === 'pre').map((each) => each.textContent),
+    ['The live missions could not be read.', 'Error: not a git repository'],
+  );
+  assert.deepStrictEqual(buttons(page), [], 'no button is drawn, so nothing can be clicked against a failed read');
+  assert.ok(!page.root.all().some((each) => each.has('workflow') || each.has('recipes') || each.has('panes')), 'no diagram, recipe, or pane is drawn');
+  page.send({ type: 'running', missions: [ALPHA] });
+  assert.deepStrictEqual(buttons(page), [], 'a running message leaves the failure state as drawn');
+  page.send(alphaPage([]));
+  assert.strictEqual(shownPane(page), 'questions', 'the page is drawn again, on its default pane');
+  assertIdle(page);
+});
+
+test('a window whose mission is no longer live draws one fixed notice alone, and its page again once it is posted', () => {
+  const page = loadPage();
+  page.send(alphaPage([]));
+  page.send({
+    type: 'preview',
+    mission: ALPHA,
+    recipe: 'complete',
+    lines: ['claude "/gurita:complete-task --mission <path> <Task Title>"'],
+    names: ['complete-task'],
+    result: { state: 'read', tasks: [] },
+  });
+  named(page, 'Remaining tasks').click();
+  page.send({ type: 'notLive', path: ALPHA });
+  assert.deepStrictEqual(page.root.children.map((each) => (each as FakeElement).className), ['not-live']);
+  assert.deepStrictEqual(texts(page).filter((text) => text !== ''), ['This mission is no longer live.'], 'the one fixed notice is all that is drawn');
+  assert.deepStrictEqual(buttons(page), [], 'no action button is drawn');
+  assert.ok(!page.root.all().some((each) => each.has('workflow') || each.has('recipes') || each.has('panes') || each.has('preview')), 'no diagram, recipe, pane, or preview');
+  page.send({ type: 'running', missions: [ALPHA] });
+  assert.deepStrictEqual(buttons(page), [], 'a running message leaves the notice as drawn');
+  page.send(alphaPage([]));
+  assert.strictEqual(shownPane(page), 'questions', "the mission's page is drawn again, on its default pane");
+  assert.ok(!page.root.all().some((each) => each.has('preview')), 'the preview held before is gone');
+  assertIdle(page);
+});
+
+test('a preview posted for another mission is not drawn on the page', () => {
+  const page = loadPage();
+  page.send(alphaPage([]));
+  page.send({
+    type: 'preview',
+    mission: BETA,
+    recipe: 'complete',
+    lines: ['claude "/gurita:complete-task --mission <path> <Task Title>"'],
+    names: ['complete-task'],
+    result: { state: 'read', tasks: [] },
+  });
+  assert.ok(!page.root.all().some((each) => each.has('preview')));
 });
 
 /** The names of the recipe entries drawn on the page shown, buttons and non-runnable entries alike, in the order drawn. */
@@ -274,11 +321,7 @@ test("each mission's page draws its shipped recipes under no heading, then its o
     ],
   };
   const page = loadPage();
-  page.send({
-    type: 'live',
-    missions: [mission(ALPHA, 'Alpha', { step: 'derive', recipes: derive }), mission(BETA, 'Beta', { step: 'finish', recipes: finish })],
-    running: [],
-  });
+  page.send(pageOf(mission(ALPHA, 'Alpha', { step: 'derive', recipes: derive })));
   assert.deepStrictEqual(recipeNames(page), ['Requirements iteration', 'Prepare tasks', 'Prepare tasks (Antigravity)', 'Mine everywhere']);
   assert.deepStrictEqual(recipeGroups(page), ['Your recipes']);
   const section = page.root.all().find((each) => each.has('recipes')) as FakeElement;
@@ -292,31 +335,26 @@ test("each mission's page draws its shipped recipes under no heading, then its o
   assert.ok(!recipeGroups(page).includes('Claude Code') && !recipeGroups(page).includes('Antigravity'));
   named(page, 'Prepare tasks').click();
   assert.deepStrictEqual(page.posted[page.posted.length - 1], { type: 'runRecipe', mission: ALPHA, recipe: 'Prepare tasks', variant: 'default' });
-  named(page, 'Beta').click();
-  assert.deepStrictEqual(recipeNames(page), [
+  const beta = loadPage();
+  beta.send(pageOf(mission(BETA, 'Beta', { step: 'finish', recipes: finish })));
+  assert.deepStrictEqual(recipeNames(beta), [
     'Finish mission',
     'Odd follow up: unknown placeholder <odd> in /home/someone/.gurita/recipes.md',
   ]);
-  assert.deepStrictEqual(recipeGroups(page), ['Your recipes']);
-  named(page, 'Finish mission').click();
-  assert.deepStrictEqual(page.posted[page.posted.length - 1], { type: 'runRecipe', mission: BETA, recipe: 'Finish mission', variant: 'default' });
+  assert.deepStrictEqual(recipeGroups(beta), ['Your recipes']);
+  named(beta, 'Finish mission').click();
+  assert.deepStrictEqual(beta.posted[beta.posted.length - 1], { type: 'runRecipe', mission: BETA, recipe: 'Finish mission', variant: 'default' });
 });
 
 test("a page with no own recipe draws no Your recipes heading, and one with only own recipes no shipped list", () => {
   const page = loadPage();
-  page.send({
-    type: 'live',
-    missions: [
-      mission(ALPHA, 'Alpha', { step: 'derive', recipes: { state: 'read', recipes: [runnable('Prepare tasks', 'shipped', ['echo <path>'])] } }),
-      mission(BETA, 'Beta', { step: 'derive', recipes: { state: 'read', recipes: [runnable('Mine', 'own', ['echo <path>'])] } }),
-    ],
-    running: [],
-  });
+  page.send(pageOf(mission(ALPHA, 'Alpha', { step: 'derive', recipes: { state: 'read', recipes: [runnable('Prepare tasks', 'shipped', ['echo <path>'])] } })));
   assert.deepStrictEqual(recipeGroups(page), []);
   assert.deepStrictEqual(recipeNames(page), ['Prepare tasks']);
-  named(page, 'Beta').click();
-  assert.deepStrictEqual(recipeGroups(page), ['Your recipes']);
-  assert.deepStrictEqual(recipeNames(page), ['Mine']);
+  const beta = loadPage();
+  beta.send(pageOf(mission(BETA, 'Beta', { step: 'derive', recipes: { state: 'read', recipes: [runnable('Mine', 'own', ['echo <path>'])] } })));
+  assert.deepStrictEqual(recipeGroups(beta), ['Your recipes']);
+  assert.deepStrictEqual(recipeNames(beta), ['Mine']);
 });
 
 test("each recipe button shows its name with the selected variant's name beneath it, exactly as named and never the values its lines carry, and its lines in its hover text", () => {
@@ -332,9 +370,8 @@ test("each recipe button shows its name with the selected variant's name beneath
   ];
   const loop = ['<single-task line>'];
   const page = loadPage();
-  page.send({
-    type: 'live',
-    missions: [
+  page.send(
+    pageOf(
       mission(ALPHA, 'Alpha', {
         step: 'first-review',
         recipes: {
@@ -354,9 +391,8 @@ test("each recipe button shows its name with the selected variant's name beneath
           ],
         },
       }),
-    ],
-    running: [],
-  });
+    ),
+  );
   assert.deepStrictEqual(recipeParts(named(page, 'First run')), ['First run', 'Claude Code']);
   assert.deepStrictEqual(recipeParts(named(page, 'Mixed')), ['Mixed', 'default']);
   assert.deepStrictEqual(recipeParts(named(page, 'Partly read')), ['Partly read', 'Mine at low effort'], 'the name exactly as the variant is named, with no own mark');
@@ -411,9 +447,8 @@ function executeTasks(selected: number): unknown {
 
 test('every recipe entry has an arrow-only dropdown beside it offering its variants in order by their bare names, on the one selected', () => {
   const page = loadPage();
-  page.send({
-    type: 'live',
-    missions: [
+  page.send(
+    pageOf(
       mission(ALPHA, 'Alpha', {
         step: 'execute',
         recipes: {
@@ -444,9 +479,8 @@ test('every recipe entry has an arrow-only dropdown beside it offering its varia
           ],
         },
       }),
-    ],
-    running: [],
-  });
+    ),
+  );
   const entries = recipeEntries(page);
   assert.deepStrictEqual(entries.map((entry) => shownName(entry.shown)), [
     'Execute tasks',
@@ -477,11 +511,7 @@ test('every recipe entry has an arrow-only dropdown beside it offering its varia
 
 test("the button's label and hover text follow the selected variant, and a click runs that variant", () => {
   const page = loadPage();
-  const live = (selected: number) => ({
-    type: 'live',
-    missions: [mission(ALPHA, 'Alpha', { step: 'execute', recipes: { state: 'read', recipes: [executeTasks(selected)] } })],
-    running: [],
-  });
+  const live = (selected: number) => pageOf(mission(ALPHA, 'Alpha', { step: 'execute', recipes: { state: 'read', recipes: [executeTasks(selected)] } }));
   page.send(live(0));
   assert.deepStrictEqual(recipeParts(named(page, 'Execute tasks')), ['Execute tasks', 'Claude Code']);
   assert.strictEqual(named(page, 'Execute tasks').title, 'claude -p "/gurita:complete-all-tasks --mission <path>" --model "opus" --effort high;');
@@ -506,7 +536,7 @@ test("the button's label and hover text follow the selected variant, and a click
 
 test('no dropdown stands beside a fixed-name button posted with nothing, and the recipe dropdowns stay enabled while a run goes', () => {
   const page = loadPage();
-  page.send(live([ALPHA]));
+  page.send(alphaPage([ALPHA]));
   eachPane(page, () => {
     const selects = page.root.all().filter((each) => each.tagName === 'select');
     const section = page.root.all().find((each) => each.has('recipes')) as FakeElement;
@@ -516,7 +546,7 @@ test('no dropdown stands beside a fixed-name button posted with nothing, and the
     for (const select of selects) {
       assert.strictEqual(select.disabled, false);
     }
-    for (const text of ['Discuss', 'Answer', 'Answer with recommendation', 'Answer with this alternative', 'New task', 'New mission', 'Define mission']) {
+    for (const text of ['Discuss', 'Answer', 'Answer with recommendation', 'Answer with this alternative', 'New task']) {
       if (buttons(page).some((each) => shownName(each) === text)) {
         assert.ok(!section.all().includes(named(page, text)), `${text} stands outside the recipe list`);
       }
@@ -526,8 +556,6 @@ test('no dropdown stands beside a fixed-name button posted with nothing, and the
 
 /** Each fixed-name button's label, the button's key, and the hover text it shows while its recipe cannot be read. */
 const FIXED_BUTTONS: [string, string, string][] = [
-  ['New mission', 'discussGoal', 'Type a goal and open an interactive discussion of it'],
-  ['Define mission', 'defineMission', 'Type a goal and its scope and define the mission'],
   ['New task', 'discussTask', 'Type an issue and open an interactive discussion of it into tasks for this mission'],
   ['Discuss', 'discussQuestion', 'Type an optional note and open an interactive discussion of this question'],
   ['Answer', 'answerQuestion', 'Record an answer you type as the decision'],
@@ -535,39 +563,27 @@ const FIXED_BUTTONS: [string, string, string][] = [
   ['Answer with this alternative', 'answerWithAlternative', 'Record keep as the decision'],
 ];
 
-/** The two mission-starting buttons, posted with the pages and the failure state rather than with a mission. */
-const STARTING_KEYS = ['discussGoal', 'defineMission'];
-
 /** A mission as `mission` builds it, enough of its questions to post a button per alternative. */
 interface BuiltMission {
   questions: { state: string; questions?: { id: string; alternatives: { id: string }[] }[] };
 }
 
 /**
- * A live message for Alpha and Beta, the two mission-starting buttons of `entries` posted with the pages,
- * its answer-with-alternative entry posted once for every alternative of every question of each mission,
- * and the other four with each mission, every mission built by `build`.
+ * The message posting Alpha's window its page, built by `build`, its answer-with-alternative entry
+ * of `entries` posted once for every alternative of every question, and the other four with the
+ * mission.
  */
 function liveButtons(entries: Record<string, unknown>, running: string[] = [], build: (missionPath: string, title: string) => unknown = mission): unknown {
-  const starting = Object.fromEntries(Object.entries(entries).filter(([key]) => STARTING_KEYS.includes(key)));
-  const onPage = Object.fromEntries(Object.entries(entries).filter(([key]) => !STARTING_KEYS.includes(key) && key !== 'answerWithAlternative'));
-  const withButtons = (missionPath: string, title: string) => {
-    const built = build(missionPath, title) as BuiltMission;
-    const entry = entries.answerWithAlternative;
-    const alternativeButtons =
-      entry === undefined
-        ? []
-        : (built.questions.questions ?? []).flatMap((question) =>
-            question.alternatives.map((alternative) => ({ question: question.id, alternative: alternative.id, entry })),
-          );
-    return { ...built, buttons: onPage, alternativeButtons };
-  };
-  return {
-    type: 'live',
-    missions: [withButtons(ALPHA, 'Alpha'), withButtons(BETA, 'Beta')],
-    running,
-    buttons: starting,
-  };
+  const onPage = Object.fromEntries(Object.entries(entries).filter(([key]) => key !== 'answerWithAlternative'));
+  const built = build(ALPHA, 'Alpha') as BuiltMission;
+  const entry = entries.answerWithAlternative;
+  const alternativeButtons =
+    entry === undefined
+      ? []
+      : (built.questions.questions ?? []).flatMap((question) =>
+          question.alternatives.map((alternative) => ({ question: question.id, alternative: alternative.id, entry })),
+        );
+  return pageOf({ ...built, buttons: onPage, alternativeButtons }, running);
 }
 
 /** What each fixed-name button runs, as the extension posts it, every button on one line of `model` at `effort`, offering its one variant, `default`. */
@@ -609,7 +625,7 @@ test("every fixed-name button shows its name with its selected variant's name be
         [[label, 'default'], `claude -p "/gurita:${key} --mission <path>" --model "${model}" --effort ${effort};`],
       ]),
     );
-  assert.deepStrictEqual(fixedShown(page), expected('fable', 'xhigh'), 'all seven buttons, with either pane shown');
+  assert.deepStrictEqual(fixedShown(page), expected('fable', 'xhigh'), 'all five buttons, with either pane shown');
 
   // A default picked in the settings view reaches every button with the pages posted again.
   page.send(liveButtons(fixedButtons('opus', 'high')));
@@ -625,36 +641,29 @@ test("every fixed-name button shows its name with its selected variant's name be
     liveButtons({
       ...fixedButtons('opus', 'high'),
       discussQuestion: { state: 'offered', lines: mixed, ...one('Mixed') },
-      defineMission: { state: 'offered', lines: ['echo <goal> <scope>'], ...one('Echo') },
+      discussTask: { state: 'offered', lines: ['echo <issue description>'], ...one('Echo') },
       answerQuestion: undefined,
-      discussTask: undefined,
+      answerWithRecommendation: undefined,
     }),
   );
   const shown = fixedShown(page);
   assert.deepStrictEqual(shown.Discuss, [['Discuss', 'Mixed'], mixed.join('\n')]);
-  assert.deepStrictEqual(shown['Define mission'], [['Define mission', 'Echo'], 'echo <goal> <scope>'], 'a variant of no readable line shows its name too');
+  assert.deepStrictEqual(shown['New task'], [['New task', 'Echo'], 'echo <issue description>'], 'a variant of no readable line shows its name too');
   assert.deepStrictEqual(shown.Answer, [['Answer'], 'Record an answer you type as the decision'], 'a recipe that cannot be read shows the name alone');
-  assert.deepStrictEqual(shown['New task'], [['New task'], 'Type an issue and open an interactive discussion of it into tasks for this mission']);
+  assert.deepStrictEqual(shown['Answer with recommendation'], [['Answer with recommendation'], "Record this question's recommendation as the decision"]);
 
   // Nothing posted for the buttons: every one shows its name alone.
-  page.send(live([]));
+  page.send(alphaPage([]));
   assert.deepStrictEqual(
     fixedShown(page),
     Object.fromEntries(FIXED_BUTTONS.map(([label, , hover]) => [label, [[label], hover]])),
   );
 
-  // The failure state's two mission-starting buttons follow what it is posted with.
-  page.send({ type: 'liveFailure', cause: 'boom', buttons: { discussGoal: fixedButtons('sonnet', 'medium').discussGoal, defineMission: fixedButtons('sonnet', 'medium').defineMission } });
-  assert.deepStrictEqual(recipeParts(named(page, 'New mission')), ['New mission', 'default']);
-  assert.strictEqual(named(page, 'Define mission').title, 'claude -p "/gurita:defineMission --mission <path>" --model "sonnet" --effort medium;');
-
-  // A click posts the variant selected with what it posted before, and a run disables the mission's fixed-name buttons alone.
+  // A click posts the variant selected with what it posted before, and a run disables the mission's fixed-name buttons.
   page.send(liveButtons(fixedButtons('fable', 'xhigh')));
   named(page, 'Discuss').click();
-  named(page, 'New mission').click();
-  assert.deepStrictEqual(page.posted.slice(-2), [
+  assert.deepStrictEqual(page.posted.slice(-1), [
     { type: 'questionButton', button: 'discussQuestion', mission: ALPHA, question: 'Pane Layout', variant: 'default' },
-    { type: 'missionButton', button: 'discussGoal', variant: 'default' },
   ]);
   page.send(liveButtons(fixedButtons('fable', 'xhigh'), [ALPHA]));
   assertRunning(page);
@@ -745,22 +754,17 @@ test('a dropdown beside each fixed-name button offers its variants and stands on
   let count = page.posted.length;
   (dropdownBeside(page, 'Discuss') as FakeElement).change('0');
   own[1].change('0');
-  (dropdownBeside(page, 'New mission') as FakeElement).change('0');
-  (dropdownBeside(page, 'Define mission') as FakeElement).change('1');
   named(page, 'Remaining tasks').click();
   (dropdownBeside(page, 'New task') as FakeElement).change('0');
   assert.deepStrictEqual(page.posted.slice(count), [
     { type: 'selectButtonVariant', button: 'discussQuestion', mission: ALPHA, variant: 'Fable' },
     { type: 'selectAlternativeVariant', mission: ALPHA, question: 'Pane Layout', alternative: 'drop', variant: 'Fable' },
-    { type: 'selectButtonVariant', button: 'discussGoal', variant: 'Fable' },
-    { type: 'selectButtonVariant', button: 'defineMission', variant: 'Opus' },
     { type: 'selectButtonVariant', button: 'discussTask', mission: ALPHA, variant: 'Fable' },
   ]);
 
   // A click posts the variant selected.
   count = page.posted.length;
   named(page, 'New task').click();
-  named(page, 'Define mission').click();
   named(page, 'Open questions').click();
   named(page, 'Answer').click();
   for (const each of buttons(page).filter((node) => shownName(node) === 'Answer with this alternative')) {
@@ -768,7 +772,6 @@ test('a dropdown beside each fixed-name button offers its variants and stands on
   }
   assert.deepStrictEqual(page.posted.slice(count), [
     { type: 'taskButton', mission: ALPHA, variant: 'Opus' },
-    { type: 'missionButton', button: 'defineMission', variant: 'Opus' },
     { type: 'questionButton', button: 'answerQuestion', mission: ALPHA, question: 'Pane Layout', variant: 'Opus' },
     { type: 'alternativeButton', mission: ALPHA, question: 'Pane Layout', alternative: 'keep', variant: 'Opus' },
     { type: 'alternativeButton', mission: ALPHA, question: 'Pane Layout', alternative: 'drop', variant: 'Opus' },
@@ -805,23 +808,18 @@ test("each answer-with-alternative button draws, picks, and runs the variant its
     ],
     selected,
   });
-  /** A live message for Alpha alone, its first card's keep and drop buttons standing on the variants at `keep` and `drop`. */
+  /** Alpha's page, its first card's keep and drop buttons standing on the variants at `keep` and `drop`. */
   const send = (keep: unknown, drop: unknown) =>
-    page.send({
-      type: 'live',
-      missions: [
-        {
-          ...(twoAlternatives(ALPHA, 'Alpha') as object),
-          buttons: {},
-          alternativeButtons: [
-            { question: 'Pane Layout', alternative: 'keep', entry: keep },
-            { question: 'Pane Layout', alternative: 'drop', entry: drop },
-          ],
-        },
-      ],
-      running: [],
-      buttons: {},
-    });
+    page.send(
+      pageOf({
+        ...(twoAlternatives(ALPHA, 'Alpha') as object),
+        buttons: {},
+        alternativeButtons: [
+          { question: 'Pane Layout', alternative: 'keep', entry: keep },
+          { question: 'Pane Layout', alternative: 'drop', entry: drop },
+        ],
+      }),
+    );
   const shown = () => {
     const drawn = buttons(page).filter((each) => shownName(each) === 'Answer with this alternative');
     return drawn.map((each) => [recipeParts(each), each.title, options(entryOf(page, each).children.find((child): child is FakeElement => child instanceof FakeElement && child.tagName === 'select') as FakeElement).map(([, , picked]) => picked)]);
@@ -861,7 +859,7 @@ test("each answer-with-alternative button draws, picks, and runs the variant its
   assert.strictEqual(keep.disabled, true);
   assert.strictEqual(alternativeDropdowns(page).length, 1);
   assert.ok(entryOf(page, drop).children.includes(alternativeDropdowns(page)[0]), 'the other alternative keeps its own dropdown');
-  page.send({ type: 'live', missions: [{ ...(twoAlternatives(ALPHA, 'Alpha') as object), buttons: {} }], running: [], buttons: {} });
+  page.send(pageOf({ ...(twoAlternatives(ALPHA, 'Alpha') as object), buttons: {} }));
   assert.strictEqual(alternativeDropdowns(page).length, 0);
   assert.deepStrictEqual(recipeParts(buttons(page).filter((each) => shownName(each) === 'Answer with this alternative')[1]), ['Answer with this alternative']);
   assert.strictEqual(buttons(page).filter((each) => shownName(each) === 'Answer with this alternative')[1].title, 'Record drop as the decision');
@@ -889,25 +887,12 @@ test('a fixed-name button posted with no variant, every one left out for a disab
       'only the recipe list holds dropdowns',
     );
   });
-  for (const text of ['review', 'Refresh']) {
-    assert.strictEqual(named(page, text).disabled, false, `${text} stays enabled`);
-  }
-
-  // The failure state draws its two mission-starting buttons the same way.
-  page.send({ type: 'liveFailure', cause: 'boom', buttons: { discussGoal: { state: 'disabled', cause }, defineMission: fixedButtons('sonnet', 'medium').defineMission } });
-  assert.strictEqual(named(page, 'New mission').disabled, true);
-  assert.strictEqual(dropdownBeside(page, 'New mission'), undefined);
-  assert.strictEqual(named(page, 'Define mission').disabled, false);
-  assert.ok(dropdownBeside(page, 'Define mission') !== undefined);
+  assert.strictEqual(named(page, 'review').disabled, false, 'review stays enabled');
 });
 
 test("a mission's page draws the recipe failure posted with its mission", () => {
   const page = loadPage();
-  page.send({
-    type: 'live',
-    missions: [mission(ALPHA, 'Alpha', { step: 'derive', recipes: { state: 'failed', cause: 'EACCES: recipes.md' } })],
-    running: [],
-  });
+  page.send(pageOf(mission(ALPHA, 'Alpha', { step: 'derive', recipes: { state: 'failed', cause: 'EACCES: recipes.md' } })));
   const section = page.root.all().find((each) => each.has('recipes'));
   assert.ok(section !== undefined);
   assert.deepStrictEqual(
@@ -919,21 +904,21 @@ test("a mission's page draws the recipe failure posted with its mission", () => 
 
 test('a run posted as started draws the page running, and its terminal closing draws it idle again', () => {
   const page = loadPage();
-  page.send(live([]));
+  page.send(alphaPage([]));
   assertIdle(page);
   page.send({ type: 'running', missions: [ALPHA] });
   assertRunning(page);
   page.send({ type: 'running', missions: [] });
   assertIdle(page);
-  page.send(live([ALPHA]));
+  page.send(alphaPage([ALPHA]));
   assertRunning(page);
-  page.send(live([]));
+  page.send(alphaPage([]));
   assertIdle(page);
 });
 
 test("a held preview's start button is disabled while its mission runs, its close button not", () => {
   const page = loadPage();
-  page.send(live([]));
+  page.send(alphaPage([]));
   page.send({
     type: 'preview',
     mission: ALPHA,
@@ -952,20 +937,10 @@ test("a held preview's start button is disabled while its mission runs, its clos
 
 test('a page shown again draws a run that started while it was hidden', () => {
   const hidden = loadPage();
-  hidden.send(live([]));
+  hidden.send(alphaPage([]));
   const shown = loadPage();
-  shown.send(live([ALPHA]));
+  shown.send(alphaPage([ALPHA]));
   assertRunning(shown);
-});
-
-test('a running message leaves the failure state as drawn', () => {
-  const page = loadPage();
-  page.send({ type: 'liveFailure', cause: 'Error: no repository' });
-  page.send({ type: 'running', missions: [ALPHA] });
-  const texts = page.root.all().map((each) => each.textContent);
-  assert.ok(texts.includes('The live missions could not be read.'));
-  assert.strictEqual(named(page, 'New mission').disabled, false);
-  assert.strictEqual(named(page, 'Define mission').disabled, false);
 });
 
 /** The workflow diagram's blocks, in the order drawn. */
@@ -976,7 +951,7 @@ function blocks(page: Page): FakeElement[] {
 /** A page drawn for one mission whose diagram draws `workflow`. */
 function diagramPage(workflow: Record<string, unknown>, running: string[] = []): Page {
   const page = loadPage();
-  page.send({ type: 'live', missions: [mission(ALPHA, 'Alpha', workflow)], running });
+  page.send(pageOf(mission(ALPHA, 'Alpha', workflow), running));
   return page;
 }
 
@@ -1059,7 +1034,7 @@ const ROW_WIDTH = 800;
  */
 function laidOutPage(pane: { width: number }, workflow: Record<string, unknown>, running: string[] = []): Page {
   const page = loadPage((element) => (element.has('workflow') ? pane.width : element.has('flow') ? ROW_WIDTH : 0));
-  page.send({ type: 'live', missions: [mission(ALPHA, 'Alpha', workflow)], running });
+  page.send(pageOf(mission(ALPHA, 'Alpha', workflow), running));
   return page;
 }
 
@@ -1144,17 +1119,14 @@ function texts(page: Page): string[] {
   return page.root.all().map((each) => each.textContent);
 }
 
-/** A live message for Alpha and Beta, each with the default pane given, `undefined` posting none. */
-function liveWith(alpha: PaneName | undefined, beta: PaneName | undefined, live: string[] = [ALPHA, BETA]): unknown {
-  const each = (missionPath: string, title: string, pane: PaneName | undefined) =>
-    mission(missionPath, title, { step: 'derive', ...(pane === undefined ? {} : { defaultPane: pane }) });
-  const all = [each(ALPHA, 'Alpha', alpha), each(BETA, 'Beta', beta)];
-  return { type: 'live', missions: all.filter((_, index) => live.includes([ALPHA, BETA][index])), running: [] };
+/** The message posting Alpha's window its page with the default pane given, `undefined` posting none. */
+function liveWith(pane: PaneName | undefined, running: string[] = []): unknown {
+  return pageOf(mission(ALPHA, 'Alpha', { step: 'derive', ...(pane === undefined ? {} : { defaultPane: pane }) }), running);
 }
 
 test('a mission page draws one row of two pane headers with only the selected pane beneath it', () => {
   const page = loadPage();
-  page.send(liveWith('questions', 'questions'));
+  page.send(liveWith('questions'));
   assert.deepStrictEqual(
     paneHeaders(page).map((each) => [each.tagName, each.textContent, each.getAttribute('role')]),
     [
@@ -1199,11 +1171,7 @@ function assertNewTaskAbovePanes(page: Page): void {
 test('the New task button stands above the pane headers with either pane shown, and not inside Remaining tasks', () => {
   for (const step of ['define', 'first-review', 'additional-review', 'derive', 'execute', 'follow-up', 'finish', undefined]) {
     const page = loadPage();
-    page.send({
-      type: 'live',
-      missions: [mission(ALPHA, 'Alpha', step === undefined ? {} : { step }), mission(BETA, 'Beta')],
-      running: [],
-    });
+    page.send(pageOf(mission(ALPHA, 'Alpha', step === undefined ? {} : { step })));
     assert.strictEqual(shownPane(page), 'questions');
     assertNewTaskAbovePanes(page);
     assert.strictEqual(named(page, 'New task').disabled, false);
@@ -1218,12 +1186,12 @@ test('the New task button stands above the pane headers with either pane shown, 
 
   // A page that opens on Open questions draws it too, and a run for the mission disables it with either pane shown.
   const page = loadPage();
-  page.send({ ...(liveWith('questions', 'tasks') as object), running: [ALPHA] });
+  page.send(liveWith('questions', [ALPHA]));
   eachPane(page, () => {
     assertNewTaskAbovePanes(page);
     assert.strictEqual(named(page, 'New task').disabled, true);
   });
-  page.send(liveWith('questions', 'tasks'));
+  page.send(liveWith('questions'));
   eachPane(page, () => {
     assertNewTaskAbovePanes(page);
     assert.strictEqual(named(page, 'New task').disabled, false);
@@ -1232,30 +1200,30 @@ test('the New task button stands above the pane headers with either pane shown, 
 
 test('a page opens on the default pane the extension posts, Open questions when none is posted', () => {
   const tasks = loadPage();
-  tasks.send(liveWith('tasks', 'questions'));
+  tasks.send(liveWith('tasks'));
   assert.strictEqual(shownPane(tasks), 'tasks');
   const questions = loadPage();
-  questions.send(liveWith('questions', 'tasks'));
+  questions.send(liveWith('questions'));
   assert.strictEqual(shownPane(questions), 'questions');
   const none = loadPage();
-  none.send(liveWith(undefined, 'tasks'));
+  none.send(liveWith(undefined));
   assert.strictEqual(shownPane(none), 'questions');
 });
 
 test('with no pane clicked the page follows the default the extension posts with every redraw', () => {
   const page = loadPage();
-  page.send(liveWith('questions', 'questions'));
+  page.send(liveWith('questions'));
   assert.strictEqual(shownPane(page), 'questions');
-  page.send(liveWith('tasks', 'questions'));
+  page.send(liveWith('tasks'));
   assert.strictEqual(shownPane(page), 'tasks');
 });
 
-test('a clicked pane stays selected through redraws and file-event refreshes while its mission stays shown', () => {
+test('a clicked pane stays selected through redraws and file-event refreshes while the page stays shown', () => {
   const page = loadPage();
-  page.send(liveWith('questions', 'questions'));
+  page.send(liveWith('questions'));
   named(page, 'Remaining tasks').click();
   assert.strictEqual(shownPane(page), 'tasks');
-  page.send(liveWith('questions', 'questions'));
+  page.send(liveWith('questions'));
   assert.strictEqual(shownPane(page), 'tasks');
   page.send({ type: 'running', missions: [ALPHA] });
   assert.strictEqual(shownPane(page), 'tasks');
@@ -1271,75 +1239,39 @@ test('a clicked pane stays selected through redraws and file-event refreshes whi
   assert.strictEqual(shownPane(page), 'tasks');
   page.send({ type: 'loopStarted', mission: ALPHA });
   assert.strictEqual(shownPane(page), 'tasks');
-  named(page, 'Alpha').click();
-  assert.strictEqual(shownPane(page), 'tasks', 'clicking the tab already shown switches nothing');
   named(page, 'Open questions').click();
-  page.send(liveWith('tasks', 'tasks'));
+  page.send(liveWith('tasks'));
   assert.strictEqual(shownPane(page), 'questions', 'a clicked pane outlasts a changed default');
 });
 
-test('every switch of the shown mission gives way to its default', () => {
+test('the failure state, the no-longer-live notice, and a fresh page give way to the default, and the pane is never saved', () => {
   const page = loadPage();
-  page.send(liveWith('questions', 'tasks'));
-  named(page, 'Remaining tasks').click();
-  assert.strictEqual(shownPane(page), 'tasks');
-  named(page, 'Beta').click();
-  assert.strictEqual(shownPane(page), 'tasks');
-  named(page, 'Open questions').click();
-  assert.strictEqual(shownPane(page), 'questions');
-  named(page, 'Alpha').click();
-  assert.strictEqual(shownPane(page), 'questions');
-  named(page, 'Remaining tasks').click();
-  named(page, 'Beta').click();
-  named(page, 'Alpha').click();
-  assert.strictEqual(shownPane(page), 'questions', 'the click on Alpha was not kept across the visit to Beta');
-
-  named(page, 'Remaining tasks').click();
-  page.send({
-    type: 'preview',
-    mission: BETA,
-    recipe: 'complete',
-    lines: ['claude "/gurita:complete-task --mission <path> <Task Title>"'],
-    names: ['complete-task'],
-    result: { state: 'read', tasks: [] },
-  });
-  named(page, 'Alpha').click();
-  assert.strictEqual(shownPane(page), 'questions', 'a preview of another mission switches the mission shown');
-
-  named(page, 'Remaining tasks').click();
-  page.send(liveWith('questions', 'tasks', [BETA]));
-  assert.strictEqual(shownPane(page), 'tasks', 'the mission fallen back to opens on its own default');
-  page.send(liveWith('questions', 'tasks'));
-  const shownTab = page.root.all().filter((each) => each.getAttribute('role') === 'tab' && !each.has('pane-tab') && each.getAttribute('aria-selected') === 'true');
-  assert.deepStrictEqual(shownTab.map((each) => each.textContent), ['Beta']);
-  named(page, 'Open questions').click();
-  named(page, 'Alpha').click();
-  assert.strictEqual(shownPane(page), 'questions', 'a fall back to the first mission switches the mission shown');
-});
-
-test('the failure state and a fresh page give way to the default, and the pane is never saved', () => {
-  const page = loadPage();
-  page.send(liveWith('questions', 'questions'));
+  page.send(liveWith('questions'));
   named(page, 'Remaining tasks').click();
   page.send({ type: 'liveFailure', cause: 'Error: no git' });
-  page.send(liveWith('questions', 'questions'));
-  assert.strictEqual(shownPane(page), 'questions');
+  page.send(liveWith('questions'));
+  assert.strictEqual(shownPane(page), 'questions', 'the failure state gives way to the default');
   named(page, 'Remaining tasks').click();
-  named(page, 'Beta').click();
+  page.send({ type: 'notLive', path: ALPHA });
+  page.send(liveWith('questions'));
+  assert.strictEqual(shownPane(page), 'questions', 'the no-longer-live notice gives way to the default');
   named(page, 'Remaining tasks').click();
+  page.key('ArrowRight');
+  named(page, 'Open questions').click();
+  page.key('ArrowRight');
   assert.ok(page.saved.length > 0);
   for (const state of page.saved) {
-    assert.deepStrictEqual(Object.keys(state as object).sort(), ['positions', 'selected']);
+    assert.deepStrictEqual(Object.keys(state as object), ['positions']);
     assert.doesNotMatch(JSON.stringify(state), /tasks|questions/);
   }
   const reopened = loadPage();
-  reopened.send(liveWith('questions', 'questions'));
+  reopened.send(liveWith('questions'));
   assert.strictEqual(shownPane(reopened), 'questions');
 });
 
 test('the arrow keys move the question view only while the Open questions pane is shown', () => {
   const page = loadPage();
-  page.send(liveWith('questions', 'questions'));
+  page.send(liveWith('questions'));
   page.key('ArrowRight');
   assert.ok(texts(page).includes('2 / 2'));
   page.key('ArrowLeft');
@@ -1351,28 +1283,14 @@ test('the arrow keys move the question view only while the Open questions pane i
   assert.ok(texts(page).includes('1 / 2'));
 });
 
-/** The tab row's controls belonging to no mission, in the order drawn. */
-function rowEnds(page: Page): string[] {
-  const ends = page.root.all().find((each) => each.has('ends'));
-  assert.ok(ends !== undefined);
-  return ends.all().filter((each) => each.tagName === 'button').map(shownName);
-}
-
-test('the tab row ends in Refresh, New mission, and Define mission with no Settings control, in the failure state too', () => {
+test('the page draws no Settings or Close settings control and no settings view, in the failure state and the notice neither', () => {
   const page = loadPage();
-  page.send(live([]));
-  assert.deepStrictEqual(rowEnds(page), ['Refresh', 'New mission', 'Define mission']);
-  const tabs = page.root.all().find((each) => each.has('tab-list'));
-  assert.ok(tabs !== undefined);
-  assert.deepStrictEqual(
-    tabs.all().filter((each) => each.tagName === 'button').map((each) => each.textContent),
-    ['Alpha', 'Beta'],
-    'the mission tabs hold missions only',
-  );
-  assert.ok(!buttons(page).some((each) => ['Settings', 'Close settings'].includes(shownName(each))), 'the pane draws no Settings or Close settings control');
+  page.send(alphaPage([]));
+  assert.ok(!buttons(page).some((each) => ['Settings', 'Close settings'].includes(shownName(each))), 'the page draws no Settings or Close settings control');
   assert.deepStrictEqual(page.root.all().filter((each) => each.has('settings')), [], 'and no settings view');
   page.send({ type: 'liveFailure', cause: 'Error: no repository' });
-  assert.deepStrictEqual(rowEnds(page), ['Refresh', 'New mission', 'Define mission']);
+  assert.ok(!buttons(page).some((each) => shownName(each) === 'Settings'));
+  page.send({ type: 'notLive', path: ALPHA });
   assert.ok(!buttons(page).some((each) => shownName(each) === 'Settings'));
 });
 
@@ -1381,11 +1299,11 @@ function pageShape(page: Page): string[] {
   return page.root.all().map((each) => `${each.tagName}|${each.textContent}|${each.className}|${each.disabled}|${each.title}`);
 }
 
-test('a harness check or settings message posted to the pane changes nothing it draws, and every click posts as before', () => {
+test('a harness check or settings message posted to a mission window changes nothing it draws, and every click posts as before', () => {
   const plain = loadPage();
-  plain.send(live([]));
+  plain.send(alphaPage([]));
   const posted = loadPage();
-  posted.send(live([]));
+  posted.send(alphaPage([]));
   const harnesses = [
     { key: 'claude', name: 'Claude Code', cli: 'claude', installed: '2.0.0', packaged: '2.0.0' },
     { key: 'codex', name: 'Codex', cli: 'codex', failed: 'cli', packaged: '2.0.0' },
@@ -1396,14 +1314,14 @@ test('a harness check or settings message posted to the pane changes nothing it 
     named(page, 'Remaining tasks').click();
   }
   assert.deepStrictEqual(pageShape(posted), pageShape(plain), 'the mission page draws every recipe, button, and the looped run alike');
-  assert.ok(!texts(posted).some((text) => text.includes('not found') || text.includes('Checking the harnesses')), 'nothing of the check is named on the pane');
+  assert.ok(!texts(posted).some((text) => text.includes('not found') || text.includes('Checking the harnesses')), 'nothing of the check is named on the page');
   for (const page of [plain, posted]) {
     named(page, 'Open questions').click();
   }
   assert.deepStrictEqual(pageShape(posted), pageShape(plain));
   const clicks = (page: Page): unknown[] => {
     const count = page.posted.length;
-    for (const text of ['review', 'complete', 'Discuss', 'Answer', 'Answer with recommendation', 'Answer with this alternative', 'New mission', 'Define mission']) {
+    for (const text of ['review', 'complete', 'Discuss', 'Answer', 'Answer with recommendation', 'Answer with this alternative', 'New task']) {
       named(page, text).click();
     }
     return page.posted.slice(count);
@@ -1423,7 +1341,7 @@ test("after a harness is disabled in the Settings window the page draws the list
   );
   const agyOnly = runnable('Gemini review', 'shipped', ['agy -p "/gurita:review-mission-requirements --mission <path>"']);
   const page = loadPage();
-  page.send({ type: 'live', missions: [mission(ALPHA, 'Alpha', { step: 'derive', recipes: { state: 'read', recipes: [both, agyOnly] } })], running: [] });
+  page.send(pageOf(mission(ALPHA, 'Alpha', { step: 'derive', recipes: { state: 'read', recipes: [both, agyOnly] } })));
   const options = () =>
     page.root
       .all()
@@ -1432,7 +1350,7 @@ test("after a harness is disabled in the Settings window the page draws the list
   assert.deepStrictEqual(recipeNames(page), ['Requirements iteration', 'Gemini review']);
   assert.deepStrictEqual(options(), ['Claude Code', 'Antigravity', 'default']);
   const narrowed = runnable('Requirements iteration', 'shipped', (both as { lines: string[] }).lines, [{ name: 'Claude Code', own: false }]);
-  page.send({ type: 'live', missions: [mission(ALPHA, 'Alpha', { step: 'derive', recipes: { state: 'read', recipes: [narrowed] } })], running: [] });
+  page.send(pageOf(mission(ALPHA, 'Alpha', { step: 'derive', recipes: { state: 'read', recipes: [narrowed] } })));
   assert.deepStrictEqual(recipeNames(page), ['Requirements iteration']);
   assert.deepStrictEqual(options(), ['Claude Code'], 'the left-out variant is gone from the dropdown, and the recipe left with none with its button');
   assert.ok(texts(page).includes('Discuss'), 'the fixed-name buttons are drawn as before');
@@ -1441,7 +1359,7 @@ test("after a harness is disabled in the Settings window the page draws the list
 
 test("an edit the extension posts reaches the mission page's dropdown", () => {
   const page = loadPage();
-  page.send(live([]));
+  page.send(alphaPage([]));
   const dropdown = () =>
     page.root
       .all()
@@ -1453,7 +1371,7 @@ test("an edit the extension posts reaches the mission page's dropdown", () => {
     ...RECIPES,
     recipes: [{ ...RECIPES.recipes[0], variants: [{ name: 'review', own: false }, { name: 'Fast', own: true }] }, RECIPES.recipes[1]],
   };
-  page.send({ type: 'live', missions: [{ ...(mission(ALPHA, 'Alpha') as object), recipes: duplicated }, mission(BETA, 'Beta')], running: [] });
+  page.send(pageOf({ ...(mission(ALPHA, 'Alpha') as object), recipes: duplicated }));
   assert.deepStrictEqual(dropdown(), ['review', 'Fast']);
 });
 
@@ -1463,7 +1381,7 @@ const PUSH_CLASSES = ['recipe', 'action', 'control'];
 /** The properties that make a button's look: its fill, text colour, border, and outline. */
 const LOOK = ['background', 'background-color', 'color', 'border', 'border-color', 'outline'];
 
-test('every push button the pane draws carries one class of the one shared look, the mission tabs, pane headers, and dependency links keeping their own', () => {
+test('every push button a mission window draws carries one class of the one shared look, the pane headers and dependency links keeping their own', () => {
   const page = loadPage();
   const linked = {
     ...(mission(ALPHA, 'Alpha') as Record<string, unknown>),
@@ -1479,18 +1397,13 @@ test('every push button the pane draws carries one class of the one shared look,
       })),
     },
   };
-  page.send({ type: 'live', missions: [linked, mission(BETA, 'Beta')], running: [] });
+  page.send(pageOf(linked));
   const seen = new Map<string, FakeElement>();
-  const look = { tabs: [] as string[], headers: [] as string[], links: [] as string[] };
+  const look = { headers: [] as string[], links: [] as string[] };
   const collect = (): void => {
-    const tabs = page.root.all().find((each) => each.has('tab-list'));
-    assert.ok(tabs !== undefined);
-    const tabButtons = new Set(tabs.all().filter((each) => each.tagName === 'button'));
     for (const each of buttons(page)) {
       const name = shownName(each);
-      if (tabButtons.has(each)) {
-        look.tabs.push(name);
-      } else if (each.has('pane-tab')) {
+      if (each.has('pane-tab')) {
         look.headers.push(name);
       } else if (each.has('link')) {
         look.links.push(name);
@@ -1517,22 +1430,19 @@ test('every push button the pane draws carries one class of the one shared look,
   for (const name of [
     'review',
     'complete',
-    'New mission',
-    'Define mission',
     'Start run',
     'Discuss',
     'Answer',
     'Answer with recommendation',
     'Answer with this alternative',
     'New task',
-    'Refresh',
     'Previous',
     'Next',
     'Close preview',
   ]) {
     assert.ok(seen.has(name), `${name} is drawn as a push button`);
   }
-  assert.ok(look.tabs.includes('Alpha') && look.headers.includes('Open questions') && look.links.includes('Tab Order'), 'the tabs, headers, and links were drawn');
+  assert.ok(look.headers.includes('Open questions') && look.links.includes('Tab Order'), 'the headers and links were drawn');
 
   const rules = stylesheetRules();
   const push = PUSH_CLASSES.map((name) => `button.${name}`);
@@ -1566,11 +1476,11 @@ test('every push button the pane draws carries one class of the one shared look,
       }
     }
   }
-  const tabRule = rules.find((each) => each.selectors.includes('.tab-list button'));
+  assert.ok(!rules.some((each) => each.selectors.some((selector) => /(^|\s|\.)tabs?\b|tab-list|\.ends\b|\.starting\b/.test(selector))), 'the stylesheet holds no tab row rule');
   const headerRule = rules.find((each) => each.selectors.includes('.pane-tabs button'));
   const linkRule = rules.find((each) => each.selectors.includes('button.link'));
-  for (const kept of [tabRule, headerRule, linkRule]) {
+  for (const kept of [headerRule, linkRule]) {
     assert.ok(kept !== undefined);
-    assert.strictEqual(kept.declarations.get('background'), 'none', 'the tabs, headers, and links keep their unfilled look');
+    assert.strictEqual(kept.declarations.get('background'), 'none', 'the headers and links keep their unfilled look');
   }
 });

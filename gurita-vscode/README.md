@@ -1,7 +1,7 @@
 # Gurita for VS Code
 
 Gurita for VS Code (`gurita-vscode`) puts the Gurita plugin's live missions in a side-bar view
-behind its own activity-bar entry and in one pane in the editor area: a page per live mission with its question view and remaining tasks, buttons that
+behind its own activity-bar entry and in a window per mission in the editor area: each mission's page with its question view and remaining tasks, buttons that
 run the plugin's skills as recipes in a terminal, and a looped task run that completes a
 mission's tasks one at a time. It drives the `claude` and `agy` command-line tools with the
 Gurita plugin installed in them; it does not replace the plugin.
@@ -41,8 +41,9 @@ Every Node command runs under Node 22 through nvm, in a subshell, from the repos
 - `npm test` compiles, then runs the unit tests of the recipe reader and the stage filter of a
   page's recipe list, the `open_questions.xml` parser, and the `TASKS_TODO.md` heading read,
   among others, with Node's built-in `node:test` over the compiled files under `out/test/`; the
-  run path, the pane's answer to a tab click, the recipe list and the fixed-name buttons it
-  posts, with the variant selections it remembers, the harness check it runs, with the check script's print stubbed, and
+  run path, the mission windows a row's click opens, each posted its own mission's page, the
+  failure state, or the notice that its mission is no longer live, the recipe list and the
+  fixed-name buttons each page is posted, with the variant selections it remembers, the harness check it runs, with the check script's print stubbed, and
   the harnesses it enables and disables, with their model and effort lists, and the variant
   edits it makes, the line editor's harness, model, and effort picks, with the `custom N` variants they
   add and the resets of stored variants, among them, and its single-task line
@@ -122,16 +123,16 @@ above the mission rows.
 - Its hover text names the recipe and the variant, with the variant's lines as written beneath
   them.
 - A click on the row runs that variant: it asks for the goal and, for **Define mission**, then
-  the scope, each in VS Code's own input box as the pane's buttons do, and starts the run, which
+  the scope, each in VS Code's own input box as a mission page's buttons ask for theirs, and starts the run, which
   belongs to no mission, at the project root. Escape in a box starts nothing.
 - An inline icon action on the row, **Choose Variant**, also offered in the row's context menu,
   opens a QuickPick of the recipe's variants, each by its name with its harness, model, and effort
   beside it and the one selected marked. Picking one changes the remembered selection, kept once
-  per project in the same map as the pane's **New mission** and **Define mission** dropdowns, and
-  starts no run; dismissing the QuickPick changes nothing. A pick in either place shows at once
-  in the other.
-- The QuickPick offers the variants the pane's dropdown offers, so a variant with a line on a
-  disabled harness is left out. A row whose every variant is left out reads `no variant enabled`,
+  per project as a map from recipe name to variant name, and starts no run; dismissing the
+  QuickPick changes nothing. The row shows the pick at once.
+- The QuickPick offers only the variants the row can run, so a variant holding a placeholder the
+  row has no value for, a looped variant, one of no line, and one with a line on a disabled
+  harness are left out. A row whose every variant is left out reads `no variant enabled`,
   and one whose recipe cannot be read or run reads `cannot run`, each with the cause in its hover
   text and told in an error notification on a click or on the action.
 
@@ -144,8 +145,8 @@ and `gurita.pickStartingVariant`) are hidden from the Command Palette.
 - Its description is the next workflow step's name followed by the counts of its open questions
   and its remaining tasks, in a compact form such as `Derive tasks · 3 questions · 2 tasks`. The
   step is one of **First review round**, **Additional review round**, **Derive tasks**,
-  **Execute tasks**, and **Finish**, chosen as the pane's workflow diagram chooses its filled
-  block.
+  **Execute tasks**, and **Finish**, chosen as a mission window's workflow diagram chooses its
+  filled block.
 - Its icon spins while a run started for the mission is going, until you dismiss the run's
   terminal, and is a steady mission icon otherwise.
 - Its hover text spells out all five facts in full beside the mission's path: the title, the
@@ -158,7 +159,10 @@ and `gurita.pickStartingVariant`) are hidden from the Command Palette.
   step a failed git read of the mission's `Requirements-review:` commits. The row gets no
   warning icon or colour.
 
-A click on a mission row opens nothing yet. Showing the view for the first time starts the
+A click on a mission row does nothing beyond opening that mission's own window in the editor area
+(see The mission windows below), or bringing it forward when it is already open; the command
+behind the click (`gurita.openMission`) is hidden from the Command Palette. Showing the view for
+the first time starts the
 extension's read of the live missions, as running a Gurita command does, and the tree is
 redrawn on every re-read (after each burst of file events, each refresh, and each run's end)
 and at every run's start and end. Until the first read settles, and while the live missions
@@ -171,128 +175,129 @@ read it is `The live missions could not be read.` followed by the cause as the r
 that lists missions clears the message, and the view's other contents stay as they are in every
 state.
 
-## Using the pane
+## The mission windows
 
-Open the pane with the command **Gurita: Open Mission Pane** (`gurita.openMissionPane`) from the
-Command Palette. Besides the side-bar view it is the extension's only entry point: there is no
-status bar item or keybinding, the pane never opens by itself, and it does not
-survive a restart or a window reload, so open it again after one. **Gurita: Refresh Missions**
-(`gurita.refreshMissions`), the side-bar view's **Refresh** title-bar action, and the pane's
-**Refresh** control re-read everything.
+A click on a mission's row in the side-bar view opens that mission's own window in the editor
+area, titled with the mission's title, or brings it forward when it is already open, so a mission
+never has two windows. Several missions' windows stand open at once, each showing that one
+mission's page with no tab row, and you close one as you close any editor tab. Besides the
+side-bar view there is no entry point: the Command Palette offers no command opening a window,
+there is no status bar item or keybinding, no window opens by itself, and the windows do not
+survive a restart or a window reload, so open them again from the side-bar view after one.
+**Gurita: Refresh Missions** (`gurita.refreshMissions`) and the side-bar view's **Refresh**
+title-bar action re-read everything and redraw every open window; of the extension's own
+commands that refresh command is the only one the Command Palette offers.
 
 The project root is the top level of the git work tree holding the first workspace folder;
-every other folder is ignored. The pane lists the live missions that `missions.py live` prints
-from that root:
+every other folder is ignored. The extension reads the live missions that `missions.py live`
+prints from that root once for the whole session, and every open window draws its mission from
+that one read. A mission's window holds no **Refresh**, **New mission**, **Define mission**, or
+Settings control: those belong to the side-bar view (see The side-bar view above and The
+Settings window below). Its page holds the workflow diagram, the recipe buttons of the recipes that
+fit the step its diagram fills, each with a dropdown of its variants beside it (see The recipes a
+page lists), the **New task** button with its dropdown in a row of its own, and directly beneath
+that row two panes behind one row of two headers, **Open questions**, holding the question view
+parsed from `open_questions.xml`, and **Remaining tasks**, holding the remaining task headings of
+`TASKS_TODO.md`. **New task** stands above the headers rather than inside either pane, so it is
+drawn on every mission page whichever pane is shown and whatever step the diagram fills. The two
+headers are of equal width and together fill the window's whole width, and only the selected
+pane's content is shown beneath them. A page opens on **Remaining tasks** when git holds at least
+one `Requirements-review:` commit for the mission (the count the workflow diagram reads) and no
+question is open, and on **Open questions** otherwise, a failed git read included. A header you
+click stays selected through every redraw and every refresh from file events while the page
+stays shown; it is not saved, so opening the window again, showing it again after it was hidden,
+or the failure state or the notice below standing in between, opens the page on its default
+afresh. The diagram shows the choices you make, not the plugin's inner steps, as one line of
+seven blocks joined by arrows: **define**, **first review round**, **additional review round**,
+**derive tasks**, **execute tasks**, **follow up tasks**, and **finish**. The two optional
+blocks, **additional review round** and **follow up tasks**, have a dashed border and the five
+required ones a solid border. The diagram is centered in the window and lies in one horizontal
+row while that row fits the window's width; in a window too narrow for the row, the same blocks
+stack vertically, joined by downward arrows and likewise centered, each block keeping its border
+and its fill, and the diagram goes back to the row once the window is wide enough again, never
+wrapping or scrolling sideways. The additional review round reads plain while git holds at most
+one `Requirements-review:` commit for the mission and then carries the count of those beyond the
+first: **additional review round 1** at two, **2** at three, and so on. The block of the step to
+run next is filled purple: **first review round** for a defined mission with no open question,
+no task, and no review commit, and while a question lacks alternatives or a pick and at most one
+review commit stands; **additional review round** while a question lacks alternatives or a pick
+and two or more stand; **derive tasks** when every open question has a pick, or when none is open
+and no task exists on a defined mission whose review commit stands; **execute tasks** while tasks
+remain and no question is open; and **finish** for a started mission with no open question and
+no task. **define** and **follow up tasks** are never filled, and an open question outranks a
+remaining task. A review pass that changed nothing leaves no commit, so the diagram does not
+count it. No block is filled when a document or the git read the choice needs does not read; a
+document's notice stays in its own pane. The diagram is display only: its blocks are not buttons
+and gate nothing. **New task** runs the `discuss-new-task` recipe for the page's mission: you
+type the issue, and an interactive conversation clarifies it into tasks and adds them to the
+mission's task list through `submit-task` inside that same conversation, so there is no separate
+submit button. The question view shows one fully opened card per question, one at a time under a
+position counter such as `3 / 12`: **Previous** and **Next**, or the left and right arrow keys,
+move between the cards, and a dependency on a card links to the named question's card. Each card
+stacks the question text in an area of fixed height, so the pick starts at the same height on
+every card, then the pick and its rationale, the alternatives, the dependencies, and the
+principles, and carries **Discuss**, **Answer**, and **Answer with recommendation** buttons and an
+**Answer with this alternative** button on each alternative. **Discuss** always asks for an
+optional note first: a note you type is carried to the discussion directly after the Short
+Title, as `--mission <path> <Short Title>. <note>`; an empty note starts the discussion of the
+question alone, and Escape starts nothing. After a run removes a question the view keeps its
+place in the list.
 
-- A row of tabs across the top, one per live mission, each showing the mission's title with its
-  path as a tooltip, and at its end the two mission-starting buttons, **New mission** (runs the
-  `discuss-mission-goal` recipe) and **Define mission** (runs the `define-mission-goal` recipe),
-  each with a dropdown of its recipe's variants beside it (see The buttons that run a recipe by
-  its fixed name). The pane has no Settings control: the settings open in a window of their own
-  from the side-bar view (see The Settings window below).
-- Under the selected tab, the mission's page: the workflow diagram, the recipe buttons of the
-  recipes that fit the step its diagram fills, each with a dropdown of its variants beside it
-  (see The recipes a page lists), the **New task** button with its dropdown in a row of its own,
-  and directly beneath that row two
-  panes behind one row of two headers, **Open questions**, holding the question view parsed from
-  `open_questions.xml`, and **Remaining tasks**, holding the remaining task headings of
-  `TASKS_TODO.md`. **New task** stands above the headers rather than inside either pane, so it is
-  drawn on every mission page whichever pane is shown and whatever step the diagram fills. The two headers are of equal width and together
-  fill the pane's whole width, and only the selected pane's content is shown beneath them. A
-  page opens on **Remaining tasks** when git holds at least one `Requirements-review:` commit
-  for the mission (the count the workflow diagram reads) and no question is open, and on **Open
-  questions** otherwise, a failed git read included. A header you click stays selected through
-  every redraw and every refresh from file events while the mission stays shown; it is not
-  saved, so switching to another mission's tab, opening the pane again, or showing it again
-  after it was hidden opens the page on its default afresh. The diagram shows the choices you
-  make, not the plugin's inner steps, as one line of seven blocks joined by arrows: **define**,
-  **first review round**, **additional review round**, **derive tasks**, **execute tasks**,
-  **follow up tasks**, and **finish**. The two optional blocks, **additional review round** and
-  **follow up tasks**, have a dashed border and the five required ones a solid border. The
-  diagram is centered in the pane and lies in one horizontal row while that row fits the pane's
-  width; in a pane too narrow for the row, the same blocks stack vertically, joined by downward
-  arrows and likewise centered, each block keeping its border and its fill, and the diagram goes
-  back to the row once the pane is wide enough again, never wrapping or scrolling sideways. The
-  additional review round reads plain while git holds at most one `Requirements-review:` commit
-  for the mission and then carries the count of those beyond the first: **additional review
-  round 1** at two, **2** at three, and so on. The block of the step to run next is filled
-  purple: **first review round** for a defined mission with no open question, no task, and no
-  review commit, and while a question lacks alternatives or a pick and at most one review commit
-  stands; **additional review round** while a question lacks alternatives or a pick and two or
-  more stand; **derive tasks** when every open question has a pick, or when none is open and no
-  task exists on a defined mission whose review commit stands; **execute tasks** while tasks
-  remain and no question is open; and **finish** for a started mission with no open question and
-  no task. **define** and **follow up tasks** are never filled, and an open question outranks a
-  remaining task. A review pass that changed nothing leaves no commit, so the diagram does not
-  count it. No block is filled when a document or the git read the choice needs does not read;
-  a document's notice stays in its own pane. The diagram is display only: its blocks are not
-  buttons and gate nothing. **New task** runs the
-  `discuss-new-task` recipe for the page's mission: you type the issue, and an interactive
-  conversation clarifies it into tasks and adds them to the mission's task list through
-  `submit-task` inside that same conversation, so there is no separate submit button. The
-  question view shows one fully opened card per question, one at a time under a position
-  counter such as `3 / 12`: **Previous** and **Next**, or the left and right arrow keys, move
-  between the cards, and a dependency on a card links to the named question's card. Each card
-  stacks the question text in an area of fixed height, so the pick starts at the same height on
-  every card, then the pick and its rationale, the alternatives, the dependencies, and the
-  principles, and carries **Discuss**, **Answer**, and **Answer with recommendation** buttons
-  and an **Answer with this alternative** button on each alternative. **Discuss** always asks
-  for an optional note first: a note you type is carried to the discussion directly after the
-  Short Title, as `--mission <path> <Short Title>. <note>`; an empty note starts the discussion
-  of the question alone, and Escape starts nothing. After a run removes a question the view
-  keeps its place in the list.
+Every push button a mission window draws has one look: the theme's primary button colour, the
+one the recipe buttons carry, with a clearly visible 1px outline in the theme's contrast border
+colour, or its foreground colour where the theme sets none, so each button stands out against the
+page and its own fill alike. That covers the recipe buttons, **Start run**, the question card's
+**Discuss**, **Answer**, and **Answer with recommendation**, every **Answer with this
+alternative**, **New task**, **Previous**, **Next**, and **Close preview**, and in the Settings
+window its edit controls (**Enable** and **Disable**, **Add model**, **Add effort**, and
+**Remove**, **Duplicate**, **Rename**, **Delete**, **Make default**, and **Reset**) and **Check
+again**. A disabled button is drawn faded. The two pane headers and the links of a card's
+dependencies keep their own unfilled look.
 
-Every push button the pane draws has one look: the theme's primary button colour, the one the
-recipe buttons carry, with a clearly visible 1px outline in the theme's contrast border colour,
-or its foreground colour where the theme sets none, so each button stands out against the page
-and its own fill alike. That covers the recipe buttons, **New mission**, **Define mission**,
-**Start run**, the question card's **Discuss**, **Answer**, and **Answer with recommendation**,
-every **Answer with this alternative**, **New task**, **Refresh**, **Previous**, **Next**, and
-**Close preview**, and in the Settings window its edit controls (**Enable** and **Disable**,
-**Add model**, **Add effort**, and **Remove**, **Duplicate**, **Rename**, **Delete**, **Make
-default**, and **Reset**) and **Check again**. A disabled button is drawn faded. The mission
-tabs, the two pane headers, and the links of a card's dependencies keep their own unfilled look.
+Every value a button needs (an answer, an issue description, a discussion note, and for the
+side-bar view's rows a goal and a scope typed as a path from the project root) is typed into
+VS Code's own input box, one line per value. Only the discussion note may be left empty. A click
+on a recipe button starts its run at once in a terminal; every recipe button shows its lines,
+placeholders included, before you click. While a run started for a mission is going, until you
+dismiss its terminal, that mission's page shows it: every action button on the page (the recipe
+buttons, the buttons on the question card and its alternatives, a preview's **Start run**, and
+**New task**) is disabled, and the workflow diagram's filled block pulses. The recipe dropdowns
+and the dropdowns beside the buttons that run a recipe by its fixed name, the **Open questions**
+and **Remaining tasks** headers, the question view's **Previous** and **Next**, and every other
+mission's window stay enabled, and the page is drawn this way again whenever it is redrawn, after
+the window was hidden and shown included. Should a click still reach the extension for that
+mission, it starts nothing: a notification says a chain is already running and the run's terminal
+is shown.
 
-Every value a button needs (a goal, a scope typed as a path from the project root, an answer,
-an issue description, a discussion note) is typed into VS Code's own input box, one line per
-value. Only the discussion note may be left empty. A click on a recipe button starts its
-run at once in a terminal; every recipe button shows its lines, placeholders included, before
-you click. While a run started for a mission is going, until you dismiss its terminal, that
-mission's page shows it: every action button on the page (the recipe buttons, the buttons on
-the question card and its alternatives, a preview's **Start run**, and **New task**) is
-disabled, and the workflow diagram's filled block pulses. The recipe dropdowns and the dropdowns beside the buttons that run a recipe by its fixed name, the tabs, the **Open questions** and
-**Remaining tasks** headers, **Refresh**, the question view's **Previous** and **Next**, the
-other missions' pages, and **New mission** and **Define mission** stay enabled, and the page is
-drawn this way again whenever it is redrawn, after the pane was hidden and shown included.
-Should a click still reach the extension for that mission, it starts nothing: a notification
-says a chain is already running and the run's terminal is shown. Clicking a mission's tab,
-whether or not it is the tab already selected, brings the terminal of that mission's run
-forward and focuses it while a run started for the mission is going; when none is, the click
-only shows the mission's page, with no notification.
-
-The pane re-reads by itself after each of its runs, once you dismiss the run's terminal, and on
-changes to any mission's `requirements.md`, `open_questions.xml`, or `TASKS_TODO.md`; git state
-is not watched. The extension reads no mission and watches no file until the side-bar view is
-first shown or a Gurita command first runs; from then the read and the watch last until the extension deactivates, kept current
-whether the pane is shown, hidden, or closed, so a pane shown or opened again draws the latest
-read at once. When the live missions cannot be read, the pane shows one line saying so with
-the cause beneath it, and the two mission-starting buttons stay. When a single
-mission document is missing or does not parse, only the part of the page drawn from it is
-replaced by a notice naming the file.
+The live missions are re-read by themselves after each run, once you dismiss the run's terminal,
+and on changes to any mission's `requirements.md`, `open_questions.xml`, or `TASKS_TODO.md`; git
+state is not watched. The extension reads no mission and watches no file until the side-bar view
+is first shown or a Gurita command first runs; from then the read and the watch last until the
+extension deactivates, kept current whether a window is shown, hidden, or closed, so a window
+shown or opened again draws the latest read at once. While the live missions cannot be read,
+every open window replaces its whole page with one line saying so,
+`The live missions could not be read.`, and the cause beneath it, drawing no diagram, recipe, pane, or button, so nothing can
+be clicked against a failed read; each window stays open and draws its mission's page again on
+the next read that succeeds. A window whose mission stops being live, finished or its directory
+otherwise gone, stays open and shows one fixed notice, `This mission is no longer live.`, with no
+diagram, recipe, pane, or action button, until you close it; should a later read list the path
+again, after a reverted finish or a branch switched back, the window draws that mission's page
+again. When a single mission document is missing or does not parse, only the part of the page
+drawn from it is replaced by a notice naming the file.
 
 ## The Settings window
 
 The settings open in a window of their own in the editor area, titled **Gurita Settings** and
 belonging to no mission. The **Settings** gear in the side-bar view's title bar, beside
 **Refresh**, opens it, or brings it forward when it is already open, so there is never more than
-one; its command is hidden from the Command Palette, and the pane draws no Settings control. You
+one; its command is hidden from the Command Palette, and no mission window draws a Settings control. You
 close it as you close any editor tab, and it has no close control of its own. The window holds
 buttons and dropdowns only: anything you type is asked for in VS Code's own input box. Every
 edit you make in it shows at once on every other surface: the mission pages, their dropdowns and
 the buttons that run a recipe by its fixed name, are posted again with their recipes re-read,
 and the side-bar view's **New mission** and **Define mission** rows are redrawn from the variant
 they now run. **Refresh** re-reads the window too, its lists read afresh, without running the
-harness check. Like the pane it does not yet survive a restart or a window reload.
+harness check. Like the mission windows it does not yet survive a restart or a window reload.
 
 The window's parts stand one beneath the other under their headings: **Harnesses**, **Models and
 efforts**, **Variants**, and **Single-task lines**. Under **Variants** each recipe is headed by its
@@ -340,7 +345,7 @@ check reports and whatever recipes run on it, and stays enabled until you disabl
 never changes it. The state is kept in your per-user variant store, `~/.gurita/variants.json`, in
 the part of that file set aside for harness values, its `harnesses` object, as
 `"<harness>": { "enabled": false }` keyed `claude`, `antigravity`, or `codex`, so it lasts across
-the pane, the editor, and every project. When the file cannot be read, the window says so with the
+every window, the editor, and every project. When the file cannot be read, the window says so with the
 cause beneath it and draws no control.
 
 Disabling a harness acts on the mission pages' recipe lists alone. A variant with at least one
@@ -350,11 +355,12 @@ nothing, and a recipe every variant of which is left out loses its button. Where
 selected for a recipe or its default is left out, the button stands on the default if that
 variant is still listed and otherwise on the first listed variant; the remembered selection is
 kept and comes back once the harness is enabled again. The buttons that run a recipe by its fixed
-name (on the question card and its alternatives, **New task**, **New mission**, and **Define
-mission**) are reached the same way: such a variant leaves the dropdown beside the button and a
+name (on the question card and its alternatives, and **New task**) are reached the same way: such a variant leaves the dropdown beside the button and a
 click on it starts nothing, the button stands on its default or its first remaining variant as a
 recipe button does, and a button left with no variant stays drawn but disabled, with no dropdown
-beside it, until the harness is enabled again. The looped run is untouched: its preview's override
+beside it, until the harness is enabled again. The side-bar view's **New mission** and **Define
+mission** rows leave such a variant out of their QuickPick the same way, and a row left with no
+variant reads `no variant enabled`. The looped run is untouched: its preview's override
 list offers every named single-task line, the rule file chooses among all of them, and every one
 is passed to the runner.
 
@@ -548,7 +554,7 @@ selection naming it is dropped as one naming a variant gone from the recipe. Onc
 a `####` sub-heading, only the blocks beneath its sub-headings are read, a block standing above
 the first sub-heading included in none; a sub-heading with no fence beneath it is a variant of no
 line, and of a variant name repeated within one recipe only the first is read. Headings inside a fence are lines, not headings. The
-pane lists recipes from two files, the shipped file and your own file, and reads both in this
+extension reads recipes from two files, the shipped file and your own file, and reads both in this
 same form. A recipe's default is the variant picked for it in the Settings window (see Variants
 above), and while none is picked its first variant: the looped run's named single-task lines run
 the default, and the recipe button on a mission's page and each button that runs a recipe by its
@@ -599,8 +605,9 @@ shipped recipes come first and your own under **Your recipes** below them, a var
 placeholder the page cannot fill is left off, and one holding a placeholder the extension does not
 know is shown as a non-runnable entry when selected. The list follows the step, so it changes
 whenever a run or a change to a mission document moves the diagram's filled block. The buttons
-that run a recipe by its fixed name (on the question card and its alternatives, **New task**,
-**New mission**, and **Define mission**) are offered whatever the step.
+that run a recipe by its fixed name (on the question card and its alternatives, and **New task**)
+are offered whatever the step, as are the side-bar view's **New mission** and **Define mission**
+rows.
 
 Under the page's **Recipes** heading the list is drawn in two parts. First come the shipped
 recipes, one button each in the shipped file's order, with no heading of their own; an own recipe
@@ -623,10 +630,10 @@ variant holding a placeholder the page cannot fill, or no line, is left out of i
 is not listed. The dropdown stands on the variant selected, and the button's label, its hover
 text, and a click all follow it: a click runs the variant the dropdown shows, and picking another
 variant starts nothing, so the dropdowns stay enabled while a run is going. The variant you select
-is remembered per recipe name on each mission, keyed by the mission's path as the pane lists it,
+is remembered per recipe name on each mission, keyed by the mission's path as the live read lists it,
 in VS Code's storage for the open workspace (the extension's `workspaceState`), as a map from
 mission path and recipe name to variant name; nothing is written into the project's tree, and the
-selection lasts across closing the pane and the editor. A remembered selection always wins over
+selection lasts across closing the mission's window and the editor. A remembered selection always wins over
 the recipe's default. With nothing remembered, or with the remembered variant one the page cannot
 draw, the dropdown stands on the default, or on the first variant drawn when the page cannot draw
 the default. When the remembered variant is gone from the recipe, taken out of your own recipe
@@ -638,10 +645,11 @@ recipe by its fixed name are never listed on the page; those buttons carry their
 
 ### The buttons that run a recipe by its fixed name
 
-Seven buttons run a recipe by its fixed name, whatever the step: **Discuss**, **Answer**, and
-**Answer with recommendation** on the question card, **Answer with this alternative** on each of
-its alternatives, **New task**, and the two mission-starting buttons, **New mission** and **Define
-mission**. They pick a variant as the recipe buttons do. Beside each stands a dropdown of its
+Five buttons on a mission's page run a recipe by its fixed name, whatever the step: **Discuss**,
+**Answer**, and **Answer with recommendation** on the question card, **Answer with this
+alternative** on each of its alternatives, and **New task**. The two rows that start a mission,
+**New mission** and **Define mission**, run theirs from the side-bar view (see The rows that
+start a mission above). The five pick a variant as the recipe buttons do. Beside each stands a dropdown of its
 recipe's variants, drawn as its arrow alone and listing, opened, the variants in the recipe's
 order, each by its bare name with no mark for your own. Every **Answer with this alternative**
 button has such a dropdown of its own beside it, one per alternative on the card, so each
@@ -653,9 +661,9 @@ The dropdown stands on the variant selected, and the button's label, its hover t
 all follow it. Each button, every **Answer with this alternative** button included, standing on
 its own dropdown's variant, shows its name and, beneath it, the name of the variant selected, always and exactly as the variant is
 named, in the recipe buttons' form, with that variant's lines as written in its hover text, so
-**Define mission** on the shipped `define-mission-goal` reads `default` beneath its name. A
-click runs the variant the dropdown shows, and only when the pane's last post of the button stood
-on that variant; picking another variant starts nothing, so these dropdowns stay enabled while a
+**New task** on the shipped `discuss-new-task` reads `default` beneath its name. A click runs the
+variant the dropdown shows, and only when the window's last post of the button stood on that
+variant; picking another variant starts nothing, so these dropdowns stay enabled while a
 run is going.
 
 The variant you select is remembered in VS Code's storage for the open workspace (the extension's
@@ -665,8 +673,7 @@ recipe buttons' selections, so every card of a mission shares its selection. For
 with this alternative** button it is remembered per mission, question, and alternative, keyed by
 the mission's path, the question's Short Title, and the Alternative Id, in a map of its own, so a
 pick on one alternative leaves every other alternative's button, on that card and on every
-other, where it stood, and a click runs the variant its own button stands on. For **New mission** and **Define mission**, which belong
-to no mission, it is remembered once per project, as a map from recipe name to variant name. A
+other, where it stood, and a click runs the variant its own button stands on. A
 remembered selection always wins over the default picked in the Settings window, and picking a new
 default leaves it standing. With nothing remembered, or with the remembered variant left out of
 the dropdown, the button stands on the default when the dropdown offers it and otherwise on the
@@ -679,8 +686,7 @@ A button whose every variant it could run is left out for a disabled harness sta
 disabled, its name alone, with no dropdown beside it and its hover text saying why. A button whose
 recipe cannot be read or run at all (no recipe of its name, or no variant the button can fill)
 shows its name alone with a hover text saying what the button does, and a click on it tells why
-in an error notification. The two mission-starting buttons and their dropdowns are drawn the same
-way in the failure state.
+in an error notification.
 
 ### The shipped recipe file
 
@@ -868,7 +874,7 @@ The marker shows every session-variable reference in the line, such as `${GURITA
 else in the line is expanded, and the line that runs keeps its references as written. The marker
 is never part of the output a headless line's check reads. When the chain ends it
 prints the line the run ended on and the recipe line it stopped at, then waits for a keypress;
-the terminal closes, and the pane re-reads, once you dismiss it.
+the terminal closes, and the live missions are re-read, once you dismiss it.
 
 The runner can also be run by hand outside the editor, from `gurita-vscode/` once a build has
 written `bundled/`; `python3 runner.py --help` lists its `chain`, `preview`, and `loop` commands

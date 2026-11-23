@@ -7,7 +7,7 @@
 // stays enabled until the person disables it: a harness the part does not name, or names without
 // `enabled`, is enabled, and the harness check never writes the state. A disabled harness acts on
 // the mission page's recipe list alone: a variant with at least one line on it is left out of the
-// list the pane posts (`pageRecipes` in `recipes.ts`), while the buttons that run a recipe by its
+// list a mission window is posted (`pageRecipes` in `recipes.ts`), while the buttons that run a recipe by its
 // fixed name and the looped run's named single-task lines are untouched.
 //
 // Its model list and its one effort list for the whole harness, Codex holding a model list and no

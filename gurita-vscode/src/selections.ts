@@ -1,18 +1,18 @@
 // The variant selected in each recipe's dropdown on a mission page, remembered per recipe name on
-// one mission, keyed by the mission's path as the pane lists it. The selections are kept in the
+// one mission, keyed by the mission's path as the live read lists it. The selections are kept in the
 // project's `ExtensionContext.workspaceState` under one key, as a map from mission path and recipe
 // name to variant name, and nothing is written into the project's tree. A remembered selection
 // always wins over the recipe's default; a remembered variant the recipe no longer holds, deleted
 // or renamed, is dropped, and the button falls back to the current default. Of several variants of
 // one recipe carrying the remembered name, the first is the one selected. The buttons that run a
 // recipe by its fixed name are remembered the same way: those on a mission's page per recipe on
-// that mission in the same map, and the two mission-starting buttons, which belong to no mission,
+// that mission in the same map, and the side-bar view's two mission-starting rows, which belong to no mission,
 // once per project, under a second key as a map from recipe name to variant name. Each answer-
 // with-alternative button on a question's card has a dropdown of its own, its selection
 // remembered per mission, question, and alternative under a third key, as a map from mission path,
 // Short Title, and Alternative Id to the variant name of that button's recipe, so a pick on one
 // alternative leaves every other button where it stood. This module imports nothing from
-// `vscode`: the pane hands it the stored value and stores what it returns.
+// `vscode`: the extension hands it the stored value and stores what it returns.
 
 import type { Recipe } from './recipes';
 

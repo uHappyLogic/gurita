@@ -1,5 +1,5 @@
-// What a file event on a mission document asks of the pane, and the debounce that gathers a burst
-// of events into one re-read. The pane's watcher covers the mission documents only, the files the
+// What a file event on a mission document asks of the session's live read, and the debounce that
+// gathers a burst of events into one re-read. The session's watcher covers the mission documents only, the files the
 // discovery pattern's directories hold: `requirements.md`, `open_questions.xml`, and
 // `TASKS_TODO.md` directly inside a `mission_*` directory. A change to a mission's question
 // document or task list re-reads that mission's documents in process, and creating or deleting a
@@ -19,7 +19,7 @@ export const DEBOUNCE_MS = 300;
 /** The kind of a file event, as the watcher reports it. */
 export type FileEventKind = 'created' | 'changed' | 'deleted';
 
-/** What one event asks of the pane. */
+/** What one event asks of the session's live read. */
 export interface EventEffect {
   /** The mission's path as `missions.py live` prints it, relative to the root, with its trailing slash. */
   mission: string;
@@ -30,10 +30,10 @@ export interface EventEffect {
 }
 
 /**
- * What an event of `kind` on the file `file` asks of the pane whose project root is `root`, or
+ * What an event of `kind` on the file `file` asks of the live read whose project root is `root`, or
  * undefined when it asks nothing: a file outside the root or outside a `mission_*` directory, a
  * file the watcher does not cover, or a change to a `requirements.md`, which moves nothing the
- * pane draws from the documents or the live list.
+ * mission window or the side-bar view draws from the documents or the live list.
  */
 export function eventEffect(root: string, file: string, kind: FileEventKind): EventEffect | undefined {
   const relative = path.relative(root, file);

@@ -1,7 +1,7 @@
 // The Settings window: one webview panel of its own in the editor area, belonging to no mission,
 // opened by the Settings command, which the Command Palette hides and the side-bar view's title bar
 // runs as an icon action beside Refresh, and revealed when it is already open. Its `webview.html`
-// is set once, to the page shell the pane uses with the window's own script,
+// is set once, to the page shell the mission windows use with the window's own script,
 // `out/webview/settings.js`, which posts a ready message on every load, the window opened or
 // shown again included, and draws what the extension answers. Every ready message is answered
 // with each harness's enabled state, its model and effort lists, the recipes and variants, and the
@@ -46,7 +46,7 @@
 // the store's line edits.
 //
 // Every edit made in the window shows at once on every other surface: the window's lists are
-// posted again, and the pages with their recipes re-read are posted to the pane while it is shown,
+// posted again, and every shown mission window is posted its page again with the recipes re-read,
 // or the failure state again while it stands, and the side-bar view's two mission-starting rows are
 // redrawn, their recipes read afresh (`recipesChanged`). The refresh command re-reads the window
 // too, posting its lists afresh while it is shown, the harness check left as it stands.

@@ -1,16 +1,16 @@
 // The note of the runs the extension holds: the terminal of each mission's running runner, keyed
-// by the mission's path, and the terminals of the runs a mission-starting button started, which
-// belong to no mission. A mission's run is held from its start until its terminal closes. The pane
-// draws the held missions' pages as running, every action button on them disabled and the
-// workflow diagram's filled block pulsing, a click that still reaches the extension for a held
-// mission is refused, and a click on a held mission's tab brings its terminal forward and focuses
-// it. This module imports nothing from `vscode`, so the terminal is any value.
+// by the mission's path, and the terminals of the runs a mission-starting row started, which
+// belong to no mission. A mission's run is held from its start until its terminal closes. The
+// mission windows draw the held missions' pages as running, every action button on them disabled
+// and the workflow diagram's filled block pulsing, and a click that still reaches the extension for
+// a held mission is refused. This module imports nothing from `vscode`, so the terminal is any
+// value.
 
 export class RunningRuns<Terminal> {
   /** The terminal of each mission's running runner, keyed by the mission's path. */
   private readonly byMission = new Map<string, Terminal>();
 
-  /** The terminals of the running runners a mission-starting button started. */
+  /** The terminals of the running runners a mission-starting row started. */
   private readonly starting = new Set<Terminal>();
 
   /** Holds `terminal` as the run of the mission at `mission`, or, `mission` undefined, of no mission. */

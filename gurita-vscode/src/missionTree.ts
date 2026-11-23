@@ -9,7 +9,9 @@
 // mission's title, its description the next workflow step's name and the two counts, its tooltip
 // the five facts spelled out in full beside the mission's path, and its icon a spinning
 // `ThemeIcon` while the mission's run is going and a steady mission icon otherwise. A click on a
-// mission row opens nothing. The view's first resolution, its first `getChildren` call, starts the
+// mission row does nothing beyond running the open-mission command, hidden from the Command Palette,
+// which opens that mission's own window in the editor area (`pane.ts`), or reveals it when one is
+// already open. The view's first resolution, its first `getChildren` call, starts the
 // session's live read when no Gurita command has started it yet, and the tree is redrawn on every
 // re-read the session keeps and at every run's start and end. Until the read settles, and while it
 // fails, the tree holds no mission row. Each state in which it holds no mission row is shown through the
@@ -24,10 +26,24 @@
 
 import * as vscode from 'vscode';
 import { MissionRow, missionRow } from './missionRows';
-import { onSessionRead, onStartingSelection, pickStartingVariant, refreshMissions, runStartingRow, sessionRead, startLiveRead, startingOffers } from './pane';
+import {
+  OPEN_MISSION_COMMAND,
+  onSessionRead,
+  onStartingSelection,
+  openMissionWindow,
+  pickStartingVariant,
+  refreshMissions,
+  runStartingRow,
+  sessionRead,
+  startLiveRead,
+  startingOffers,
+} from './pane';
 import { runningMissions } from './runs';
 import { refreshSettings } from './settingsWindow';
 import { STARTING_ROWS, StartingButton, StartingRow, startingRow } from './startingRows';
+
+/** The hidden command a click on a mission row runs, opening or revealing that mission's window. */
+export { OPEN_MISSION_COMMAND };
 
 /** The id of the side-bar view, as the manifest's `views` entry contributes it. */
 export const MISSIONS_VIEW = 'gurita.missions';
@@ -123,13 +139,17 @@ export function startingItem(row: StartingRow): vscode.TreeItem {
   return item;
 }
 
-/** The tree item drawing the row `row`: a leaf with no command, so a click on it opens nothing. */
+/**
+ * The tree item drawing the row `row`: a leaf whose click runs the open-mission command with the
+ * mission's path, opening that mission's window or revealing it when it is open.
+ */
 export function rowItem(row: MissionRow): vscode.TreeItem {
   const item = new vscode.TreeItem(row.label, vscode.TreeItemCollapsibleState.None);
   item.id = row.path;
   item.description = row.description;
   item.tooltip = row.tooltip;
   item.iconPath = new vscode.ThemeIcon(row.running ? RUNNING_ICON : MISSION_ICON);
+  item.command = { command: OPEN_MISSION_COMMAND, title: 'Open Mission', arguments: [row.path] };
   return item;
 }
 
@@ -173,6 +193,13 @@ export function registerMissionTree(context: vscode.ExtensionContext): MissionTr
         return runStartingRow(context, button);
       }),
     ),
+    vscode.commands.registerCommand(OPEN_MISSION_COMMAND, (mission?: unknown) => {
+      if (typeof mission === 'string') {
+        openMissionWindow(context, mission);
+      } else {
+        startLiveRead(context);
+      }
+    }),
     vscode.commands.registerCommand(PICK_VARIANT_COMMAND, (element?: TreeRow) => {
       startLiveRead(context);
       return element?.kind === 'starting' ? pickStartingVariant(context, element.row.button) : undefined;

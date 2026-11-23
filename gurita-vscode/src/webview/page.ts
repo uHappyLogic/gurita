@@ -1,23 +1,19 @@
-// The mission pane's page script. On every load it posts a ready message and draws what the
-// extension answers: a row of tabs, one per live mission in the order `missions.py live` prints
-// them, each showing the mission's title with its path as a tooltip, with the two mission-starting
-// buttons and the refresh control at the row's end and the selected mission's page beneath; or the
-// one failure state in place of the pages, the refresh control and the two mission-starting buttons
-// staying on the pane above it. Every click of a mission's tab, the tab already selected included,
-// posts the clicked mission's path to the extension, which brings forward and focuses the terminal
-// of that mission's running runner when it has one and does nothing more, with no notification,
-// when it has none. The refresh control asks the extension to re-read everything, and
-// after every answer the page stays on the mission it showed unless that mission is no longer
-// live, when it falls back to the first. A page opens on the workflow diagram, drawn by this script
+// A mission window's page script. On every load it posts a ready message and draws what the
+// extension answers for the window's one mission: that mission's page, with no tab row, no refresh
+// control, and no mission-starting button, those belonging to the side-bar view; or, in place of the
+// whole page while the live missions cannot be read, the one failure state, the failure line with
+// the cause beneath it; or, while the live read does not list the window's mission, one fixed
+// notice that the mission is no longer live, drawing no diagram, recipe, pane, or action button. A
+// later answer that carries the mission's page draws it again. A page opens on the workflow diagram, drawn by this script
 // with no Mermaid: the choices a person makes as one line of seven neutral blocks joined by arrows,
 // define, first review round, additional review round, derive tasks, execute tasks, follow up
 // tasks, and finish, with no frame, loop arrow, or handoff label, the two optional blocks,
 // additional review round and follow up tasks, drawn with a dashed border and the five required
-// ones solid. The diagram is centered horizontally in the pane and lies in one horizontal row while
-// that row fits the pane's width; when the row would overflow, the same blocks stack vertically,
+// ones solid. The diagram is centered horizontally in the window and lies in one horizontal row while
+// that row fits the window's width; when the row would overflow, the same blocks stack vertically,
 // joined by downward arrows and likewise centered, their borders, fill, and pulse unchanged. The
-// row is measured afresh on every redraw and every change of the pane's width, so the diagram
-// switches back to the row once the pane is wide enough again, and it never wraps or scrolls
+// row is measured afresh on every redraw and every change of the window's width, so the diagram
+// switches back to the row once the window is wide enough again, and it never wraps or scrolls
 // sideways. The additional review round reads plain while git holds at most one review commit for
 // the mission and then carries the count of those beyond the first, as the extension posts it,
 // such as "additional review round 2". The block of the step to run next, which the extension
@@ -26,20 +22,19 @@
 // it stand the recipe buttons, then the new-task button, posting the page's mission, in a row of
 // its own drawn on every mission page whichever pane is shown and at every step, and then two
 // panes behind one row of two headers directly beneath it, Open questions and Remaining tasks, of
-// equal width and together filling the pane's whole width, with only the selected pane's content
+// equal width and together filling the window's whole width, with only the selected pane's content
 // beneath them: the question view in Open questions, and in Remaining tasks the remaining task
 // headings, all drawn from the parse the extension posts. A page opens on the pane the extension posts as the
 // mission's default, Remaining tasks when git holds at least one review commit for it and no
 // question is open and Open questions otherwise, Open questions too when none is posted. A pane
-// header the person clicks stays selected through every redraw while its mission stays shown; it
-// is held in this script's memory only, never saved with `setState`, so every switch of the shown
-// mission (a tab click, a preview of another mission, a fall back to the first, the failure
-// state) and every load of the page, a reopening or a hidden pane shown again, opens on the
-// default afresh. The recipe buttons: the recipe list the extension posts with the page's mission,
+// header the person clicks stays selected through every redraw while the page stays shown; it
+// is held in this script's memory only, never saved with `setState`, so the failure state, the
+// no-longer-live notice, and every load of the page, a reopening or a hidden window shown again,
+// open on the default afresh. The recipe buttons: the recipe list the extension posts with the page's mission,
 // holding only the recipes that fit the step its diagram fills, those declaring that step, beside
 // them those declaring the additional review round when derive tasks is filled, or when first
 // review round is while any question of the mission is open, and follow up tasks when finish is, and every recipe declaring no step, whichever block is filled, or every recipe
-// when no block is filled, so each mission's page draws its own list; first the shipped recipes in
+// when no block is filled; first the shipped recipes in
 // it, one button each in the order posted, the shipped file's, under no heading of their own, and
 // below them the own recipes that carry no shipped recipe's name under "Your recipes", in the own
 // file's order, each with a dropdown beside it drawn as its arrow alone, its opened list offering
@@ -50,19 +45,17 @@
 // name beneath it, exactly as the variant is named, carries that variant's lines as written in its
 // hover text, and starts that variant's chain for the page's mission when clicked, and a selected
 // variant holding a placeholder the extension does not know is shown as a non-runnable entry
-// naming it and its file. The seven buttons outside the recipe list, which run a recipe by its
-// fixed name, take the recipe list's pick mechanics, as the extension posts them, the five on a
-// mission's page with that mission and the two mission-starting buttons with the pages and with
-// the failure state: a dropdown beside each, drawn as its arrow alone, offers the variants the
+// naming it and its file. The five buttons on a mission's page outside the recipe list, which run a
+// recipe by its fixed name, take the recipe list's pick mechanics, as the extension posts them with
+// the mission: a dropdown beside each, drawn as its arrow alone, offers the variants the
 // button can run by their bare names and stands on the one selected, the one remembered for the
-// recipe, per mission for the buttons on a mission's page and once per project for the two
-// mission-starting buttons, else the recipe's default. Each answer-with-alternative button on a
+// recipe on the mission, else the recipe's default. Each answer-with-alternative button on a
 // question card has a dropdown of its own beside it, standing on the variant remembered for that
 // alternative of that question on the mission, else the default, so a pick on one alternative
-// leaves every other button where it stood; picking another posts it with the button, and its
-// mission for a button on a mission's page, or with the mission, the Short Title, and the
-// Alternative Id for an answer-with-alternative button, to the extension, which remembers it and
-// posts the page again. Each button shows its name with the selected variant's
+// leaves every other button where it stood; picking another posts it with the button and its
+// mission, or with the mission, the Short Title, and the Alternative Id for an
+// answer-with-alternative button, to the extension, which remembers it and posts the page again.
+// Each button shows its name with the selected variant's
 // name beneath it, with that variant's lines as written in its hover text, its click posting that
 // variant's name; a button the extension posts with no variant, every one it could run having a
 // line on a disabled harness, stays drawn but disabled, with no dropdown, and one posted with
@@ -83,21 +76,21 @@
 // principles. Each button posts the Short Title and the Alternative Id of the card clicked; the
 // extension asks for any typed value in VS Code's own input box, the discuss button's optional
 // discussion note included. Every message the extension
-// posts redraws the card in place and the view keeps its position: the page keeps each mission's
+// posts redraws the card in place and the view keeps its position: the page keeps its mission's
 // position, the Short Title shown and its place in the list, saved with `setState` on every move
 // and read back with `getState` when the page is re-created, and when a run removes the question
 // shown the view stays at the same place in the list, clamped to its last card. A part drawn from
-// a file that did not read is replaced by that file's notice alone. While a chain started for a
+// a file that did not read is replaced by that file's notice alone. While a chain started for the
 // mission is running, as the extension posts when a run starts, when its terminal closes, and with
-// every redraw, that mission's page draws every action button on it disabled, its recipe buttons,
+// every redraw, the page draws every action button on it disabled, its recipe buttons,
 // its question card's buttons, its preview's start button, and its New task button, and its
-// workflow diagram's filled block pulses; the recipe dropdowns and the fixed-name buttons' dropdowns, the tabs, the refresh control, the question view's
-// previous and next buttons and dependency links, the preview's close button, the other missions'
-// pages, the two pane headers, and the two mission-starting buttons stay enabled, and the left and
-// right arrow keys move the question view only while its pane is shown. The pane draws no Settings
-// control and nothing from the harness check: the settings live in the Settings window of their
-// own, drawn by its own script (`settings.ts`), and a disabled harness reaches the pages only as the
-// recipe lists and fixed-name buttons the extension posts without its variants.
+// workflow diagram's filled block pulses; the recipe dropdowns and the fixed-name buttons' dropdowns, the question view's
+// previous and next buttons and dependency links, the preview's close button, and the two pane
+// headers stay enabled, and the left and right arrow keys move the question view only while its
+// pane is shown. The page draws no Settings control and nothing from the harness check: the
+// settings live in the Settings window of their own, drawn by its own script (`settings.ts`), and a
+// disabled harness reaches the page only as the recipe lists and fixed-name buttons the extension
+// posts without its variants.
 // Every value is drawn as text, never as markup, since it comes from the workspace.
 
 interface VsCodeApi {
@@ -181,15 +174,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
 
   type RecipePart = { state: 'read'; recipes: PageRecipe[] } | { state: 'failed'; cause: string };
 
-  /** One of the seven buttons outside the recipe list, each running the recipe of its fixed name. */
-  type FixedButton =
-    | 'discussQuestion'
-    | 'answerQuestion'
-    | 'answerWithRecommendation'
-    | 'answerWithAlternative'
-    | 'discussGoal'
-    | 'defineMission'
-    | 'discussTask';
+  /** One of the five buttons on a mission's page outside the recipe list, each running the recipe of its fixed name. */
+  type FixedButton = 'discussQuestion' | 'answerQuestion' | 'answerWithRecommendation' | 'answerWithAlternative' | 'discussTask';
 
   /**
    * What a fixed-name button runs, as the extension posts it: the variants its dropdown offers and
@@ -227,9 +213,10 @@ declare function acquireVsCodeApi(): VsCodeApi;
     overrides: Map<string, string>;
   }
 
-  type PaneMessage =
-    | { type: 'live'; missions: Mission[]; running: string[]; buttons?: FixedButtons }
-    | { type: 'liveFailure'; cause: string; buttons?: FixedButtons }
+  type WindowMessage =
+    | { type: 'page'; mission: Mission; running: string[] }
+    | { type: 'liveFailure'; cause: string }
+    | { type: 'notLive'; path: string }
     | { type: 'running'; missions: string[] }
     | { type: 'preview'; mission: string; recipe: string; lines: string[]; names: string[]; result: PreviewRead }
     | { type: 'loopStarted'; mission: string };
@@ -241,13 +228,12 @@ declare function acquireVsCodeApi(): VsCodeApi;
   }
 
   interface PageState {
-    selected?: string;
-    /** The position of each mission's question view, keyed by mission path. */
+    /** The position of the mission's question view, keyed by mission path. */
     positions?: Record<string, Position>;
   }
 
   const FAILURE_LINE = 'The live missions could not be read.';
-  const NO_MISSION_LINE = 'No mission is live.';
+  const NOT_LIVE_LINE = 'This mission is no longer live.';
   const RECIPE_FAILURE_LINE = 'The recipes could not be read.';
   const PREVIEW_FAILURE_LINE = 'The preview could not be run.';
   /** The buttons on a question's card, each with its label and the hover text it shows while its recipe cannot be read. */
@@ -277,24 +263,22 @@ declare function acquireVsCodeApi(): VsCodeApi;
   const vscode = acquireVsCodeApi();
   const root = document.getElementById('root') as HTMLElement;
   const saved = (vscode.getState() ?? {}) as PageState;
-  let selected: string | undefined = saved.selected;
   const positions = new Map<string, Position>(Object.entries(saved.positions ?? {}));
-  let missions: Mission[] = [];
-  /** The paths of the missions with a running runner, whose pages are drawn as running. */
+  /** The window's mission as the extension last posted its page. */
+  let shownMission: Mission | undefined;
+  /** The paths of the missions with a running runner; the page is drawn as running while its mission's is among them. */
   let running = new Set<string>();
-  /** What the pane last drew from the extension's answer: nothing yet, the mission pages, or the failure state. */
-  let drawn: 'nothing' | 'live' | 'failure' = 'nothing';
-  /** Each mission's preview, by its path, while it stands on the page. */
+  /** What the window last drew from the extension's answer: nothing yet, its mission's page, the failure state, or the no-longer-live notice. */
+  let drawn: 'nothing' | 'page' | 'failure' | 'notLive' = 'nothing';
+  /** The mission's preview, by its path, while it stands on the page. */
   const previews = new Map<string, Preview>();
-  /** What the two mission-starting buttons run, as the extension last posted it with the pages or the failure state. */
-  let startingButtons: FixedButtons = {};
   /** The card drawn on the page, so a dependency link can scroll to the card it jumped to. */
   let card: HTMLElement | undefined;
-  /** The workflow diagram drawn on the page and its line of blocks, so it can be laid out again whenever the pane's width changes. */
+  /** The workflow diagram drawn on the page and its line of blocks, so it can be laid out again whenever the window's width changes. */
   let diagram: { section: HTMLElement; flow: HTMLElement } | undefined;
   /**
-   * The pane header the person clicked and the mission it was clicked on, held while that mission
-   * stays shown and never saved, so a switch of mission or a fresh page opens on the default.
+   * The pane header the person clicked and the mission it was clicked on, held while the page stays
+   * shown and never saved, so the failure state, the notice, or a fresh page opens on the default.
    */
   let picked: { mission: string; pane: MissionPane } | undefined;
 
@@ -436,14 +420,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
   }
 
   function save(): void {
-    const state: PageState = { selected, positions: Object.fromEntries(positions) };
+    const state: PageState = { positions: Object.fromEntries(positions) };
     vscode.setState(state);
-  }
-
-  function select(path: string): void {
-    selected = path;
-    save();
-    draw();
   }
 
   /**
@@ -481,7 +459,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
     return mission.defaultPane === 'tasks' ? 'tasks' : 'questions';
   }
 
-  /** Shows the pane clicked on the mission's page, held until the shown mission switches. */
+  /** Shows the pane clicked on the mission's page, held while the page stays shown. */
   function pick(mission: string, pane: MissionPane): void {
     picked = { mission, pane };
     draw();
@@ -489,7 +467,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
 
   /** The questions of the page shown, when its Open questions pane is shown and its question view reads and holds any. */
   function shownQuestions(): { mission: string; questions: Question[] } | undefined {
-    const mission = missions.find((each) => each.path === selected);
+    const mission = drawn === 'page' ? shownMission : undefined;
     if (
       mission === undefined ||
       shownPane(mission) !== 'questions' ||
@@ -519,45 +497,6 @@ declare function acquireVsCodeApi(): VsCodeApi;
     card?.scrollIntoView({ block: 'start' });
   }
 
-  /** The refresh control and the two mission-starting buttons, belonging to no mission, at the tab row's end. */
-  function drawStarting(): HTMLElement {
-    const ends = element('div', undefined, 'ends');
-    const refresh = button('Refresh', 'control', () => vscode.postMessage({ type: 'refresh' }));
-    refresh.title = 'Re-read the live missions and their documents';
-    const starting = element('div', undefined, 'starting');
-    const discuss = fixedEntry('discussGoal', startingButtons.discussGoal, 'New mission', 'Type a goal and open an interactive discussion of it', 'recipe', undefined, undefined, (variant) =>
-      vscode.postMessage({ type: 'missionButton', button: 'discussGoal', variant }),
-    );
-    const define = fixedEntry('defineMission', startingButtons.defineMission, 'Define mission', 'Type a goal and its scope and define the mission', 'recipe', undefined, undefined, (variant) =>
-      vscode.postMessage({ type: 'missionButton', button: 'defineMission', variant }),
-    );
-    starting.append(discuss, define);
-    ends.append(refresh, starting);
-    return ends;
-  }
-
-  function drawTabs(): HTMLElement {
-    const tabs = element('div', undefined, 'tabs');
-    const list = element('div', undefined, 'tab-list');
-    list.setAttribute('role', 'tablist');
-    tabs.append(list);
-    for (const mission of missions) {
-      const tab = element('button', mission.title);
-      tab.type = 'button';
-      tab.title = mission.path;
-      tab.setAttribute('role', 'tab');
-      tab.setAttribute('aria-selected', String(mission.path === selected));
-      // Posted on every click, selected or not, so the extension can show the mission's run terminal.
-      tab.addEventListener('click', () => {
-        vscode.postMessage({ type: 'missionTab', mission: mission.path });
-        select(mission.path);
-      });
-      list.append(tab);
-    }
-    tabs.append(drawStarting());
-    return tabs;
-  }
-
   function drawNotice(notice: Notice): HTMLElement {
     const box = element('div', undefined, 'notice');
     box.setAttribute('role', 'alert');
@@ -573,7 +512,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
    * the additional review round carrying `rounds` when given. The block of `step` is filled, and
    * pulses while `busy`, a chain started for the mission running; every block is display only.
    * The line is drawn as a horizontal row, and `fitWorkflow` turns it into a vertical stack once
-   * the page is laid out, when the row would overflow the pane.
+   * the page is laid out, when the row would overflow the window.
    */
   function drawWorkflow(step: WorkflowStep | undefined, rounds: number | undefined, busy: boolean): HTMLElement {
     const section = element('section', undefined, 'workflow');
@@ -609,11 +548,11 @@ declare function acquireVsCodeApi(): VsCodeApi;
   }
 
   /**
-   * Lays the drawn workflow diagram out to the pane's width: one horizontal row, centered, while
-   * that row fits the diagram's width, and otherwise the `vertical` class, under which the pane's
+   * Lays the drawn workflow diagram out to the window's width: one horizontal row, centered, while
+   * that row fits the diagram's width, and otherwise the `vertical` class, under which the page's
    * stylesheet stacks the same blocks in a centered column joined by downward arrows. The row is
    * measured with the class taken off every time, so the diagram switches back to the row once the
-   * pane is wide enough again; the measurement and the switch both land before the page is painted.
+   * window is wide enough again; the measurement and the switch both land before the page is painted.
    */
   function fitWorkflow(): void {
     if (diagram === undefined) {
@@ -1024,7 +963,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
 
   function drawPage(mission: Mission): HTMLElement {
     const page = element('section', undefined, 'page');
-    page.setAttribute('role', 'tabpanel');
+    page.setAttribute('aria-label', mission.title);
     const busy = running.has(mission.path);
     page.append(drawWorkflow(mission.step, mission.additionalRounds, busy), drawRecipes(mission, busy));
     const preview = previews.get(mission.path);
@@ -1036,25 +975,22 @@ declare function acquireVsCodeApi(): VsCodeApi;
   }
 
   /**
-   * Redraws the whole pane in place from the latest parse, laying the workflow diagram out to the
-   * pane's width and keeping the scroll position and the focus on the previous or next button or
-   * a pane header when it held it. The pane header clicked gives way to the default once the
-   * mission shown is no longer the one it was clicked on.
+   * Redraws the window's page in place from the latest parse of its mission, laying the workflow
+   * diagram out to the window's width and keeping the scroll position and the focus on the previous
+   * or next button or a pane header when it held it.
    */
   function draw(): void {
+    if (drawn !== 'page' || shownMission === undefined) {
+      return;
+    }
     const scrolled = window.scrollY;
     const focused = document.activeElement instanceof HTMLElement ? document.activeElement.dataset.focus : undefined;
-    if (!missions.some((mission) => mission.path === selected)) {
-      selected = missions[0]?.path;
-    }
-    if (picked !== undefined && picked.mission !== selected) {
+    if (picked !== undefined && picked.mission !== shownMission.path) {
       picked = undefined;
     }
     card = undefined;
     diagram = undefined;
-    const shown = missions.find((mission) => mission.path === selected);
-    root.replaceChildren(drawTabs());
-    root.append(shown === undefined ? element('p', NO_MISSION_LINE) : drawPage(shown));
+    root.replaceChildren(drawPage(shownMission));
     fitWorkflow();
     window.scrollTo(0, scrolled);
     if (focused !== undefined) {
@@ -1065,41 +1001,55 @@ declare function acquireVsCodeApi(): VsCodeApi;
     }
   }
 
-  /** Draws the failure state beneath the row of the controls belonging to no mission. */
+  /** Draws, in place of the whole page, the failure line with the cause beneath it, and nothing else. */
   function drawFailure(cause: string): void {
     diagram = undefined;
     card = undefined;
-    const tabs = element('div', undefined, 'tabs');
-    tabs.append(drawStarting());
     const failure = element('section', undefined, 'failure');
+    failure.setAttribute('role', 'alert');
     failure.append(element('p', FAILURE_LINE), element('pre', cause));
-    root.replaceChildren(tabs, failure);
+    root.replaceChildren(failure);
   }
 
-  window.addEventListener('message', (event: MessageEvent<PaneMessage>) => {
+  /** Draws, in place of the whole page, the one fixed notice that the window's mission is no longer live, and nothing else. */
+  function drawNotLive(): void {
+    diagram = undefined;
+    card = undefined;
+    const notice = element('section', undefined, 'not-live');
+    notice.setAttribute('role', 'status');
+    notice.append(element('p', NOT_LIVE_LINE));
+    root.replaceChildren(notice);
+  }
+
+  window.addEventListener('message', (event: MessageEvent<WindowMessage>) => {
     const message = event.data;
-    if (message.type === 'live') {
-      missions = message.missions;
-      running = new Set(message.running ?? []);
-      startingButtons = message.buttons ?? {};
-      drawn = 'live';
-      for (const mission of [...previews.keys()]) {
-        if (!missions.some((each) => each.path === mission)) {
-          previews.delete(mission);
-        }
+    if (message.type === 'page') {
+      if (shownMission !== undefined && shownMission.path !== message.mission.path) {
+        previews.clear();
       }
+      if (drawn !== 'page') {
+        picked = undefined;
+      }
+      shownMission = message.mission;
+      running = new Set(message.running ?? []);
+      drawn = 'page';
       draw();
     } else if (message.type === 'liveFailure') {
-      startingButtons = message.buttons ?? {};
       drawn = 'failure';
       picked = undefined;
       drawFailure(message.cause);
+    } else if (message.type === 'notLive') {
+      drawn = 'notLive';
+      picked = undefined;
+      previews.clear();
+      drawNotLive();
     } else if (message.type === 'running') {
       running = new Set(message.missions);
-      if (drawn === 'live') {
-        draw();
-      }
+      draw();
     } else if (message.type === 'preview') {
+      if (shownMission === undefined || shownMission.path !== message.mission) {
+        return;
+      }
       previews.set(message.mission, {
         recipe: message.recipe,
         lines: message.lines,
@@ -1107,10 +1057,6 @@ declare function acquireVsCodeApi(): VsCodeApi;
         result: message.result,
         overrides: new Map(),
       });
-      if (missions.some((mission) => mission.path === message.mission)) {
-        selected = message.mission;
-        save();
-      }
       draw();
     } else if (message.type === 'loopStarted') {
       previews.delete(message.mission);
@@ -1137,7 +1083,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
     step(event.key === 'ArrowLeft' ? -1 : 1);
   });
 
-  /** Every change of the pane's width lays the workflow diagram out again, as a row or as a stack. */
+  /** Every change of the window's width lays the workflow diagram out again, as a row or as a stack. */
   window.addEventListener('resize', fitWorkflow);
 
   vscode.postMessage({ type: 'ready' });

@@ -4,9 +4,10 @@ import { execFileSync } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-// The pane's and the Settings window's answers to what their pages post, against a stub of the
-// `vscode` module standing in for the editor: the two webview panels, one per view type, and the
-// messages each page posts, the terminals the run path creates, and the notifications.
+// The mission windows' and the Settings window's answers to what their pages post, against a stub
+// of the `vscode` module standing in for the editor: the webview panels, a mission window per
+// mission and the one Settings window, the messages each page posts and each panel is posted, the
+// terminals the run path creates, and the notifications.
 const Module = require('node:module') as {
   _load: (request: string, parent: unknown, isMain: boolean) => unknown;
 };
@@ -32,7 +33,7 @@ interface InputBoxOptions {
 }
 /** The options of every input box the stub's editor showed, in order. */
 const inputBoxes: InputBoxOptions[] = [];
-/** Every message the extension posted to either page, the pane's and the Settings window's, in order. */
+/** Every message the extension posted to any page, the mission windows' and the Settings window's, in order. */
 const posted: unknown[] = [];
 
 /** A webview panel the stub's editor created: what its page's messages reach, its disposal, and its reveals. */
@@ -44,6 +45,8 @@ interface StubPanel {
   reveals: number;
   /** The script its page shell loads. */
   html: string;
+  /** Every message the extension posted to this panel's page, in order. */
+  posts: Record<string, unknown>[];
   receive?: (message: unknown) => void;
   /** Closes the panel, as the editor does when the person closes it. */
   dispose?: () => void;
@@ -120,7 +123,7 @@ const stub = {
   },
   window: {
     createWebviewPanel(viewType: string, title: string): unknown {
-      const record: StubPanel = { viewType, title, visible: true, reveals: 0, html: '' };
+      const record: StubPanel = { viewType, title, visible: true, reveals: 0, html: '', posts: [] };
       panels.push(record);
       return {
         get visible() {
@@ -144,6 +147,7 @@ const stub = {
           },
           postMessage(message: unknown): Promise<boolean> {
             posted.push(message);
+            record.posts.push(message as Record<string, unknown>);
             return Promise.resolve(true);
           },
         },
@@ -180,7 +184,6 @@ const stub = {
 const load = Module._load;
 Module._load = (request, parent, isMain) => (request === 'vscode' ? stub : load(request, parent, isMain));
 const pane = require('../pane') as typeof import('../pane');
-const runs = require('../runs') as typeof import('../runs');
 const settingsWindow = require('../settingsWindow') as typeof import('../settingsWindow');
 Module._load = load;
 
@@ -201,10 +204,38 @@ const context = {
   },
 } as unknown as import('vscode').ExtensionContext;
 
-const ALPHA = 'lib/mission_alpha/';
-const BETA = 'mission_beta/';
+/** The mission window open for each mission, by its path, as `openWindow` opened it. */
+const windowOf = new Map<string, StubPanel>();
 
-pane.openMissionPane(context);
+/**
+ * Opens the window of `mission`, as a click on its row in the side-bar view does, or reveals it when
+ * it is open, and returns it; a window created afresh is delivered the ready message its page posts
+ * on loading.
+ */
+function openWindow(mission: string): StubPanel {
+  const count = panels.length;
+  pane.openMissionWindow(context, mission);
+  if (panels.length > count) {
+    const opened = panels[panels.length - 1];
+    assert.strictEqual(opened.viewType, pane.MISSION_VIEW_TYPE);
+    windowOf.set(mission, opened);
+    opened.receive?.({ type: 'ready' });
+  }
+  const found = windowOf.get(mission);
+  assert.ok(found?.receive !== undefined, `the window of ${mission} is open`);
+  return found;
+}
+
+/** Closes the window of `mission`, as the person closing its editor tab does. */
+function closeWindow(mission: string): void {
+  const target = windowOf.get(mission);
+  assert.ok(target?.dispose !== undefined, `the window of ${mission} is open`);
+  const dispose = target.dispose;
+  target.dispose = undefined;
+  target.receive = undefined;
+  windowOf.delete(mission);
+  dispose();
+}
 
 /** The messages only the Settings window's page posts: its check-again control and its edits. */
 const SETTINGS_MESSAGES = new Set([
@@ -228,16 +259,59 @@ const SETTINGS_MESSAGES = new Set([
 
 /**
  * Delivers a message to the extension as the page that posts it does: a message of the Settings
- * window's page from that window, opened first when it is not, and every other from the pane's page.
+ * window's page from that window, opened first when it is not; `refresh` as the refresh command
+ * runs it; and every other from the window of the mission it names, opened first when it is not, a
+ * ready message naming its window's mission here alone, since a page's own carries none.
  */
 function send(message: unknown): void {
-  const settings = SETTINGS_MESSAGES.has((message as { type?: string }).type ?? '');
-  if (settings && panelOf(settingsWindow.SETTINGS_VIEW_TYPE)?.dispose === undefined) {
-    settingsWindow.openSettings(context);
+  const { type, mission } = message as { type?: string; mission?: unknown };
+  if (type === 'refresh') {
+    pane.refreshMissions(context);
+    return;
   }
-  const target = panelOf(settings ? settingsWindow.SETTINGS_VIEW_TYPE : 'gurita.missionPane');
-  assert.ok(target?.receive !== undefined, `the ${settings ? 'Settings window' : 'pane'} listens to its page`);
+  const settings = SETTINGS_MESSAGES.has(type ?? '');
+  if (settings) {
+    if (panelOf(settingsWindow.SETTINGS_VIEW_TYPE)?.dispose === undefined) {
+      settingsWindow.openSettings(context);
+    }
+    const target = panelOf(settingsWindow.SETTINGS_VIEW_TYPE);
+    assert.ok(target?.receive !== undefined, 'the Settings window listens to its page');
+    target.receive(message);
+    return;
+  }
+  assert.ok(typeof mission === 'string', `a ${type} message names its window's mission`);
+  const target = openWindow(mission);
+  assert.ok(target.receive !== undefined);
+  target.receive(type === 'ready' ? { type: 'ready' } : message);
+}
+
+/** Waits until the window of `mission` has been posted a message of `type` beyond its first `from`, and returns it. */
+async function windowPosted(mission: string, type: string, from: number): Promise<Record<string, unknown>> {
+  for (let attempt = 0; attempt < 400; attempt++) {
+    const found = windowOf.get(mission)?.posts.slice(from).find((message) => message.type === type);
+    if (found !== undefined) {
+      return found;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+  assert.fail(`no ${type} message was posted to the window of ${mission}`);
+}
+
+/** Delivers `message` to the extension as the page of the window of `mission` posts it, whatever mission it names. */
+function sendFrom(mission: string, message: unknown): void {
+  const target = openWindow(mission);
+  assert.ok(target.receive !== undefined);
   target.receive(message);
+}
+
+/**
+ * Opens the window of `mission`, sends `message`, and returns the mission its window is posted in
+ * the next page message after it.
+ */
+async function pageAfter(message: unknown, mission: string): Promise<Record<string, unknown>> {
+  const from = openWindow(mission).posts.length;
+  send(message);
+  return (await windowPosted(mission, 'page', from)).mission as Record<string, unknown>;
 }
 
 /** Opens the Settings window, or reveals it when it is open, and delivers the ready message its page posts on loading. */
@@ -257,46 +331,6 @@ function close(viewType: string): void {
   target.receive = undefined;
   dispose();
 }
-
-/** Starts a held run for `mission` through the run path and returns its terminal. */
-function startRun(mission: string): StubTerminal {
-  runs.startChain(context, '/project', mission, 'review', ['echo review'], { path: mission });
-  return created[created.length - 1];
-}
-
-test("a tab click's message brings forward and focuses the terminal of its mission's held run, with no notification", () => {
-  const alpha = startRun(ALPHA);
-  const beta = startRun(BETA);
-  const [alphaShows, betaShows] = [alpha.shows.length, beta.shows.length];
-  const count = created.length;
-  notifications.length = 0;
-  posted.length = 0;
-  send({ type: 'missionTab', mission: ALPHA });
-  assert.deepStrictEqual(alpha.shows.slice(alphaShows), [undefined], 'shown once, taking the focus');
-  assert.strictEqual(beta.shows.length, betaShows, "the other mission's terminal is not shown");
-  send({ type: 'missionTab', mission: ALPHA });
-  assert.deepStrictEqual(alpha.shows.slice(alphaShows), [undefined, undefined], 'every click shows it again');
-  assert.deepStrictEqual(notifications, []);
-  assert.strictEqual(created.length, count, 'no terminal is created');
-  assert.deepStrictEqual(posted, [], 'nothing is posted to the page');
-});
-
-test("a tab click's message for a mission with no held run shows nothing and no notification", () => {
-  const shows = created.map((terminal) => terminal.shows.length);
-  const count = created.length;
-  notifications.length = 0;
-  posted.length = 0;
-  send({ type: 'missionTab', mission: 'other/mission_gamma/' });
-  send({ type: 'missionTab' });
-  assert.deepStrictEqual(
-    created.map((terminal) => terminal.shows.length),
-    shows,
-    'no terminal is shown',
-  );
-  assert.deepStrictEqual(notifications, []);
-  assert.strictEqual(created.length, count, 'no terminal is created');
-  assert.deepStrictEqual(posted, [], 'nothing is posted to the page');
-});
 
 function git(cwd: string, ...args: string[]): void {
   execFileSync('git', ['-c', 'user.name=Test', '-c', 'user.email=test@example.com', ...args], { cwd, stdio: 'ignore' });
@@ -358,7 +392,7 @@ async function postedOf(type: string, from: number): Promise<Record<string, unkn
   assert.fail(`no ${type} message was posted`);
 }
 
-test("the pane posts each page's recipes in the shipped file's order, then its own, each with its first variant's lines and the variants its dropdown offers", async () => {
+test("a mission window is posted its page's recipes in the shipped file's order, then its own, each with its first variant's lines and the variants its dropdown offers", async () => {
   const home = process.env.HOME;
   process.env.HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-home-'));
   try {
@@ -377,11 +411,9 @@ test("the pane posts each page's recipes in the shipped file's order, then its o
     packaged.set('bundled/shipped_recipes.md', path.join(files, 'shipped_recipes.md'));
     workspace.folders = [{ uri: { fsPath: root } }];
     workspace.settings = { ownRecipesFile: path.join(files, 'recipes.md') };
-    const from = posted.length;
-    send({ type: 'refresh' });
-    const live = (await postedOf('live', from)) as { missions: { path: string; recipes: { state: string; recipes: unknown[] } }[] };
-    assert.deepStrictEqual(live.missions.map((each) => each.path), [GAMMA]);
-    const recipes = live.missions[0].recipes;
+    const page = (await pageAfter({ type: 'refresh' }, GAMMA)) as { path: string; recipes: { state: string; recipes: unknown[] } };
+    assert.strictEqual(page.path, GAMMA, "the window is posted its own mission's page");
+    const recipes = page.recipes;
     assert.strictEqual(recipes.state, 'read');
     assert.deepStrictEqual(recipes.recipes, [
       {
@@ -458,12 +490,10 @@ interface PostedEntry {
   selected: number;
 }
 
-/** Sends `message` and returns the entry of the recipe `recipe` on the page of `mission` in the next live message posted. */
+/** Sends `message` and returns the entry of the recipe `recipe` on the page the window of `mission` is next posted. */
 async function entryAfter(message: unknown, mission: string, recipe: string): Promise<PostedEntry> {
-  const from = posted.length;
-  send(message);
-  const live = (await postedOf('live', from)) as { missions: { path: string; recipes: { recipes: PostedEntry[] } }[] };
-  const found = live.missions.find((each) => each.path === mission)?.recipes.recipes.find((each) => each.name === recipe);
+  const page = (await pageAfter(message, mission)) as { recipes: { recipes: PostedEntry[] } };
+  const found = page.recipes.recipes.find((each) => each.name === recipe);
   assert.ok(found !== undefined, `no ${recipe} on ${mission}'s page`);
   return found;
 }
@@ -516,9 +546,11 @@ test('a selected variant is remembered per recipe on one mission in workspaceSta
     send({ type: 'runRecipe', mission: DELTA, recipe: 'First run', variant: 'Antigravity' });
     send({ type: 'runRecipe', mission: DELTA, recipe: 'First run', variant: 'No such variant' });
     send({ type: 'selectVariant', mission: DELTA, recipe: 'First run', variant: 'No such variant' });
-    send({ type: 'selectVariant', mission: 'other/mission_zeta/', recipe: 'First run', variant: 'Claude Code' });
+    sendFrom(DELTA, { type: 'selectVariant', mission: 'other/mission_zeta/', recipe: 'First run', variant: 'Claude Code' });
+    sendFrom(EPSILON, { type: 'runRecipe', mission: DELTA, recipe: 'First run', variant: 'default' });
+    sendFrom(EPSILON, { type: 'selectVariant', mission: DELTA, recipe: 'First run', variant: 'Claude Code' });
     await new Promise((resolve) => setTimeout(resolve, 50));
-    assert.strictEqual(created.length, count, 'a variant the last posted list does not show selected starts nothing');
+    assert.strictEqual(created.length, count, "a variant the last posted list does not show selected starts nothing, nor a click naming another window's mission");
     assert.deepStrictEqual(workspaceState.get('gurita.variantSelections'), { [DELTA]: { 'First run': 'default' } }, 'nor is remembered');
     send({ type: 'runRecipe', mission: DELTA, recipe: 'First run', variant: 'default' });
     assert.deepStrictEqual(created.slice(count).map((terminal) => terminal.name), [`Gurita: First run (${DELTA})`], 'the selected variant runs');
@@ -538,6 +570,109 @@ test('a selected variant is remembered per recipe on one mission in workspaceSta
     assert.deepStrictEqual(workspaceState.get('gurita.variantSelections'), {}, 'the remembered variant is dropped');
 
     assert.strictEqual(execFileSync('git', ['status', '--porcelain', '--ignored'], { cwd: root, encoding: 'utf8' }), '', "nothing is written into the project's tree");
+  } finally {
+    process.env.HOME = home;
+  }
+});
+
+/** Two missions of the windows test, the second of which stops being live and comes back. */
+const ZETA = 'pkg/mission_zeta/';
+const ZETA_TWO = 'mission_zeta_two/';
+
+test("each open mission window is posted its own mission's page from the session's one read, the failure state while the read fails, and the notice while its mission is not live, its page again once it is", async () => {
+  const home = process.env.HOME;
+  process.env.HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-home-'));
+  try {
+    const root = project(ZETA, ZETA_TWO);
+    const files = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-recipes-'));
+    fs.writeFileSync(path.join(files, 'shipped_recipes.md'), SHIPPED_TEXT);
+    packaged.set('bundled/missions.py', path.join(__dirname, '..', '..', '..', 'core', 'tools', 'missions.py'));
+    packaged.set('bundled/shipped_recipes.md', path.join(files, 'shipped_recipes.md'));
+    workspace.folders = [{ uri: { fsPath: root } }];
+    workspace.settings = { ownRecipesFile: path.join(files, 'recipes.md') };
+    workspaceState.clear();
+    /** Refreshes and returns the next message of each window, by mission. */
+    const refreshed = async (types: Record<string, string>): Promise<Record<string, Record<string, unknown>>> => {
+      const from = Object.fromEntries(Object.keys(types).map((mission) => [mission, openWindow(mission).posts.length]));
+      send({ type: 'refresh' });
+      const answers: Record<string, Record<string, unknown>> = {};
+      for (const [mission, type] of Object.entries(types)) {
+        answers[mission] = await windowPosted(mission, type, from[mission]);
+      }
+      return answers;
+    };
+
+    const count = panels.length;
+    const [zeta, two] = [openWindow(ZETA), openWindow(ZETA_TWO)];
+    assert.strictEqual(panels.length, count + 2, 'each mission gets a window of its own');
+    assert.deepStrictEqual([zeta.viewType, two.viewType], [pane.MISSION_VIEW_TYPE, pane.MISSION_VIEW_TYPE]);
+    assert.match(zeta.html, /page\.js/, "each window loads the mission page's script");
+    let answers = await refreshed({ [ZETA]: 'page', [ZETA_TWO]: 'page' });
+    assert.strictEqual((answers[ZETA].mission as { path: string }).path, ZETA, 'each window is posted its own mission alone');
+    assert.strictEqual((answers[ZETA_TWO].mission as { path: string }).path, ZETA_TWO);
+    assert.ok(!('missions' in answers[ZETA]), 'and no other mission beside it');
+    const reveals = zeta.reveals;
+    assert.strictEqual(openWindow(ZETA), zeta, 'a second opening reveals the open window');
+    assert.strictEqual(zeta.reveals, reveals + 1);
+    assert.strictEqual(panels.length, count + 2, 'and creates none');
+    assert.deepStrictEqual(pane.openMissionWindows().filter((mission) => [ZETA, ZETA_TWO].includes(mission)), [ZETA, ZETA_TWO]);
+
+    // A window opened afresh draws from the session's read, reading nothing of its own.
+    closeWindow(ZETA_TWO);
+    fs.writeFileSync(path.join(root, ZETA_TWO, 'TASKS_TODO.md'), '# TASKS TODO\n\n## Unread task\n\nA brief.\n\n---\n');
+    const reopened = openWindow(ZETA_TWO);
+    assert.notStrictEqual(reopened, two, 'a closed window is opened afresh');
+    assert.deepStrictEqual(
+      ((reopened.posts.find((message) => message.type === 'page')?.mission as { tasks: { headings: string[] } }).tasks.headings),
+      [],
+      "its ready message is answered from the session's read",
+    );
+
+    // While the live read fails, every window is posted the failure state, and no click starts anything.
+    workspace.folders = undefined;
+    answers = await refreshed({ [ZETA]: 'liveFailure', [ZETA_TWO]: 'liveFailure' });
+    assert.deepStrictEqual(answers[ZETA], { type: 'liveFailure', cause: 'No folder is open in this window.' });
+    assert.deepStrictEqual(answers[ZETA_TWO], { type: 'liveFailure', cause: 'No folder is open in this window.' });
+    let started = created.length;
+    send({ type: 'runRecipe', mission: ZETA, recipe: 'First run', variant: 'Claude Code' });
+    assert.strictEqual(created.length, started, 'a click against a failed read starts nothing');
+    let from = zeta.posts.length;
+    send({ type: 'ready', mission: ZETA });
+    assert.deepStrictEqual(zeta.posts.slice(from), [{ type: 'liveFailure', cause: 'No folder is open in this window.' }], 'a ready message is answered with the failure state too');
+    workspace.folders = [{ uri: { fsPath: root } }];
+    answers = await refreshed({ [ZETA]: 'page', [ZETA_TWO]: 'page' });
+    assert.strictEqual((answers[ZETA].mission as { path: string }).path, ZETA, 'each window draws its page again on the next read that succeeds');
+
+    // A mission no longer live: its window stays open with the notice, the other window keeps its page.
+    fs.rmSync(path.join(root, ZETA_TWO), { recursive: true });
+    answers = await refreshed({ [ZETA]: 'page', [ZETA_TWO]: 'notLive' });
+    assert.deepStrictEqual(answers[ZETA_TWO], { type: 'notLive', path: ZETA_TWO });
+    assert.ok(pane.openMissionWindows().includes(ZETA_TWO), 'the window stays open');
+    started = created.length;
+    send({ type: 'runRecipe', mission: ZETA_TWO, recipe: 'First run', variant: 'Claude Code' });
+    assert.strictEqual(created.length, started, 'a click reaching the notice starts nothing');
+    from = reopened.posts.length;
+    send({ type: 'ready', mission: ZETA_TWO });
+    assert.deepStrictEqual(reopened.posts.slice(from), [{ type: 'notLive', path: ZETA_TWO }]);
+    execFileSync('git', ['checkout', '--', ZETA_TWO], { cwd: root, stdio: 'ignore' });
+    answers = await refreshed({ [ZETA_TWO]: 'page' });
+    assert.strictEqual((answers[ZETA_TWO].mission as { path: string }).path, ZETA_TWO, 'listed again, the window draws its page again');
+    send({ type: 'runRecipe', mission: ZETA_TWO, recipe: 'First run', variant: 'Claude Code' });
+    assert.deepStrictEqual(created.slice(started).map((terminal) => terminal.name), [`Gurita: First run (${ZETA_TWO})`], 'and its clicks run again');
+
+    // A click a window posts naming another mission starts nothing.
+    started = created.length;
+    sendFrom(ZETA, { type: 'runRecipe', mission: ZETA_TWO, recipe: 'Mixed review', variant: 'default' });
+    assert.strictEqual(created.length, started);
+    send({ type: 'runRecipe', mission: ZETA, recipe: 'Mixed review', variant: 'default' });
+    assert.deepStrictEqual(created.slice(started).map((terminal) => terminal.name), [`Gurita: Mixed review (${ZETA})`]);
+
+    // A run's start and end post the running missions to every open window.
+    from = zeta.posts.length;
+    const twoFrom = reopened.posts.length;
+    pane.postRunning();
+    assert.deepStrictEqual(zeta.posts.slice(from).map((message) => message.type), ['running']);
+    assert.deepStrictEqual(reopened.posts.slice(twoFrom).map((message) => message.type), ['running']);
   } finally {
     process.env.HOME = home;
   }
@@ -618,7 +753,7 @@ test("the Settings window's first opening runs the check once for the session, e
   workspaceState.clear();
 
   const before = (await entryAfter({ type: 'refresh' }, ETA, 'First run')) as unknown;
-  assert.deepStrictEqual(checkRuns(stubbed.log), [], 'no answer of the pane runs the check');
+  assert.deepStrictEqual(checkRuns(stubbed.log), [], "no answer to a mission window's page runs the check");
 
   let from = posted.length;
   showSettings();
@@ -653,7 +788,7 @@ test("the Settings window's first opening runs the check once for the session, e
   );
 
   const after = (await entryAfter({ type: 'refresh' }, ETA, 'First run')) as unknown;
-  await entryAfter({ type: 'ready' }, ETA, 'First run');
+  await entryAfter({ type: 'ready', mission: ETA }, ETA, 'First run');
   assert.strictEqual(checkRuns(stubbed.log).length, 1, 'no later opening, re-read, or Refresh runs the check');
   assert.deepStrictEqual(after, before, "a failed check leaves the mission page's recipes as posted");
   const count = created.length;
@@ -683,11 +818,10 @@ test("the Settings window's first opening runs the check once for the session, e
   const failed = await checkPosted('failed', from);
   assert.match(String(failed.cause), /the harness check printed no JSON/);
 
-  // Neither a pane created afresh nor a Settings window created afresh runs the check again: only check again does.
+  // Neither a mission window created afresh nor a Settings window created afresh runs the check again: only check again does.
   fs.writeFileSync(stubbed.print, JSON.stringify(CHECK_PRINT) + '\n');
-  close('gurita.missionPane');
-  pane.openMissionPane(context);
-  await entryAfter({ type: 'ready' }, ETA, 'First run');
+  closeWindow(ETA);
+  await entryAfter({ type: 'ready', mission: ETA }, ETA, 'First run');
   close(settingsWindow.SETTINGS_VIEW_TYPE);
   from = posted.length;
   showSettings();
@@ -736,12 +870,7 @@ test("disabling a harness is stored in the variant store's harness part and leav
     workspace.settings = { ownRecipesFile: path.join(files, 'recipes.md') };
     workspaceState.clear();
     const store = path.join(fakeHome, '.gurita', 'variants.json');
-    const page = async (message: unknown) => {
-      const from = posted.length;
-      send(message);
-      const live = (await postedOf('live', from)) as { missions: { path: string; recipes: { recipes: PostedEntry[] } }[] };
-      return live.missions.find((each) => each.path === THETA)?.recipes.recipes ?? [];
-    };
+    const page = async (message: unknown) => ((await pageAfter(message, THETA)) as { recipes: { recipes: PostedEntry[] } }).recipes.recipes;
     const shown = (entries: PostedEntry[]) => entries.map((entry) => [entry.name, entry.variants.map((each) => each.name), selectedName(entry)]);
 
     let from = posted.length;
@@ -762,17 +891,18 @@ test("disabling a harness is stored in the variant store's harness part and leav
     assert.ok(!fs.existsSync(store), 'nothing is written until a harness is disabled');
 
     from = posted.length;
+    let windowFrom = openWindow(THETA).posts.length;
     send({ type: 'setHarnessEnabled', harness: 'antigravity', enabled: false });
     assert.deepStrictEqual(await postedOf('harnessSettings', from), {
       type: 'harnessSettings',
       settings: { state: 'read', enabled: { claude: true, antigravity: false, codex: true } },
     });
-    const live = (await postedOf('live', from)) as { missions: { path: string; recipes: { recipes: PostedEntry[] } }[]; buttons: Record<string, unknown> };
-    const narrowed = live.missions.find((each) => each.path === THETA)?.recipes.recipes ?? [];
+    const live = (await windowPosted(THETA, 'page', windowFrom)).mission as { recipes: { recipes: PostedEntry[] } };
+    const narrowed = live.recipes.recipes;
     assert.deepStrictEqual(
-      live.buttons.discussGoal,
-      { state: 'disabled', cause: 'Every variant of discuss-mission-goal this button can run has a line on a disabled harness.' },
-      'the fixed-name button whose only variant runs on Antigravity is posted with no variant, drawn disabled',
+      pane.startingOffers(context).discussGoal,
+      { state: 'disabled', recipe: 'discuss-mission-goal', cause: 'Every variant of discuss-mission-goal this button can run has a line on a disabled harness.' },
+      'the mission-starting control whose only variant runs on Antigravity offers no variant',
     );
     assert.deepStrictEqual(shown(narrowed), [
       ['First run', ['Claude Code'], 'Claude Code'],
@@ -788,17 +918,16 @@ test("disabling a harness is stored in the variant store's harness part and leav
     assert.strictEqual(created.length, count, 'a click on a left-out variant or recipe is refused');
     assert.deepStrictEqual(shown(await page({ type: 'refresh' })), shown(narrowed), 'a re-read keeps the harness disabled');
 
-    // The fixed-name button left with no variant starts nothing.
+    // The mission-starting row left with no variant starts nothing.
     const boxes = inputBoxes.length;
-    send({ type: 'missionButton', button: 'discussGoal', variant: 'default' });
-    await new Promise((resolve) => setTimeout(resolve, 50));
-    assert.strictEqual(created.length, count, 'a click on a fixed-name button left with no variant starts nothing');
+    await pane.runStartingRow(context, 'discussGoal');
+    assert.strictEqual(created.length, count, 'a click on a mission-starting row left with no variant starts nothing');
     assert.strictEqual(inputBoxes.length, boxes, 'nor asks for its values');
 
     // The looped run's preview and run keep every named single-task line.
-    from = posted.length;
+    windowFrom = openWindow(THETA).posts.length;
     send({ type: 'previewLoop', mission: THETA, recipe: 'Execute tasks one at a time', variant: 'default' });
-    const preview = await postedOf('preview', from);
+    const preview = await windowPosted(THETA, 'preview', windowFrom);
     assert.deepStrictEqual(preview.names, ['Single task (Claude Code)', 'Single task (Antigravity)']);
     assert.deepStrictEqual((preview.result as { state: string }).state, 'read');
     count = created.length;
@@ -811,18 +940,18 @@ test("disabling a harness is stored in the variant store's harness part and leav
       'every named single-task line is passed as one --line',
     );
 
-    from = posted.length;
+    windowFrom = openWindow(THETA).posts.length;
     send({ type: 'setHarnessEnabled', harness: 'antigravity', enabled: true });
-    const again = (await postedOf('live', from)) as { missions: { path: string; recipes: { recipes: PostedEntry[] } }[]; buttons: Record<string, { state: string }> };
+    const again = (await windowPosted(THETA, 'page', windowFrom)).mission as { recipes: { recipes: PostedEntry[] } };
     assert.deepStrictEqual(
-      shown(again.missions.find((each) => each.path === THETA)?.recipes.recipes ?? [])[0],
+      shown(again.recipes.recipes)[0],
       ['First run', ['Claude Code', 'Antigravity'], 'Antigravity'],
       'enabled again, the remembered selection comes back',
     );
-    assert.strictEqual(again.buttons.discussGoal.state, 'offered', 'enabled again, the fixed-name button offers its variant');
+    assert.strictEqual(pane.startingOffers(context).discussGoal.state, 'offered', 'enabled again, the mission-starting control offers its variant');
     count = created.length;
     typedValues.push('A goal');
-    send({ type: 'missionButton', button: 'discussGoal', variant: 'default' });
+    void pane.runStartingRow(context, 'discussGoal');
     for (let attempt = 0; attempt < 200 && created.length === count; attempt++) {
       await new Promise((resolve) => setTimeout(resolve, 10));
     }
@@ -1003,18 +1132,20 @@ test('the settings view lists every recipe with its variants and carries out eac
     /** Sends `message` and returns the variant list and the First run dropdown on IOTA's page posted after it. */
     const edit = async (message: unknown) => {
       const from = posted.length;
+      const windowFrom = openWindow(IOTA).posts.length;
       send(message);
       const recipes = await postedVariants(from);
-      const live = (await postedOf('live', from)) as { missions: { path: string; recipes: { recipes: PostedEntry[] } }[] };
-      const firstRun = live.missions.find((each) => each.path === IOTA)?.recipes.recipes.find((each) => each.name === 'First run');
+      const live = (await windowPosted(IOTA, 'page', windowFrom)).mission as { recipes: { recipes: PostedEntry[] } };
+      const firstRun = live.recipes.recipes.find((each) => each.name === 'First run');
       assert.ok(firstRun !== undefined);
       return { recipes, dropdown: firstRun.variants.map((each) => each.name), selected: selectedName(firstRun) };
     };
-    /** Runs the discuss-mission-goal button, its dropdown on its default variant, with a typed goal and returns the runner's arguments. */
+    /** Runs the New mission row, on the discuss-mission-goal variant it draws, with a typed goal and returns the runner's arguments. */
     const discussGoal = async () => {
       const count = created.length;
       typedValues.push('A goal');
-      send({ type: 'missionButton', button: 'discussGoal', variant: 'default' });
+      pane.startingOffers(context);
+      void pane.runStartingRow(context, 'discussGoal');
       for (let attempt = 0; attempt < 200 && created.length === count; attempt++) {
         await new Promise((resolve) => setTimeout(resolve, 10));
       }
@@ -1154,10 +1285,11 @@ test("a pick in a line's dropdown on a shipped variant leaves it unchanged besid
     /** Sends `message` and returns the variants of `recipe` listed and its entry on KAPPA's page posted after it. */
     const pick = async (message: unknown, recipe = 'First run') => {
       const from = posted.length;
+      const windowFrom = openWindow(KAPPA).posts.length;
       send(message);
       const recipes = await postedVariants(from);
-      const live = (await postedOf('live', from)) as { missions: { path: string; recipes: { recipes: PostedEntry[] } }[] };
-      const entry = live.missions.find((each) => each.path === KAPPA)?.recipes.recipes.find((each) => each.name === recipe);
+      const live = (await windowPosted(KAPPA, 'page', windowFrom)).mission as { recipes: { recipes: PostedEntry[] } };
+      const entry = live.recipes.recipes.find((each) => each.name === recipe);
       const listed = recipes.find((each) => each.name === recipe);
       assert.ok(entry !== undefined && listed !== undefined);
       return { variants: listed.variants as EditedVariant[], entry };
@@ -1290,11 +1422,12 @@ test("a pick in a line's harness dropdown rewrites the line onto the picked harn
     /** Sends `message` and returns the First run variants listed, the single-task lines, and the First run entry on SIGMA's page posted after it. */
     const pick = async (message: unknown) => {
       const from = posted.length;
+      const windowFrom = openWindow(SIGMA).posts.length;
       send(message);
       const recipes = await postedVariants(from);
       const lines = await postedLines(from);
-      const live = (await postedOf('live', from)) as { missions: { path: string; recipes: { recipes: PostedEntry[] } }[] };
-      const entry = live.missions.find((each) => each.path === SIGMA)?.recipes.recipes.find((each) => each.name === 'First run');
+      const live = (await windowPosted(SIGMA, 'page', windowFrom)).mission as { recipes: { recipes: PostedEntry[] } };
+      const entry = live.recipes.recipes.find((each) => each.name === 'First run');
       assert.ok(entry !== undefined);
       return { variants: recipes[0].variants as EditedVariant[], lines: lines.lines, entry };
     };
@@ -1429,17 +1562,18 @@ test("the settings view lists the named single-task lines and carries out each l
     /** Sends `message` and returns the line list posted after it, checking the variant list and the pages are posted again too. */
     const edit = async (message: unknown) => {
       const from = posted.length;
+      const windowFrom = openWindow(LAMBDA).posts.length;
       send(message);
       const listed = await postedLines(from);
       await postedVariants(from);
-      await postedOf('live', from);
+      await windowPosted(LAMBDA, 'page', windowFrom);
       return listed;
     };
     /** The looped run's preview on LAMBDA's page: the names its override list offers. */
     const previewNames = async () => {
-      const from = posted.length;
+      const from = openWindow(LAMBDA).posts.length;
       send({ type: 'previewLoop', mission: LAMBDA, recipe: 'Execute tasks one at a time', variant: 'default' });
-      const preview = await postedOf('preview', from);
+      const preview = await windowPosted(LAMBDA, 'preview', from);
       assert.strictEqual((preview.result as { state: string }).state, 'read');
       return preview.names;
     };
@@ -1447,9 +1581,9 @@ test("the settings view lists the named single-task lines and carries out each l
     const loopLines = async () => {
       const mission = LAMBDA_LOOPS.shift();
       assert.ok(mission !== undefined, 'a mission is left for the run');
-      const from = posted.length;
+      const from = openWindow(mission).posts.length;
       send({ type: 'previewLoop', mission, recipe: 'Execute tasks one at a time', variant: 'default' });
-      assert.strictEqual(((await postedOf('preview', from)).result as { state: string }).state, 'read');
+      assert.strictEqual(((await windowPosted(mission, 'preview', from)).result as { state: string }).state, 'read');
       const count = created.length;
       send({ type: 'startLoop', mission, recipe: 'Execute tasks one at a time', overrides: {} });
       assert.strictEqual(created.length, count + 1);
@@ -1669,24 +1803,13 @@ type PostedButton =
     }
   | { state: 'disabled'; cause: string };
 
-/** The live message's fixed-name buttons: the two mission-starting ones posted with the pages, the others with each mission. */
-interface ButtonsLive {
-  missions: { path: string; buttons: Record<string, PostedButton> }[];
-  buttons: Record<string, PostedButton>;
+/** The fixed-name buttons a page message posts for its mission's page. */
+function postedButtons(message: Record<string, unknown>): Record<string, PostedButton> {
+  assert.strictEqual(message.type, 'page');
+  return { ...(message.mission as { buttons: Record<string, PostedButton> }).buttons };
 }
 
-/** The fixed-name buttons a live message posts for the page of `mission`, the two mission-starting ones beside them; a failure message's two alone. */
-function postedButtons(message: Record<string, unknown>, mission: string): Record<string, PostedButton> {
-  const live = message as unknown as ButtonsLive;
-  if (message.type !== 'live') {
-    return { ...live.buttons };
-  }
-  const page = live.missions.find((each) => each.path === mission);
-  assert.ok(page !== undefined, `no page of ${mission}`);
-  return { ...live.buttons, ...page.buttons };
-}
-
-test("every fixed-name button is posted with the variants it can run and the lines of the one selected, following a default picked in the settings view, in the failure state too", async () => {
+test("every fixed-name button on a mission's page is posted with the variants it can run and the lines of the one selected, following a default picked in the settings view", async () => {
   const home = process.env.HOME;
   const fakeHome = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-home-'));
   process.env.HOME = fakeHome;
@@ -1701,11 +1824,11 @@ test("every fixed-name button is posted with the variants it can run and the lin
     workspace.folders = [{ uri: { fsPath: root } }];
     workspace.settings = { ownRecipesFile: path.join(files, 'recipes.md') };
     workspaceState.clear();
-    /** Sends `message` and returns the buttons of the next message of `type` posted after it. */
-    const buttonsAfter = async (message: unknown, type = 'live') => {
-      const from = posted.length;
+    /** Sends `message` and returns the buttons of the next page message the window of MU is posted after it. */
+    const buttonsAfter = async (message: unknown) => {
+      const from = openWindow(MU).posts.length;
       send(message);
-      return postedButtons(await postedOf(type, from), MU);
+      return postedButtons(await windowPosted(MU, 'page', from));
     };
     const shipped = (key: string, own = false): PostedButton => ({
       state: 'offered',
@@ -1714,8 +1837,6 @@ test("every fixed-name button is posted with the variants it can run and the lin
       selected: 0,
     });
     const initial: Record<string, PostedButton> = {
-      discussGoal: shipped('discussGoal'),
-      defineMission: shipped('defineMission', true),
       discussQuestion: shipped('discussQuestion', true),
       answerQuestion: shipped('answerQuestion'),
       answerWithRecommendation: shipped('answerWithRecommendation'),
@@ -1738,10 +1859,6 @@ test("every fixed-name button is posted with the variants it can run and the lin
     });
     assert.deepStrictEqual({ ...buttons, discussQuestion: undefined }, { ...initial, discussQuestion: undefined }, 'the other buttons stay as they were');
 
-    // A pick of a variant of no readable line: the button stands on it, carrying its line.
-    buttons = await buttonsAfter({ type: 'pickDefault', recipe: 'define-mission-goal', variant: { name: 'default', origin: 'own' } });
-    assert.deepStrictEqual(buttons.defineMission, { ...(initial.defineMission as object), lines: ['echo <goal> <scope>'], selected: 1 });
-
     // A pick of a variant the button cannot run: it stays out of the dropdown, which stands on the first variant offered.
     buttons = await buttonsAfter({ type: 'pickDefault', recipe: 'discuss-new-task', variant: { name: 'default', origin: 'own' } });
     assert.deepStrictEqual(buttons.discussTask, initial.discussTask);
@@ -1753,27 +1870,27 @@ test("every fixed-name button is posted with the variants it can run and the lin
     buttons = await buttonsAfter({ type: 'setHarnessEnabled', harness: 'antigravity', enabled: true });
     assert.deepStrictEqual(buttons.discussQuestion.state === 'offered' && buttons.discussQuestion.selected, 1, 'enabled again, the default comes back');
 
-    // The failure state carries the two mission-starting buttons, and an edit made while it stands posts it again with them.
+    // The failure state is posted with no button, an edit made while it stands posts it again, and the next read draws the buttons again.
     workspace.folders = undefined;
-    buttons = await buttonsAfter({ type: 'refresh' }, 'liveFailure');
-    assert.deepStrictEqual(Object.keys(buttons), ['discussGoal', 'defineMission']);
-    assert.deepStrictEqual(buttons.defineMission, { ...(initial.defineMission as object), lines: ['echo <goal> <scope>'], selected: 1 });
-    buttons = await buttonsAfter({ type: 'pickDefault', recipe: 'define-mission-goal', variant: { name: 'default', origin: 'shipped' } }, 'liveFailure');
-    assert.deepStrictEqual(buttons.defineMission, initial.defineMission, 'the failure state follows the default picked');
+    let from = openWindow(MU).posts.length;
+    send({ type: 'refresh' });
+    assert.deepStrictEqual(await windowPosted(MU, 'liveFailure', from), { type: 'liveFailure', cause: 'No folder is open in this window.' });
+    from = openWindow(MU).posts.length;
+    send({ type: 'pickDefault', recipe: 'define-mission-goal', variant: { name: 'default', origin: 'own' } });
+    assert.deepStrictEqual(await windowPosted(MU, 'liveFailure', from), { type: 'liveFailure', cause: 'No folder is open in this window.' }, 'an edit posts the failure state again');
     workspace.folders = [{ uri: { fsPath: root } }];
     buttons = await buttonsAfter({ type: 'refresh' });
-    assert.deepStrictEqual(buttons.defineMission, initial.defineMission);
     assert.deepStrictEqual(buttons.discussTask, initial.discussTask);
 
     // A click runs the variant the label shows.
     const count = created.length;
-    typedValues.push('A goal');
-    send({ type: 'missionButton', button: 'discussGoal', variant: 'default' });
+    typedValues.push('An issue');
+    send({ type: 'taskButton', mission: MU, variant: 'default' });
     for (let attempt = 0; attempt < 200 && created.length === count; attempt++) {
       await new Promise((resolve) => setTimeout(resolve, 10));
     }
     assert.strictEqual(created.length, count + 1);
-    assert.match(created[created.length - 1].args.join(' '), / chain -- claude "\/gurita:discuss-mission-goal/);
+    assert.match(created[created.length - 1].args.join(' '), / chain -- claude "\/gurita:discuss-new-task/);
     assert.strictEqual(execFileSync('git', ['status', '--porcelain', '--ignored'], { cwd: root, encoding: 'utf8' }), '', "nothing is written into the project's tree");
   } finally {
     process.env.HOME = home;
@@ -1818,7 +1935,7 @@ claude "/gurita:discuss-mission-goal <goal>" --model "opus" --effort high; # int
 \`\`\`
 `;
 
-test("a fixed-name button's dropdown selection is remembered in workspaceState, per recipe on its mission and once per project for the mission-starting buttons, wins over the default, and is dropped once gone", async () => {
+test("a fixed-name button's dropdown selection is remembered in workspaceState per recipe on its mission, wins over the default, and is dropped once gone", async () => {
   const home = process.env.HOME;
   const fakeHome = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-home-'));
   process.env.HOME = fakeHome;
@@ -1839,24 +1956,28 @@ test("a fixed-name button's dropdown selection is remembered in workspaceState, 
     workspace.folders = [{ uri: { fsPath: root } }];
     workspace.settings = { ownRecipesFile: path.join(files, 'recipes.md') };
     workspaceState.clear();
-    /** Sends `message` and returns the next live message posted after it. */
-    const liveAfter = async (message: unknown) => {
-      const from = posted.length;
-      send(message);
-      return postedOf('live', from);
+    /** The page message the window of `mission` was last posted. */
+    const latest = (mission: string): Record<string, unknown> => {
+      const pages = openWindow(mission).posts.filter((message) => message.type === 'page');
+      assert.ok(pages.length > 0, `the window of ${mission} was posted a page`);
+      return pages[pages.length - 1];
     };
-    /** The names a button's dropdown offers and the one it stands on, as `message` posts it for `mission`. */
-    const dropdown = (message: Record<string, unknown>, mission: string, key: string): [string[], string] => {
-      const entry = postedButtons(message, mission)[key];
+    /** Sends `message` and waits until the window of `mission`, NU's unless given, is posted its page again. */
+    const liveAfter = async (message: unknown, mission = NU) => {
+      const from = openWindow(mission).posts.length;
+      send(message);
+      await windowPosted(mission, 'page', from);
+    };
+    /** The names a button's dropdown offers and the one it stands on, as the window of `mission` was last posted it. */
+    const dropdown = (mission: string, key: string): [string[], string] => {
+      const entry = postedButtons(latest(mission))[key];
       assert.ok(entry.state === 'offered', `${key} offers variants`);
       return [entry.variants.map((each) => each.name), entry.variants[entry.selected].name];
     };
-    /** The names the answer-with-alternative button of `alternative` on the card of `question` offers and the one it stands on, as `message` posts it for `mission`. */
-    const alternativeDropdown = (message: Record<string, unknown>, mission: string, question: string, alternative: string): [string[], string] => {
-      const page = (message as unknown as { missions: { path: string; alternativeButtons: { question: string; alternative: string; entry: PostedButton }[] }[] }).missions.find(
-        (each) => each.path === mission,
-      );
-      const entry = page?.alternativeButtons.find((each) => each.question === question && each.alternative === alternative)?.entry;
+    /** The names the answer-with-alternative button of `alternative` on the card of `question` offers and the one it stands on, as the window of `mission` was last posted it. */
+    const alternativeDropdown = (mission: string, question: string, alternative: string): [string[], string] => {
+      const page = latest(mission).mission as { alternativeButtons: { question: string; alternative: string; entry: PostedButton }[] };
+      const entry = page.alternativeButtons.find((each) => each.question === question && each.alternative === alternative)?.entry;
       assert.ok(entry?.state === 'offered', `${alternative} of ${question} offers variants`);
       return [entry.variants.map((each) => each.name), entry.variants[entry.selected].name];
     };
@@ -1873,52 +1994,56 @@ test("a fixed-name button's dropdown selection is remembered in workspaceState, 
       return created.length === count ? undefined : created[created.length - 1].args.join(' ');
     };
 
-    let live = await liveAfter({ type: 'refresh' });
-    assert.deepStrictEqual(dropdown(live, NU, 'discussQuestion'), [['default', 'Gemini'], 'default'], 'with nothing remembered the dropdown stands on the default');
-    assert.deepStrictEqual(alternativeDropdown(live, NU, 'Pane Layout', 'keep'), [['default', 'Sonnet'], 'default']);
-    assert.deepStrictEqual(alternativeDropdown(live, NU, 'Pane Layout', 'drop'), [['default', 'Sonnet'], 'default']);
-    assert.strictEqual(postedButtons(live, NU).answerWithAlternative, undefined, 'no one entry is posted for every alternative of the page');
-    assert.deepStrictEqual(dropdown(live, NU, 'discussGoal'), [['default', 'Opus'], 'default']);
-    assert.deepStrictEqual(dropdown(live, NU, 'discussTask'), [['default'], 'default'], 'a looped variant the button cannot run is not offered');
+    for (const mission of missions) {
+      openWindow(mission);
+    }
+    await liveAfter({ type: 'refresh' });
+    assert.deepStrictEqual(dropdown(NU, 'discussQuestion'), [['default', 'Gemini'], 'default'], 'with nothing remembered the dropdown stands on the default');
+    assert.deepStrictEqual(alternativeDropdown(NU, 'Pane Layout', 'keep'), [['default', 'Sonnet'], 'default']);
+    assert.deepStrictEqual(alternativeDropdown(NU, 'Pane Layout', 'drop'), [['default', 'Sonnet'], 'default']);
+    assert.strictEqual(postedButtons(latest(NU)).answerWithAlternative, undefined, 'no one entry is posted for every alternative of the page');
+    assert.strictEqual(postedButtons(latest(NU)).discussGoal, undefined, 'no mission-starting button is posted with a page');
+    assert.deepStrictEqual(dropdown(NU, 'discussTask'), [['default'], 'default'], 'a looped variant the button cannot run is not offered');
 
-    // A selection on a mission's page is remembered per recipe on that mission.
-    live = await liveAfter({ type: 'selectButtonVariant', button: 'discussQuestion', mission: NU, variant: 'Gemini' });
+    // A selection on a mission's page is remembered per recipe on that mission, and posted to that mission's window alone.
+    const others = missions.filter((mission) => mission !== NU).map((mission) => openWindow(mission).posts.length);
+    await liveAfter({ type: 'selectButtonVariant', button: 'discussQuestion', mission: NU, variant: 'Gemini' });
+    assert.deepStrictEqual(
+      missions.filter((mission) => mission !== NU).map((mission) => openWindow(mission).posts.length),
+      others,
+      "no other mission's window is posted its page again",
+    );
     assert.deepStrictEqual(workspaceState.get('gurita.variantSelections'), { [NU]: { 'discuss-open-question': 'Gemini' } });
-    assert.deepStrictEqual(dropdown(live, NU, 'discussQuestion'), [['default', 'Gemini'], 'Gemini'], 'a remembered selection wins over the default');
-    assert.deepStrictEqual(dropdown(live, XI, 'discussQuestion')[1], 'default', "another mission's page keeps its own selection");
-    const entry = postedButtons(live, NU).discussQuestion;
+    assert.deepStrictEqual(dropdown(NU, 'discussQuestion'), [['default', 'Gemini'], 'Gemini'], 'a remembered selection wins over the default');
+    assert.deepStrictEqual(dropdown(XI, 'discussQuestion')[1], 'default', "another mission's page keeps its own selection");
+    const entry = postedButtons(latest(NU)).discussQuestion;
     assert.ok(entry.state === 'offered');
     assert.deepStrictEqual(entry.lines, [SELECTION_OWN_TEXT.split('\n')[3]], 'the label and hover text follow the selection');
     // An answer-with-alternative button's selection is remembered per mission, question, and alternative.
-    live = await liveAfter({ type: 'selectAlternativeVariant', mission: NU, question: 'Pane Layout', alternative: 'drop', variant: 'Sonnet' });
+    await liveAfter({ type: 'selectAlternativeVariant', mission: NU, question: 'Pane Layout', alternative: 'drop', variant: 'Sonnet' });
     assert.deepStrictEqual(workspaceState.get('gurita.alternativeVariantSelections'), { [NU]: { 'Pane Layout': { drop: 'Sonnet' } } });
     assert.deepStrictEqual(workspaceState.get('gurita.variantSelections'), { [NU]: { 'discuss-open-question': 'Gemini' } }, "the other buttons' selections are untouched");
-    assert.deepStrictEqual(alternativeDropdown(live, NU, 'Pane Layout', 'drop')[1], 'Sonnet', "the alternative's own dropdown stands on it");
-    assert.deepStrictEqual(alternativeDropdown(live, NU, 'Pane Layout', 'keep')[1], 'default', 'every other alternative stays where it stood');
-    assert.deepStrictEqual(alternativeDropdown(live, XI, 'Pane Layout', 'drop')[1], 'default', "another mission's card keeps its own selection");
-    const alternativeEntry = (live as unknown as { missions: { path: string; alternativeButtons: { alternative: string; entry: PostedButton }[] }[] }).missions
-      .find((each) => each.path === NU)
-      ?.alternativeButtons.find((each) => each.alternative === 'drop')?.entry;
+    assert.deepStrictEqual(alternativeDropdown(NU, 'Pane Layout', 'drop')[1], 'Sonnet', "the alternative's own dropdown stands on it");
+    assert.deepStrictEqual(alternativeDropdown(NU, 'Pane Layout', 'keep')[1], 'default', 'every other alternative stays where it stood');
+    assert.deepStrictEqual(alternativeDropdown(XI, 'Pane Layout', 'drop')[1], 'default', "another mission's card keeps its own selection");
+    const alternativeEntry = (latest(NU).mission as { alternativeButtons: { alternative: string; entry: PostedButton }[] }).alternativeButtons.find(
+      (each) => each.alternative === 'drop',
+    )?.entry;
     assert.ok(alternativeEntry?.state === 'offered');
     assert.deepStrictEqual(alternativeEntry.lines, [SELECTION_OWN_TEXT.split('\n')[9]], "the button's label and hover text follow its own selection");
-    await liveAfter({ type: 'selectAlternativeVariant', mission: OMICRON, question: 'Pane Layout', alternative: 'drop', variant: 'Sonnet' });
-    await liveAfter({ type: 'selectAlternativeVariant', mission: PI, question: 'Pane Layout', alternative: 'keep', variant: 'Sonnet' });
+    await liveAfter({ type: 'selectAlternativeVariant', mission: OMICRON, question: 'Pane Layout', alternative: 'drop', variant: 'Sonnet' }, OMICRON);
+    await liveAfter({ type: 'selectAlternativeVariant', mission: PI, question: 'Pane Layout', alternative: 'keep', variant: 'Sonnet' }, PI);
     assert.deepStrictEqual(workspaceState.get('gurita.alternativeVariantSelections'), {
       [NU]: { 'Pane Layout': { drop: 'Sonnet' } },
       [OMICRON]: { 'Pane Layout': { drop: 'Sonnet' } },
       [PI]: { 'Pane Layout': { keep: 'Sonnet' } },
     });
-    live = await liveAfter({ type: 'selectButtonVariant', button: 'discussQuestion', mission: RHO, variant: 'Gemini' });
+    await liveAfter({ type: 'selectButtonVariant', button: 'discussQuestion', mission: RHO, variant: 'Gemini' }, RHO);
     const remembered = () => workspaceState.get('gurita.variantSelections') as Record<string, Record<string, string>>;
     assert.deepStrictEqual(remembered()[RHO], { 'discuss-open-question': 'Gemini' });
-
-    // A mission-starting button's selection is remembered once per project.
-    live = await liveAfter({ type: 'selectButtonVariant', button: 'discussGoal', variant: 'Opus' });
-    assert.deepStrictEqual(workspaceState.get('gurita.projectVariantSelections'), { 'discuss-mission-goal': 'Opus' });
-    assert.deepStrictEqual(dropdown(live, NU, 'discussGoal')[1], 'Opus');
-    live = await liveAfter({ type: 'refresh' });
-    assert.deepStrictEqual(dropdown(live, XI, 'discussGoal')[1], 'Opus', 'the selection is remembered through a re-read');
-    assert.deepStrictEqual(dropdown(live, NU, 'discussQuestion')[1], 'Gemini');
+    await liveAfter({ type: 'refresh' });
+    assert.deepStrictEqual(dropdown(NU, 'discussQuestion')[1], 'Gemini', 'the selection is remembered through a re-read');
+    assert.deepStrictEqual(dropdown(XI, 'discussQuestion')[1], 'default');
 
     // A pick the latest answer did not post is remembered nowhere.
     const before = JSON.stringify([
@@ -1931,12 +2056,15 @@ test("a fixed-name button's dropdown selection is remembered in workspaceState, 
     send({ type: 'selectAlternativeVariant', mission: NU, question: 'Pane Layout', alternative: 'keep', variant: 'No such variant' });
     send({ type: 'selectAlternativeVariant', mission: NU, question: 'Pane Layout', alternative: 'no such alternative', variant: 'Sonnet' });
     send({ type: 'selectAlternativeVariant', mission: NU, question: 'No Such Question', alternative: 'keep', variant: 'Sonnet' });
-    send({ type: 'selectAlternativeVariant', mission: 'other/mission_zeta/', question: 'Pane Layout', alternative: 'keep', variant: 'Sonnet' });
+    sendFrom(NU, { type: 'selectAlternativeVariant', mission: 'other/mission_zeta/', question: 'Pane Layout', alternative: 'keep', variant: 'Sonnet' });
+    sendFrom(NU, { type: 'selectAlternativeVariant', mission: XI, question: 'Pane Layout', alternative: 'keep', variant: 'Sonnet' });
     send({ type: 'selectButtonVariant', button: 'discussQuestion', mission: NU, variant: 'No such variant' });
     send({ type: 'selectButtonVariant', button: 'discussTask', mission: NU, variant: 'Looped' });
-    send({ type: 'selectButtonVariant', button: 'discussQuestion', mission: 'other/mission_zeta/', variant: 'Gemini' });
+    sendFrom(NU, { type: 'selectButtonVariant', button: 'discussQuestion', mission: 'other/mission_zeta/', variant: 'Gemini' });
+    sendFrom(NU, { type: 'selectButtonVariant', button: 'discussQuestion', mission: XI, variant: 'Gemini' });
     send({ type: 'selectButtonVariant', button: 'noSuchButton', mission: NU, variant: 'Gemini' });
-    send({ type: 'selectButtonVariant', button: 'defineMission', variant: 'Opus' });
+    send({ type: 'selectButtonVariant', button: 'discussGoal', mission: NU, variant: 'Opus' });
+    send({ type: 'missionButton', button: 'discussGoal', mission: NU, variant: 'default' });
     await new Promise((resolve) => setTimeout(resolve, 50));
     assert.strictEqual(
       JSON.stringify([
@@ -1947,6 +2075,7 @@ test("a fixed-name button's dropdown selection is remembered in workspaceState, 
       before,
     );
     assert.deepStrictEqual(posted.slice(from), [], 'nor posts the pages again');
+    assert.deepStrictEqual(workspaceState.get('gurita.projectVariantSelections'), undefined, 'a page selects no mission-starting variant');
 
     // A click runs the variant selected, and only when the latest answer posted the button standing on it.
     assert.strictEqual(await click({ type: 'questionButton', button: 'discussQuestion', mission: NU, question: 'Pane Layout', variant: 'default' }, ['']), undefined, 'a variant the button was not posted standing on starts nothing');
@@ -1959,48 +2088,40 @@ test("a fixed-name button's dropdown selection is remembered in workspaceState, 
     assert.match((await click({ type: 'alternativeButton', mission: OMICRON, question: 'Pane Layout', alternative: 'drop', variant: 'Sonnet' })) ?? '', /--model "sonnet"/, 'each button runs the variant its own dropdown stands on');
     assert.strictEqual(await click({ type: 'alternativeButton', mission: PI, question: 'Pane Layout', alternative: 'drop', variant: 'Sonnet' }), undefined);
     assert.match((await click({ type: 'alternativeButton', mission: PI, question: 'Pane Layout', alternative: 'keep', variant: 'Sonnet' })) ?? '', /--model "sonnet"/);
-    assert.strictEqual(await click({ type: 'missionButton', button: 'discussGoal', variant: 'default' }, ['A goal']), undefined);
-    assert.match((await click({ type: 'missionButton', button: 'discussGoal', variant: 'Opus' }, ['A goal'])) ?? '', / chain -- claude "\/gurita:discuss-mission-goal \${GURITA_GOAL}" --model "opus"/);
+    assert.strictEqual(await click({ type: 'missionButton', button: 'discussGoal', mission: NU, variant: 'default' }, ['A goal']), undefined, 'a page runs no mission-starting button');
 
     // A default picked in the settings view leaves every remembered selection standing.
     showSettings();
-    live = await liveAfter({ type: 'pickDefault', recipe: 'discuss-mission-goal', variant: { name: 'default', origin: 'shipped' } });
-    assert.deepStrictEqual(dropdown(live, NU, 'discussGoal')[1], 'Opus');
+    await liveAfter({ type: 'pickDefault', recipe: 'discuss-open-question', variant: { name: 'default', origin: 'shipped' } });
+    assert.deepStrictEqual(dropdown(NU, 'discussQuestion')[1], 'Gemini');
 
     // Disabling the harness of a remembered variant gives way to the default and keeps the selection for when it is enabled again.
-    live = await liveAfter({ type: 'setHarnessEnabled', harness: 'antigravity', enabled: false });
-    assert.deepStrictEqual(dropdown(live, RHO, 'discussQuestion'), [['default'], 'default']);
+    await liveAfter({ type: 'setHarnessEnabled', harness: 'antigravity', enabled: false }, RHO);
+    assert.deepStrictEqual(dropdown(RHO, 'discussQuestion'), [['default'], 'default']);
     assert.deepStrictEqual(remembered()[RHO], { 'discuss-open-question': 'Gemini' }, 'the remembered selection is kept');
     assert.strictEqual(await click({ type: 'questionButton', button: 'discussQuestion', mission: RHO, question: 'Pane Layout', variant: 'Gemini' }, ['']), undefined, 'a variant left out for a disabled harness starts nothing');
-    live = await liveAfter({ type: 'setHarnessEnabled', harness: 'antigravity', enabled: true });
-    assert.deepStrictEqual(dropdown(live, RHO, 'discussQuestion')[1], 'Gemini', 'enabled again, the remembered selection comes back');
+    await liveAfter({ type: 'setHarnessEnabled', harness: 'antigravity', enabled: true }, RHO);
+    assert.deepStrictEqual(dropdown(RHO, 'discussQuestion')[1], 'Gemini', 'enabled again, the remembered selection comes back');
     assert.match((await click({ type: 'taskButton', mission: RHO, variant: 'default' }, ['An issue'])) ?? '', / chain -- claude "\/gurita:discuss-new-task/);
 
     // The remembered variants go from the own file: they are dropped and the buttons fall back to the default.
     fs.writeFileSync(path.join(files, 'recipes.md'), '');
-    live = await liveAfter({ type: 'refresh' });
-    assert.deepStrictEqual(dropdown(live, NU, 'discussQuestion'), [['default'], 'default']);
-    assert.deepStrictEqual(dropdown(live, NU, 'discussGoal'), [['default'], 'default']);
+    await liveAfter({ type: 'refresh' });
+    assert.deepStrictEqual(dropdown(NU, 'discussQuestion'), [['default'], 'default']);
     assert.deepStrictEqual(workspaceState.get('gurita.variantSelections'), {}, 'the remembered variants are dropped');
-    assert.deepStrictEqual(workspaceState.get('gurita.projectVariantSelections'), {});
     assert.deepStrictEqual(workspaceState.get('gurita.alternativeVariantSelections'), {});
-    assert.deepStrictEqual(alternativeDropdown(live, NU, 'Pane Layout', 'drop'), [['default'], 'default']);
+    assert.deepStrictEqual(alternativeDropdown(NU, 'Pane Layout', 'drop'), [['default'], 'default']);
 
-    // A mission-starting button's selection reaches the failure state too.
+    // While the read fails, no click on a window's page starts anything and no pick is remembered.
     fs.writeFileSync(path.join(files, 'recipes.md'), SELECTION_OWN_TEXT);
     workspace.folders = undefined;
-    let failure = await (async () => {
-      const at = posted.length;
-      send({ type: 'refresh' });
-      return postedOf('liveFailure', at);
-    })();
-    assert.deepStrictEqual(dropdown(failure, NU, 'discussGoal'), [['default', 'Opus'], 'default']);
-    const at = posted.length;
-    send({ type: 'selectButtonVariant', button: 'discussGoal', variant: 'Opus' });
-    failure = await postedOf('liveFailure', at);
-    assert.deepStrictEqual(dropdown(failure, NU, 'discussGoal')[1], 'Opus', 'a selection made in the failure state is posted with it again');
-    assert.deepStrictEqual(workspaceState.get('gurita.projectVariantSelections'), { 'discuss-mission-goal': 'Opus' });
-    assert.match((await click({ type: 'missionButton', button: 'discussGoal', variant: 'Opus' }, ['A goal'])) ?? '', /--model "opus"/);
+    const at = openWindow(NU).posts.length;
+    send({ type: 'refresh' });
+    await windowPosted(NU, 'liveFailure', at);
+    assert.strictEqual(await click({ type: 'taskButton', mission: NU, variant: 'default' }, ['An issue']), undefined, 'a click against a failed read starts nothing');
+    send({ type: 'selectButtonVariant', button: 'discussQuestion', mission: NU, variant: 'Gemini' });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    assert.deepStrictEqual(workspaceState.get('gurita.variantSelections'), {}, 'nor is a pick remembered');
     workspace.folders = [{ uri: { fsPath: root } }];
     assert.strictEqual(execFileSync('git', ['status', '--porcelain', '--ignored'], { cwd: root, encoding: 'utf8' }), '', "nothing is written into the project's tree");
   } finally {
@@ -2058,12 +2179,14 @@ test("a page filling first review round lists the additional review round's reci
     packaged.set('bundled/shipped_recipes.md', path.join(files, 'shipped_recipes.md'));
     workspace.folders = [{ uri: { fsPath: root } }];
     workspace.settings = { ownRecipesFile: path.join(files, 'recipes.md') };
-    const from = posted.length;
+    type Page = { path: string; step?: string; additionalRounds?: number; recipes: { state: string; recipes: { name: string }[] } };
+    const from = [FRESH, REVIEWED].map((mission) => openWindow(mission).posts.length);
     send({ type: 'refresh' });
-    const live = (await postedOf('live', from)) as {
-      missions: { path: string; step?: string; additionalRounds?: number; recipes: { state: string; recipes: { name: string }[] } }[];
-    };
-    const page = (mission: string) => live.missions.find((each) => each.path === mission);
+    const pages = new Map<string, Page>();
+    for (const [index, mission] of [FRESH, REVIEWED].entries()) {
+      pages.set(mission, (await windowPosted(mission, 'page', from[index])).mission as Page);
+    }
+    const page = (mission: string) => pages.get(mission);
     for (const mission of [FRESH, REVIEWED]) {
       assert.strictEqual(page(mission)?.step, 'first-review', `${mission} fills first review round`);
       assert.strictEqual(page(mission)?.additionalRounds, undefined, `${mission} carries no round count`);
@@ -2077,6 +2200,7 @@ test("a page filling first review round lists the additional review round's reci
     const count = created.length;
     send({ type: 'runRecipe', mission: REVIEWED, recipe: 'Requirements iteration', variant: 'default' });
     send({ type: 'runRecipe', mission: FRESH, recipe: 'Requirements iteration', variant: 'default' });
+    sendFrom(FRESH, { type: 'runRecipe', mission: REVIEWED, recipe: 'Requirements iteration', variant: 'default' });
     assert.deepStrictEqual(
       created.slice(count).map((terminal) => terminal.name),
       [`Gurita: Requirements iteration (${REVIEWED})`],
@@ -2090,7 +2214,7 @@ test("a page filling first review round lists the additional review round's reci
 /** A mission whose task list and question document the watcher test changes. */
 const OMEGA = 'pkg/mission_omega/';
 
-test("the live read and its one watcher outlast the pane, every debounced event re-read whatever is visible and shown in the next ready message's answer, which reads nothing afresh", async () => {
+test("the live read and its one watcher outlast every mission window, every debounced event re-read whatever is visible and shown in the next ready message's answer, which reads nothing afresh", async () => {
   const home = process.env.HOME;
   process.env.HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-home-'));
   try {
@@ -2102,12 +2226,9 @@ test("the live read and its one watcher outlast the pane, every debounced event 
     workspace.folders = [{ uri: { fsPath: root } }];
     workspace.settings = { ownRecipesFile: path.join(files, 'recipes.md') };
     type Page = { path: string; tasks: { headings?: string[] }; questions: { questions?: { id: string }[] } };
-    const pageAfter = async (message: unknown): Promise<Page> => {
-      const from = posted.length;
-      send(message);
-      const live = (await postedOf('live', from)) as { missions: Page[] };
-      const page = live.missions.find((each) => each.path === OMEGA);
-      assert.ok(page !== undefined, `no page for ${OMEGA}`);
+    const omegaAfter = async (message: unknown): Promise<Page> => {
+      const page = (await pageAfter(message, OMEGA)) as unknown as Page;
+      assert.strictEqual(page.path, OMEGA);
       return page;
     };
     const fire = (kind: keyof StubWatcher['listeners'], file: string) => {
@@ -2116,20 +2237,23 @@ test("the live read and its one watcher outlast the pane, every debounced event 
       }
     };
     const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-    const livePosted = (from: number) => posted.slice(from).filter((message) => (message as { type?: string }).type === 'live');
+    const livePosted = (from: number) => posted.slice(from).filter((message) => ['page', 'liveFailure', 'notLive'].includes((message as { type?: string }).type ?? ''));
 
-    assert.deepStrictEqual((await pageAfter({ type: 'refresh' })).tasks.headings, []);
+    assert.deepStrictEqual((await omegaAfter({ type: 'refresh' })).tasks.headings, []);
     const count = watchers.length;
     const watcher = watchers[count - 1];
     assert.strictEqual(watcher.disposed, false);
 
     // A change no event reports is not shown: a ready message is answered from the current read.
     fs.writeFileSync(path.join(root, OMEGA, 'TASKS_TODO.md'), '# TASKS TODO\n\n## First task\n\nA brief.\n\n---\n');
-    assert.deepStrictEqual((await pageAfter({ type: 'ready' })).tasks.headings, [], 'a ready message reads nothing afresh');
+    assert.deepStrictEqual((await omegaAfter({ type: 'ready', mission: OMEGA })).tasks.headings, [], 'a ready message reads nothing afresh');
 
-    // The pane is closed: the watcher stays, and its event is re-read with no pane to post to.
-    close('gurita.missionPane');
-    assert.strictEqual(watcher.disposed, false, "the watcher survives the pane's disposal");
+    // Every mission window is closed: the watcher stays, and its event is re-read with no window to post to.
+    for (const mission of [...windowOf.keys()]) {
+      closeWindow(mission);
+    }
+    assert.deepStrictEqual(pane.openMissionWindows(), [], 'no mission window is open');
+    assert.strictEqual(watcher.disposed, false, "the watcher survives the windows' disposal");
     assert.deepStrictEqual(
       [watcher.listeners.create.length, watcher.listeners.change.length, watcher.listeners.delete.length],
       [1, 1, 1],
@@ -2138,14 +2262,12 @@ test("the live read and its one watcher outlast the pane, every debounced event 
     let from = posted.length;
     fire('change', 'TASKS_TODO.md');
     await wait(1500);
-    assert.deepStrictEqual(livePosted(from), [], 'nothing is posted while no pane is open');
-    pane.openMissionPane(context);
-    assert.deepStrictEqual((await pageAfter({ type: 'ready' })).tasks.headings, ['First task'], "the reopened pane's ready message is answered with the re-read the event caused");
-    assert.strictEqual(watchers.length, count, 'reopening the pane creates no second watcher');
+    assert.deepStrictEqual(livePosted(from), [], 'nothing is posted while no window is open');
+    assert.deepStrictEqual((await omegaAfter({ type: 'ready', mission: OMEGA })).tasks.headings, ['First task'], "the reopened window's ready message is answered with the re-read the event caused");
+    assert.strictEqual(watchers.length, count, 'reopening a window creates no second watcher');
 
-    // The pane is hidden: an event is re-read all the same, and shown by the ready message the page posts when shown.
-    const shownPane = panelOf('gurita.missionPane');
-    assert.ok(shownPane !== undefined);
+    // The window is hidden: an event is re-read all the same, and shown by the ready message the page posts when shown.
+    const shownPane = openWindow(OMEGA);
     shownPane.visible = false;
     fs.writeFileSync(
       path.join(root, OMEGA, 'open_questions.xml'),
@@ -2154,9 +2276,9 @@ test("the live read and its one watcher outlast the pane, every debounced event 
     from = posted.length;
     fire('change', 'open_questions.xml');
     await wait(1500);
-    assert.deepStrictEqual(livePosted(from), [], 'nothing is posted to a hidden pane');
+    assert.deepStrictEqual(livePosted(from), [], 'nothing is posted to a hidden window');
     shownPane.visible = true;
-    const shown = await pageAfter({ type: 'ready' });
+    const shown = await omegaAfter({ type: 'ready', mission: OMEGA });
     assert.deepStrictEqual(shown.questions.questions?.map((each) => each.id), ['Pane Layout'], 'an event during a hidden pane shows in its next ready answer');
     assert.deepStrictEqual(shown.tasks.headings, ['First task']);
     assert.strictEqual(watcher.disposed, false);

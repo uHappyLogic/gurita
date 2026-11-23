@@ -1,8 +1,13 @@
-// The mission pane: the one webview panel in the editor area the extension holds. Its
-// `webview.html` is set once, to a page shell whose script, loaded from the output directory
-// through `asWebviewUri` under a content security policy, posts a ready message on every load
-// and draws what the extension answers. The extension answers every ready message from the
-// session's live read, described below, its recipes read afresh: the live missions, each carrying its documents as the in-process readers parse them and what
+// The mission windows: one webview panel in the editor area per mission, opened by a click on the
+// mission's row in the side-bar view (`missionTree.ts`) through the hidden open-mission command,
+// which reveals the mission's window when one is already open, so several missions' windows stand
+// open at once, never two for one mission. Each window's `webview.html` is set once, to a page
+// shell whose script, loaded from the output directory through `asWebviewUri` under a content
+// security policy, posts a ready message on every load and draws what the extension answers: that
+// one mission's page, with no tab row, no refresh control, and no mission-starting button, those
+// belonging to the side-bar view. Every window draws from the session's one live read, described
+// below, and the extension answers every ready message from it, its recipes read afresh: the
+// window's mission carrying its documents as the in-process readers parse them and what
 // its seven-block workflow diagram draws: the block filled, the step to run next, chosen from the
 // mission's state, its documents' facts, and the number of `Requirements-review:` commits git
 // holds for it, and the count of those beyond the first, which the additional review round
@@ -16,32 +21,38 @@
 // and follow up tasks' when finish is, and every undeclared recipe, or every
 // recipe when no step is chosen, laid out within that by the page's other rules, the shipped
 // recipes in the shipped file's order followed by its own group, and the leaving off of a recipe
-// holding a placeholder the page cannot fill; or with the one failure state the live read gives.
+// holding a placeholder the page cannot fill. While the live read fails, every open window is
+// answered with the one failure state in place of its whole page, the failure line with the cause
+// beneath it, and while a successful read does not list a window's mission, that window stays open
+// and is answered with one fixed notice that the mission is no longer live, drawing no diagram,
+// recipe, pane, or action button; either window draws its mission's page again from the next read
+// that lists the path. Every click a window's page posts is checked against what the latest answer
+// posted to that window, for that window's own mission, so a click naming another mission, or one
+// reaching a window in the failure state or the no-longer-live notice, starts nothing.
 // The recipes are read with the per-user variant store laid over them. Each entry offers the
 // recipe's variants for the dropdown beside its button, by their names, and describes the one
 // selected, whose name its button shows beneath its own: the variant remembered for the recipe on
 // that mission, a remembered selection always winning over the default, and otherwise the
 // recipe's default. A selection the page posts is remembered per recipe name on one mission, keyed by the
-// mission's path as the pane lists it, in the project's `workspaceState` as a map from mission
-// path and recipe name to variant name, nothing written into the project's tree, and the pages are
+// mission's path as the live read lists it, in the project's `workspaceState` as a map from mission
+// path and recipe name to variant name, nothing written into the project's tree, and the page is
 // posted again with it; a remembered variant its recipe no longer carries is dropped there at the
 // next answer, the button falling back to the current default. The page redraws its question card in place from
 // every such message, keeping the pane the person clicked while the mission stays shown.
-// A click on a recipe button starts the selected variant's chain for the page's mission at once,
-// and a recipe or variant the latest answer did not list, selected, on that mission's page starts
+// A click on a recipe button starts the selected variant's chain for the window's mission at once,
+// and a recipe or variant the latest answer did not list, selected, on that page starts
 // nothing. The
 // buttons outside the chains, untouched by the step, each run a variant of the recipe of its fixed
 // name, its shipped variants and those an own recipe of the same name adds, the variant store laid
-// over them, picked as the recipe list's are: each is posted with the pages, and the two
-// mission-starting buttons with the failure state too, offering in the dropdown beside it the
-// variants it can run, a variant with a line on a disabled harness left out, and describing the
-// one selected, its name and its lines, which the button's label and hover text show: the
-// variant remembered for the recipe, a remembered selection always winning over the default,
-// where the default or the remembered one is left out the default when still offered and
-// otherwise the first offered. The selection is remembered as
-// the recipe list's is, per recipe on the mission for the buttons on a mission's page, and once
-// per project, in `workspaceState` under a key of its own, for the two mission-starting buttons,
-// and a remembered variant its recipe no longer carries is dropped at the next answer. The
+// over them, picked as the recipe list's are: each is posted with the page, offering in the
+// dropdown beside it the variants it can run, a variant with a line on a disabled harness left
+// out, and describing the one selected, its name and its lines, which the button's label and hover
+// text show: the variant remembered for the recipe on the mission, a remembered selection always
+// winning over the default, where the default or the remembered one is left out the default when
+// still offered and otherwise the first offered, and a remembered variant its recipe no longer
+// carries is dropped at the next answer. The two mission-starting controls are the side-bar view's
+// rows, which this module serves (`startingOffers`, `runStartingRow`, `pickStartingVariant`), their
+// selection remembered once per project in `workspaceState` under a key of its own. The
 // answer-with-alternative button is posted once per alternative of each question the mission's
 // question view shows, each with a dropdown and a selection of its own, remembered in
 // `workspaceState` under a third key per mission, question, and alternative, so a pick on one
@@ -54,8 +65,7 @@
 // run
 // through the same run path: on a question's card the discuss, answer, and answer-with-
 // recommendation buttons, on an alternative on that card the answer-with-alternative button,
-// and on the pane at the tab row's end, in its failure state too, the two mission-starting
-// buttons, and on a mission's page, in its row above the pane headers, the new-task button. The
+// and on a mission's page, in its row above the pane headers, the new-task button. The
 // Short Title and the Alternative Id come from the card clicked, every typed value from
 // VS Code's own input box, one line per value, and each value reaches its line only as its
 // `GURITA_*` session variable. The discuss button always asks for an optional discussion note,
@@ -64,29 +74,25 @@
 // nothing. While a chain started for a mission is running, from its start until its terminal
 // closes, that mission's page draws every action button on it disabled, its recipe buttons, its
 // question card's buttons, its preview's start button, and its New task button, and pulses its
-// workflow diagram's filled block, while the tabs, the two pane headers, the refresh control, the
-// other missions' pages, and the two mission-starting buttons stay enabled. The settings live in
-// the Settings window of their own (`settingsWindow.ts`), not on the pane: the pane draws no
-// Settings control, and a variant with at least one line on a harness the window disabled is left
-// out of the list the pane posts, so out of its recipe's dropdown and refused on a click as any
+// workflow diagram's filled block, while its two pane headers and every other mission's window stay
+// enabled. The settings live in
+// the Settings window of their own (`settingsWindow.ts`), not on a mission's page: a variant with
+// at least one line on a harness the window disabled is left
+// out of the list a page is posted, so out of its recipe's dropdown and refused on a click as any
 // variant the list lacks is, a recipe whose every variant is left out loses its button, and where
 // the remembered variant or the default is left out the button stands on the default when it is
 // still listed and otherwise on the first listed variant, the remembered selection kept for when
 // the harness is enabled again. The fixed-name buttons' dropdowns leave such a variant out in the
 // same way, and the looped run's preview, overrides, and lines keep every named single-task line.
-// Every edit the window makes re-reads the recipes and posts the pages again while the pane is
-// shown, or the failure state again while it stands, so the mission pages' dropdowns and the
-// fixed-name buttons' dropdowns and labels show it at once.
+// Every edit the window makes re-reads the recipes and posts every shown mission window again, the
+// failure state again while it stands, so the pages' dropdowns and the fixed-name buttons'
+// dropdowns and labels show it at once.
 // The
 // extension posts the
-// paths of the missions with a running runner to the page when a run starts and when its terminal closes, and
-// with every redraw, so a hidden pane shown again draws them too; a click that still reaches the
-// extension for such a mission is refused as before. The page posts the clicked mission's path on
-// every click of a mission's tab, the tab already selected included, and the extension answers by
-// calling `show()` on the terminal the run note keeps for that mission, bringing it forward and
-// focusing it, and does nothing more, with no notification, when the mission has no running
-// runner. When a run's terminal closes the pane is
-// re-read and the fresh parse posted to the page. A click on a looped recipe's button shows that recipe's preview on the
+// paths of the missions with a running runner to every open window when a run starts and when its
+// terminal closes, and with every redraw, so a hidden window shown again draws them too; a click
+// that still reaches the extension for such a mission is refused as before. When a run's terminal
+// closes the live missions are re-read and the fresh parse posted to every shown window. A click on a looped recipe's button shows that recipe's preview on the
 // page before anything runs: the extension gathers the named single-task lines from the recipes,
 // read afresh, runs the runner's `preview` with them, the mission, and the rule file at the
 // project root as a short-lived child process, and posts what it printed. The person may override
@@ -94,23 +100,21 @@
 // runner's `loop` in the run terminal with every named line and every override, whether or not a
 // task is still unresolved.
 //
-// The live read belongs to the extension's session, not to the panel: the extension reads no
+// The live read belongs to the extension's session, not to any window: the extension reads no
 // mission and watches no file until the side-bar view is first resolved or a Gurita command first
 // runs, and whichever comes first starts the session's live read, which, with the one file system watcher over the mission documents under
 // the project root, created with the first live read that succeeds, lasts until the extension
-// deactivates, released neither when the panel is hidden nor when it is closed. The watcher's
-// events are debounced so that a burst of writes causes one re-read, made whatever is visible. A
-// change to a mission's question document or task list re-reads that mission's documents in
-// process against the live list last read, choosing its next step, and with it the recipes its
-// page lists, and its default pane and counting its review commits afresh, and creating or deleting
-// a `requirements.md`, or changing a `TASKS_TODO.md`, also re-runs `missions.py live`. A re-read
-// posts to the panel only while it is shown; a hidden or closed panel's page is drawn from the
-// current read by the ready message it posts when shown or opened, so no stale flag is kept. The
-// refresh control on the page and the refresh command each re-read everything, as a fallback. Git
+// deactivates, released neither when a window is hidden nor when every window is closed. The
+// watcher's events are debounced so that a burst of writes causes one re-read, made whatever is
+// visible. A change to a mission's question document or task list re-reads that mission's
+// documents in process against the live list last read, choosing its next step, and with it the
+// recipes its page lists, and its default pane and counting its review commits afresh, and creating
+// or deleting a `requirements.md`, or changing a `TASKS_TODO.md`, also re-runs `missions.py live`.
+// A re-read posts to a window only while it is shown, a burst's only to the windows of the missions
+// it touched; a hidden window's page is drawn from the current read by the ready message it posts
+// when shown, so no stale flag is kept. The refresh command re-reads everything, as a fallback. Git
 // state is not watched. Every re-read the session keeps, a full one or a burst's, is told to the
 // side-bar view's tree (`missionTree.ts`), which redraws its rows from it.
-// The page stays on the mission it shows unless that mission is no longer live, when it falls back
-// to the first.
 
 import * as os from 'node:os';
 import * as vscode from 'vscode';
@@ -152,12 +156,15 @@ import { disabledCommands, readHarnessStates } from './harnessSettings';
 import { Harness } from './lineValues';
 import { FileEventKind, RefreshBatch, RefreshQueue, WATCHED_PATTERN, eventEffect } from './refresh';
 import { OPTIONAL_PLACEHOLDERS } from './placeholders';
-import { refuseWhileRunning, runnerFile, runningMissions, showRun, startChain, startLoop } from './runs';
+import { refuseWhileRunning, runnerFile, runningMissions, startChain, startLoop } from './runs';
 import { MissionWorkflow, WorkflowStep, missionWorkflow, reviewCount } from './workflow';
 import { StartingButton, StartingOffer, variantValues } from './startingRows';
 
-const VIEW_TYPE = 'gurita.missionPane';
-const PANEL_TITLE = 'Gurita Missions';
+/** The view type of every mission window. */
+export const MISSION_VIEW_TYPE = 'gurita.mission';
+
+/** The hidden command a click on a mission's row in the side-bar view runs, opening or revealing that mission's window. */
+export const OPEN_MISSION_COMMAND = 'gurita.openMission';
 
 /** The placeholders a mission page holds a value for: the mission's own path. */
 const PAGE_PLACEHOLDERS = ['path'];
@@ -165,21 +172,18 @@ const PAGE_PLACEHOLDERS = ['path'];
 /** A button on a question's card. */
 type QuestionButton = 'discussQuestion' | 'answerQuestion' | 'answerWithRecommendation';
 
-/** A mission-starting button at the tab row's end, and a mission-starting row of the side-bar view. */
+/** A mission-starting row of the side-bar view. */
 type MissionButton = StartingButton;
 
-/** A message the page posts to the extension. */
+/** A message a mission window's page posts to the extension, every one but ready naming the window's mission. */
 type PageMessage =
   | { type: 'ready' }
-  | { type: 'refresh' }
-  | { type: 'missionTab'; mission: string }
   | { type: 'runRecipe'; mission: string; recipe: string; variant: string }
   | { type: 'selectVariant'; mission: string; recipe: string; variant: string }
   | { type: 'questionButton'; button: QuestionButton; mission: string; question: string; variant: string }
   | { type: 'alternativeButton'; mission: string; question: string; alternative: string; variant: string }
-  | { type: 'missionButton'; button: MissionButton; variant: string }
   | { type: 'taskButton'; mission: string; variant: string }
-  | { type: 'selectButtonVariant'; button: FixedButton; mission?: string; variant: string }
+  | { type: 'selectButtonVariant'; button: FixedButton; mission: string; variant: string }
   | { type: 'selectAlternativeVariant'; mission: string; question: string; alternative: string; variant: string }
   | { type: 'previewLoop'; mission: string; recipe: string; variant: string }
   | { type: 'startLoop'; mission: string; recipe: string; overrides: Record<string, string> };
@@ -203,11 +207,8 @@ type FixedButton = keyof typeof BUTTON_RECIPES;
  */
 type PageButton = Exclude<FixedButton, MissionButton | 'answerWithAlternative'>;
 
-/** The fixed-name buttons on a mission's page posted once with each mission, by the button. */
+/** The fixed-name buttons on a mission's page posted once with its mission, by the button. */
 const PAGE_BUTTONS: readonly PageButton[] = ['discussQuestion', 'answerQuestion', 'answerWithRecommendation', 'discussTask'];
-
-/** The two mission-starting buttons, belonging to no mission, their dropdowns' selections remembered once per project. */
-const STARTING_BUTTONS: readonly MissionButton[] = ['discussGoal', 'defineMission'];
 
 /**
  * What a fixed-name button runs, as its dropdown, label, and hover text show it: the variants it
@@ -235,7 +236,7 @@ type ButtonPost =
   | { state: 'disabled' }
   | { state: 'refused'; cause: string };
 
-/** What the latest answer posted for each fixed-name button of one scope, by the button. */
+/** What the latest answer posted for each fixed-name button of one page, by the button. */
 type ButtonPosts = Partial<Record<FixedButton, ButtonPost>>;
 
 /**
@@ -249,27 +250,33 @@ interface AlternativeButtonEntry {
   entry: FixedButtonEntry;
 }
 
-/** A message the extension posts to the page. */
-type PaneMessage =
+/** A mission as a window's page draws it: its documents, its diagram, its recipe list, and its fixed-name buttons. */
+type PageMission = { path: string; state: string; title: string } & MissionDocuments &
+  MissionWorkflow & { recipes: RecipePart; buttons: FixedButtons; alternativeButtons: AlternativeButtonEntry[] };
+
+/** A message the extension posts to a mission window's page. */
+type WindowMessage =
   | {
-      type: 'live';
+      type: 'page';
       /**
-       * Each live mission with its documents, the step its diagram fills, left out when none is
+       * The window's mission with its documents, the step its diagram fills, left out when none is
        * chosen, the count its additional review round carries, left out while there is none, the
-       * pane its page opens on, and the recipe list its page shows, the recipes that fit that step.
+       * pane its page opens on, the recipe list its page shows, the recipes that fit that step, and
+       * what its fixed-name buttons run.
        */
-      missions: ({ path: string; state: string; title: string } & MissionDocuments &
-        MissionWorkflow & { recipes: RecipePart; buttons: FixedButtons; alternativeButtons: AlternativeButtonEntry[] })[];
-      /** The paths of the missions with a running runner, whose pages are drawn as running. */
+      mission: PageMission;
+      /** The paths of the missions with a running runner; the page is drawn as running while its mission's is among them. */
       running: string[];
-      /** What the two mission-starting buttons run, which their dropdowns, labels, and hover text show. */
-      buttons: FixedButtons;
     }
   | {
+      /** The failure state, drawn in place of the whole page while the live read fails. */
       type: 'liveFailure';
       cause: string;
-      /** What the two mission-starting buttons run, drawn in the failure state too. */
-      buttons: FixedButtons;
+    }
+  | {
+      /** The notice drawn in place of the page while a successful live read does not list the window's mission. */
+      type: 'notLive';
+      path: string;
     }
   | {
       type: 'running';
@@ -297,22 +304,29 @@ interface HeldPreview {
 }
 
 /**
- * What the latest answer posted: the project root, the live missions' paths, the recipes each
- * mission's page listed, the fixed-name buttons each mission's page drew, the Short Titles each
- * mission's question view showed, each with its alternatives' ids, and the answer-with-alternative
- * button each of those alternatives drew, by mission, Short Title, and Alternative Id.
+ * What the latest answer posted to one mission window, its mission's page: the project root, the
+ * mission's path, the recipes its page listed, the fixed-name buttons it drew, the Short Titles its
+ * question view showed, each with its alternatives' ids, and the answer-with-alternative button each
+ * of those alternatives drew, by Short Title and Alternative Id.
  */
 interface Posted {
   root: string;
-  missions: Set<string>;
-  recipes: Map<string, PageRecipe[]>;
-  buttons: Map<string, ButtonPosts>;
-  questions: Map<string, Map<string, Set<string>>>;
-  alternatives: Map<string, Map<string, Map<string, ButtonPost>>>;
+  mission: string;
+  recipes: PageRecipe[];
+  buttons: ButtonPosts;
+  questions: Map<string, Set<string>>;
+  alternatives: Map<string, Map<string, ButtonPost>>;
+}
+
+/** One open mission window: its mission's path, its panel, and what the latest answer posted to it, none while it shows no page. */
+interface MissionWindow {
+  mission: string;
+  panel: vscode.WebviewPanel;
+  posted?: Posted;
 }
 
 /**
- * What the latest successful live read gave and the pane last drew: the project root, the live
+ * What the latest successful live read gave: the project root, the live
  * missions in the order printed, each one's documents as last read and what its diagram draws, and
  * the merged recipes, out of which each page's list is chosen for its step.
  */
@@ -324,15 +338,12 @@ interface Current {
   recipes: RecipeRead;
 }
 
-let panel: vscode.WebviewPanel | undefined;
-let posted: Posted | undefined;
+/** Every open mission window, by its mission's path. */
+const windows = new Map<string, MissionWindow>();
 let current: Current | undefined;
 
-/** The cause of the failure state the latest answer posted, kept while it stands so an edit can post it again. */
+/** The cause the latest live read failed with, kept while the failure stands so an edit can post it again. */
 let failure: string | undefined;
-
-/** What the latest answer, the pages or the failure state, posted for the two mission-starting buttons. */
-let startingPosts: ButtonPosts | undefined;
 
 /** The watcher over the mission documents, and the project root it was created over. */
 let watcher: { root: string; disposables: vscode.Disposable[] } | undefined;
@@ -403,7 +414,7 @@ export function onSessionRead(listener: () => void): vscode.Disposable {
 
 /**
  * Calls `listener` after every change to the variant remembered for either mission-starting control,
- * made from the side-bar view's QuickPick or the pane's dropdown, and after every edit in the
+ * made from the side-bar view's QuickPick, and after every edit in the
  * Settings window, which may change what either control runs, until the returned disposable is
  * disposed.
  */
@@ -444,9 +455,9 @@ export function startLiveRead(context: vscode.ExtensionContext): void {
 /**
  * Re-reads everything the session's live read holds, starting the session when no command has
  * started it yet: the live missions, every mission's documents, and the recipes, the side-bar tree
- * redrawn from the fresh parse as every kept re-read redraws it, and the fresh parse posted to the
- * pane while it is shown. A hidden or closed pane draws it from its next ready message. The refresh
- * command and the side-bar view's Refresh title-bar action both run it.
+ * redrawn from the fresh parse as every kept re-read redraws it, and the fresh parse posted to
+ * every mission window while it is shown. A hidden window draws it from its next ready message. The
+ * refresh command and the side-bar view's Refresh title-bar action both run it.
  */
 export function refreshMissions(context: vscode.ExtensionContext): void {
   if (startSession(context)) {
@@ -477,69 +488,72 @@ function endSession(): void {
   unwatch();
   current = undefined;
   failure = undefined;
-  posted = undefined;
+  for (const each of windows.values()) {
+    each.posted = undefined;
+  }
 }
 
 /**
- * Posts the paths of the missions with a running runner to the page, when the extension holds a
- * pane, so their pages are drawn as running. A hidden pane holds no page, and the next redraw,
+ * Posts the paths of the missions with a running runner to every open mission window, so the page
+ * of a mission among them is drawn as running. A hidden window holds no page, and the next redraw,
  * answering the ready message its page posts when shown again, carries them instead.
  */
 export function postRunning(): void {
-  if (panel !== undefined) {
-    void post(panel, { type: 'running', missions: runningMissions() });
+  const missions = runningMissions();
+  for (const each of windows.values()) {
+    void post(each.panel, { type: 'running', missions });
   }
 }
 
 /**
- * Creates the one mission pane, or reveals the one the extension already holds, starting the
- * session's live read when no command has started it yet.
+ * Opens the window of the mission at `mission`, or reveals it when one is already open, starting the
+ * session's live read when nothing has started it yet: a webview panel of its own in the active
+ * editor column, titled with the mission's title as the session's read lists it, else its path,
+ * beside every other mission's window.
  */
-export function openMissionPane(context: vscode.ExtensionContext): void {
+export function openMissionWindow(context: vscode.ExtensionContext, mission: string): void {
   startSession(context);
-  if (panel !== undefined) {
-    panel.reveal();
+  const open = windows.get(mission);
+  if (open !== undefined) {
+    open.panel.reveal();
     return;
   }
   const scripts = vscode.Uri.joinPath(context.extensionUri, 'out', 'webview');
-  const created = vscode.window.createWebviewPanel(VIEW_TYPE, PANEL_TITLE, vscode.ViewColumn.Active, {
+  const title = current?.live.find((each) => each.path === mission)?.title ?? mission;
+  const created = vscode.window.createWebviewPanel(MISSION_VIEW_TYPE, title, vscode.ViewColumn.Active, {
     enableScripts: true,
     localResourceRoots: [scripts],
   });
-  panel = created;
-  created.webview.html = pageShell(created.webview, vscode.Uri.joinPath(scripts, 'page.js'), PANEL_TITLE);
+  const win: MissionWindow = { mission, panel: created };
+  windows.set(mission, win);
+  created.webview.html = pageShell(created.webview, vscode.Uri.joinPath(scripts, 'page.js'), title);
   created.webview.onDidReceiveMessage(
     (message: PageMessage) => {
+      if (windows.get(mission) !== win) {
+        return;
+      }
       if (message?.type === 'ready') {
         if (settled === reads) {
-          void postPages(context, created);
-        }
-      } else if (message?.type === 'refresh') {
-        void answer(context);
-      } else if (message?.type === 'missionTab') {
-        if (typeof message.mission === 'string') {
-          showRun(message.mission);
+          void postWindow(context, win);
         }
       } else if (message?.type === 'runRecipe') {
-        runRecipe(context, message.mission, message.recipe, message.variant);
+        runRecipe(context, win, message.mission, message.recipe, message.variant);
       } else if (message?.type === 'selectVariant') {
-        void selectVariant(context, created, message.mission, message.recipe, message.variant);
+        void selectVariant(context, win, message.mission, message.recipe, message.variant);
       } else if (message?.type === 'questionButton') {
-        void runQuestionButton(context, message.button, message.mission, message.question, message.variant);
+        void runQuestionButton(context, win, message.button, message.mission, message.question, message.variant);
       } else if (message?.type === 'alternativeButton') {
-        runAlternativeButton(context, message.mission, message.question, message.alternative, message.variant);
-      } else if (message?.type === 'missionButton') {
-        void runMissionButton(context, message.button, message.variant);
+        runAlternativeButton(context, win, message.mission, message.question, message.alternative, message.variant);
       } else if (message?.type === 'taskButton') {
-        void runTaskButton(context, message.mission, message.variant);
+        void runTaskButton(context, win, message.mission, message.variant);
       } else if (message?.type === 'selectButtonVariant') {
-        void selectButtonVariant(context, created, message.button, message.mission, message.variant);
+        void selectButtonVariant(context, win, message.button, message.mission, message.variant);
       } else if (message?.type === 'selectAlternativeVariant') {
-        void selectAlternativeVariant(context, created, message.mission, message.question, message.alternative, message.variant);
+        void selectAlternativeVariant(context, win, message.mission, message.question, message.alternative, message.variant);
       } else if (message?.type === 'previewLoop') {
-        void previewLoop(context, created, message.mission, message.recipe, message.variant);
+        void previewLoop(context, win, message.mission, message.recipe, message.variant);
       } else if (message?.type === 'startLoop') {
-        runLoop(context, created, message.mission, message.recipe, message.overrides);
+        runLoop(context, win, message.mission, message.recipe, message.overrides);
       }
     },
     undefined,
@@ -547,16 +561,19 @@ export function openMissionPane(context: vscode.ExtensionContext): void {
   );
   created.onDidDispose(
     () => {
-      if (panel === created) {
-        panel = undefined;
-        posted = undefined;
-        startingPosts = undefined;
-        previews.clear();
+      if (windows.get(mission) === win) {
+        windows.delete(mission);
+        previews.delete(mission);
       }
     },
     undefined,
     context.subscriptions,
   );
+}
+
+/** The paths of the missions whose window is open, in the order the windows were opened. */
+export function openMissionWindows(): string[] {
+  return [...windows.keys()];
 }
 
 /**
@@ -605,8 +622,8 @@ function readWorkflow(root: string, mission: LiveMission, documents: MissionDocu
  * Acts on one debounced burst of the watcher's events, whatever is visible: a burst that moves the
  * live list re-reads everything; any other re-reads in process the documents of each live mission
  * it touched, chooses what its diagram draws, and with it the recipes its page lists, and its
- * default pane afresh, keeps it in the session's live read, and posts the fresh parse to the pane
- * while it is shown.
+ * default pane afresh, keeps it in the session's live read, and posts the fresh parse to the window
+ * of each mission it touched while that window is shown.
  */
 async function flushEvents(context: vscode.ExtensionContext, batch: RefreshBatch): Promise<void> {
   if (queue === undefined) {
@@ -632,15 +649,13 @@ async function flushEvents(context: vscode.ExtensionContext, batch: RefreshBatch
     shown.workflows.set(mission.path, workflows[index]);
   });
   readKept();
-  const target = shownPanel();
-  if (target !== undefined) {
-    await post(target, publish(context, shown));
-  }
+  const paths = new Set(touched.map((mission) => mission.path));
+  await Promise.all(shownWindows().filter((each) => paths.has(each.mission)).map((each) => post(each.panel, publish(context, shown, each))));
 }
 
-/** The pane, while the extension holds one and it is shown; a hidden page holds nothing to post to. */
-function shownPanel(): vscode.WebviewPanel | undefined {
-  return panel !== undefined && panel.visible ? panel : undefined;
+/** The open mission windows that are shown; a hidden window's page holds nothing to post to. */
+function shownWindows(): MissionWindow[] {
+  return [...windows.values()].filter((each) => each.panel.visible);
 }
 
 /**
@@ -727,7 +742,9 @@ function liveSelections(context: vscode.ExtensionContext, live: readonly LiveMis
 /**
  * Re-reads everything the session's live read holds, the live missions, every mission's
  * documents, and the recipes, keeps the fresh parse, or the failure state the live read gives, and
- * posts it to the pane while it is shown. Only the latest re-read started keeps and posts its answer.
+ * posts it to every mission window while it is shown, each its own mission's page, the notice that
+ * its mission is no longer live, or the failure state. Only the latest re-read started keeps and
+ * posts its answer.
  */
 async function answer(context: vscode.ExtensionContext): Promise<void> {
   const sequence = ++reads;
@@ -755,17 +772,12 @@ async function answer(context: vscode.ExtensionContext): Promise<void> {
       };
       failure = undefined;
     } else {
-      posted = undefined;
       current = undefined;
       failure = read.cause;
     }
     settled = sequence;
     readKept();
-    const target = shownPanel();
-    if (target === undefined) {
-      return;
-    }
-    await post(target, current !== undefined ? publish(context, current) : failureMessage(context, failure as string));
+    await Promise.all(shownWindows().map((each) => postAnswer(context, each)));
   } finally {
     if (sequence === reads) {
       settled = sequence;
@@ -774,18 +786,7 @@ async function answer(context: vscode.ExtensionContext): Promise<void> {
 }
 
 /**
- * The failure state's message for `cause`, with what the two mission-starting buttons run, the
- * recipes read afresh, noting it as what the latest answer posted for them.
- */
-function failureMessage(context: vscode.ExtensionContext, cause: string): PaneMessage {
-  const read = readRecipeList(context);
-  const starting = fixedButtons(read, STARTING_BUTTONS, new Map(Object.entries(projectSelections(context, read))));
-  startingPosts = starting.posts;
-  return { type: 'liveFailure', cause, buttons: starting.entries };
-}
-
-/**
- * The dropdown selections of the two mission-starting buttons the project's `workspaceState`
+ * The selections of the two mission-starting rows the project's `workspaceState`
  * remembers, by recipe name, every remembered variant its recipe in the merged list `read` no
  * longer carries dropped from it. A failed read drops nothing.
  */
@@ -803,35 +804,54 @@ function projectSelections(context: vscode.ExtensionContext, read: RecipeRead): 
 }
 
 /**
- * Posts the pages again from the session's live read, their recipes re-read, in answer to a ready
- * message and after a change to a remembered selection, so the recipe list's dropdowns and the
- * fixed-name buttons' labels show it at once: the mission pages when the latest read gave them,
- * and the failure state, its buttons re-read, when it gave that.
+ * The message answering the mission window `win` from the session's live read as it stands, noting
+ * what it posts as what the latest answer posted to that window: its mission's page when the latest
+ * read lists the mission, the notice that it is no longer live when the read does not, and the
+ * failure state while the read fails; none while the first read has not settled.
  */
-async function postPages(context: vscode.ExtensionContext, target: vscode.WebviewPanel): Promise<void> {
-  if (panel !== target) {
-    return;
-  }
+function windowMessage(context: vscode.ExtensionContext, win: MissionWindow): WindowMessage | undefined {
   if (current !== undefined) {
-    current.recipes = readRecipeList(context);
-    await post(target, publish(context, current));
-  } else if (failure !== undefined) {
-    await post(target, failureMessage(context, failure));
+    return publish(context, current, win);
+  }
+  win.posted = undefined;
+  return failure !== undefined ? { type: 'liveFailure', cause: failure } : undefined;
+}
+
+/** Posts to the mission window `win` its answer from the session's live read as it stands, as `windowMessage` gives it. */
+async function postAnswer(context: vscode.ExtensionContext, win: MissionWindow): Promise<void> {
+  const message = windowMessage(context, win);
+  if (message !== undefined) {
+    await post(win.panel, message);
   }
 }
 
 /**
+ * Posts the mission window `win` its answer again from the session's live read, the recipes
+ * re-read, in answer to a ready message and after a change to a remembered selection, so the recipe
+ * list's dropdowns and the fixed-name buttons' labels show it at once.
+ */
+async function postWindow(context: vscode.ExtensionContext, win: MissionWindow): Promise<void> {
+  if (windows.get(win.mission) !== win) {
+    return;
+  }
+  if (current !== undefined) {
+    current.recipes = readRecipeList(context);
+  }
+  await postAnswer(context, win);
+}
+
+/**
  * Tells every surface drawn from the recipes that an edit in the Settings window changed them: the
- * side-bar view's two mission-starting rows are redrawn, their recipes read afresh, and the pages
- * are posted again to the pane while it is shown, their recipes re-read. A hidden or closed pane
- * draws them from its next ready message.
+ * side-bar view's two mission-starting rows are redrawn, their recipes read afresh, and every
+ * mission window is posted its answer again while it is shown, the recipes re-read once for them
+ * all. A hidden window draws it from its next ready message.
  */
 export async function recipesChanged(context: vscode.ExtensionContext): Promise<void> {
   startingChanged();
-  const target = shownPanel();
-  if (target !== undefined) {
-    await postPages(context, target);
+  if (current !== undefined) {
+    current.recipes = readRecipeList(context);
   }
+  await Promise.all(shownWindows().map((each) => postAnswer(context, each)));
 }
 
 /**
@@ -945,188 +965,168 @@ function alternativeButtons(
 }
 
 /**
- * The page's message for what `shown` holds, each mission carrying the recipe list its page shows
- * for the step its diagram fills, noting what it lists as what the latest answer posted.
+ * The mission window `win`'s message for what `shown` holds: its mission's page, carrying the recipe
+ * list it shows for the step its diagram fills, noted as what the latest answer posted to that
+ * window; or, when `shown` does not list the mission, the notice that it is no longer live, noting
+ * that nothing is posted and dropping the mission's held preview.
  */
-function publish(context: vscode.ExtensionContext, shown: Current): PaneMessage {
+function publish(context: vscode.ExtensionContext, shown: Current, win: MissionWindow): WindowMessage {
+  const mission = shown.live.find((each) => each.path === win.mission);
+  if (mission === undefined) {
+    win.posted = undefined;
+    previews.delete(win.mission);
+    return { type: 'notLive', path: win.mission };
+  }
   const selections = liveSelections(context, shown.live, shown.recipes);
   const chosen = liveAlternativeSelections(context, shown.recipes);
-  const starting = fixedButtons(shown.recipes, STARTING_BUTTONS, new Map(Object.entries(projectSelections(context, shown.recipes))));
-  startingPosts = starting.posts;
-  const buttons = new Map<string, ButtonPosts>();
-  const alternatives = new Map<string, Map<string, Map<string, ButtonPost>>>();
-  const missions = shown.live.map((mission) => {
-    const workflow = shown.workflows.get(mission.path) as MissionWorkflow;
-    const documents = shown.documents.get(mission.path) as MissionDocuments;
-    const remembered = missionSelections(selections, mission.path);
-    const fixed = fixedButtons(shown.recipes, PAGE_BUTTONS, remembered);
-    buttons.set(mission.path, fixed.posts);
-    const perAlternative = alternativeButtons(shown.recipes, mission.path, documents, chosen);
-    alternatives.set(mission.path, perAlternative.posts);
-    return {
-      ...mission,
-      ...documents,
-      ...workflow,
-      recipes: missionRecipes(shown.recipes, workflow.step, documents.facts.questionsEmpty === false, remembered),
-      buttons: fixed.entries,
-      alternativeButtons: perAlternative.entries,
-    };
-  });
-  const questions = new Map<string, Map<string, Set<string>>>();
-  for (const mission of missions) {
-    if (mission.questions.state === 'read') {
-      questions.set(
-        mission.path,
-        new Map(
-          mission.questions.questions.map((question) => [
-            question.id,
-            new Set(question.alternatives.map((alternative) => alternative.id)),
-          ]),
-        ),
-      );
+  const workflow = shown.workflows.get(mission.path) as MissionWorkflow;
+  const documents = shown.documents.get(mission.path) as MissionDocuments;
+  const remembered = missionSelections(selections, mission.path);
+  const fixed = fixedButtons(shown.recipes, PAGE_BUTTONS, remembered);
+  const perAlternative = alternativeButtons(shown.recipes, mission.path, documents, chosen);
+  const page: PageMission = {
+    ...mission,
+    ...documents,
+    ...workflow,
+    recipes: missionRecipes(shown.recipes, workflow.step, documents.facts.questionsEmpty === false, remembered),
+    buttons: fixed.entries,
+    alternativeButtons: perAlternative.entries,
+  };
+  const questions = new Map<string, Set<string>>();
+  if (page.questions.state === 'read') {
+    for (const question of page.questions.questions) {
+      questions.set(question.id, new Set(question.alternatives.map((alternative) => alternative.id)));
     }
   }
-  posted = {
+  win.posted = {
     root: shown.root,
-    missions: new Set(shown.live.map((mission) => mission.path)),
-    recipes: new Map(missions.map((mission) => [mission.path, mission.recipes.state === 'read' ? mission.recipes.recipes : []])),
-    buttons,
+    mission: mission.path,
+    recipes: page.recipes.state === 'read' ? page.recipes.recipes : [],
+    buttons: fixed.posts,
     questions,
-    alternatives,
+    alternatives: perAlternative.posts,
   };
-  return { type: 'live', missions, running: runningMissions(), buttons: starting.entries };
+  return { type: 'page', mission: page, running: runningMissions() };
 }
 
 /**
- * The entry of the recipe named `recipe` the latest answer listed on the page of the live mission
- * at `mission`, when its dropdown stood on the variant named `variant`; undefined otherwise, so the
- * pane starts no variant its last posted list lacks.
+ * What the latest answer posted to the mission window `win`, when it posted the page of the
+ * mission at `mission`, the one the window shows; undefined otherwise, so a click naming another
+ * mission, or reaching a window in the failure state or the no-longer-live notice, starts nothing.
  */
-function postedEntry(mission: string, recipe: string, variant: unknown): PageRecipe | undefined {
-  if (posted === undefined || !posted.missions.has(mission)) {
-    return undefined;
-  }
-  const listed = posted.recipes.get(mission)?.find((entry) => entry.name === recipe);
+function postedFor(win: MissionWindow, mission: unknown): Posted | undefined {
+  return win.posted !== undefined && win.posted.mission === mission ? win.posted : undefined;
+}
+
+/**
+ * The entry of the recipe named `recipe` the latest answer listed on the page of the mission window
+ * `win`, for the mission at `mission`, when its dropdown stood on the variant named `variant`;
+ * undefined otherwise, so the window starts no variant its last posted list lacks.
+ */
+function postedEntry(win: MissionWindow, mission: unknown, recipe: string, variant: unknown): PageRecipe | undefined {
+  const listed = postedFor(win, mission)?.recipes.find((entry) => entry.name === recipe);
   return listed !== undefined && selectedChoice(listed).name === variant ? listed : undefined;
 }
 
 /**
  * Starts the chain of the variant named `variant` of the recipe named `recipe`, as the latest
- * answer listed it, selected, on the page of the live mission at `mission`, for that mission, its
- * path its one value. A mission the latest answer did not list, or a recipe or variant it did not
- * list so on that mission's page, starts nothing.
+ * answer listed it, selected, on the page of the mission window `win`, for its mission, its path
+ * its one value. A mission the window does not show, or a recipe or variant the latest answer did
+ * not list so on its page, starts nothing.
  */
-function runRecipe(context: vscode.ExtensionContext, mission: string, recipe: string, variant: unknown): void {
-  const listed = postedEntry(mission, recipe, variant);
+function runRecipe(context: vscode.ExtensionContext, win: MissionWindow, mission: string, recipe: string, variant: unknown): void {
+  const posted = postedFor(win, mission);
+  const listed = postedEntry(win, mission, recipe, variant);
   if (posted === undefined || listed === undefined || listed.kind !== 'runnable') {
     return;
   }
-  startChain(context, posted.root, mission, listed.name, listed.lines, { path: mission });
+  startChain(context, posted.root, posted.mission, listed.name, listed.lines, { path: posted.mission });
 }
 
 /**
  * Remembers the variant named `variant` as the one selected in the dropdown of the recipe named
- * `recipe` on the page of the live mission at `mission`, in the project's `workspaceState`, and
- * posts the pages again with it selected. A mission, recipe, or variant the latest answer did not
- * list on that mission's page remembers nothing.
+ * `recipe` on the page of the mission window `win`, in the project's `workspaceState`, and posts
+ * that window's page again with it selected. A mission the window does not show, or a recipe or
+ * variant the latest answer did not list on its page, remembers nothing.
  */
 async function selectVariant(
   context: vscode.ExtensionContext,
-  target: vscode.WebviewPanel,
+  win: MissionWindow,
   mission: string,
   recipe: string,
   variant: unknown,
 ): Promise<void> {
-  if (posted === undefined || !posted.missions.has(mission) || typeof variant !== 'string') {
+  const posted = postedFor(win, mission);
+  if (posted === undefined || typeof variant !== 'string') {
     return;
   }
-  const listed = posted.recipes.get(mission)?.find((entry) => entry.name === recipe);
+  const listed = posted.recipes.find((entry) => entry.name === recipe);
   if (listed === undefined || !listed.variants.some((each) => each.name === variant)) {
     return;
   }
-  await context.workspaceState.update(SELECTIONS_KEY, rememberSelection(storedSelections(context), mission, recipe, variant));
-  if (current !== undefined && panel === target) {
-    await post(target, publish(context, current));
+  await context.workspaceState.update(SELECTIONS_KEY, rememberSelection(storedSelections(context), posted.mission, recipe, variant));
+  if (current !== undefined && windows.get(win.mission) === win) {
+    await post(win.panel, publish(context, current, win));
   }
 }
 
 /**
  * Remembers the variant named `variant` as the one selected in the dropdown beside the fixed-name
- * button `button`, in the project's `workspaceState`: for a button on a mission's page per recipe
- * on the live mission at `mission`, and for a mission-starting button once per project, and posts
- * the pages, or the failure state, again with it selected. A button, mission, or variant the
- * latest answer did not post so remembers nothing.
+ * button `button` on the page of the mission window `win`, in the project's `workspaceState`, per
+ * recipe on its mission, and posts that window's page again with it selected. A button, mission, or
+ * variant the latest answer did not post so to the window remembers nothing.
  */
 async function selectButtonVariant(
   context: vscode.ExtensionContext,
-  target: vscode.WebviewPanel,
+  win: MissionWindow,
   button: unknown,
   mission: unknown,
   variant: unknown,
 ): Promise<void> {
-  if (typeof button !== 'string' || typeof variant !== 'string') {
+  const posted = postedFor(win, mission);
+  if (posted === undefined || typeof button !== 'string' || typeof variant !== 'string' || !(PAGE_BUTTONS as readonly string[]).includes(button)) {
     return;
   }
-  const offers = (post: ButtonPost | undefined): post is Extract<ButtonPost, { state: 'offered' }> =>
-    post?.state === 'offered' && post.variants.includes(variant);
-  if ((STARTING_BUTTONS as readonly string[]).includes(button)) {
-    const post = startingPosts?.[button as MissionButton];
-    if (!offers(post)) {
-      return;
-    }
-    const stored = readProjectSelections(context.workspaceState.get(PROJECT_SELECTIONS_KEY));
-    await context.workspaceState.update(PROJECT_SELECTIONS_KEY, { ...stored, [post.recipe]: variant });
-    startingChanged();
-  } else if ((PAGE_BUTTONS as readonly string[]).includes(button)) {
-    if (posted === undefined || typeof mission !== 'string' || !posted.missions.has(mission)) {
-      return;
-    }
-    const post = posted.buttons.get(mission)?.[button as PageButton];
-    if (!offers(post)) {
-      return;
-    }
-    await context.workspaceState.update(SELECTIONS_KEY, rememberSelection(storedSelections(context), mission, post.recipe, variant));
-  } else {
+  const post = posted.buttons[button as PageButton];
+  if (post?.state !== 'offered' || !post.variants.includes(variant)) {
     return;
   }
-  await postPages(context, target);
+  await context.workspaceState.update(SELECTIONS_KEY, rememberSelection(storedSelections(context), posted.mission, post.recipe, variant));
+  await postWindow(context, win);
 }
 
 /**
  * Remembers the variant named `variant` as the one selected in the dropdown beside the
  * answer-with-alternative button of the alternative `alternative` on the card of the question
- * `question` of the live mission at `mission`, in the project's `workspaceState`, per mission,
- * question, and alternative, so every other alternative's button stays where it stood, and posts
- * the pages again with it selected. A mission, question, alternative, or variant the latest answer
- * did not post that button offering remembers nothing.
+ * `question` on the page of the mission window `win`, in the project's `workspaceState`, per
+ * mission, question, and alternative, so every other alternative's button stays where it stood, and
+ * posts that window's page again with it selected. A mission, question, alternative, or variant the
+ * latest answer did not post that button offering to the window remembers nothing.
  */
 async function selectAlternativeVariant(
   context: vscode.ExtensionContext,
-  target: vscode.WebviewPanel,
+  win: MissionWindow,
   mission: unknown,
   question: unknown,
   alternative: unknown,
   variant: unknown,
 ): Promise<void> {
-  if (posted === undefined || typeof mission !== 'string' || typeof question !== 'string' || typeof alternative !== 'string' || typeof variant !== 'string') {
+  const posted = postedFor(win, mission);
+  if (posted === undefined || typeof question !== 'string' || typeof alternative !== 'string' || typeof variant !== 'string') {
     return;
   }
-  if (!posted.missions.has(mission)) {
-    return;
-  }
-  const post = posted.alternatives.get(mission)?.get(question)?.get(alternative);
+  const post = posted.alternatives.get(question)?.get(alternative);
   if (post?.state !== 'offered' || !post.variants.includes(variant)) {
     return;
   }
   await context.workspaceState.update(
     ALTERNATIVE_SELECTIONS_KEY,
-    rememberAlternativeSelection(storedAlternativeSelections(context), mission, question, alternative, variant),
+    rememberAlternativeSelection(storedAlternativeSelections(context), posted.mission, question, alternative, variant),
   );
-  await postPages(context, target);
+  await postWindow(context, win);
 }
 
-
-async function post(target: vscode.WebviewPanel, message: PaneMessage): Promise<void> {
+async function post(target: vscode.WebviewPanel, message: WindowMessage): Promise<void> {
   try {
     await target.webview.postMessage(message);
   } catch {
@@ -1136,26 +1136,28 @@ async function post(target: vscode.WebviewPanel, message: PaneMessage): Promise<
 
 /**
  * Shows the preview of the variant named `variant` of the looped recipe named `recipe`, as the
- * latest answer listed it, selected, on the page of the live mission at `mission`, for that
- * mission: the recipes read afresh, the named single-task lines gathered from them, and the
- * runner's `preview` run with those lines, the mission, and the rule file, its print posted to the
- * page. A mission the latest answer did not list, a recipe or variant it did not list so on that
- * mission's page, or a mission with a running chain, runs nothing.
+ * latest answer listed it, selected, on the page of the mission window `win`, for its mission: the
+ * recipes read afresh, the named single-task lines gathered from them, and the runner's `preview`
+ * run with those lines, the mission, and the rule file, its print posted to the window's page. A
+ * mission the window does not show, a recipe or variant the latest answer did not list so on its
+ * page, or a mission with a running chain, runs nothing.
  */
 async function previewLoop(
   context: vscode.ExtensionContext,
-  target: vscode.WebviewPanel,
+  win: MissionWindow,
   mission: string,
   recipe: string,
   variant: unknown,
 ): Promise<void> {
-  const listed = postedEntry(mission, recipe, variant);
+  const posted = postedFor(win, mission);
+  const listed = postedEntry(win, mission, recipe, variant);
   if (posted === undefined || listed === undefined || listed.kind !== 'looped') {
     return;
   }
   if (refuseWhileRunning(mission)) {
     return;
   }
+  const target = win.panel;
   const root = posted.root;
   let recipes: Recipe[];
   let disabled: Harness[];
@@ -1188,21 +1190,21 @@ async function previewLoop(
 }
 
 /**
- * Starts the looped run of the recipe named `recipe` for the live mission at `mission`, with the
- * named single-task lines and the looped recipe's lines its latest preview ran with and every
- * override the person picked, whether or not a task is still unresolved. A mission with no
- * preview of that recipe starts nothing, and a mission with a running chain is refused as any
- * click is.
+ * Starts the looped run of the recipe named `recipe` for the mission of the mission window `win`,
+ * with the named single-task lines and the looped recipe's lines its latest preview ran with and
+ * every override the person picked, whether or not a task is still unresolved. A mission the window
+ * does not show, or one with no preview of that recipe, starts nothing, and a mission with a running
+ * chain is refused as any click is.
  */
 function runLoop(
   context: vscode.ExtensionContext,
-  target: vscode.WebviewPanel,
+  win: MissionWindow,
   mission: string,
   recipe: string,
   overrides: unknown,
 ): void {
   const held = previews.get(mission);
-  if (posted === undefined || !posted.missions.has(mission) || held === undefined || held.recipe !== recipe) {
+  if (postedFor(win, mission) === undefined || held === undefined || held.recipe !== recipe) {
     return;
   }
   const picked: Record<string, string> = {};
@@ -1223,7 +1225,7 @@ function runLoop(
   );
   if (startLoop(held.root, mission, recipe, args)) {
     previews.delete(mission);
-    void post(target, { type: 'loopStarted', mission });
+    void post(win.panel, { type: 'loopStarted', mission });
   }
 }
 
@@ -1234,7 +1236,7 @@ const QUESTION_BUTTONS: Record<QuestionButton, { typed: string[] }> = {
   answerWithRecommendation: { typed: [] },
 };
 
-/** The placeholder values each mission-starting button has typed, in the order it asks for them. */
+/** The placeholder values each mission-starting row has typed, in the order it asks for them. */
 const MISSION_BUTTONS: Record<MissionButton, { typed: string[] }> = {
   discussGoal: { typed: ['goal'] },
   defineMission: { typed: ['goal', 'scope'] },
@@ -1269,7 +1271,7 @@ const PROMPTS: Record<string, { prompt: string; placeHolder?: string }> = {
 /**
  * The recipe's name and the lines the fixed-name button `button` runs when clicked with its
  * dropdown standing on the variant named `variant`, as `posts`, what the latest answer posted for
- * the button's scope, holds it: only when the button was posted standing on that variant. A
+ * the window's page, holds it: only when the button was posted standing on that variant. A
  * button posted as refused, its recipe unreadable or one it cannot run, is told in an error
  * notification naming the cause, and every other click yields nothing.
  */
@@ -1317,35 +1319,38 @@ async function askValues(names: readonly string[]): Promise<Record<string, strin
   return values;
 }
 
-/** Whether the latest answer showed the question `question`, and the alternative given, for `mission`. */
-function shown(mission: string, question: string, alternative?: string): boolean {
-  const alternatives = posted?.questions.get(mission)?.get(question);
+/** Whether the latest answer `posted` to a window showed the question `question`, and the alternative given. */
+function shown(posted: Posted, question: string, alternative?: string): boolean {
+  const alternatives = posted.questions.get(question);
   return alternatives !== undefined && (alternative === undefined || alternatives.has(alternative));
 }
 
 /**
- * Runs a question card's button for the question `question` of the live mission at `mission`, as
- * the latest answer listed them: the Short Title from the card, the answer text, for the answer
- * button, and the optional discussion note, for the discuss button, typed into an input box, the
- * lines those of the variant named `variant` the latest answer posted the button standing on. A
- * question or mission the latest answer did not show, a variant it did not post the button
- * standing on, a mission with a running chain, or a box dismissed with Escape starts nothing.
+ * Runs a question card's button for the question `question` on the page of the mission window
+ * `win`, as the latest answer posted them to it: the Short Title from the card, the answer text,
+ * for the answer button, and the optional discussion note, for the discuss button, typed into an
+ * input box, the lines those of the variant named `variant` the latest answer posted the button
+ * standing on. A question the latest answer did not show, a mission the window does not show, a
+ * variant it did not post the button standing on, a mission with a running chain, or a box
+ * dismissed with Escape starts nothing.
  */
 async function runQuestionButton(
   context: vscode.ExtensionContext,
+  win: MissionWindow,
   button: QuestionButton,
   mission: string,
   question: string,
   variant: unknown,
 ): Promise<void> {
   const spec = QUESTION_BUTTONS[button];
-  if (spec === undefined || posted === undefined || !posted.missions.has(mission) || !shown(mission, question)) {
+  const posted = postedFor(win, mission);
+  if (spec === undefined || posted === undefined || !shown(posted, question)) {
     return;
   }
   if (refuseWhileRunning(mission)) {
     return;
   }
-  const recipe = postedButton(posted.buttons.get(mission), button, variant);
+  const recipe = postedButton(posted.buttons, button, variant);
   if (recipe === undefined) {
     return;
   }
@@ -1363,14 +1368,22 @@ async function runQuestionButton(
  * lines those of the variant named `variant` the latest answer posted that alternative's own
  * dropdown standing on.
  */
-function runAlternativeButton(context: vscode.ExtensionContext, mission: string, question: string, alternative: string, variant: unknown): void {
-  if (posted === undefined || !posted.missions.has(mission) || !shown(mission, question, alternative)) {
+function runAlternativeButton(
+  context: vscode.ExtensionContext,
+  win: MissionWindow,
+  mission: string,
+  question: string,
+  alternative: string,
+  variant: unknown,
+): void {
+  const posted = postedFor(win, mission);
+  if (posted === undefined || !shown(posted, question, alternative)) {
     return;
   }
   if (refuseWhileRunning(mission)) {
     return;
   }
-  const recipe = postedRun(posted.alternatives.get(mission)?.get(question)?.get(alternative), variant);
+  const recipe = postedRun(posted.alternatives.get(question)?.get(alternative), variant);
   if (recipe === undefined) {
     return;
   }
@@ -1382,20 +1395,21 @@ function runAlternativeButton(context: vscode.ExtensionContext, mission: string,
 }
 
 /**
- * Runs the new-task button of the live mission at `mission`, as the latest answer listed it: the
- * issue description typed into an input box, the mission's path from the page, the lines those of
- * the variant named `variant` the latest answer posted the button standing on. A mission the
- * latest answer did not list, a variant it did not post the button standing on, or a mission with
- * a running chain, starts nothing.
+ * Runs the new-task button on the page of the mission window `win`, as the latest answer posted it
+ * to the window: the issue description typed into an input box, the mission's path from the page,
+ * the lines those of the variant named `variant` the latest answer posted the button standing on. A
+ * mission the window does not show, a variant the latest answer did not post the button standing
+ * on, or a mission with a running chain, starts nothing.
  */
-async function runTaskButton(context: vscode.ExtensionContext, mission: string, variant: unknown): Promise<void> {
-  if (posted === undefined || !posted.missions.has(mission)) {
+async function runTaskButton(context: vscode.ExtensionContext, win: MissionWindow, mission: string, variant: unknown): Promise<void> {
+  const posted = postedFor(win, mission);
+  if (posted === undefined) {
     return;
   }
   if (refuseWhileRunning(mission)) {
     return;
   }
-  const recipe = postedButton(posted.buttons.get(mission), 'discussTask', variant);
+  const recipe = postedButton(posted.buttons, 'discussTask', variant);
   if (recipe === undefined) {
     return;
   }
@@ -1408,14 +1422,11 @@ async function runTaskButton(context: vscode.ExtensionContext, mission: string, 
 }
 
 /**
- * The directory a mission-starting run starts in: the project root the latest answer read, else
+ * The directory a mission-starting run starts in: the project root the latest live read read, else
  * the top level of the git work tree holding the first workspace folder, else that folder, and
  * undefined when no folder is open.
  */
 export async function startingRoot(): Promise<string | undefined> {
-  if (posted !== undefined) {
-    return posted.root;
-  }
   if (current !== undefined) {
     return current.root;
   }
@@ -1428,30 +1439,8 @@ export async function startingRoot(): Promise<string | undefined> {
 }
 
 /**
- * Runs a mission-starting button: the goal, and for the define button then the scope, typed into
- * input boxes, the run belonging to no mission, the lines those of the variant named `variant` the
- * latest answer, the pages or the failure state, posted the button standing on; any other variant
- * starts nothing.
- */
-async function runMissionButton(context: vscode.ExtensionContext, button: MissionButton, variant: unknown): Promise<void> {
-  const spec = MISSION_BUTTONS[button];
-  if (spec === undefined) {
-    return;
-  }
-  const recipe = postedButton(startingPosts, button, variant);
-  if (recipe === undefined) {
-    return;
-  }
-  const typed = await askValues(spec.typed);
-  if (typed === undefined) {
-    return;
-  }
-  startChain(context, await startingRoot(), undefined, recipe.name, recipe.lines, typed);
-}
-
-/**
  * What the mission-starting control `button` runs, out of the merged list `read` and the variant
- * the project remembers for its recipe, as `buttonRecipe` offers it to the pane's button.
+ * the project remembers for its recipe, as `buttonRecipe` offers it.
  */
 function startingOffer(read: RecipeRead, button: MissionButton, remembered: ProjectSelections): StartingOffer {
   if (read.state === 'failed') {
@@ -1519,9 +1508,9 @@ export async function runStartingRow(context: vscode.ExtensionContext, button: M
 /**
  * Offers the variants the mission-starting control `button` can run in a QuickPick, each by its
  * name with its harness, model, and effort beside it and the one selected marked, and remembers
- * the variant picked once per project, as the pane's dropdown does, without starting a run; every
- * listener and the pane are told. A control with no variant to offer tells why in an error
- * notification, and a QuickPick dismissed remembers nothing.
+ * the variant picked once per project without starting a run; every listener is told. A control
+ * with no variant to offer tells why in an error notification, and a QuickPick dismissed remembers
+ * nothing.
  */
 export async function pickStartingVariant(context: vscode.ExtensionContext, button: MissionButton): Promise<void> {
   if (MISSION_BUTTONS[button] === undefined) {
@@ -1548,9 +1537,6 @@ export async function pickStartingVariant(context: vscode.ExtensionContext, butt
   const stored = readProjectSelections(context.workspaceState.get(PROJECT_SELECTIONS_KEY));
   await context.workspaceState.update(PROJECT_SELECTIONS_KEY, { ...stored, [offer.recipe]: picked.variant });
   startingChanged();
-  if (panel !== undefined) {
-    await postPages(context, panel);
-  }
 }
 
 function nonce(): string {
@@ -1563,13 +1549,13 @@ function nonce(): string {
 }
 
 /**
- * The page shell `webview.html` is set to once, titled `title`: the stylesheet the pane and the
- * Settings window share and one page script, `script`, the pane's or the Settings window's. The
- * stylesheet centers the workflow diagram's row of blocks horizontally in the pane, as wide as the
- * row itself and never wrapping or scrolling sideways, and under the `vertical` class the page
- * script sets when that row would overflow the pane, it stacks the same blocks in a centered
- * column of equal width joined by the arrows turned downward, a block's name breaking onto a second
- * line only when the pane is narrower than the block itself; the dashed, solid, filled, and pulsing
+ * The page shell `webview.html` is set to once, titled `title`: the stylesheet the mission windows
+ * and the Settings window share and one page script, `script`, a mission window's or the Settings
+ * window's. The stylesheet centers the workflow diagram's row of blocks horizontally in the window,
+ * as wide as the row itself and never wrapping or scrolling sideways, and under the `vertical` class
+ * the page script sets when that row would overflow the window, it stacks the same blocks in a
+ * centered column of equal width joined by the arrows turned downward, a block's name breaking onto
+ * a second line only when the window is narrower than the block itself; the dashed, solid, filled, and pulsing
  * block rules hold in both layouts. It lays a mission page's two pane headers, Open questions and
  * Remaining tasks, out as two columns of equal width that together fill the page's whole width,
  * the selected one underlined, with only the selected pane's content beneath them. It draws every
@@ -1578,8 +1564,8 @@ function nonce(): string {
  * line beneath a button's name. Every push button, the `recipe`, `action`, and `control` classes
  * alike, takes one look in one shared rule: the theme's primary button colour, its hover colour,
  * and a 1px outline in the contrast border colour, else the foreground colour, so it stands out
- * against both the page and its own fill. The mission tabs, the two pane headers, and the
- * dependency links keep looks of their own. In the Settings window each variant
+ * against both the page and its own fill. The two pane headers and the dependency links keep looks
+ * of their own. In the Settings window each variant
  * under Variants and Single-task lines, a deleted one included, is a card of its own: its list
  * indented under the recipe's or line's heading, a vertical line down the card's left edge, and a
  * gap between one card and the next.
@@ -1600,12 +1586,6 @@ export function pageShell(webview: vscode.Webview, script: vscode.Uri, title: st
 <title>${title}</title>
 <style nonce="${token}">
   body { font-family: var(--vscode-font-family); color: var(--vscode-foreground); padding: 0 1em; }
-  .tabs { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25em; border-bottom: 1px solid var(--vscode-panel-border); padding: 0.5em 0; }
-  .tab-list { display: flex; flex-wrap: wrap; gap: 0.25em; }
-  .tabs .ends { margin-left: auto; display: flex; align-items: center; gap: 0.8em; }
-  .tabs .starting { display: flex; gap: 0.4em; }
-  .tab-list button { background: none; color: var(--vscode-foreground); border: 1px solid transparent; padding: 0.3em 0.8em; cursor: pointer; font: inherit; }
-  .tab-list button[aria-selected="true"] { border-color: var(--vscode-focusBorder); background: var(--vscode-list-activeSelectionBackground); color: var(--vscode-list-activeSelectionForeground); }
   .failure pre, .notice pre { white-space: pre-wrap; font-family: var(--vscode-editor-font-family); }
   .workflow { margin: 1em 0; }
   .workflow .flow { display: flex; flex-wrap: nowrap; align-items: center; gap: 0.4em; width: max-content; margin: 0 auto; }

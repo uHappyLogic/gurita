@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Mission Windows Replace the Mission Pane
-
-Replace the one mission pane with a window per mission: a click on a mission's row in the side-bar tree does nothing beyond opening that mission's own window in the editor area, or revealing it when open, several windows open at once, each showing that one mission's page with no tab row and drawing from the session's one read. While the live read fails every open window replaces its whole page with the line `The live missions could not be read.` and the cause beneath it, and a window whose mission stops being live stays open showing one fixed notice that the mission is no longer live, with no diagram, recipe, pane, or action button, each drawing its mission's page again once a live read lists the path. The pane, its tab row, and `gurita.openMissionPane` are removed and the command behind the row click is hidden from the Command Palette, leaving the refresh command the only one of the extension's own it offers; verified by the pane and page tests reworked for several windows, with `gurita-vscode/README.md` describing the windows.
-
----
-
 ## Run Terminal Shown on Window Activation
 
 Each time a mission's window becomes the active editor while that mission's run is going, by a click on its row in the side-bar tree, a click on its editor tab, or keyboard navigation between editors, bring that run's terminal forward without taking the focus (`terminal.show(true)`), read from the panel's `onDidChangeViewState`. Neither the side-bar tree nor the mission's page draws a control for it, and a click for a mission whose run is going is still refused with the notification and that run's terminal shown; verified by a test against the `vscode` stub that records each `show` call's `preserveFocus` argument, with `gurita-vscode/README.md` saying when the terminal comes forward.

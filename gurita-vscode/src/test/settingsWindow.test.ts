@@ -166,6 +166,7 @@ const extension = require('../extension') as typeof import('../extension');
 const settingsWindow = require('../settingsWindow') as typeof import('../settingsWindow');
 const missionTree = require('../missionTree') as typeof import('../missionTree');
 const startingRows = require('../startingRows') as typeof import('../startingRows');
+const { MISSION_VIEW_TYPE } = require('../pane') as typeof import('../pane');
 Module._load = load;
 
 const context = {
@@ -320,7 +321,7 @@ test('the Settings command opens one Settings window in the editor area, reveals
   assert.strictEqual(window.column, stub.ViewColumn.Active, 'opened in the editor area');
   assert.strictEqual(window.options.enableScripts, true);
   assert.match(window.html, /settings\.js/, "the window loads the Settings window's own script");
-  assert.doesNotMatch(window.html, /page\.js/, "and not the pane's");
+  assert.doesNotMatch(window.html, /page\.js/, "and not a mission window's");
   run();
   run();
   assert.strictEqual(settingsPanels().length, 1, 'a second run creates no second window');
@@ -328,7 +329,7 @@ test('the Settings command opens one Settings window in the editor area, reveals
   assert.deepStrictEqual(
     panels.filter((each) => each.viewType !== settingsWindow.SETTINGS_VIEW_TYPE),
     [],
-    'the Settings window is a window of its own, no pane opened beside it',
+    'the Settings window is a window of its own, no mission window opened beside it',
   );
   closeWindow();
   run();
@@ -361,12 +362,14 @@ test("the harness check runs once in the session, across the window's close and 
   await until(() => checkRuns() === 2, 'check again runs the check afresh');
 });
 
-test('an edit made in the Settings window reaches the mission pages and the two mission-starting rows at once', async () => {
-  commands.get('gurita.openMissionPane')?.();
-  const pane = panels.find((each) => each.viewType === 'gurita.missionPane');
-  assert.ok(pane?.receive !== undefined, 'the pane is open');
-  pane.receive({ type: 'ready' });
-  await until(() => postedOf(pane, 'live').length > 0, 'the pane draws the live read');
+test("an edit made in the Settings window reaches the open mission windows' pages and the two mission-starting rows at once", async () => {
+  commands.get(missionTree.OPEN_MISSION_COMMAND)?.(ALPHA);
+  const pane = panels.find((each) => each.viewType === MISSION_VIEW_TYPE);
+  assert.ok(pane?.receive !== undefined, "the mission's window is open");
+  await until(() => {
+    pane.receive?.({ type: 'ready' });
+    return postedOf(pane, 'page').length > 0;
+  }, "the mission's window draws the live read");
   assert.strictEqual(rowDescription('Define mission'), 'Claude Code · sonnet · medium', "the recipe's shipped default stands");
 
   let redraws = 0;
@@ -377,13 +380,11 @@ test('an edit made in the Settings window reaches the mission pages and the two 
   let from = window.posted.length;
   let paneFrom = pane.posted.length;
   sendSettings({ type: 'pickDefault', recipe: 'define-mission-goal', variant: { name: 'quick', origin: 'own' } });
-  await until(() => postedOf(window, 'variants', from).length > 0 && postedOf(pane, 'live', paneFrom).length > 0, 'the edit is posted to the window and the pane');
+  await until(() => postedOf(window, 'variants', from).length > 0 && postedOf(pane, 'page', paneFrom).length > 0, "the edit is posted to the Settings window and the mission's window");
   const listed = (postedOf(window, 'variants', from)[0].variants as { recipes: { name: string; variants: { name: string; isDefault: boolean }[] }[] }).recipes.find(
     (each) => each.name === 'define-mission-goal',
   );
   assert.deepStrictEqual(listed?.variants.filter((each) => each.isDefault).map((each) => each.name), ['quick'], 'the window lists the default picked');
-  const buttons = postedOf(pane, 'live', paneFrom)[0].buttons as Record<string, { variants: { name: string }[]; selected: number }>;
-  assert.strictEqual(buttons.defineMission.variants[buttons.defineMission.selected].name, 'quick', "the pane's Define mission button stands on the default picked");
   assert.ok(redraws > 0, 'the tree is redrawn');
   assert.strictEqual(rowDescription('Define mission'), 'Antigravity · gemini-4-argon · low', 'the Define mission row describes the default picked');
 
@@ -391,11 +392,14 @@ test('an edit made in the Settings window reaches the mission pages and the two 
   from = window.posted.length;
   paneFrom = pane.posted.length;
   sendSettings({ type: 'setHarnessEnabled', harness: 'antigravity', enabled: false });
-  await until(() => postedOf(window, 'harnessSettings', from).length > 0 && postedOf(pane, 'live', paneFrom).length > 0, 'the harness edit is posted to the window and the pane');
+  await until(() => postedOf(window, 'harnessSettings', from).length > 0 && postedOf(pane, 'page', paneFrom).length > 0, "the harness edit is posted to the Settings window and the mission's window");
   assert.ok(redraws > 0, 'the tree is redrawn');
   assert.strictEqual(rowDescription('Define mission'), 'Claude Code · sonnet · medium', 'the row falls back off the disabled harness at once');
-  const narrowed = postedOf(pane, 'live', paneFrom)[0].buttons as Record<string, { variants: { name: string }[] }>;
-  assert.deepStrictEqual(narrowed.defineMission.variants.map((each) => each.name), ['default'], "the pane's dropdown leaves the disabled harness's variant out");
+  const narrowed = postedOf(pane, 'page', paneFrom)[0];
+  assert.ok(
+    !JSON.stringify(narrowed.mission).includes('agy '),
+    "the mission's page is posted with no variant of the disabled harness selected",
+  );
 
   // With Claude Code disabled too, neither row has a variant left to run, and both say so at once.
   assert.strictEqual(rowDescription('New mission'), 'Claude Code · fable · xhigh');

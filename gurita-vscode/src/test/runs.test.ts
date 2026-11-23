@@ -103,46 +103,6 @@ test('a mission-starting run holds no mission and is still posted', () => {
   assert.deepStrictEqual(events, ['started ', 'ended ']);
 });
 
-test("a tab click shows the terminal of its mission's held run, with no notification", () => {
-  notifications.length = 0;
-  runs.startChain(context, '/project', 'lib/mission_alpha/', 'review', ['echo review'], { path: 'lib/mission_alpha/' });
-  const alpha = created[created.length - 1];
-  runs.startChain(context, '/project', 'mission_beta/', 'review', ['echo review'], { path: 'mission_beta/' });
-  const beta = created[created.length - 1];
-  const count = created.length;
-  const [alphaShown, betaShown] = [alpha.shown, beta.shown];
-  events.length = 0;
-  assert.strictEqual(runs.showRun('lib/mission_alpha/'), true);
-  assert.strictEqual(alpha.shown, alphaShown + 1);
-  assert.strictEqual(beta.shown, betaShown);
-  assert.strictEqual(runs.showRun('lib/mission_alpha/'), true);
-  assert.strictEqual(alpha.shown, alphaShown + 2);
-  assert.deepStrictEqual(notifications, []);
-  assert.strictEqual(created.length, count);
-  assert.deepStrictEqual(events, []);
-  assert.deepStrictEqual(runs.runningMissions(), ['lib/mission_alpha/', 'mission_beta/']);
-  close(alpha);
-  close(beta);
-});
-
-test('a tab click shows nothing and no notification for a mission with no held run', () => {
-  notifications.length = 0;
-  runs.startChain(context, '/project', 'mission_beta/', 'review', ['echo review'], { path: 'mission_beta/' });
-  const beta = created[created.length - 1];
-  runs.startChain(context, '/project', undefined, 'define', ['echo define'], { goal: 'A goal', scope: '.' });
-  const starting = created[created.length - 1];
-  const shown = created.map((terminal) => terminal.shown);
-  const count = created.length;
-  events.length = 0;
-  assert.strictEqual(runs.showRun('lib/mission_alpha/'), false);
-  close(beta);
-  assert.strictEqual(runs.showRun('mission_beta/'), false, 'a run whose terminal closed is no longer shown');
-  assert.deepStrictEqual(created.map((terminal) => terminal.shown), shown);
-  assert.deepStrictEqual(notifications, []);
-  assert.strictEqual(created.length, count);
-  close(starting);
-});
-
 test("a closed terminal the extension never started is not the end of a run", () => {
   events.length = 0;
   close({ name: 'another', shown: 0 });
