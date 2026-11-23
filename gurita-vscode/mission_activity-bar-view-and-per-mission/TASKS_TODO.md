@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Centre Arm Drawing for the Icon
-
-Draw the icon's centre arm by hand as a plain-text file of its own, `assets/icon-centre-arm.txt`, printable ASCII with one grid row per line in the form `assets/banner.txt` uses: an arm that is none of the banner's eight, in the banner's characters and style at a larger character scale, with more rows and columns than the banner's ten-row long arm. It is the icon's second hand-drawn source beside the banner's drawing, which the icon script reads for the centre arm; verified by checking the file's character set and its row and column counts against the banner's long arm, with `assets/banner.txt` and `assets/banner.svg` left unchanged.
-
----
-
 ## Icon Script and Tracked Activity-Bar Icon
 
 Add `scripts/render_icon.py`, a stdlib-only Python script run by hand like `scripts/render_banner.py`, which stays unchanged, that writes the activity-bar icon as a tracked SVG under `gurita-vscode/media/`: two short arms cut verbatim from `assets/banner.txt` as a mirrored pair curling inward, one from the drawing's left half on the left and one from its right half on the right, either side of the centre arm read from `assets/icon-centre-arm.txt`, the three composed at one common character scale with no arm magnified. Each arm is drawn as a filled, tapering outline derived from its drawing, with its curl, in one fill colour and with no character drawn as text, the centre arm keeping its suckers as round holes cut out of the fill, the two side arms plain silhouettes with no holes, and the brackets surviving only as the shapes' edges. Verified by a new pytest test under `tests/`, shaped like `tests/test_banner.py`, that loads the script and asserts the tracked icon is well-formed SVG and equals what the script renders from the two drawings, passing in both pytest runs.
