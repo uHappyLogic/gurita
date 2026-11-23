@@ -1,8 +1,8 @@
 // The mission pane: the one webview panel in the editor area the extension holds. Its
 // `webview.html` is set once, to a page shell whose script, loaded from the output directory
 // through `asWebviewUri` under a content security policy, posts a ready message on every load
-// and draws what the extension answers. The extension answers every ready message with the live
-// missions, read afresh, each carrying its documents as the in-process readers parse them and what
+// and draws what the extension answers. The extension answers every ready message from the
+// session's live read, described below, its recipes read afresh: the live missions, each carrying its documents as the in-process readers parse them and what
 // its seven-block workflow diagram draws: the block filled, the step to run next, chosen from the
 // mission's state, its documents' facts, and the number of `Requirements-review:` commits git
 // holds for it, and the count of those beyond the first, which the additional review round
@@ -152,15 +152,20 @@
 // runner's `loop` in the run terminal with every named line and every override, whether or not a
 // task is still unresolved.
 //
-// Beyond its own runs and its opening, the pane is kept current by a file system watcher over the
-// mission documents under the project root, created with the first live read that succeeds and
-// disposed with the panel, debounced so that a burst of writes causes one re-read. A change to a
-// mission's question document or task list re-reads that mission's documents in process against
-// the live list last read, choosing its next step, and with it the recipes its page lists, and its
-// default pane and counting its review commits afresh, and creating or deleting a `requirements.md`, or changing a `TASKS_TODO.md`, also re-runs
-// `missions.py live`. While the panel is hidden an event only marks the page stale, and a stale
-// page is re-read when the panel is shown. The refresh control on the page and the refresh command
-// each re-read everything, as a fallback. Git state is not watched.
+// The live read belongs to the extension's session, not to the panel: the extension reads no
+// mission and watches no file until a Gurita command first runs, and that first command starts the
+// session's live read, which, with the one file system watcher over the mission documents under
+// the project root, created with the first live read that succeeds, lasts until the extension
+// deactivates, released neither when the panel is hidden nor when it is closed. The watcher's
+// events are debounced so that a burst of writes causes one re-read, made whatever is visible. A
+// change to a mission's question document or task list re-reads that mission's documents in
+// process against the live list last read, choosing its next step, and with it the recipes its
+// page lists, and its default pane and counting its review commits afresh, and creating or deleting
+// a `requirements.md`, or changing a `TASKS_TODO.md`, also re-runs `missions.py live`. A re-read
+// posts to the panel only while it is shown; a hidden or closed panel's page is drawn from the
+// current read by the ready message it posts when shown or opened, so no stale flag is kept. The
+// refresh control on the page and the refresh command each re-read everything, as a fallback. Git
+// state is not watched.
 // The page stays on the mission it shows unless that mission is no longer live, when it falls back
 // to the first.
 
@@ -461,14 +466,17 @@ let startingPosts: ButtonPosts | undefined;
 /** The watcher over the mission documents, and the project root it was created over. */
 let watcher: { root: string; disposables: vscode.Disposable[] } | undefined;
 
-/** The debounce gathering the watcher's events into one re-read, while the extension holds a panel. */
+/**
+ * The debounce gathering the watcher's events into one re-read, created when the session's live
+ * read starts and kept until the extension deactivates: undefined until a Gurita command first runs.
+ */
 let queue: RefreshQueue | undefined;
-
-/** Whether an event or a refresh came while the panel was hidden, so it is re-read when shown. */
-let stale = false;
 
 /** The number of full re-reads started, so only the latest one started posts its answer. */
 let reads = 0;
+
+/** The number of the latest full re-read that settled, so a ready message knows whether one is still under way. */
+let settled = 0;
 
 /** Each mission's latest preview, by the mission's path. */
 const previews = new Map<string, HeldPreview>();
@@ -480,19 +488,40 @@ let harnessCheck: HarnessCheck | undefined;
 let checks = 0;
 
 /**
- * Re-reads the pane, when the extension holds one, and posts the fresh parse to its page: the live
- * missions, every mission's documents, and the recipes. A hidden panel is only marked stale, and
- * is re-read when shown.
+ * Re-reads everything the session's live read holds, starting the session when no command has
+ * started it yet: the live missions, every mission's documents, and the recipes, the fresh parse
+ * posted to the pane while it is shown. A hidden or closed pane draws it from its next ready message.
  */
 export function refreshMissionPane(context: vscode.ExtensionContext): void {
-  if (panel === undefined) {
+  if (startSession(context)) {
     return;
   }
-  if (!panel.visible) {
-    stale = true;
-    return;
+  void answer(context);
+}
+
+/**
+ * Starts the session's live read when no Gurita command has started it yet, and tells whether it
+ * did: the debounce the watcher's events go through and the first full read, both kept until the
+ * extension deactivates, when the read and the watcher are released.
+ */
+function startSession(context: vscode.ExtensionContext): boolean {
+  if (queue !== undefined) {
+    return false;
   }
-  void answer(context, panel);
+  queue = new RefreshQueue((batch) => void flushEvents(context, batch));
+  context.subscriptions.push({ dispose: endSession });
+  void answer(context);
+  return true;
+}
+
+/** Releases the session's live read and its watcher, as the extension deactivates. */
+function endSession(): void {
+  queue?.dispose();
+  queue = undefined;
+  unwatch();
+  current = undefined;
+  failure = undefined;
+  posted = undefined;
 }
 
 /**
@@ -506,8 +535,12 @@ export function postRunning(): void {
   }
 }
 
-/** Creates the one mission pane, or reveals the one the extension already holds. */
+/**
+ * Creates the one mission pane, or reveals the one the extension already holds, starting the
+ * session's live read when no command has started it yet.
+ */
 export function openMissionPane(context: vscode.ExtensionContext): void {
+  startSession(context);
   if (panel !== undefined) {
     panel.reveal();
     return;
@@ -518,12 +551,15 @@ export function openMissionPane(context: vscode.ExtensionContext): void {
     localResourceRoots: [scripts],
   });
   panel = created;
-  queue = new RefreshQueue((batch) => void flushEvents(context, created, batch));
   created.webview.html = pageShell(created.webview, vscode.Uri.joinPath(scripts, 'page.js'));
   created.webview.onDidReceiveMessage(
     (message: PageMessage) => {
-      if (message?.type === 'ready' || message?.type === 'refresh') {
-        void answer(context, created);
+      if (message?.type === 'ready') {
+        if (settled === reads) {
+          void postPages(context, created);
+        }
+      } else if (message?.type === 'refresh') {
+        void answer(context);
       } else if (message?.type === 'missionTab') {
         if (typeof message.mission === 'string') {
           showRun(message.mission);
@@ -581,29 +617,14 @@ export function openMissionPane(context: vscode.ExtensionContext): void {
     undefined,
     context.subscriptions,
   );
-  created.onDidChangeViewState(
-    (event) => {
-      if (panel === created && event.webviewPanel.visible && stale) {
-        void answer(context, created);
-      }
-    },
-    undefined,
-    context.subscriptions,
-  );
   created.onDidDispose(
     () => {
       if (panel === created) {
         panel = undefined;
         posted = undefined;
-        current = undefined;
-        failure = undefined;
         startingPosts = undefined;
-        stale = false;
         previews.clear();
         harnessCheck = undefined;
-        queue?.dispose();
-        queue = undefined;
-        unwatch();
       }
     },
     undefined,
@@ -654,21 +675,18 @@ function readWorkflow(root: string, mission: LiveMission, documents: MissionDocu
 }
 
 /**
- * Acts on one debounced burst of the watcher's events: a hidden panel is only marked stale; a
- * burst that moves the live list re-reads everything; any other re-reads in process the documents
- * of each live mission it touched, chooses what its diagram draws, and with it the recipes its page
- * lists, and its default pane afresh, and posts the fresh parse.
+ * Acts on one debounced burst of the watcher's events, whatever is visible: a burst that moves the
+ * live list re-reads everything; any other re-reads in process the documents of each live mission
+ * it touched, chooses what its diagram draws, and with it the recipes its page lists, and its
+ * default pane afresh, keeps it in the session's live read, and posts the fresh parse to the pane
+ * while it is shown.
  */
-async function flushEvents(context: vscode.ExtensionContext, target: vscode.WebviewPanel, batch: RefreshBatch): Promise<void> {
-  if (panel !== target) {
-    return;
-  }
-  if (!target.visible) {
-    stale = true;
+async function flushEvents(context: vscode.ExtensionContext, batch: RefreshBatch): Promise<void> {
+  if (queue === undefined) {
     return;
   }
   if (batch.live || current === undefined) {
-    void answer(context, target);
+    void answer(context);
     return;
   }
   const shown = current;
@@ -679,14 +697,22 @@ async function flushEvents(context: vscode.ExtensionContext, target: vscode.Webv
   }
   const read = touched.map((mission) => ({ mission, documents: readMissionDocuments(shown.root, mission.path) }));
   const workflows = await Promise.all(read.map(({ mission, documents }) => readWorkflow(shown.root, mission, documents)));
-  if (sequence !== reads || current !== shown || panel !== target) {
+  if (sequence !== reads || current !== shown) {
     return;
   }
   read.forEach(({ mission, documents }, index) => {
     shown.documents.set(mission.path, documents);
     shown.workflows.set(mission.path, workflows[index]);
   });
-  await post(target, publish(context, shown));
+  const target = shownPanel();
+  if (target !== undefined) {
+    await post(target, publish(context, shown));
+  }
+}
+
+/** The pane, while the extension holds one and it is shown; a hidden page holds nothing to post to. */
+function shownPanel(): vscode.WebviewPanel | undefined {
+  return panel !== undefined && panel.visible ? panel : undefined;
 }
 
 /**
@@ -771,44 +797,51 @@ function liveSelections(context: vscode.ExtensionContext, live: readonly LiveMis
 }
 
 /**
- * Re-reads everything the pane draws, the live missions, every mission's documents, and the
- * recipes, and posts the fresh parse to the page, or the failure state the live read gives. Only
- * the latest re-read started posts its answer.
+ * Re-reads everything the session's live read holds, the live missions, every mission's
+ * documents, and the recipes, keeps the fresh parse, or the failure state the live read gives, and
+ * posts it to the pane while it is shown. Only the latest re-read started keeps and posts its answer.
  */
-async function answer(context: vscode.ExtensionContext, target: vscode.WebviewPanel): Promise<void> {
+async function answer(context: vscode.ExtensionContext): Promise<void> {
   const sequence = ++reads;
-  stale = false;
-  const folder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-  const read: LiveRead = await readLive(folder, context.asAbsolutePath('bundled/missions.py'));
-  if (sequence !== reads || panel !== target) {
-    return;
-  }
-  let message: PaneMessage;
-  if (read.state === 'read') {
-    const documents = new Map(read.missions.map((mission) => [mission.path, readMissionDocuments(read.root, mission.path)]));
-    const workflows = await Promise.all(
-      read.missions.map((mission) => readWorkflow(read.root, mission, documents.get(mission.path) as MissionDocuments)),
-    );
-    if (sequence !== reads || panel !== target) {
+  try {
+    const folder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    const read: LiveRead = await readLive(folder, context.asAbsolutePath('bundled/missions.py'));
+    if (sequence !== reads || queue === undefined) {
       return;
     }
-    watch(read.root);
-    current = {
-      root: read.root,
-      live: read.missions,
-      documents,
-      workflows: new Map(read.missions.map((mission, index) => [mission.path, workflows[index]])),
-      recipes: readRecipeList(context),
-    };
-    failure = undefined;
-    message = publish(context, current);
-  } else {
-    posted = undefined;
-    current = undefined;
-    failure = read.cause;
-    message = failureMessage(context, read.cause);
+    if (read.state === 'read') {
+      const documents = new Map(read.missions.map((mission) => [mission.path, readMissionDocuments(read.root, mission.path)]));
+      const workflows = await Promise.all(
+        read.missions.map((mission) => readWorkflow(read.root, mission, documents.get(mission.path) as MissionDocuments)),
+      );
+      if (sequence !== reads || queue === undefined) {
+        return;
+      }
+      watch(read.root);
+      current = {
+        root: read.root,
+        live: read.missions,
+        documents,
+        workflows: new Map(read.missions.map((mission, index) => [mission.path, workflows[index]])),
+        recipes: readRecipeList(context),
+      };
+      failure = undefined;
+    } else {
+      posted = undefined;
+      current = undefined;
+      failure = read.cause;
+    }
+    settled = sequence;
+    const target = shownPanel();
+    if (target === undefined) {
+      return;
+    }
+    await post(target, current !== undefined ? publish(context, current) : failureMessage(context, failure as string));
+  } finally {
+    if (sequence === reads) {
+      settled = sequence;
+    }
   }
-  await post(target, message);
 }
 
 /**
@@ -841,9 +874,10 @@ function projectSelections(context: vscode.ExtensionContext, read: RecipeRead): 
 }
 
 /**
- * Posts the pages again after an edit in the settings view, their recipes re-read, so the recipe
- * list's dropdowns and the fixed-name buttons' labels show it at once: the mission pages when the
- * latest answer drew them, and the failure state, its buttons re-read, when it drew that.
+ * Posts the pages again from the session's live read, their recipes re-read, in answer to a ready
+ * message and after an edit in the settings view, so the recipe list's dropdowns and the fixed-name
+ * buttons' labels show it at once: the mission pages when the latest read gave them, and the
+ * failure state, its buttons re-read, when it gave that.
  */
 async function postPages(context: vscode.ExtensionContext, target: vscode.WebviewPanel): Promise<void> {
   if (panel !== target) {

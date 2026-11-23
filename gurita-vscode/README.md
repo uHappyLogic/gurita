@@ -190,7 +190,10 @@ only shows the mission's page, with no notification.
 
 The pane re-reads by itself after each of its runs, once you dismiss the run's terminal, and on
 changes to any mission's `requirements.md`, `open_questions.xml`, or `TASKS_TODO.md`; git state
-is not watched. When the live missions cannot be read, the pane shows one line saying so with
+is not watched. The extension reads no mission and watches no file until a Gurita command first
+runs; from then the read and the watch last until the extension deactivates, kept current
+whether the pane is shown, hidden, or closed, so a pane shown or opened again draws the latest
+read at once. When the live missions cannot be read, the pane shows one line saying so with
 the cause beneath it, and the two mission-starting buttons and **Settings** stay. When a single
 mission document is missing or does not parse, only the part of the page drawn from it is
 replaced by a notice naming the file.

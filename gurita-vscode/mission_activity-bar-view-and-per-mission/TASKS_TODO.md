@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Live Read and Watcher Last the Session
-
-Take the live read and the one file watcher off the mission pane's lifetime: the extension still reads no mission and watches no file until a Gurita command first runs, and from then the read and the watcher last until the extension deactivates, released neither when the pane is hidden nor when it is closed. Every debounced burst of file events re-reads what it touches whatever is visible, a hidden pane is redrawn from the current read by its ready message when shown, and no stale flag is left; this is the one read the side-bar tree and every window will draw from. Verified by the pane tests against the `vscode` stub, the watcher surviving the pane's disposal and an event during a hidden pane showing in what its next ready message is answered with.
-
----
-
 ## Side-Bar Tree of Live Missions
 
 Contribute an activity-bar container, its icon the tracked SVG under `gurita-vscode/media/`, holding one side-bar view: a native tree with one leaf row per live mission and no child rows, the row's label the mission's title, its description the next workflow step's name followed by both counts in a compact form such as "Derive tasks · 3 questions · 2 tasks", its icon a spinning `ThemeIcon` while the mission's run is going and a steady mission icon otherwise, and its tooltip all five facts spelled out in full beside the mission's path, a click on the row opening nothing yet. Each step or count that could not be read is replaced, on its own, by one fixed placeholder in its slot, never a zero count, with the row's hover text naming the cause (the missing or unparsable file with its path, or for the step a failed git read) and no warning icon or colour. The view's first resolution starts the session's read and the tree is redrawn on every re-read and at every run's start and end; verified by tests of the rows against a tree stand-in added to the `vscode` stub, a check of the manifest, and the packaged VSIX carrying the icon, with `gurita-vscode/README.md` describing the view.

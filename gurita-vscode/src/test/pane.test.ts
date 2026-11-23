@@ -45,6 +45,16 @@ function notify(message: string): Promise<undefined> {
 
 const disposable = { dispose(): void {} };
 
+/** A file system watcher the stub's editor created: the listeners registered on it by event kind, and whether it was disposed. */
+interface StubWatcher {
+  listeners: Record<'create' | 'change' | 'delete', ((uri: { fsPath: string }) => void)[]>;
+  disposed: boolean;
+}
+/** Every file system watcher the stub's editor created, in order. */
+const watchers: StubWatcher[] = [];
+/** The panel the extension created last, its `visible` set by a test as the editor sets it on hiding and showing. */
+let lastPanel: { visible: boolean } | undefined;
+
 /** The workspace the stub's editor holds open: its folders and the `gurita` settings it answers with. */
 const workspace = {
   folders: undefined as { uri: { fsPath: string } }[] | undefined,
@@ -71,16 +81,30 @@ const stub = {
       return workspace.folders;
     },
     getConfiguration: () => ({ get: (key: string) => workspace.settings[key] }),
-    createFileSystemWatcher: () => ({
-      onDidCreate: () => disposable,
-      onDidChange: () => disposable,
-      onDidDelete: () => disposable,
-      dispose(): void {},
-    }),
+    createFileSystemWatcher: () => {
+      const watcher: StubWatcher = { listeners: { create: [], change: [], delete: [] }, disposed: false };
+      watchers.push(watcher);
+      const on = (kind: keyof StubWatcher['listeners']) => (listener: (uri: { fsPath: string }) => void) => {
+        watcher.listeners[kind].push(listener);
+        return {
+          dispose(): void {
+            watcher.listeners[kind] = watcher.listeners[kind].filter((each) => each !== listener);
+          },
+        };
+      };
+      return {
+        onDidCreate: on('create'),
+        onDidChange: on('change'),
+        onDidDelete: on('delete'),
+        dispose(): void {
+          watcher.disposed = true;
+        },
+      };
+    },
   },
   window: {
     createWebviewPanel(): unknown {
-      return {
+      lastPanel = {
         visible: true,
         reveal(): void {},
         webview: {
@@ -101,7 +125,8 @@ const stub = {
           dispose = listener;
           return disposable;
         },
-      };
+      } as { visible: boolean };
+      return lastPanel;
     },
     createTerminal(options: { name: string; shellArgs?: string[] }): StubTerminal & { show(preserveFocus?: boolean): void } {
       const terminal = {
@@ -280,7 +305,7 @@ test("the pane posts each page's recipes in the shipped file's order, then its o
     workspace.folders = [{ uri: { fsPath: root } }];
     workspace.settings = { ownRecipesFile: path.join(files, 'recipes.md') };
     const from = posted.length;
-    send({ type: 'ready' });
+    send({ type: 'refresh' });
     const live = (await postedOf('live', from)) as { missions: { path: string; recipes: { state: string; recipes: unknown[] } }[] };
     assert.deepStrictEqual(live.missions.map((each) => each.path), [GAMMA]);
     const recipes = live.missions[0].recipes;
@@ -396,7 +421,7 @@ test('a selected variant is remembered per recipe on one mission in workspaceSta
     workspace.settings = { ownRecipesFile: path.join(files, 'recipes.md') };
     workspaceState.clear();
 
-    let entry = await entryAfter({ type: 'ready' }, DELTA, 'First run');
+    let entry = await entryAfter({ type: 'refresh' }, DELTA, 'First run');
     assert.strictEqual(selectedName(entry), 'Antigravity', 'with nothing remembered the dropdown stands on the default');
     assert.deepStrictEqual(entry.variants, [
       { name: 'Claude Code', own: false },
@@ -519,7 +544,7 @@ test('the first opening of the settings view runs the check once, every later op
   workspace.settings = { ownRecipesFile: path.join(files, 'recipes.md') };
   workspaceState.clear();
 
-  const before = (await entryAfter({ type: 'ready' }, ETA, 'First run')) as unknown;
+  const before = (await entryAfter({ type: 'refresh' }, ETA, 'First run')) as unknown;
   assert.deepStrictEqual(checkRuns(stubbed.log), [], 'no answer of the pane runs the check');
 
   let from = posted.length;
@@ -627,7 +652,7 @@ test("disabling a harness is stored in the variant store's harness part and leav
     const shown = (entries: PostedEntry[]) => entries.map((entry) => [entry.name, entry.variants.map((each) => each.name), selectedName(entry)]);
 
     let from = posted.length;
-    const initial = await page({ type: 'ready' });
+    const initial = await page({ type: 'refresh' });
     assert.deepStrictEqual(shown(initial), [
       ['First run', ['Claude Code', 'Antigravity'], 'Claude Code'],
       ['Execute tasks one at a time', ['default'], 'default'],
@@ -904,7 +929,7 @@ test('the settings view lists every recipe with its variants and carries out eac
       return created[created.length - 1].args.join(' ');
     };
 
-    await entryAfter({ type: 'ready' }, IOTA, 'First run');
+    await entryAfter({ type: 'refresh' }, IOTA, 'First run');
     let from = posted.length;
     send({ type: 'settingsOpened' });
     let recipes = await postedVariants(from);
@@ -1045,7 +1070,7 @@ test("a pick in a line's dropdown on a shipped variant leaves it unchanged besid
       return { variants: listed.variants as EditedVariant[], entry };
     };
 
-    await entryAfter({ type: 'ready' }, KAPPA, 'First run');
+    await entryAfter({ type: 'refresh' }, KAPPA, 'First run');
     const from = posted.length;
     send({ type: 'settingsOpened' });
     const listed = (await postedVariants(from))[0].variants as EditedVariant[];
@@ -1181,7 +1206,7 @@ test("a pick in a line's harness dropdown rewrites the line onto the picked harn
       return { variants: recipes[0].variants as EditedVariant[], lines: lines.lines, entry };
     };
 
-    await entryAfter({ type: 'ready' }, SIGMA, 'First run');
+    await entryAfter({ type: 'refresh' }, SIGMA, 'First run');
     const from = posted.length;
     send({ type: 'settingsOpened' });
     const shippedLines = ((await postedVariants(from))[0].variants as EditedVariant[])[0].lines;
@@ -1345,7 +1370,7 @@ test("the settings view lists the named single-task lines and carries out each l
       return found;
     };
 
-    await entryAfter({ type: 'ready' }, LAMBDA, 'First run');
+    await entryAfter({ type: 'refresh' }, LAMBDA, 'First run');
     let from = posted.length;
     send({ type: 'settingsOpened' });
     let listed = await postedLines(from);
@@ -1605,7 +1630,7 @@ test("every fixed-name button is posted with the variants it can run and the lin
     };
 
     assert.deepStrictEqual(
-      await buttonsAfter({ type: 'ready' }),
+      await buttonsAfter({ type: 'refresh' }),
       initial,
       'with no pick each button stands on its first listed variant, the shipped one, an own variant the button cannot run left out of its dropdown, the answer-with-alternative buttons posted per alternative instead',
     );
@@ -1755,7 +1780,7 @@ test("a fixed-name button's dropdown selection is remembered in workspaceState, 
       return created.length === count ? undefined : created[created.length - 1].args.join(' ');
     };
 
-    let live = await liveAfter({ type: 'ready' });
+    let live = await liveAfter({ type: 'refresh' });
     assert.deepStrictEqual(dropdown(live, NU, 'discussQuestion'), [['default', 'Gemini'], 'default'], 'with nothing remembered the dropdown stands on the default');
     assert.deepStrictEqual(alternativeDropdown(live, NU, 'Pane Layout', 'keep'), [['default', 'Sonnet'], 'default']);
     assert.deepStrictEqual(alternativeDropdown(live, NU, 'Pane Layout', 'drop'), [['default', 'Sonnet'], 'default']);
@@ -1941,7 +1966,7 @@ test("a page filling first review round lists the additional review round's reci
     workspace.folders = [{ uri: { fsPath: root } }];
     workspace.settings = { ownRecipesFile: path.join(files, 'recipes.md') };
     const from = posted.length;
-    send({ type: 'ready' });
+    send({ type: 'refresh' });
     const live = (await postedOf('live', from)) as {
       missions: { path: string; step?: string; additionalRounds?: number; recipes: { state: string; recipes: { name: string }[] } }[];
     };
@@ -1964,6 +1989,84 @@ test("a page filling first review round lists the additional review round's reci
       [`Gurita: Requirements iteration (${REVIEWED})`],
       'Requirements iteration runs from the page listing it, and from no other',
     );
+  } finally {
+    process.env.HOME = home;
+  }
+});
+
+/** A mission whose task list and question document the watcher test changes. */
+const OMEGA = 'pkg/mission_omega/';
+
+test("the live read and its one watcher outlast the pane, every debounced event re-read whatever is visible and shown in the next ready message's answer, which reads nothing afresh", async () => {
+  const home = process.env.HOME;
+  process.env.HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-home-'));
+  try {
+    const root = project(OMEGA);
+    const files = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-recipes-'));
+    fs.writeFileSync(path.join(files, 'shipped_recipes.md'), SHIPPED_TEXT);
+    packaged.set('bundled/missions.py', path.join(__dirname, '..', '..', '..', 'core', 'tools', 'missions.py'));
+    packaged.set('bundled/shipped_recipes.md', path.join(files, 'shipped_recipes.md'));
+    workspace.folders = [{ uri: { fsPath: root } }];
+    workspace.settings = { ownRecipesFile: path.join(files, 'recipes.md') };
+    type Page = { path: string; tasks: { headings?: string[] }; questions: { questions?: { id: string }[] } };
+    const pageAfter = async (message: unknown): Promise<Page> => {
+      const from = posted.length;
+      send(message);
+      const live = (await postedOf('live', from)) as { missions: Page[] };
+      const page = live.missions.find((each) => each.path === OMEGA);
+      assert.ok(page !== undefined, `no page for ${OMEGA}`);
+      return page;
+    };
+    const fire = (kind: keyof StubWatcher['listeners'], file: string) => {
+      for (const listener of watchers[watchers.length - 1].listeners[kind]) {
+        listener({ fsPath: path.join(root, OMEGA, file) });
+      }
+    };
+    const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+    const livePosted = (from: number) => posted.slice(from).filter((message) => (message as { type?: string }).type === 'live');
+
+    assert.deepStrictEqual((await pageAfter({ type: 'refresh' })).tasks.headings, []);
+    const count = watchers.length;
+    const watcher = watchers[count - 1];
+    assert.strictEqual(watcher.disposed, false);
+
+    // A change no event reports is not shown: a ready message is answered from the current read.
+    fs.writeFileSync(path.join(root, OMEGA, 'TASKS_TODO.md'), '# TASKS TODO\n\n## First task\n\nA brief.\n\n---\n');
+    assert.deepStrictEqual((await pageAfter({ type: 'ready' })).tasks.headings, [], 'a ready message reads nothing afresh');
+
+    // The pane is closed: the watcher stays, and its event is re-read with no pane to post to.
+    assert.ok(dispose !== undefined);
+    dispose();
+    assert.strictEqual(watcher.disposed, false, "the watcher survives the pane's disposal");
+    assert.deepStrictEqual(
+      [watcher.listeners.create.length, watcher.listeners.change.length, watcher.listeners.delete.length],
+      [1, 1, 1],
+      'its listeners stay registered',
+    );
+    let from = posted.length;
+    fire('change', 'TASKS_TODO.md');
+    await wait(1500);
+    assert.deepStrictEqual(livePosted(from), [], 'nothing is posted while no pane is open');
+    pane.openMissionPane(context);
+    assert.deepStrictEqual((await pageAfter({ type: 'ready' })).tasks.headings, ['First task'], "the reopened pane's ready message is answered with the re-read the event caused");
+    assert.strictEqual(watchers.length, count, 'reopening the pane creates no second watcher');
+
+    // The pane is hidden: an event is re-read all the same, and shown by the ready message the page posts when shown.
+    assert.ok(lastPanel !== undefined);
+    lastPanel.visible = false;
+    fs.writeFileSync(
+      path.join(root, OMEGA, 'open_questions.xml'),
+      '<open-questions>\n  <open-question id="Pane Layout">\n    <question>Which layout?</question>\n  </open-question>\n</open-questions>\n',
+    );
+    from = posted.length;
+    fire('change', 'open_questions.xml');
+    await wait(1500);
+    assert.deepStrictEqual(livePosted(from), [], 'nothing is posted to a hidden pane');
+    lastPanel.visible = true;
+    const shown = await pageAfter({ type: 'ready' });
+    assert.deepStrictEqual(shown.questions.questions?.map((each) => each.id), ['Pane Layout'], 'an event during a hidden pane shows in its next ready answer');
+    assert.deepStrictEqual(shown.tasks.headings, ['First task']);
+    assert.strictEqual(watcher.disposed, false);
   } finally {
     process.env.HOME = home;
   }
