@@ -98,6 +98,8 @@ Nothing in the extension installs or updates the plugin on any harness, and noth
 
 - **Install mechanism.** The Antigravity install is done by a packaged stdlib Python script standing beside `harness_check.py`: it downloads the distribution repository's archive at the published release ref with `urllib` and extracts it with `tarfile`, stripping the archive's top directory, directly into `~/.gemini/config/plugins/gurita`. No shell pipeline and no `agy` command take part.
 
+- **Update by staged swap.** An Antigravity update fetches and extracts the whole new release into a fresh staging directory outside `~/.gemini/config/plugins/`, on the same filesystem so that the final step is a rename, and checks it: its root `plugin.json` is present and its version is read. Only then does it remove the old `gurita` directory and move the staged one into its place. The old copy is discarded and no backup is kept, so afterwards the directory holds exactly what the new release ships.
+
 ### Harness check
 
 - **Version comparison.** The installed copy is compared with the packaged version alone, as a minimum rather than an equality: a copy older than the packaged version fails the `version` check, and a copy equal to or newer than it passes, the versions ordered as bare MAJOR.MINOR.PATCH. The latest published version is never read for the check, so the check stays offline.

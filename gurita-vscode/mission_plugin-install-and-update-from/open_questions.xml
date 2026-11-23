@@ -1,43 +1,4 @@
 <open-questions>
-  <open-question id="Antigravity update of directory">
-    <question>Antigravity has no update command. When an update from the Settings window brings a newer release into the existing plugin directory `~/.gemini/config/plugins/gurita`, are the new files laid over the old ones, which keeps files the new release no longer ships, or is the directory&apos;s content replaced whole?</question>
-    <recommendation option="Staged swap">Releases retire and rename skills, so only a whole replacement leaves the harness offering exactly what the release ships, and staging and checking the fetch first means a failed download or a bad archive leaves the working copy untouched, with no stored backup for the extension to own.</recommendation>
-    <alternative id="Staged swap">
-      The update fetches and extracts the whole new release into a fresh staging directory outside `~/.gemini/config/plugins/` (on the same filesystem, so the final step is a rename), checks it (its root `plugin.json` present and its version read), and only then removes the old `gurita` directory and moves the staged one into its place; the old copy is discarded and no backup is kept, so afterwards the directory holds exactly what the new release ships.
-      <advantage>The installed copy ends up exactly the published release, and a failed fetch or a bad archive leaves the old copy untouched and working, the window between removing the old directory and renaming the new one in being a single rename.</advantage>
-      <drawback>It is the most code of the replacing options short of a backup, needing a staging location that Antigravity&apos;s plugin discovery never sees and a check of the staged tree, and it still deletes anything a person placed in the directory and depends, like every removing option, on what the existing directory is, which the sibling question on a copy from another source owns.</drawback>
-    </alternative>
-    <alternative id="Overlay in place">
-      The update brings the new release into the existing `~/.gemini/config/plugins/gurita` by extracting it straight over the directory as it stands, exactly as the documented `curl` and `tar --strip-components=1 -C` pipeline does when run a second time; nothing is removed first, so every file the old release shipped and the new one no longer does, and anything else the directory holds, stays; no staging copy and no backup are made.
-      <advantage>It needs no file-removal step of the extension&apos;s own, matches the documented install byte for byte, and can never delete anything, so it cannot destroy a hand-placed file or reach through a directory that is not what the window expects.</advantage>
-      <drawback>A release that drops or renames a skill, agent, shared procedure, or tool leaves the old file loaded beside the new ones, so the harness can keep offering a skill the release retired, and a fetch that breaks mid-stream leaves a mixture of old and new files with no sign of it.</drawback>
-    </alternative>
-    <alternative id="Staged overlay">
-      The update first fetches and extracts the whole new release into a fresh temporary directory outside `~/.gemini/config/plugins/`, checks it (its root `plugin.json` present and its version read), and only then copies its files over the existing plugin directory; nothing in the existing directory is removed, so files the new release no longer ships stay; no backup is kept and the staging directory is discarded.
-      <advantage>A failed or partial fetch never touches the installed copy, while the update still deletes nothing, so the working copy is either left as it was or overlaid with a complete release.</advantage>
-      <drawback>It keeps the overlay&apos;s stale files, the retired skills of older releases staying loaded, and adds a staging step and a check of its own over the plain pipeline.</drawback>
-    </alternative>
-    <alternative id="Clear then extract">
-      The update removes the existing content of `~/.gemini/config/plugins/gurita` and then extracts the new release into the emptied directory, in place, with no staging copy and no backup; afterwards the directory holds exactly what the new release ships.
-      <advantage>The installed copy matches the published release exactly, with no retired file left loaded, by the smallest change to the documented pipeline, one removal ahead of it.</advantage>
-      <drawback>Between the removal and a completed extraction the plugin is absent or partial, so a network failure or a timeout mid-fetch leaves Antigravity with a broken or empty plugin until a retry succeeds; it also deletes anything a person placed in the directory, and how safe the removal is depends on what the existing directory is, which the sibling question on a copy from another source owns (a directory linked or copied from a checkout).</drawback>
-    </alternative>
-    <alternative id="Staged swap with backup">
-      As the staged swap, the new release is fetched, extracted, and checked in a staging directory outside `~/.gemini/config/plugins/` and then moved into place, but the old `gurita` directory is moved aside to one fixed backup location outside the plugins directory (for example under the per-user `~/.gurita/`) instead of being deleted, each update replacing the previous backup.
-      <advantage>Nothing is ever lost: the previous copy, and any file a person had placed in it, stays on disk, so a release that misbehaves can be put back by hand.</advantage>
-      <drawback>The extension then owns a stored copy of the plugin outside the harness that nothing in the window restores or removes, since the goal adds no uninstall control, and that the person must learn of and manage; the backup must stand outside the plugins directory or Antigravity would load it as a second plugin.</drawback>
-    </alternative>
-    <alternative id="Remove retired files only">
-      The update extracts the new release over the existing directory and then removes only the files the installed release shipped and the new one does not, the installed release&apos;s file list read from that version&apos;s published archive in the distribution repository; any file shipped by neither release stays.
-      <advantage>Retired files leave while a file a person placed in the directory is kept, the one option that removes stale release content without deleting anything that is not release content.</advantage>
-      <drawback>It needs a second fetch of the installed version&apos;s archive, which exists only for released versions (the distribution repositories hold the one tag `2.0.0`, while this machine&apos;s copy is 1.9.0 from a checkout), so it needs a fallback to another option whenever that archive is missing, and it keeps the overlay&apos;s mixed tree on a fetch that breaks mid-stream.</drawback>
-    </alternative>
-    <alternative id="Uninstall then reinstall">
-      The update removes the existing copy through Antigravity&apos;s own `agy plugin uninstall` and then installs the new release by the same path a fresh install from the window uses, so the old directory&apos;s content is cleared by the harness rather than by the extension and the result holds exactly what the new release ships.
-      <advantage>The harness itself clears whatever it registered for the plugin, so the extension deletes no files of its own and the update is an uninstall plus the already-built install.</advantage>
-      <drawback>What `agy plugin uninstall` removes, whether it keeps the plugin&apos;s enabled or disabled state, and whether it touches a copy it did not install are unobserved, and between the two commands the plugin is gone, a failed install leaving no copy at all; it is viable only as far as the install path the sibling question on Antigravity&apos;s install mechanism settles can reinstall into that directory.</drawback>
-    </alternative>
-  </open-question>
   <open-question id="Claude Code ref on update">
     <question>A Claude Code `gurita` marketplace registered from the Settings window carries, as its ref, the tag of the release that was latest when it was installed, so `claude plugin marketplace update gurita` and `claude plugin update gurita@gurita` keep reading that tag. Once a newer release is published, how does an update from the window bring the marketplace registration, at each scope it stands at, to the newer release&apos;s tag?</question>
     <applied-principle>Check tier claims against the live environment</applied-principle>
