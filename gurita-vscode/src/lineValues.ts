@@ -19,10 +19,8 @@
 // first `;`, `&`, or `|`, or a `#` opening a word, standing outside quotes, so a flag written
 // inside the quoted prompt or after the line's closing `;` is never read. The skill a line runs
 // is read from the same first command: the name after the first `/gurita:` or `$gurita:` opening a
-// word of its arguments or a part of one, the quoted prompt being one word. From a variant's lines
-// the module gives the three lists a recipe button shows: the distinct harnesses, the distinct
-// models, and the distinct efforts, each in the order of first appearance and independent of the
-// other two. This module imports nothing from `vscode`.
+// word of its arguments or a part of one, the quoted prompt being one word. This module imports
+// nothing from `vscode`.
 
 /** The harnesses a line can run on, each named by the command a line opens with. */
 export const HARNESSES = ['claude', 'agy', 'codex'] as const;
@@ -34,13 +32,6 @@ export interface LineValues {
   harness: Harness;
   model?: string;
   effort?: string;
-}
-
-/** A variant's values as its recipe button shows them, each list distinct and in first-appearance order. */
-export interface VariantValues {
-  harnesses: Harness[];
-  models: string[];
-  efforts: string[];
 }
 
 /** The flag carrying each harness's model, and its effort where the harness takes one. */
@@ -291,25 +282,4 @@ export function rewriteHarness(line: string, harness: SwitchableHarness, offer: 
   }
   const valued = replaceEffort(replaceModel(line, model) as string, effort) as string;
   return switchCommand(valued, harness);
-}
-
-/** The distinct harnesses, models, and efforts a variant's lines carry, each in first-appearance order. */
-export function variantValues(lines: readonly string[]): VariantValues {
-  const values: VariantValues = { harnesses: [], models: [], efforts: [] };
-  for (const line of lines) {
-    const read = readLine(line);
-    if (read === undefined) {
-      continue;
-    }
-    if (!values.harnesses.includes(read.harness)) {
-      values.harnesses.push(read.harness);
-    }
-    if (read.model !== undefined && !values.models.includes(read.model)) {
-      values.models.push(read.model);
-    }
-    if (read.effort !== undefined && !values.efforts.includes(read.effort)) {
-      values.efforts.push(read.effort);
-    }
-  }
-  return values;
 }

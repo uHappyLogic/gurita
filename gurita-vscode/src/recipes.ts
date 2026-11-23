@@ -53,7 +53,7 @@
 // `vscode`.
 
 import * as fs from 'node:fs';
-import { Harness, VariantValues, readLine, variantValues } from './lineValues';
+import { Harness, readLine } from './lineValues';
 import { ReadVariantRef, SourceRef, StoredVariant, VariantOrigin, VariantRef, VariantStore, readVariantStore } from './variantStore';
 import type { WorkflowStep } from './workflow';
 
@@ -584,10 +584,10 @@ export function ownRecipesFile(setting: string | undefined, home: string): strin
 /** The heading of the page's group of own recipes that replace no shipped recipe. */
 export const OWN_GROUP_HEADING = 'Your recipes';
 
-/** One variant a page recipe's dropdown offers: its name, and whether it is the person's own. */
+/** One variant a page recipe's dropdown offers: its name, which the dropdown and the button beside it show, and whether it is the person's own. */
 export interface PageVariantChoice {
   name: string;
-  /** Set for a variant of the person's own recipe file or of the variant store, marked as theirs. */
+  /** Set for a variant of the person's own recipe file or of the variant store. */
   own: boolean;
 }
 
@@ -607,8 +607,6 @@ export type PageEntry =
       group: RecipeGroup;
       /** The variant's lines as written, placeholders included. */
       lines: string[];
-      /** The harnesses, models, and efforts its lines carry, which its button shows with its name. */
-      values: VariantValues;
     }
   | {
       kind: 'looped';
@@ -616,8 +614,6 @@ export type PageEntry =
       group: RecipeGroup;
       /** The variant's lines as written, the slot line last. */
       lines: string[];
-      /** The harnesses, models, and efforts its lines carry, which its button shows with its name. */
-      values: VariantValues;
     }
   | {
       kind: 'unknown';
@@ -656,14 +652,14 @@ function variantEntry(recipe: Recipe, runs: Variant, fillable: readonly string[]
   }
   if (runs.looped) {
     if (runs.knownPlaceholders.every((name) => LOOPED_PLACEHOLDERS.includes(name))) {
-      return { kind: 'looped', name: recipe.name, group: recipe.group, lines: [...runs.lines], values: variantValues(runs.lines) };
+      return { kind: 'looped', name: recipe.name, group: recipe.group, lines: [...runs.lines] };
     }
     return undefined;
   }
   if (runs.lines.length === 0 || runs.knownPlaceholders.some((name) => !fillable.includes(name))) {
     return undefined;
   }
-  return { kind: 'runnable', name: recipe.name, group: recipe.group, lines: [...runs.lines], values: variantValues(runs.lines) };
+  return { kind: 'runnable', name: recipe.name, group: recipe.group, lines: [...runs.lines] };
 }
 
 /** Whether at least one of the variant's lines runs on one of the harnesses `disabled` names. */
@@ -683,10 +679,9 @@ function onDisabledHarness(variant: Variant, disabled: readonly Harness[]): bool
  * drawn by its content: one holding a placeholder the extension does not
  * know as a non-runnable entry naming it and its file, a looped one as its own kind, run through
  * its preview rather than as a chain, when every placeholder it holds is one a looped run fills
- * itself, and every other one as a button, carrying the distinct harnesses, models, and efforts its
- * lines carry, as the line-value module reads them; a variant holding a known placeholder the page
- * has no value for, or no line, is left off silently, staying reachable by name for the button or
- * loop that fills it. A recipe every variant of which is left off is not listed, and neither is a
+ * itself, and every other one as a button; a variant holding a known placeholder the page has no
+ * value for, or no line, is left off silently, staying reachable by name for the button or loop
+ * that fills it. A recipe every variant of which is left off is not listed, and neither is a
  * recipe one of the buttons outside the chains runs by its fixed name (`BUTTON_RECIPES`), whose
  * variants that button's own dropdown offers (`buttonRecipe`). Each entry offers the variants the page draws in its dropdown and
  * describes the one selected: the first carrying the remembered name, a remembered selection always

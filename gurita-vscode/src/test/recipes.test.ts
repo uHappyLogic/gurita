@@ -614,7 +614,7 @@ test('each step lists exactly the shipped chains that fit it, and no step chosen
   assert.strictEqual(at(undefined).length, 7);
 });
 
-test('a page lists the recipes it can fill, in the merged order, each by its default variant with the values its lines carry and the variants its dropdown offers, and names each unknown placeholder and its file', () => {
+test('a page lists the recipes it can fill, in the merged order, each by its default variant with its lines and the variants its dropdown offers, and names each unknown placeholder and its file', () => {
   const listed = pageRecipes(mergeRecipes(shipped(), own()), ['path']);
   assert.deepStrictEqual(
     listed.map((entry) => [entry.kind, entry.group, entry.name]),
@@ -637,7 +637,6 @@ test('a page lists the recipes it can fill, in the merged order, each by its def
       'claude -p "/gurita:review-mission-requirements --mission <path>" --model "fable";',
       'claude "/gurita:recommend-all-open-questions --mission <path>" --model "fable"; # interactive',
     ],
-    values: { harnesses: ['claude'], models: ['fable'], efforts: [] },
     variants: [
       { name: 'default', own: false },
       { name: 'default', own: true },
@@ -649,7 +648,6 @@ test('a page lists the recipes it can fill, in the merged order, each by its def
     name: 'Variants',
     group: 'shipped',
     lines: ['claude -p "/gurita:complete-all-tasks --mission <path>" --model "opus" --effort high;'],
-    values: { harnesses: ['claude'], models: ['opus'], efforts: ['high'] },
     variants: [
       { name: 'On Claude Code', own: false },
       { name: 'On Antigravity', own: false },
@@ -663,7 +661,6 @@ test('a page lists the recipes it can fill, in the merged order, each by its def
     name: 'My variant recipe',
     group: 'own',
     lines: ['echo first <path>'],
-    values: { harnesses: [], models: [], efforts: [] },
     variants: [{ name: 'First', own: true }],
     selected: 0,
   });
@@ -672,7 +669,6 @@ test('a page lists the recipes it can fill, in the merged order, each by its def
     name: 'Loop',
     group: 'shipped',
     lines: ['source .env_fixture', '<single-task line>'],
-    values: { harnesses: [], models: [], efforts: [] },
     variants: [{ name: 'default', own: false }],
     selected: 0,
   });
@@ -709,14 +705,13 @@ test("a page entry's dropdown offers the variants the page can draw and stands o
   const entry = (remembered: [string, string][], recipes: Recipe[] = merged) => {
     const found = pageRecipes(recipes, ['path'], new Map(remembered)).find((each) => each.name === 'Variants');
     assert.ok(found !== undefined && found.kind === 'runnable');
-    return { variant: found.variants[found.selected], lines: found.lines, values: found.values };
+    return { variant: found.variants[found.selected], lines: found.lines };
   };
   const antigravity = { name: 'On Antigravity', own: false };
   assert.deepStrictEqual(entry([]).variant, { name: 'On Claude Code', own: false }, 'nothing remembered and no pick: the first variant');
   assert.deepStrictEqual(entry([['Variants', 'Own variant']]), {
     variant: { name: 'Own variant', own: true },
     lines: ["codex exec '$gurita:complete-all-tasks --mission <path>';"],
-    values: { harnesses: ['codex'], models: [], efforts: [] },
   });
   assert.deepStrictEqual(entry([['Chain', 'Own variant']]).variant.name, 'On Claude Code', "another recipe's selection is not read");
   const picked = merged.map((recipe) => (recipe.name === 'Variants' ? { ...recipe, picked: { name: 'On Antigravity', origin: 'shipped' as const } } : recipe));

@@ -211,7 +211,6 @@ test("the page's button, the fixed-name buttons, and the named single-task lines
   const chain = pageRecipes(recipes, ['path']).find((entry) => entry.name === 'Chain');
   assert.ok(chain && chain.kind === 'runnable');
   assert.deepStrictEqual(chain.lines, ['claude -p "/gurita:review-mission-requirements --mission <path>" --model "sonnet" --effort medium;']);
-  assert.deepStrictEqual(chain.values, { harnesses: ['claude'], models: ['sonnet'], efforts: ['medium'] });
   const button = buttonRecipe(recipes, 'answer-open-question', ['path', 'Short Title', 'answer text']);
   assert.ok(button.state === 'found');
   assert.strictEqual(button.variant.name, 'Answer on Sonnet');

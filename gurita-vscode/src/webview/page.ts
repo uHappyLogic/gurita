@@ -42,30 +42,29 @@
 // when no block is filled, so each mission's page draws its own list; first the shipped recipes in
 // it, one button each in the order posted, the shipped file's, under no heading of their own, and
 // below them the own recipes that carry no shipped recipe's name under "Your recipes", in the own
-// file's order, each with a dropdown beside it offering the recipe's variants, a person's own
-// marked as theirs, and standing on the variant selected, as the extension posts it: the one
-// remembered for the recipe on this mission, else the recipe's default. Picking another variant
-// posts it to the extension, which remembers it and posts the page again with it selected. Each
-// button shows its recipe's name with the distinct harnesses, models, and efforts of the selected
-// variant, as the extension posts them, a variant none of whose lines is readable showing its name
-// alone, carries that variant's lines as written in its hover text, and starts that variant's
-// chain for the page's mission when clicked, and a selected variant holding a placeholder the
-// extension does not know is shown as a non-runnable entry naming it and its file. The seven buttons
-// outside the recipe list, which run a recipe by its fixed name, take the recipe list's pick
-// mechanics, as the extension posts them, the five on a mission's page with that mission and the
-// two mission-starting buttons with the pages and with the failure state: a dropdown beside each
-// offers the variants the button can run, a person's own marked as theirs, and stands on the one
-// selected, the one remembered for the recipe, per mission for the buttons on a mission's page and
-// once per project for the two mission-starting buttons, else the recipe's default, a question
-// card holding one dropdown beside its Alternatives heading shared by its answer-with-alternative
-// buttons; picking another posts it with the button, and its mission for a button on a mission's
-// page, to the extension, which remembers it and posts the page again. Each button shows its name
-// with the distinct harnesses, models, and efforts of the variant selected, with that variant's
-// lines as written in its hover text, its click posting that variant's name; a button the
-// extension posts with no variant, every one it could run having a line on a disabled harness,
-// stays drawn but disabled, with no dropdown, and one posted with nothing, its recipe not read or
-// not one it can run, shows its name alone with a hover text saying what it does, as does a
-// variant none of whose lines is readable.
+// file's order, each with a dropdown beside it drawn as its arrow alone, its opened list offering
+// the recipe's variants by their bare names, and standing on the variant selected, as the
+// extension posts it: the one remembered for the recipe on this mission, else the recipe's
+// default. Picking another variant posts it to the extension, which remembers it and posts the
+// page again with it selected. Each button shows its recipe's name with the selected variant's
+// name beneath it, exactly as the variant is named, carries that variant's lines as written in its
+// hover text, and starts that variant's chain for the page's mission when clicked, and a selected
+// variant holding a placeholder the extension does not know is shown as a non-runnable entry
+// naming it and its file. The seven buttons outside the recipe list, which run a recipe by its
+// fixed name, take the recipe list's pick mechanics, as the extension posts them, the five on a
+// mission's page with that mission and the two mission-starting buttons with the pages and with
+// the failure state: a dropdown beside each, drawn as its arrow alone, offers the variants the
+// button can run by their bare names and stands on the one selected, the one remembered for the
+// recipe, per mission for the buttons on a mission's page and once per project for the two
+// mission-starting buttons, else the recipe's default, a question card holding one dropdown beside
+// its Alternatives heading shared by its answer-with-alternative buttons; picking another posts it
+// with the button, and its mission for a button on a mission's page, to the extension, which
+// remembers it and posts the page again. Each button shows its name with the selected variant's
+// name beneath it, with that variant's lines as written in its hover text, its click posting that
+// variant's name; a button the extension posts with no variant, every one it could run having a
+// line on a disabled harness, stays drawn but disabled, with no dropdown, and one posted with
+// nothing, its recipe not read or not one it can run, shows its name alone with a hover text
+// saying what it does.
 // A looped recipe's button asks the extension for its preview instead, drawn on the page beneath
 // the recipes: every remaining task with the line the rules give it or as unresolved, naming the
 // missing line, and above them what the runner said about a missing or unreadable rule file,
@@ -208,17 +207,9 @@ declare function acquireVsCodeApi(): VsCodeApi;
 
   type RecipeGroup = 'shipped' | 'own';
 
-  /** The distinct harnesses, models, and efforts a variant's lines carry, each in first-appearance order. */
-  interface VariantValues {
-    harnesses: string[];
-    models: string[];
-    efforts: string[];
-  }
-
-  /** One variant a recipe's dropdown offers: its name, and whether it is the person's own. */
+  /** One variant a recipe's dropdown offers, by its name, the one part of what the extension posts for it the page draws. */
   interface PageVariantChoice {
     name: string;
-    own: boolean;
   }
 
   /** The dropdown beside a recipe: the variants it offers and the index of the selected one, which the entry describes. */
@@ -229,8 +220,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
 
   type PageRecipe = PageChoices &
     (
-      | { kind: 'runnable'; name: string; group: RecipeGroup; lines: string[]; values: VariantValues }
-      | { kind: 'looped'; name: string; group: RecipeGroup; lines: string[]; values: VariantValues }
+      | { kind: 'runnable'; name: string; group: RecipeGroup; lines: string[] }
+      | { kind: 'looped'; name: string; group: RecipeGroup; lines: string[] }
       | { kind: 'unknown'; name: string; group: RecipeGroup; lines: string[]; placeholders: string[]; file: string }
     );
 
@@ -248,11 +239,11 @@ declare function acquireVsCodeApi(): VsCodeApi;
 
   /**
    * What a fixed-name button runs, as the extension posts it: the variants its dropdown offers and
-   * the one selected, with that variant's lines and their values; or no variant, every one it could
+   * the one selected, with that variant's lines; or no variant, every one it could
    * run having a line on a disabled harness, the button drawn disabled.
    */
   type FixedButtonEntry =
-    | { state: 'offered'; lines: string[]; values: VariantValues; variants: PageVariantChoice[]; selected: number }
+    | { state: 'offered'; lines: string[]; variants: PageVariantChoice[]; selected: number }
     | { state: 'disabled'; cause: string };
 
   /** What each fixed-name button runs, by the button; a button whose recipe cannot be read or run is left out. */
@@ -474,10 +465,6 @@ declare function acquireVsCodeApi(): VsCodeApi;
   ];
   /** The heading of the page's group of own recipes, drawn below the shipped recipes, which have none. */
   const OWN_GROUP_HEADING = 'Your recipes';
-  /** The mark between a recipe button's lists of harnesses, models, and efforts. */
-  const VALUES_SEPARATOR = ' · ';
-  /** The mark a recipe dropdown's option carries after the name of a variant of the person's own. */
-  const OWN_VARIANT_MARK = ' (yours)';
 
   const vscode = acquireVsCodeApi();
   const root = document.getElementById('root') as HTMLElement;
@@ -543,9 +530,9 @@ declare function acquireVsCodeApi(): VsCodeApi;
   }
 
   /**
-   * A fixed-name button, in the form the recipe list's buttons take: its name, then the values the
-   * variant selected in its dropdown carries, as the extension posts `entry`, when any is readable,
-   * with that variant's lines as written in its hover text; its name alone with `hover` as its
+   * A fixed-name button, in the form the recipe list's buttons take: its name, then the name of the
+   * variant selected in its dropdown, as the extension posts `entry`, exactly as the variant is
+   * named, with that variant's lines as written in its hover text; its name alone with `hover` as its
    * hover text when nothing is posted, its recipe not read or not one it can run; and its name
    * alone, drawn disabled, with the cause beneath `hover` in its hover text, when it offers no
    * variant, every one it could run having a line on a disabled harness. A click hands `onClick`
@@ -564,9 +551,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
     const node = busy === undefined ? button('', className, () => onClick(variant)) : action('', className, busy, () => onClick(variant));
     node.append(element('span', label, 'recipe-name'));
     if (entry?.state === 'offered') {
-      const values = valuesLabel(entry.values);
-      if (values !== '') {
-        node.append(element('span', values, 'recipe-values'));
+      if (variant !== undefined) {
+        node.append(element('span', variant, 'recipe-variant-name'));
       }
       node.title = entry.lines.join('\n');
     } else if (entry?.state === 'disabled') {
@@ -580,8 +566,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
 
   /**
    * The dropdown beside a fixed-name button, or beside the alternatives of a question's card for
-   * their answer-with-alternative buttons, which share it: one option per variant `entry` offers,
-   * in order, a variant of the person's own marked as theirs, standing on the selected one, and
+   * their answer-with-alternative buttons, which share it, drawn as its arrow alone: one option per
+   * variant `entry` offers, in order, by its bare name, standing on the selected one, and
    * none while the button offers no variant or nothing is posted for it. Picking another posts it
    * to the extension with the button and, for a button on a mission's page, its mission, and the
    * extension remembers it and posts the page again.
@@ -590,8 +576,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
     if (entry?.state !== 'offered') {
       return undefined;
     }
-    const choice = element('select', undefined, 'recipe-variant');
-    choice.setAttribute('aria-label', `The variant of ${label}`);
+    const choice = variantSelect(`The variant of ${label}`);
     choice.dataset.focus = `button-variant-${key}`;
     variantOptions(choice, entry.variants, entry.selected);
     choice.addEventListener('change', () => {
@@ -1529,40 +1514,27 @@ declare function acquireVsCodeApi(): VsCodeApi;
   }
 
   /**
-   * The values a recipe button shows beside its name: the variant's distinct harnesses, models, and
-   * efforts, each list joined in its order, the lists that hold a value joined in turn, and nothing
-   * for a variant none of whose lines is readable.
-   */
-  function valuesLabel(values: VariantValues): string {
-    return [values.harnesses, values.models, values.efforts]
-      .filter((list) => list.length > 0)
-      .map((list) => list.join(', '))
-      .join(VALUES_SEPARATOR);
-  }
-
-  /**
-   * A recipe's button: its name, then the values its variant's lines carry, when any is readable,
+   * A recipe's button: its name, then the selected variant's name, exactly as the variant is named,
    * with the variant's lines as written in its hover text.
    */
   function recipeButton(recipe: Extract<PageRecipe, { kind: 'runnable' | 'looped' }>, busy: boolean, onClick: () => void): HTMLButtonElement {
     const node = action('', 'recipe', busy, onClick);
     node.append(element('span', recipe.name, 'recipe-name'));
-    const label = valuesLabel(recipe.values);
-    if (label !== '') {
-      node.append(element('span', label, 'recipe-values'));
+    const variant = recipe.variants[recipe.selected]?.name;
+    if (variant !== undefined) {
+      node.append(element('span', variant, 'recipe-variant-name'));
     }
     node.title = recipe.lines.join('\n');
     return node;
   }
 
   /**
-   * The dropdown beside a recipe's entry: one option per variant offered, in order, a variant of the
-   * person's own marked as theirs, standing on the selected one. Picking another posts it to the
+   * The dropdown beside a recipe's entry, drawn as its arrow alone: one option per variant offered,
+   * in order, by its bare name, standing on the selected one. Picking another posts it to the
    * extension, which remembers it for the recipe on this mission and posts the page again.
    */
   function variantDropdown(mission: Mission, recipe: PageRecipe): HTMLSelectElement {
-    const choice = element('select', undefined, 'recipe-variant');
-    choice.setAttribute('aria-label', `The variant of ${recipe.name}`);
+    const choice = variantSelect(`The variant of ${recipe.name}`);
     choice.dataset.focus = `variant-${recipe.name}`;
     variantOptions(choice, recipe.variants, recipe.selected);
     choice.addEventListener('change', () => {
@@ -1574,10 +1546,22 @@ declare function acquireVsCodeApi(): VsCodeApi;
     return choice;
   }
 
-  /** Appends to `choice` one option per variant of `variants`, in order, a variant of the person's own marked as theirs, the one at `selected` selected. */
+  /**
+   * A variant dropdown, drawn by the stylesheet as its arrow alone, its selected variant's name kept
+   * out of sight since the button beside it shows it; `label` names it for a screen reader and in
+   * its hover text.
+   */
+  function variantSelect(label: string): HTMLSelectElement {
+    const choice = element('select', undefined, 'recipe-variant');
+    choice.setAttribute('aria-label', label);
+    choice.title = label;
+    return choice;
+  }
+
+  /** Appends to `choice` one option per variant of `variants`, in order, each by its bare name, the one at `selected` selected. */
   function variantOptions(choice: HTMLSelectElement, variants: PageVariantChoice[], selected: number): void {
     variants.forEach((variant, index) => {
-      const option = element('option', variant.own ? `${variant.name}${OWN_VARIANT_MARK}` : variant.name);
+      const option = element('option', variant.name);
       option.value = String(index);
       option.selected = index === selected;
       choice.append(option);

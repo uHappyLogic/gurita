@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import * as assert from 'node:assert';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { readLine, readSkill, replaceEffort, replaceModel, rewriteHarness, variantValues } from '../lineValues';
+import { readLine, readSkill, replaceEffort, replaceModel, rewriteHarness } from '../lineValues';
 import { Recipe, SLOT_LINE, isHeadless, parseShippedRecipes } from '../recipes';
 
 const SHIPPED_RECIPES = path.join(__dirname, '..', '..', 'shipped_recipes.md');
@@ -96,45 +96,6 @@ test('a value the line does not carry is never inserted', () => {
 test('an empty replacement value is refused', () => {
   assert.throws(() => replaceModel(CLAUDE_LINE, ''));
   assert.throws(() => replaceEffort(CLAUDE_LINE, ''));
-});
-
-test('the shipped First run reads claude · fable, opus · xhigh, high', () => {
-  const recipe = shippedRecipe('First run');
-  assert.deepStrictEqual(variantValues(recipe.variants[0].lines), {
-    harnesses: ['claude'],
-    models: ['fable', 'opus'],
-    efforts: ['xhigh', 'high'],
-  });
-});
-
-test('the mixed-agent chain reads agy, claude · gemini-4-argon, opus, fable · medium, high, xhigh', () => {
-  const recipe = shippedRecipe('Mixed-agent requirements review (Gemini reviews, Claude annotates)');
-  assert.deepStrictEqual(variantValues(recipe.variants[0].lines), {
-    harnesses: ['agy', 'claude'],
-    models: ['gemini-4-argon', 'opus', 'fable'],
-    efforts: ['medium', 'high', 'xhigh'],
-  });
-});
-
-test('the three lists are independent, and unreadable lines add nothing', () => {
-  assert.deepStrictEqual(
-    variantValues([
-      'git pull;',
-      'claude -p "/a" --effort high;',
-      SLOT_LINE,
-      'codex exec "/b" -m gpt-5.5;',
-      'make test;',
-      'agy -p "/c" --model gemini-4-argon;',
-    ]),
-    { harnesses: ['claude', 'codex', 'agy'], models: ['gpt-5.5', 'gemini-4-argon'], efforts: ['high'] },
-  );
-});
-
-test('a variant none of whose lines is readable yields three empty lists', () => {
-  assert.deepStrictEqual(variantValues([SLOT_LINE]), { harnesses: [], models: [], efforts: [] });
-  assert.deepStrictEqual(shippedRecipe('Execute tasks one at a time').variants.map((variant) => variantValues(variant.lines)), [
-    { harnesses: [], models: [], efforts: [] },
-  ]);
 });
 
 test("the skill a line runs is read from its first command's arguments, a line of no known harness running none", () => {

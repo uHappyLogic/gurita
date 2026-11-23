@@ -493,22 +493,20 @@ Under the page's **Recipes** heading the list is drawn in two parts. First come 
 recipes, one button each in the shipped file's order, with no heading of their own; an own recipe
 carrying a shipped recipe's name joins that recipe's button rather than adding one. Then, under
 **Your recipes**, come your own recipes that carry no shipped recipe's name, in your file's order,
-the heading left out when there is none. Each button shows the recipe's name and, beneath it, what
-the lines of the variant it runs, the one selected in its dropdown, carry: its distinct harnesses, its distinct models,
-and its distinct efforts, each list in the order of first appearance and the three lists separated
-by `·`, so a `First run` whose lines run `fable` at `xhigh`, `opus` at `high`, and `fable` at
-`xhigh` on `claude` reads `claude · fable, opus · xhigh, high`. A line adds only the values its
-text carries: its harness when its first word is `claude`, `agy`, or `codex`, and the values of
-`--model` and `--effort`, or of `-m` on a Codex line. A shell step, the slot line
-`<single-task line>`, and a command the extension does not know add nothing, so a variant none of
-whose lines is readable, such as `Execute tasks one at a time`, shows its name alone. The label
-does not say which model runs at which effort; the button's hover text shows the variant's lines
-as written.
+the heading left out when there is none. Each button shows the recipe's name and, beneath it, the
+name of the variant it runs, the one selected in its dropdown, always and exactly as the variant
+is named, so a button says which variant a click runs: `Execute tasks` on its shipped
+`Normal difficulty` variant reads `Normal difficulty` beneath its name, and a recipe of one
+variant, such as `First run` or `Execute tasks one at a time`, reads `default`. The button lists
+no harness, model, or effort; those stay readable in its hover text, which shows the variant's
+lines as written, and in the settings view (see Variants above).
 
 Beside each recipe's button, or its non-runnable entry, stands a dropdown of the recipe's
-variants in the recipe's order, the shipped ones first, those of your own recipe file marked
-`(yours)`. It offers only the variants the page can draw: a variant holding a placeholder the page
-cannot fill, or no line, is left out of it, and a recipe none of whose variants the page can draw
+variants, drawn as its arrow alone, since the button beside it already names the variant
+selected. Opened, it lists the variants in the recipe's order, the shipped ones first, each by its
+bare name, those of your own recipe file and your variant store carrying no mark of their own;
+the settings view says where each comes from. It offers only the variants the page can draw: a
+variant holding a placeholder the page cannot fill, or no line, is left out of it, and a recipe none of whose variants the page can draw
 is not listed. The dropdown stands on the variant selected, and the button's label, its hover
 text, and a click all follow it: a click runs the variant the dropdown shows, and picking another
 variant starts nothing, so the dropdowns stay enabled while a run is going. The variant you select
@@ -531,17 +529,17 @@ Seven buttons run a recipe by its fixed name, whatever the step: **Discuss**, **
 **Answer with recommendation** on the question card, **Answer with this alternative** on each of
 its alternatives, **New task**, and the two mission-starting buttons, **New mission** and **Define
 mission**. They pick a variant as the recipe buttons do. Beside each stands a dropdown of its
-recipe's variants in the recipe's order, those of your own recipe file or your variant store
-marked `(yours)`; a question card holds one such dropdown, beside its **Alternatives** heading,
-shared by all its **Answer with this alternative** buttons. The dropdown offers only the variants
-the button can run: a variant holding a placeholder the button has no value for, a looped variant,
+recipe's variants, drawn as its arrow alone and listing, opened, the variants in the recipe's
+order, each by its bare name with no mark for your own; a question card holds one such dropdown,
+also drawn as its arrow alone, beside its **Alternatives** heading, shared by all its **Answer
+with this alternative** buttons. The dropdown offers only the variants the button can run: a variant holding a placeholder the button has no value for, a looped variant,
 one of no line, and one with at least one line on a disabled harness are left out of it.
 
 The dropdown stands on the variant selected, and the button's label, its hover text, and a click
-all follow it. Each button shows its name and, beneath it, the distinct harnesses, models, and
-efforts of the variant selected, in the recipe buttons' form, with that variant's lines as written
-in its hover text, so **Define mission** on the shipped `define-mission-goal` reads
-`claude · sonnet · medium`; a variant whose lines carry no readable value shows the name alone. A
+all follow it. Each button, every **Answer with this alternative** button included, shows its
+name and, beneath it, the name of the variant selected, always and exactly as the variant is
+named, in the recipe buttons' form, with that variant's lines as written in its hover text, so
+**Define mission** on the shipped `define-mission-goal` reads `default` beneath its name. A
 click runs the variant the dropdown shows, and only when the pane's last post of the button stood
 on that variant; picking another variant starts nothing, so these dropdowns stay enabled while a
 run is going.

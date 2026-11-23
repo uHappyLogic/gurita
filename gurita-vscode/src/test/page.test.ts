@@ -219,7 +219,6 @@ const RECIPES = {
       name: 'review',
       group: 'shipped',
       lines: ['claude "/gurita:review-mission-requirements --mission <path>"'],
-      values: { harnesses: ['claude'], models: [], efforts: [] },
       variants: [{ name: 'review', own: false }],
       selected: 0,
     },
@@ -228,7 +227,6 @@ const RECIPES = {
       name: 'complete',
       group: 'shipped',
       lines: ['claude "/gurita:complete-task --mission <path> <Task Title>"'],
-      values: { harnesses: ['claude'], models: [], efforts: [] },
       variants: [{ name: 'complete', own: false }],
       selected: 0,
     },
@@ -243,7 +241,7 @@ function buttons(page: Page): FakeElement[] {
   return page.root.all().filter((each) => each.tagName === 'button');
 }
 
-/** The spans a recipe button draws, its name and, when its variant carries any, its values, in order. */
+/** The spans a recipe button draws, its name and, when it runs a variant, that variant's name, in order. */
 function recipeParts(each: FakeElement): string[] {
   return each.children.filter((child): child is FakeElement => child instanceof FakeElement).map((child) => child.textContent);
 }
@@ -382,35 +380,57 @@ interface Choice {
 }
 
 /**
- * A runnable page recipe as the extension posts it, its values read from its lines, its dropdown
- * offering `variants`, one variant named by the recipe unless given, and standing on `selected`.
+ * A runnable page recipe as the extension posts it, its dropdown offering `variants`, one variant
+ * named `default` unless given, and standing on `selected`.
  */
 function runnable(
   name: string,
   group: string,
   lines: string[],
-  values: [string[], string[], string[]],
   variants: Choice[] = [{ name: 'default', own: group === 'own' }],
   selected = 0,
 ): unknown {
-  const [harnesses, models, efforts] = values;
-  return { kind: 'runnable', name, group, lines, values: { harnesses, models, efforts }, variants, selected };
+  return { kind: 'runnable', name, group, lines, variants, selected };
+}
+
+/** The pane's stylesheet rule for the variant dropdowns, read from the page shell in `src/pane.ts`. */
+function variantDropdownRule(): string {
+  const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'pane.ts'), 'utf8');
+  const rule = /^\s*select\.recipe-variant \{([^}]*)\}/m.exec(source);
+  assert.ok(rule !== null, 'the stylesheet holds a rule for the variant dropdowns');
+  return rule[1];
+}
+
+/**
+ * Asserts `dropdown` is drawn as its arrow alone: a variant dropdown, holding no text but its
+ * options', its own look replaced by the stylesheet's arrow, its selected name kept out of sight,
+ * and its options drawn in the dropdown's colours.
+ */
+function assertArrowOnly(dropdown: FakeElement): void {
+  assert.ok(dropdown.has('recipe-variant'), 'a variant dropdown');
+  assert.ok(dropdown.children.every((child) => child instanceof FakeElement && child.tagName === 'option'), 'it holds its options alone');
+  const rule = variantDropdownRule();
+  for (const declaration of ['appearance: none', 'color: transparent', 'width: 1.8em', 'background-image: linear-gradient(']) {
+    assert.ok(rule.includes(declaration), `the dropdown's rule holds ${declaration}`);
+  }
+  const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'pane.ts'), 'utf8');
+  assert.match(source, /select\.recipe-variant option \{ color: var\(--vscode-dropdown-foreground\);/, 'the opened list shows its options');
 }
 
 test("each mission's page draws its shipped recipes under no heading, then its own under Your recipes", () => {
   const derive = {
     state: 'read',
     recipes: [
-      runnable('Requirements iteration', 'shipped', ['claude -p "/gurita:review-mission-requirements --mission <path>"'], [['claude'], [], []]),
-      runnable('Prepare tasks', 'shipped', ['claude -p "/gurita:derive-tasks --mission <path>"'], [['claude'], [], []]),
-      runnable('Prepare tasks (Antigravity)', 'shipped', ['agy -p "/gurita:derive-tasks --mission <path>"'], [['agy'], [], []]),
-      runnable('Mine everywhere', 'own', ['echo <path>'], [[], [], []]),
+      runnable('Requirements iteration', 'shipped', ['claude -p "/gurita:review-mission-requirements --mission <path>"']),
+      runnable('Prepare tasks', 'shipped', ['claude -p "/gurita:derive-tasks --mission <path>"']),
+      runnable('Prepare tasks (Antigravity)', 'shipped', ['agy -p "/gurita:derive-tasks --mission <path>"']),
+      runnable('Mine everywhere', 'own', ['echo <path>']),
     ],
   };
   const finish = {
     state: 'read',
     recipes: [
-      runnable('Finish mission', 'shipped', ['claude -p "/gurita:finish-mission --mission <path>"'], [['claude'], [], []]),
+      runnable('Finish mission', 'shipped', ['claude -p "/gurita:finish-mission --mission <path>"']),
       {
         kind: 'unknown',
         name: 'Odd follow up',
@@ -457,8 +477,8 @@ test("a page with no own recipe draws no Your recipes heading, and one with only
   page.send({
     type: 'live',
     missions: [
-      mission(ALPHA, 'Alpha', { step: 'derive', recipes: { state: 'read', recipes: [runnable('Prepare tasks', 'shipped', ['echo <path>'], [[], [], []])] } }),
-      mission(BETA, 'Beta', { step: 'derive', recipes: { state: 'read', recipes: [runnable('Mine', 'own', ['echo <path>'], [[], [], []])] } }),
+      mission(ALPHA, 'Alpha', { step: 'derive', recipes: { state: 'read', recipes: [runnable('Prepare tasks', 'shipped', ['echo <path>'])] } }),
+      mission(BETA, 'Beta', { step: 'derive', recipes: { state: 'read', recipes: [runnable('Mine', 'own', ['echo <path>'])] } }),
     ],
     running: [],
   });
@@ -469,7 +489,7 @@ test("a page with no own recipe draws no Your recipes heading, and one with only
   assert.deepStrictEqual(recipeNames(page), ['Mine']);
 });
 
-test("each recipe button shows its name with its variant's distinct harnesses, models, and efforts, and its lines in its hover text", () => {
+test("each recipe button shows its name with the selected variant's name beneath it, exactly as named and never the values its lines carry, and its lines in its hover text", () => {
   const firstRun = [
     'claude -p "/gurita:review-mission-requirements --mission <path>" --model "fable" --effort xhigh;',
     'claude -p "/gurita:provide-alternatives-to-all-open-questions --mission <path>" --model "opus" --effort high;',
@@ -490,15 +510,14 @@ test("each recipe button shows its name with its variant's distinct harnesses, m
         recipes: {
           state: 'read',
           recipes: [
-            runnable('First run', 'shipped', firstRun, [['claude'], ['fable', 'opus'], ['xhigh', 'high']]),
-            runnable('Mixed', 'shipped', mixed, [['agy', 'claude'], ['gemini-4-argon', 'opus', 'fable'], ['medium', 'high', 'xhigh']]),
-            runnable('Partly read', 'own', ['agy -p "/gurita:finish-mission --mission <path>" --effort low;'], [['agy'], [], ['low']]),
+            runnable('First run', 'shipped', firstRun, [{ name: 'Claude Code', own: false }]),
+            runnable('Mixed', 'shipped', mixed),
+            runnable('Partly read', 'own', ['agy -p "/gurita:finish-mission --mission <path>" --effort low;'], [{ name: 'Mine at low effort', own: true }]),
             {
               kind: 'looped',
               name: 'Execute tasks one at a time',
               group: 'shipped',
               lines: loop,
-              values: { harnesses: [], models: [], efforts: [] },
               variants: [{ name: 'default', own: false }],
               selected: 0,
             },
@@ -508,10 +527,16 @@ test("each recipe button shows its name with its variant's distinct harnesses, m
     ],
     running: [],
   });
-  assert.deepStrictEqual(recipeParts(named(page, 'First run')), ['First run', 'claude · fable, opus · xhigh, high']);
-  assert.deepStrictEqual(recipeParts(named(page, 'Mixed')), ['Mixed', 'agy, claude · gemini-4-argon, opus, fable · medium, high, xhigh']);
-  assert.deepStrictEqual(recipeParts(named(page, 'Partly read')), ['Partly read', 'agy · low']);
-  assert.deepStrictEqual(recipeParts(named(page, 'Execute tasks one at a time')), ['Execute tasks one at a time'], 'a variant of no readable line shows its name alone');
+  assert.deepStrictEqual(recipeParts(named(page, 'First run')), ['First run', 'Claude Code']);
+  assert.deepStrictEqual(recipeParts(named(page, 'Mixed')), ['Mixed', 'default']);
+  assert.deepStrictEqual(recipeParts(named(page, 'Partly read')), ['Partly read', 'Mine at low effort'], 'the name exactly as the variant is named, with no own mark');
+  assert.deepStrictEqual(recipeParts(named(page, 'Execute tasks one at a time')), ['Execute tasks one at a time', 'default'], 'a variant of no readable line shows its name too');
+  for (const name of ['First run', 'Mixed', 'Partly read', 'Execute tasks one at a time']) {
+    const shown = named(page, name);
+    assert.ok(!shown.all().some((each) => each.has('recipe-values')), `${name} draws no values line`);
+    assert.ok(!recipeParts(shown).some((part) => part.includes(' · ')), `${name} lists no harnesses, models, or efforts`);
+    assert.ok(shown.children.some((child) => child instanceof FakeElement && child.has('recipe-variant-name')), `${name} draws the variant's name`);
+  }
   assert.strictEqual(named(page, 'First run').title, firstRun.join('\n'));
   assert.strictEqual(named(page, 'Mixed').title, mixed.join('\n'));
   assert.strictEqual(named(page, 'Execute tasks one at a time').title, loop.join('\n'));
@@ -546,20 +571,15 @@ function executeTasks(selected: number): unknown {
     ['agy -p "/gurita:complete-all-tasks --mission <path>" --model "claude-opus-5-5" --effort high;'],
     ['claude -p "/gurita:complete-all-tasks --mission <path>" --model "sonnet" --effort medium;'],
   ][selected];
-  const values: [string[], string[], string[]][] = [
-    [['claude'], ['opus'], ['high']],
-    [['agy'], ['claude-opus-5-5'], ['high']],
-    [['claude'], ['sonnet'], ['medium']],
-  ];
   const variants = [
     { name: 'Claude Code', own: false },
     { name: 'Antigravity', own: false },
     { name: 'Mine', own: true },
   ];
-  return runnable('Execute tasks', 'shipped', lines, values[selected], variants, selected);
+  return runnable('Execute tasks', 'shipped', lines, variants, selected);
 }
 
-test('every recipe entry has a dropdown beside it offering its variants in order, the own ones marked as yours, on the one selected', () => {
+test('every recipe entry has an arrow-only dropdown beside it offering its variants in order by their bare names, on the one selected', () => {
   const page = loadPage();
   page.send({
     type: 'live',
@@ -575,7 +595,6 @@ test('every recipe entry has a dropdown beside it offering its variants in order
               name: 'Execute tasks one at a time',
               group: 'shipped',
               lines: ['<single-task line>'],
-              values: { harnesses: [], models: [], efforts: [] },
               variants: [{ name: 'default', own: false }],
               selected: 0,
             },
@@ -606,18 +625,24 @@ test('every recipe entry has a dropdown beside it offering its variants in order
   ]);
   for (const entry of entries) {
     assert.ok(entry.dropdown !== undefined, `a dropdown beside ${shownName(entry.shown)}`);
+    assertArrowOnly(entry.dropdown);
   }
   assert.deepStrictEqual(options(entries[0].dropdown as FakeElement), [
     ['Claude Code', '0', false],
     ['Antigravity', '1', true],
-    ['Mine (yours)', '2', false],
+    ['Mine', '2', false],
   ]);
   assert.deepStrictEqual(options(entries[1].dropdown as FakeElement), [['default', '0', true]]);
   assert.deepStrictEqual(options(entries[2].dropdown as FakeElement), [
-    ['Plain (yours)', '0', false],
-    ['Odd one (yours)', '1', true],
+    ['Plain', '0', false],
+    ['Odd one', '1', true],
   ]);
+  assert.ok(
+    entries.every((entry) => options(entry.dropdown as FakeElement).every(([text]) => !text.includes('(yours)'))),
+    'no option carries an own mark',
+  );
   assert.strictEqual((entries[0].dropdown as FakeElement).getAttribute('aria-label'), 'The variant of Execute tasks');
+  assert.strictEqual((entries[0].dropdown as FakeElement).title, 'The variant of Execute tasks');
 });
 
 test("the button's label and hover text follow the selected variant, and a click runs that variant", () => {
@@ -628,7 +653,7 @@ test("the button's label and hover text follow the selected variant, and a click
     running: [],
   });
   page.send(live(0));
-  assert.deepStrictEqual(recipeParts(named(page, 'Execute tasks')), ['Execute tasks', 'claude · opus · high']);
+  assert.deepStrictEqual(recipeParts(named(page, 'Execute tasks')), ['Execute tasks', 'Claude Code']);
   assert.strictEqual(named(page, 'Execute tasks').title, 'claude -p "/gurita:complete-all-tasks --mission <path>" --model "opus" --effort high;');
   const before = page.posted.length;
   (recipeEntries(page)[0].dropdown as FakeElement).change('2');
@@ -638,13 +663,13 @@ test("the button's label and hover text follow the selected variant, and a click
     'picking a variant posts its name for the recipe on this mission, and nothing runs',
   );
   page.send(live(2));
-  assert.deepStrictEqual(recipeParts(named(page, 'Execute tasks')), ['Execute tasks', 'claude · sonnet · medium']);
+  assert.deepStrictEqual(recipeParts(named(page, 'Execute tasks')), ['Execute tasks', 'Mine']);
   assert.strictEqual(named(page, 'Execute tasks').title, 'claude -p "/gurita:complete-all-tasks --mission <path>" --model "sonnet" --effort medium;');
   assert.deepStrictEqual(options(recipeEntries(page)[0].dropdown as FakeElement).map(([, , picked]) => picked), [false, false, true]);
   named(page, 'Execute tasks').click();
   assert.deepStrictEqual(page.posted[page.posted.length - 1], { type: 'runRecipe', mission: ALPHA, recipe: 'Execute tasks', variant: 'Mine' });
   page.send(live(1));
-  assert.deepStrictEqual(recipeParts(named(page, 'Execute tasks')), ['Execute tasks', 'agy · claude-opus-5-5 · high']);
+  assert.deepStrictEqual(recipeParts(named(page, 'Execute tasks')), ['Execute tasks', 'Antigravity']);
   named(page, 'Execute tasks').click();
   assert.deepStrictEqual(page.posted[page.posted.length - 1], { type: 'runRecipe', mission: ALPHA, recipe: 'Execute tasks', variant: 'Antigravity' });
 });
@@ -709,7 +734,6 @@ function fixedButtons(model: string, effort: string): Record<string, unknown> {
       {
         state: 'offered',
         lines: [`claude -p "/gurita:${key} --mission <path>" --model "${model}" --effort ${effort};`],
-        values: { harnesses: ['claude'], models: [model], efforts: [effort] },
         variants: [{ name: 'default', own: false }],
         selected: 0,
       },
@@ -731,14 +755,14 @@ function fixedShown(page: Page): Record<string, [string[], string]> {
   return shown;
 }
 
-test("every fixed-name button shows its name with its selected variant's distinct harnesses, models, and efforts, and its lines in its hover text, following what is posted", () => {
+test("every fixed-name button shows its name with its selected variant's name beneath it, never the values its lines carry, and its lines in its hover text, following what is posted", () => {
   const page = loadPage();
   page.send(liveButtons(fixedButtons('fable', 'xhigh')));
   const expected = (model: string, effort: string) =>
     Object.fromEntries(
       FIXED_BUTTONS.map(([label, key]) => [
         label,
-        [[label, `claude · ${model} · ${effort}`], `claude -p "/gurita:${key} --mission <path>" --model "${model}" --effort ${effort};`],
+        [[label, 'default'], `claude -p "/gurita:${key} --mission <path>" --model "${model}" --effort ${effort};`],
       ]),
     );
   assert.deepStrictEqual(fixedShown(page), expected('fable', 'xhigh'), 'all seven buttons, with either pane shown');
@@ -747,7 +771,7 @@ test("every fixed-name button shows its name with its selected variant's distinc
   page.send(liveButtons(fixedButtons('opus', 'high')));
   assert.deepStrictEqual(fixedShown(page), expected('opus', 'high'));
 
-  // A variant of several lines shows each list once, in first-appearance order, and its lines as written.
+  // A variant of several lines shows its name alone beneath the button's, and its lines as written.
   const mixed = [
     'agy -i "/gurita:discuss-open-question --mission <path> <Short Title>. <note>" --model "gemini-4-argon" --effort medium; # interactive',
     'claude -p "/gurita:recommend-all-open-questions --mission <path>" --model "opus" --effort high;',
@@ -756,15 +780,15 @@ test("every fixed-name button shows its name with its selected variant's distinc
   page.send(
     liveButtons({
       ...fixedButtons('opus', 'high'),
-      discussQuestion: { state: 'offered', lines: mixed, values: { harnesses: ['agy', 'claude'], models: ['gemini-4-argon', 'opus'], efforts: ['medium', 'high'] }, ...one('Mixed') },
-      defineMission: { state: 'offered', lines: ['echo <goal> <scope>'], values: { harnesses: [], models: [], efforts: [] }, ...one('Echo') },
+      discussQuestion: { state: 'offered', lines: mixed, ...one('Mixed') },
+      defineMission: { state: 'offered', lines: ['echo <goal> <scope>'], ...one('Echo') },
       answerQuestion: undefined,
       discussTask: undefined,
     }),
   );
   const shown = fixedShown(page);
-  assert.deepStrictEqual(shown.Discuss, [['Discuss', 'agy, claude · gemini-4-argon, opus · medium, high'], mixed.join('\n')]);
-  assert.deepStrictEqual(shown['Define mission'], [['Define mission'], 'echo <goal> <scope>'], 'a variant of no readable line shows the name alone');
+  assert.deepStrictEqual(shown.Discuss, [['Discuss', 'Mixed'], mixed.join('\n')]);
+  assert.deepStrictEqual(shown['Define mission'], [['Define mission', 'Echo'], 'echo <goal> <scope>'], 'a variant of no readable line shows its name too');
   assert.deepStrictEqual(shown.Answer, [['Answer'], 'Record an answer you type as the decision'], 'a recipe that cannot be read shows the name alone');
   assert.deepStrictEqual(shown['New task'], [['New task'], 'Type an issue and open an interactive discussion of it into tasks for this mission']);
 
@@ -777,7 +801,7 @@ test("every fixed-name button shows its name with its selected variant's distinc
 
   // The failure state's two mission-starting buttons follow what it is posted with.
   page.send({ type: 'liveFailure', cause: 'boom', buttons: { discussGoal: fixedButtons('sonnet', 'medium').discussGoal, defineMission: fixedButtons('sonnet', 'medium').defineMission } });
-  assert.deepStrictEqual(recipeParts(named(page, 'New mission')), ['New mission', 'claude · sonnet · medium']);
+  assert.deepStrictEqual(recipeParts(named(page, 'New mission')), ['New mission', 'default']);
   assert.strictEqual(named(page, 'Define mission').title, 'claude -p "/gurita:defineMission --mission <path>" --model "sonnet" --effort medium;');
 
   // A click posts the variant selected with what it posted before, and a run disables the mission's fixed-name buttons alone.
@@ -820,7 +844,6 @@ test('a dropdown beside each fixed-name button offers its variants and stands on
         {
           state: 'offered',
           lines: [`claude -p "/gurita:${key}" --model "${models[selected]}" --effort high;`],
-          values: { harnesses: ['claude'], models: [models[selected]], efforts: ['high'] },
           variants: [
             { name: 'Fable', own: false },
             { name: 'Opus', own: true },
@@ -839,13 +862,14 @@ test('a dropdown beside each fixed-name button offers its variants and stands on
       const dropdown = dropdownBeside(page, label);
       assert.ok(dropdown !== undefined, `a dropdown stands beside ${label}`);
       assert.strictEqual(dropdown.getAttribute('aria-label'), `The variant of ${label}`);
+      assertArrowOnly(dropdown);
       besides[label] = options(dropdown);
-      assert.deepStrictEqual(recipeParts(named(page, label)), [label, 'claude · opus · high'], `${label} shows the variant selected`);
+      assert.deepStrictEqual(recipeParts(named(page, label)), [label, 'Opus'], `${label} shows the variant selected by its bare name`);
     }
   });
   const selectedOpus: [string, string, boolean][] = [
     ['Fable', '0', false],
-    ['Opus (yours)', '1', true],
+    ['Opus', '1', true],
   ];
   assert.deepStrictEqual(
     besides,
@@ -857,11 +881,12 @@ test('a dropdown beside each fixed-name button offers its variants and stands on
   assert.strictEqual(shared.length, 1, 'one dropdown per question card');
   const head = page.root.all().find((each) => each.has('alternatives-head'));
   assert.ok(head !== undefined && head.children.includes(shared[0]), 'it stands beside the Alternatives heading');
+  assertArrowOnly(shared[0]);
   assert.deepStrictEqual(options(shared[0]), selectedOpus);
   const alternatives = buttons(page).filter((each) => shownName(each) === 'Answer with this alternative');
   assert.strictEqual(alternatives.length, 2);
   for (const each of alternatives) {
-    assert.deepStrictEqual(recipeParts(each), ['Answer with this alternative', 'claude · opus · high']);
+    assert.deepStrictEqual(recipeParts(each), ['Answer with this alternative', 'Opus']);
     assert.strictEqual(each.title, 'claude -p "/gurita:answerWithAlternative" --model "opus" --effort high;');
   }
 
@@ -901,7 +926,7 @@ test('a dropdown beside each fixed-name button offers its variants and stands on
   // The pages posted again with another variant selected: the dropdowns, the labels, and a click follow it.
   page.send(liveButtons(offered(0), [], twoAlternatives));
   assert.deepStrictEqual(options(dropdownBeside(page, 'Discuss') as FakeElement).map(([, , picked]) => picked), [true, false]);
-  assert.deepStrictEqual(recipeParts(named(page, 'Discuss')), ['Discuss', 'claude · fable · high']);
+  assert.deepStrictEqual(recipeParts(named(page, 'Discuss')), ['Discuss', 'Fable']);
   assert.strictEqual(named(page, 'Discuss').title, 'claude -p "/gurita:discussQuestion" --model "fable" --effort high;');
   count = page.posted.length;
   named(page, 'Discuss').click();
@@ -1751,13 +1776,12 @@ test("after a harness is disabled the page draws the list the extension posts: t
     'Requirements iteration',
     'shipped',
     ['claude -p "/gurita:review-mission-requirements --mission <path>"'],
-    [['claude'], [], []],
     [
       { name: 'Claude Code', own: false },
       { name: 'Antigravity', own: false },
     ],
   );
-  const agyOnly = runnable('Gemini review', 'shipped', ['agy -p "/gurita:review-mission-requirements --mission <path>"'], [['agy'], [], []]);
+  const agyOnly = runnable('Gemini review', 'shipped', ['agy -p "/gurita:review-mission-requirements --mission <path>"']);
   const page = loadPage();
   page.send({ type: 'live', missions: [mission(ALPHA, 'Alpha', { step: 'derive', recipes: { state: 'read', recipes: [both, agyOnly] } })], running: [] });
   const options = () =>
@@ -1769,7 +1793,7 @@ test("after a harness is disabled the page draws the list the extension posts: t
   assert.deepStrictEqual(options(), ['Claude Code', 'Antigravity', 'default']);
   named(page, 'Settings').click();
   page.send(harnessSettings({ claude: true, antigravity: false, codex: true }));
-  const narrowed = runnable('Requirements iteration', 'shipped', (both as { lines: string[] }).lines, [['claude'], [], []], [{ name: 'Claude Code', own: false }]);
+  const narrowed = runnable('Requirements iteration', 'shipped', (both as { lines: string[] }).lines, [{ name: 'Claude Code', own: false }]);
   page.send({ type: 'live', missions: [mission(ALPHA, 'Alpha', { step: 'derive', recipes: { state: 'read', recipes: [narrowed] } })], running: [] });
   named(page, 'Close settings').click();
   assert.deepStrictEqual(recipeNames(page), ['Requirements iteration']);
@@ -2029,7 +2053,7 @@ test("an edit the extension posts reaches the mission page's dropdown", () => {
     recipes: [{ ...RECIPES.recipes[0], variants: [{ name: 'review', own: false }, { name: 'Fast', own: true }] }, RECIPES.recipes[1]],
   };
   page.send({ type: 'live', missions: [{ ...(mission(ALPHA, 'Alpha') as object), recipes: duplicated }, mission(BETA, 'Beta')], running: [] });
-  assert.deepStrictEqual(dropdown(), ['review', 'Fast (yours)']);
+  assert.deepStrictEqual(dropdown(), ['review', 'Fast']);
 });
 
 const MODEL_ONLY_LINE = 'claude -p "/gurita:provide-alternatives-to-all-open-questions --mission <path>" --model "opus";';

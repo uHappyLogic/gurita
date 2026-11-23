@@ -15,13 +15,12 @@
 // derive tasks is filled and follow up tasks' when finish is, and every undeclared recipe, or every
 // recipe when no step is chosen, laid out within that by the page's other rules, the shipped
 // recipes in the shipped file's order followed by its own group, and the leaving off of a recipe
-// holding a placeholder the page cannot fill, each entry carrying the distinct harnesses, models,
-// and efforts its variant's lines carry, which its button shows with its name; or with the one
-// failure state the live read gives. The recipes are read with the per-user variant store laid over
-// them. Each entry offers the recipe's variants for the dropdown beside its button, a person's own
-// marked as theirs, and describes the one selected: the variant remembered for the recipe on that
-// mission, a remembered selection always winning over the default, and otherwise the recipe's
-// default. A selection the page posts is remembered per recipe name on one mission, keyed by the
+// holding a placeholder the page cannot fill; or with the one failure state the live read gives.
+// The recipes are read with the per-user variant store laid over them. Each entry offers the
+// recipe's variants for the dropdown beside its button, by their names, and describes the one
+// selected, whose name its button shows beneath its own: the variant remembered for the recipe on
+// that mission, a remembered selection always winning over the default, and otherwise the
+// recipe's default. A selection the page posts is remembered per recipe name on one mission, keyed by the
 // mission's path as the pane lists it, in the project's `workspaceState` as a map from mission
 // path and recipe name to variant name, nothing written into the project's tree, and the pages are
 // posted again with it; a remembered variant its recipe no longer carries is dropped there at the
@@ -35,10 +34,10 @@
 // over them, picked as the recipe list's are: each is posted with the pages, and the two
 // mission-starting buttons with the failure state too, offering in the dropdown beside it the
 // variants it can run, a variant with a line on a disabled harness left out, and describing the
-// one selected, its lines and the distinct harnesses, models, and efforts they carry, which the
-// button's label and hover text show: the variant remembered for the recipe, a remembered
-// selection always winning over the default, where the default or the remembered one is left out
-// the default when still offered and otherwise the first offered. The selection is remembered as
+// one selected, its name and its lines, which the button's label and hover text show: the
+// variant remembered for the recipe, a remembered selection always winning over the default,
+// where the default or the remembered one is left out the default when still offered and
+// otherwise the first offered. The selection is remembered as
 // the recipe list's is, per recipe on the mission for the buttons on a mission's page, and once
 // per project, in `workspaceState` under a key of its own, for the two mission-starting buttons,
 // and a remembered variant its recipe no longer carries is dropped at the next answer. A button
@@ -225,7 +224,7 @@ import {
   readHarnessStates,
   setHarnessEnabled,
 } from './harnessSettings';
-import { Harness, SwitchableHarness, VariantValues, variantValues } from './lineValues';
+import { Harness, SwitchableHarness } from './lineValues';
 import { FileEventKind, RefreshBatch, RefreshQueue, WATCHED_PATTERN, eventEffect } from './refresh';
 import { OPTIONAL_PLACEHOLDERS } from './placeholders';
 import { CHECK_SCRIPT, CheckResult, HARNESSES, PLUGIN_VERSION_FILE, readPackagedVersion, runHarnessCheck } from './harnessCheck';
@@ -314,7 +313,7 @@ const STARTING_BUTTONS: readonly MissionButton[] = ['discussGoal', 'defineMissio
 
 /**
  * What a fixed-name button runs, as its dropdown, label, and hover text show it: the variants it
- * offers and the one selected, with that variant's lines and their values; or no variant at all,
+ * offers and the one selected, with that variant's lines; or no variant at all,
  * every one it could run having a line on a disabled harness, the button drawn disabled.
  */
 type FixedButtonEntry =
@@ -322,8 +321,6 @@ type FixedButtonEntry =
       state: 'offered';
       /** The selected variant's lines as written, placeholders included. */
       lines: string[];
-      /** The harnesses, models, and efforts its lines carry, which the button shows with its name. */
-      values: VariantValues;
       /** The variants the button's dropdown offers, at least one, in the recipe's order. */
       variants: PageVariantChoice[];
       /** The index in `variants` of the variant selected, the one the button runs. */
@@ -827,8 +824,7 @@ async function postPages(context: vscode.ExtensionContext, target: vscode.Webvie
  * What each of the fixed-name buttons `keys` runs, out of the merged list `read`, as `buttonRecipe`
  * offers it, the variant name `remembered` holds for each recipe the dropdown selection remembered
  * for it: the variants its dropdown offers, every variant with a line on a disabled harness left
- * out, and the one selected, with its lines and the distinct harnesses, models, and efforts they
- * carry; or no variant, every one it could run left out, the button drawn disabled. A button whose
+ * out, and the one selected, with its lines; or no variant, every one it could run left out, the button drawn disabled. A button whose
  * recipe cannot be read or run is left out of the entries and shows its name alone. Beside the
  * entries posted, what each button's click and dropdown are checked against, a refused one with
  * its cause.
@@ -852,7 +848,6 @@ function fixedButtons(
       entries[key] = {
         state: 'offered',
         lines,
-        values: variantValues(lines),
         variants: found.variants.map((variant) => ({ name: variant.name, own: variant.own })),
         selected: found.selected,
       };
@@ -1992,7 +1987,10 @@ function nonce(): string {
  * line only when the pane is narrower than the block itself; the dashed, solid, filled, and pulsing
  * block rules hold in both layouts. It lays a mission page's two pane headers, Open questions and
  * Remaining tasks, out as two columns of equal width that together fill the page's whole width,
- * the selected one underlined, with only the selected pane's content beneath them.
+ * the selected one underlined, with only the selected pane's content beneath them. It draws every
+ * variant dropdown beside a button as its arrow alone, the selected name kept out of sight and
+ * the opened list's options in the dropdown's colours, and the selected variant's name on its own
+ * line beneath a button's name.
  */
 function pageShell(webview: vscode.Webview, script: vscode.Uri): string {
   const token = nonce();
@@ -2092,10 +2090,11 @@ function pageShell(webview: vscode.Webview, script: vscode.Uri): string {
   .recipes h4 { margin: 0.8em 0 0.3em; }
   .recipe-list { display: flex; flex-wrap: wrap; gap: 0.4em; }
   .recipe-entry { display: inline-flex; align-items: stretch; gap: 0.2em; }
-  select.recipe-variant { background: var(--vscode-dropdown-background); color: var(--vscode-dropdown-foreground); border: 1px solid var(--vscode-dropdown-border); font: inherit; max-width: 14em; }
+  select.recipe-variant { -webkit-appearance: none; appearance: none; box-sizing: border-box; width: 1.8em; min-width: 1.8em; padding: 0; cursor: pointer; font: inherit; color: transparent; border: 1px solid var(--vscode-dropdown-border); background-color: var(--vscode-dropdown-background); background-image: linear-gradient(45deg, transparent 50%, var(--vscode-dropdown-foreground) 50%), linear-gradient(135deg, var(--vscode-dropdown-foreground) 50%, transparent 50%); background-position: calc(50% - 0.2em) 55%, calc(50% + 0.2em) 55%; background-size: 0.4em 0.4em; background-repeat: no-repeat; }
+  select.recipe-variant option { color: var(--vscode-dropdown-foreground); background: var(--vscode-dropdown-background); }
   button.recipe { background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; padding: 0.3em 0.9em; cursor: pointer; font: inherit; }
   button.recipe:hover:not(:disabled) { background: var(--vscode-button-hoverBackground); }
-  button.recipe .recipe-values, button.action .recipe-values { display: block; font-size: 0.85em; opacity: 0.8; }
+  button.recipe .recipe-variant-name, button.action .recipe-variant-name { display: block; font-size: 0.85em; opacity: 0.8; }
   .recipe-unknown { border: 1px dashed var(--vscode-inputValidation-warningBorder); padding: 0.3em 0.9em; opacity: 0.85; }
   .preview { border-top: 1px solid var(--vscode-panel-border); margin-top: 1em; }
   .preview-tasks { border-collapse: collapse; margin: 0.5em 0; width: 100%; }

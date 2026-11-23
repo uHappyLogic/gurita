@@ -260,7 +260,7 @@ async function postedOf(type: string, from: number): Promise<Record<string, unkn
   assert.fail(`no ${type} message was posted`);
 }
 
-test("the pane posts each page's recipes in the shipped file's order, then its own, each with the values its first variant's lines carry", async () => {
+test("the pane posts each page's recipes in the shipped file's order, then its own, each with its first variant's lines and the variants its dropdown offers", async () => {
   const home = process.env.HOME;
   process.env.HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-home-'));
   try {
@@ -295,7 +295,6 @@ test("the pane posts each page's recipes in the shipped file's order, then its o
           'claude -p "/gurita:provide-alternatives-to-all-open-questions --mission <path>" --model "opus" --effort high;',
           'claude -p "/gurita:recommend-all-open-questions --mission <path>" --model "fable" --effort xhigh;',
         ],
-        values: { harnesses: ['claude'], models: ['fable', 'opus'], efforts: ['xhigh', 'high'] },
         variants: [
           { name: 'Claude Code', own: false },
           { name: 'Antigravity', own: false },
@@ -308,7 +307,6 @@ test("the pane posts each page's recipes in the shipped file's order, then its o
         name: 'Execute tasks one at a time',
         group: 'shipped',
         lines: ['<single-task line>'],
-        values: { harnesses: [], models: [], efforts: [] },
         variants: [{ name: 'default', own: false }],
         selected: 0,
       },
@@ -317,7 +315,6 @@ test("the pane posts each page's recipes in the shipped file's order, then its o
         name: 'Mixed review',
         group: 'shipped',
         lines: ['agy -p "/gurita:review-mission-requirements --mission <path>" --model "gemini-4-argon" --effort medium;'],
-        values: { harnesses: ['agy'], models: ['gemini-4-argon'], efforts: ['medium'] },
         variants: [{ name: 'default', own: false }],
         selected: 0,
       },
@@ -326,7 +323,6 @@ test("the pane posts each page's recipes in the shipped file's order, then its o
         name: 'Mine everywhere',
         group: 'own',
         lines: ['echo <path>'],
-        values: { harnesses: [], models: [], efforts: [] },
         variants: [{ name: 'default', own: true }],
         selected: 0,
       },
@@ -1204,7 +1200,6 @@ test("a pick in a line's harness dropdown rewrites the line onto the picked harn
     const entry = await entryAfter({ type: 'selectVariant', mission: SIGMA, recipe: 'First run', variant: 'custom 1' }, SIGMA, 'First run');
     assert.strictEqual(selectedName(entry), 'custom 1');
     assert.deepStrictEqual(entry.lines, [onAgy, shippedLines[1], shippedLines[2]], "the page's button runs the rewritten line once custom 1 is selected");
-    assert.deepStrictEqual((entry as PostedEntry & { values?: unknown }).values, { harnesses: ['agy', 'claude'], models: ['gemini-4-argon', 'opus', 'fable'], efforts: ['medium', 'high', 'xhigh'] });
 
     // An offered effort is kept, and custom 1 is changed in place.
     const copy = { name: 'custom 1', origin: 'stored' };
@@ -1546,12 +1541,11 @@ claude -p "/gurita:complete-task --mission <path> <Task Title>" --model "opus" -
 \`\`\`
 `;
 
-/** What a fixed-name button is posted as running: the variants its dropdown offers, the one selected, and that variant's lines and the values they carry. */
+/** What a fixed-name button is posted as running: the variants its dropdown offers, the one selected, and that variant's lines. */
 type PostedButton =
   | {
       state: 'offered';
       lines: string[];
-      values: { harnesses: string[]; models: string[]; efforts: string[] };
       variants: { name: string; own: boolean }[];
       selected: number;
     }
@@ -1574,7 +1568,7 @@ function postedButtons(message: Record<string, unknown>, mission: string): Recor
   return { ...live.buttons, ...page.buttons };
 }
 
-test("every fixed-name button is posted with the variants it can run and the lines and values of the one selected, following a default picked in the settings view, in the failure state too", async () => {
+test("every fixed-name button is posted with the variants it can run and the lines of the one selected, following a default picked in the settings view, in the failure state too", async () => {
   const home = process.env.HOME;
   const fakeHome = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-home-'));
   process.env.HOME = fakeHome;
@@ -1595,21 +1589,20 @@ test("every fixed-name button is posted with the variants it can run and the lin
       send(message);
       return postedButtons(await postedOf(type, from), MU);
     };
-    const shipped = (key: string, harnesses: string[], models: string[], efforts: string[], own = false): PostedButton => ({
+    const shipped = (key: string, own = false): PostedButton => ({
       state: 'offered',
       lines: [BUTTON_LINES[key]],
-      values: { harnesses, models, efforts },
       variants: own ? [{ name: 'default', own: false }, { name: 'default', own: true }] : [{ name: 'default', own: false }],
       selected: 0,
     });
     const initial: Record<string, PostedButton> = {
-      discussGoal: shipped('discussGoal', ['claude'], ['fable'], ['xhigh']),
-      defineMission: shipped('defineMission', ['claude'], ['sonnet'], ['medium'], true),
-      discussQuestion: shipped('discussQuestion', ['claude'], ['fable'], ['xhigh'], true),
-      answerQuestion: shipped('answerQuestion', ['claude'], ['fable'], ['high']),
-      answerWithRecommendation: shipped('answerWithRecommendation', ['claude'], ['opus'], ['high']),
-      answerWithAlternative: shipped('answerWithAlternative', ['claude'], ['fable'], ['medium']),
-      discussTask: shipped('discussTask', ['claude'], ['opus'], ['xhigh']),
+      discussGoal: shipped('discussGoal'),
+      defineMission: shipped('defineMission', true),
+      discussQuestion: shipped('discussQuestion', true),
+      answerQuestion: shipped('answerQuestion'),
+      answerWithRecommendation: shipped('answerWithRecommendation'),
+      answerWithAlternative: shipped('answerWithAlternative'),
+      discussTask: shipped('discussTask'),
     };
 
     assert.deepStrictEqual(
@@ -1619,19 +1612,18 @@ test("every fixed-name button is posted with the variants it can run and the lin
     );
     send({ type: 'settingsOpened' });
 
-    // A pick of a two-line own variant: the button stands on it, carrying both lines and their distinct values.
+    // A pick of a two-line own variant: the button stands on it, carrying both lines.
     let buttons = await buttonsAfter({ type: 'pickDefault', recipe: 'discuss-open-question', variant: { name: 'default', origin: 'own' } });
     assert.deepStrictEqual(buttons.discussQuestion, {
       ...(initial.discussQuestion as object),
       lines: BUTTON_OWN_TEXT.split('\n').slice(2, 4),
-      values: { harnesses: ['agy', 'claude'], models: ['gemini-4-argon', 'opus'], efforts: ['medium', 'high'] },
       selected: 1,
     });
     assert.deepStrictEqual({ ...buttons, discussQuestion: undefined }, { ...initial, discussQuestion: undefined }, 'the other buttons stay as they were');
 
-    // A pick of a variant of no readable line: its lines with no value, so the button shows its name alone.
+    // A pick of a variant of no readable line: the button stands on it, carrying its line.
     buttons = await buttonsAfter({ type: 'pickDefault', recipe: 'define-mission-goal', variant: { name: 'default', origin: 'own' } });
-    assert.deepStrictEqual(buttons.defineMission, { ...(initial.defineMission as object), lines: ['echo <goal> <scope>'], values: { harnesses: [], models: [], efforts: [] }, selected: 1 });
+    assert.deepStrictEqual(buttons.defineMission, { ...(initial.defineMission as object), lines: ['echo <goal> <scope>'], selected: 1 });
 
     // A pick of a variant the button cannot run: it stays out of the dropdown, which stands on the first variant offered.
     buttons = await buttonsAfter({ type: 'pickDefault', recipe: 'discuss-new-task', variant: { name: 'default', origin: 'own' } });
@@ -1640,7 +1632,7 @@ test("every fixed-name button is posted with the variants it can run and the lin
 
     // Disabling a harness leaves its variants out of the buttons' dropdowns, the default giving way to the first offered.
     buttons = await buttonsAfter({ type: 'setHarnessEnabled', harness: 'antigravity', enabled: false });
-    assert.deepStrictEqual(buttons.discussQuestion, shipped('discussQuestion', ['claude'], ['fable'], ['xhigh']));
+    assert.deepStrictEqual(buttons.discussQuestion, shipped('discussQuestion'));
     buttons = await buttonsAfter({ type: 'setHarnessEnabled', harness: 'antigravity', enabled: true });
     assert.deepStrictEqual(buttons.discussQuestion.state === 'offered' && buttons.discussQuestion.selected, 1, 'enabled again, the default comes back');
 
@@ -1648,7 +1640,7 @@ test("every fixed-name button is posted with the variants it can run and the lin
     workspace.folders = undefined;
     buttons = await buttonsAfter({ type: 'refresh' }, 'liveFailure');
     assert.deepStrictEqual(Object.keys(buttons), ['discussGoal', 'defineMission']);
-    assert.deepStrictEqual(buttons.defineMission, { ...(initial.defineMission as object), lines: ['echo <goal> <scope>'], values: { harnesses: [], models: [], efforts: [] }, selected: 1 });
+    assert.deepStrictEqual(buttons.defineMission, { ...(initial.defineMission as object), lines: ['echo <goal> <scope>'], selected: 1 });
     buttons = await buttonsAfter({ type: 'pickDefault', recipe: 'define-mission-goal', variant: { name: 'default', origin: 'shipped' } }, 'liveFailure');
     assert.deepStrictEqual(buttons.defineMission, initial.defineMission, 'the failure state follows the default picked');
     workspace.folders = [{ uri: { fsPath: root } }];
@@ -1769,7 +1761,6 @@ test("a fixed-name button's dropdown selection is remembered in workspaceState, 
     const entry = postedButtons(live, NU).discussQuestion;
     assert.ok(entry.state === 'offered');
     assert.deepStrictEqual(entry.lines, [SELECTION_OWN_TEXT.split('\n')[3]], 'the label and hover text follow the selection');
-    assert.deepStrictEqual(entry.values, { harnesses: ['agy'], models: ['gemini-4-argon'], efforts: ['medium'] });
     live = await liveAfter({ type: 'selectButtonVariant', button: 'answerWithAlternative', mission: NU, variant: 'Sonnet' });
     assert.deepStrictEqual(workspaceState.get('gurita.variantSelections'), { [NU]: { 'discuss-open-question': 'Gemini', 'answer-open-question-with-alternative': 'Sonnet' } });
     assert.deepStrictEqual(dropdown(live, NU, 'answerWithAlternative')[1], 'Sonnet', "the card's one dropdown for its alternatives stands on it");
