@@ -126,7 +126,7 @@ No Marketplace publisher, Open VSX namespace, or token for either is recorded as
 
 ### Root documents
 
-- **Root documents mention.** After the first publication the root `README.md` gains a short subsection with links to both listings and to `gurita-vscode/README.md`, and `CONTRIBUTING.md`'s `## Development` gains a pointer: the extension under `gurita-vscode/` has a build and test loop of its own (Node 22 through nvm, independent of the host build and `VERSION`), documented in its README, and is released through its own maintainer-only skill rather than `/release-plugin`. `docs/` stays untouched.
+- **Root documents mention.** After the first publication the root `README.md` gains a short subsection with links to both listings and to `gurita-vscode/README.md`, and `CONTRIBUTING.md`'s `## Development` gains a pointer: the extension under `gurita-vscode/` has a build and test loop of its own (Node 22 through nvm, independent of the host build and `VERSION`), documented in the new tracked file in `gurita-vscode/` for building from the checkout rather than in its README, and is released through its own maintainer-only skill rather than `/release-plugin`. `docs/` stays untouched.
 
 ### CI
 
