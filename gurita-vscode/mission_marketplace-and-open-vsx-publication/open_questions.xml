@@ -1,33 +1,4 @@
 <open-questions>
-  <open-question id="Listing keywords">
-    <question>The manifest holds no `keywords` entry, which both registries read for search. Does the published manifest gain keywords, and if so which ones?</question>
-    <recommendation option="Own terms plus harnesses">A likely user searches by the harness they already run and the job they want done, terms that neither the name nor the `AI` category supplies as tags; a short list in which every tag is accurate adds that reach without the low-precision matches of a list padded toward the cap.</recommendation>
-    <alternative id="Own terms plus harnesses">
-      The manifest gains a short `keywords` list, about six to ten entries: the extension&apos;s own terms (`gurita`, `missions`) plus the three harnesses the plugin runs on (`claude code`, `codex`, `antigravity`) and a few domain terms naming what it does (`ai agents`, `planning`, `requirements`).
-      <advantage>The tags match how a likely user would search, by the harness they already use and the job they want done, while staying a short list in which every tag is accurate.</advantage>
-      <drawback>Naming third-party products as tags ties the listing to those products&apos; current names, so the list has to be revisited when a harness is renamed or a new one is supported. Each tag is a judgment call, with no stated rule for adding or dropping one.</drawback>
-    </alternative>
-    <alternative id="No keywords">
-      The published manifest gains no `keywords` entry. Search on both registries rests on what the manifest already carries for it: the name `gurita-vscode`, the `displayName` `Gurita for VS Code`, the rewritten one-sentence `description`, and the `AI` category.
-      <advantage>Nothing is added for later releases to keep current, and the rewritten description already names the plugin and its three harnesses in words a search can match, so the most likely searches still find the extension.</advantage>
-      <drawback>The listing carries no tags. A search on a term the description does not contain, such as `agent`, `planning`, or `requirements`, misses the extension. vsce also derives no tags of its own here: none of its built-in description keywords appear in the description, and the manifest contributes nothing that tags itself.</drawback>
-    </alternative>
-    <alternative id="Own vocabulary only">
-      The manifest gains a short `keywords` list, about four to six entries, built only from the extension&apos;s and the plugin&apos;s own vocabulary, for example `gurita`, `missions`, `open questions`, `recipes`, and `task runner`. It names no third-party harness or product.
-      <advantage>Every tag describes something the extension itself provides. The list takes no position on naming other vendors&apos; products, so it can never read as an endorsement or need changing when a harness is renamed.</advantage>
-      <drawback>A reader new to Gurita does not search for its own terms. A user looking for something to use with Claude Code, Codex, or Antigravity matches no tag, so the tags add little beyond the name and description.</drawback>
-    </alternative>
-    <alternative id="Broad set with harnesses">
-      The manifest gains a broad `keywords` list close to the Marketplace&apos;s cap of 30 tags. Beside the extension&apos;s own terms and the three harness names, it includes generic discovery terms such as `ai`, `llm`, `agent`, `agentic`, `spec-driven`, `workflow`, `productivity`, `project management`, `tasks`, and `automation`.
-      <advantage>It gives the widest search reach. Generic searches in the crowded AI category can surface the extension, not only searches that already know Gurita or one of its harnesses.</advantage>
-      <drawback>Generic tags match far more extensions than this one and draw users the extension does not serve. A long list is harder to keep accurate, and a list that brushes against the cap risks being refused at publish time.</drawback>
-    </alternative>
-    <alternative id="Broad set without harnesses">
-      The manifest gains a broad `keywords` list close to the Marketplace&apos;s cap of 30 tags, made only of the extension&apos;s own terms and generic discovery terms (`ai`, `llm`, `agent`, `workflow`, `planning`, `requirements`, `tasks`, `automation`, and the like). No third-party harness or product is named.
-      <advantage>It reaches generic AI and workflow searches and never names another vendor&apos;s product, so the list needs no change when a harness is renamed or added.</advantage>
-      <drawback>It leaves out the tag a likely user searches first, the harness they already use, and keeps the broad list&apos;s costs: low-precision matches and a long list to keep accurate.</drawback>
-    </alternative>
-  </open-question>
   <open-question id="Gallery banner">
     <question>The manifest holds no `galleryBanner` entry, which sets the colour and the light or dark theme of the header band on the Marketplace listing page. Does the published manifest gain one, and if so with which colour and theme?</question>
     <recommendation option="Icon violet, dark theme">The band is the listing page&apos;s largest coloured area, and giving it the icon&apos;s own recorded violet carries the brand across the header with no new colour to choose; white header text on `#9333ea` computes to about 5.4 to 1, above the usual 4.5 threshold, and the icon still reads as a tile in search results and the Extensions view.</recommendation>
