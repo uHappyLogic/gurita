@@ -174,35 +174,6 @@
       <drawback>What `agy plugin uninstall` removes, whether it keeps the plugin&apos;s enabled or disabled state, and whether it touches a copy it did not install are unobserved, and between the two commands the plugin is gone, a failed install leaving no copy at all; it is viable only as far as the install path the sibling question on Antigravity&apos;s install mechanism settles can reinstall into that directory.</drawback>
     </alternative>
   </open-question>
-  <open-question id="Check after install">
-    <question>The harness check&apos;s result is kept for the extension&apos;s session and only Check again runs it afresh. After an install or update ends, does the Settings window run the check again by itself, or keep showing the earlier result until Check again is used?</question>
-    <recommendation option="Full re-check on any end">The line of the harness just acted on must not go on saying what was true before, and a failed run can change a harness too; running the unchanged check as Check again does shows the real state at once through the one code path that already exists.</recommendation>
-    <alternative id="Full re-check on any end">
-      An automatic re-check of all three harnesses: whenever an install or update ends, whether it succeeded or failed, the window runs the whole harness check afresh as Check again does, `harness_check.py` unchanged, and the new result replaces the kept one for every harness.
-      <advantage>The line for the harness acted on shows its real state at once, a failed run that left a marketplace added or a partial copy behind included, with no change to the check script and the same one code path Check again already uses.</advantage>
-      <drawback>Every install or update is followed by a full check of all three harnesses in an interactive session shell, up to 120 seconds, and the existing guard that skips a check while one is running would drop the re-check when a check is already in flight unless it is queued; it also depends on the window learning that the run ended, which turns on how the install runs (the sibling Install run form question).</drawback>
-    </alternative>
-    <alternative id="Keep earlier result">
-      No automatic re-check and no change to the kept result: after an install or update ends, the Settings window goes on showing the harness check&apos;s earlier result for every harness, exactly as it does today, until the person uses Check again.
-      <advantage>Leaves the session-kept check and the Check again control exactly as the previous mission built them, adding no new trigger, no change to `checkHarnesses` or `harness_check.py`, and no extra run of the 120-second, interactive-shell check that the person did not ask for.</advantage>
-      <drawback>The harness line the person just acted on keeps saying what was true before, for example &quot;plugin not installed&quot; or a differing version right after a successful install, so the window contradicts what just happened and the person must know to press Check again to see the outcome.</drawback>
-    </alternative>
-    <alternative id="Mark result stale">
-      No automatic re-check, but the kept result is flagged: once an install or update ends, the line of the harness it acted on is marked in the window as possibly out of date since that install or update, pointing at Check again, and the flag clears when the next check&apos;s result arrives; the other harnesses&apos; lines stand unchanged.
-      <advantage>The window never presents a pre-install result as current, while the check still runs only when the person asks for it, so no shell session or harness CLI listing is started that they did not request.</advantage>
-      <drawback>Adds a third per-harness state to the kept check and the page&apos;s drawing, and still leaves the person one click away from the outcome they almost always want to see right after acting.</drawback>
-    </alternative>
-    <alternative id="Full re-check on success">
-      An automatic re-check of all three harnesses only when the install or update ended successfully, `harness_check.py` unchanged; when it failed, the earlier result is kept as it stands until Check again is used.
-      <advantage>Shows the new installed version right after the case that changes it, while a failed run, whose failure the window reports on its own, costs no extra check.</advantage>
-      <drawback>A failed run can still have changed the harness, for example a marketplace registered before the install step failed, and the kept line then hides that; telling success from failure requires the window to receive the run&apos;s exit status, which depends on how the install runs (the sibling Install run form question).</drawback>
-    </alternative>
-    <alternative id="Re-check acted-on harness">
-      An automatic re-check of only the harness the install or update acted on: whenever one ends, the window checks that one harness afresh, which needs `harness_check.py` to accept a harness to check rather than always listing all three, and replaces that harness&apos;s line in the kept result while the other two harnesses&apos; lines are kept as they were.
-      <advantage>The line the person acted on is refreshed at once while the run stays short, starting one CLI listing instead of three and leaving the other harnesses&apos; results undisturbed.</advantage>
-      <drawback>Changes the check script&apos;s interface and its tests and turns the kept result into per-harness pieces taken at different times, so the window&apos;s lines may no longer come from one check; it also depends on the window learning that the run ended (the sibling Install run form question).</drawback>
-    </alternative>
-  </open-question>
   <open-question id="Restart notice">
     <question>Claude Code says an updated plugin needs a restart to apply, and Antigravity discovers a new plugin directory only when a session starts. After an install or update, does the Settings window tell the person that running harness sessions must be restarted?</question>
     <recommendation option="Uniform notice in end report">A running session keeps the old copy without saying so, and Antigravity&apos;s install prints nothing, so the window says it once where it reports the end; one fixed sentence for every harness needs no page state and no rule resting on what is not yet known of Codex, and a restart that was not needed costs nothing.</recommendation>
