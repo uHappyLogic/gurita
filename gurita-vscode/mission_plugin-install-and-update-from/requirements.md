@@ -70,6 +70,8 @@ Nothing in the extension installs or updates the plugin on any harness, and noth
 
 - **Scopes with no folder open.** With no workspace folder open, the Settings window offers a Claude Code install at user scope alone: project and local are not among the scopes it offers, and nothing on the page mentions them until a folder is open. The home directory stays only the root the harness check runs from.
 
+- **Several-scope display.** When Claude Code holds Gurita copies at several scopes that apply to the open project, the window names every applying detected scope and shows one version, the winning copy's. The winning scope is set apart, for example by being named first as the scope in effect with the others listed after it as also installed, and no version is shown for a scope that does not win. The harness check prints the scope names and which of them won.
+
 ### Running an install or update
 
 - **Install run form.** An install or update started from the Settings window runs in a terminal the extension opens and shows, as a recipe run does, so its output and any prompt are visible and answerable there. The extension also watches that terminal's process end, taking its exit status through the terminal or through a VS Code task run in the terminal panel, and the window then reports how the run ended, success or failure, beside the harness or in a notification.
