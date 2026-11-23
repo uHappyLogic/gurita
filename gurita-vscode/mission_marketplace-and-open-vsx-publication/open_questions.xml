@@ -71,6 +71,26 @@
   </open-question>
   <open-question id="Preview flag">
     <question>Is the extension published marked as a preview, through the manifest&apos;s `preview` entry, or as a regular release?</question>
+    <alternative id="Regular release">
+      The manifest gains no `preview` entry, which it does not hold today, and the extension is published through the ordinary release channel on both registries, so neither listing carries a Preview badge. Nothing in the manifest or the release skill marks the extension&apos;s maturity, beyond what its version number says.
+      <advantage>Nothing is added to the manifest or the release skill and nothing has to be removed later. The listings present the extension as the working tool three finished missions built and the maintainer has installed and uses, with no badge that would need a later decision to retire.</advantage>
+      <drawback>A first public listing makes no claim of being early. Nothing on the listing page warns a reader that the extension is new, supports Windows only through Remote-WSL, and depends on a separately installed plugin, unless the README or description says so, which those sibling questions own.</drawback>
+    </alternative>
+    <alternative id="Preview until removed by hand">
+      The manifest gains `&quot;preview&quot;: true`. The one package carries it to both registries, so both listings mark the extension as a preview. The entry stays until a later release removes it by hand, with no rule stating when, and the release skill neither sets nor checks it.
+      <advantage>One manifest line tells every reader on both listings that the extension is early and may change, and it states the maintainer&apos;s expectations for a first public release without changing how it is published or installed.</advantage>
+      <drawback>Nothing ever prompts the entry&apos;s removal, so the badge can outlive its reason and stay on the listing indefinitely. Leaving preview later is a manual change nobody tracks, and a Preview badge may make some users wary of installing.</drawback>
+    </alternative>
+    <alternative id="Preview governed by version">
+      The manifest gains `&quot;preview&quot;: true` for the first publication, and the release skill ties the entry to the version. It refuses to publish while the entry disagrees with a stated rule, for example preview exactly while the major version is 0, so the badge is dropped by the release that reaches the rule&apos;s threshold and by no other.
+      <advantage>The preview marking gets a defined end and cannot drift away from the version number it describes. Leaving preview becomes part of an ordinary release rather than a step someone has to remember.</advantage>
+      <drawback>The release skill gains one more check and the manifest one more coupled field, all to govern a cosmetic badge. The rule&apos;s threshold depends on the version numbering that the First published version and Version source at release questions settle, so a scheme they settle differently would need a different rule.</drawback>
+    </alternative>
+    <alternative id="Pre-release channel">
+      The manifest gains no `preview` entry. Instead each version is published as a pre-release, through the publishing tools&apos; `--pre-release` option on both registries. VS Code then shows and installs it as a pre-release version, which the manifest&apos;s `engines.vscode` floor already allows, since pre-releases need 1.63 or later. A later release publishes the first version on the ordinary channel.
+      <advantage>It uses the registries&apos; own mechanism for unfinished versions: the Extensions view labels each install as a pre-release. Later stable and pre-release lines can stand side by side, so the maintainer can try out changes on users who opt in while others stay on a stable version.</advantage>
+      <drawback>Every release must choose a channel, and the release skill must carry that choice to both publishing tools. The Marketplace&apos;s convention reserves distinct version numbers per channel (even minor for release, odd for pre-release), which couples this choice to the version numbering the First published version and Version source at release questions settle. Forks reading Open VSX may also handle a pre-release-only extension less predictably than a regular one.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Issue and question links">
     <question>Where does a listing send a reader who looks for the project&apos;s home page, wants to report an issue, or wants to ask a question: which targets do the manifest&apos;s `homepage`, `bugs`, and `qna` entries name, the Marketplace&apos;s own Q&amp;A tab being one possibility for the last?</question>
