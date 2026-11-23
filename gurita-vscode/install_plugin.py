@@ -55,6 +55,16 @@ copy failing its check is discarded with the old directory left untouched. Eithe
 refuses, with one `Error:` line and exit 1, an archive that cannot be downloaded or read, that
 holds no single top directory, or that holds a member other than a file or directory or one
 reaching outside the directory it is extracted into.
+
+On Codex the commands run as Claude Code's do, as one chain in one session of the runner's
+session shell started at ROOT with the terminal's own input and output, each behind the previous
+one's success, the plugin being installed per user. An install runs
+`codex plugin marketplace add uHappyLogic/gurita-codex --ref <tag>` and then
+`codex plugin add gurita@gurita`. An update moves the `gurita` marketplace registration to the
+tag by removing it and adding it again, then installs the plugin again over the copy still
+standing: `codex plugin marketplace remove gurita`, then that marketplace add at the tag, then
+`codex plugin add gurita@gurita`. Nothing removes the installed plugin. A command that fails
+ends the chain, and the script exits with the session's status, non-zero.
 """
 
 import argparse
@@ -460,6 +470,48 @@ def update_antigravity(
     return 0
 
 
+# Codex: the marketplace added from the distribution repository at the tag, then the plugin
+# added from it, per user.
+
+CODEX_CLI = "codex"
+CODEX_MARKETPLACE = "gurita"
+CODEX_PLUGIN_ID = "gurita@gurita"
+
+
+def codex_marketplace_add(tag: str) -> List[str]:
+    """The marketplace added from the distribution repository at `tag`."""
+    return [CODEX_CLI, "plugin", "marketplace", "add", REPOSITORY[CODEX], "--ref", tag]
+
+
+def codex_plugin_add() -> List[str]:
+    return [CODEX_CLI, "plugin", "add", CODEX_PLUGIN_ID]
+
+
+def codex_install_commands(tag: str) -> List[List[str]]:
+    """An install: the marketplace added at `tag`, then the plugin added from it."""
+    return [codex_marketplace_add(tag), codex_plugin_add()]
+
+
+def codex_update_commands(tag: str) -> List[List[str]]:
+    """An update: the marketplace removed and added again at `tag`, then the plugin added again
+    over the copy still standing; the installed plugin is never removed."""
+    return [
+        [CODEX_CLI, "plugin", "marketplace", "remove", CODEX_MARKETPLACE],
+        codex_marketplace_add(tag),
+        codex_plugin_add(),
+    ]
+
+
+def install_codex(tag: str, target: Target, session: Session = run_session) -> int:
+    """Install the release at `tag`, per user, its commands run at the target's root."""
+    return session(chain(codex_install_commands(tag)), target.root)
+
+
+def update_codex(tag: str, target: Target, session: Session = run_session) -> int:
+    """Move the installed copy to the release at `tag`, its commands run at the target's root."""
+    return session(chain(codex_update_commands(tag)), target.root)
+
+
 # The install and update steps, by harness and action, each run with the release's tag and its
 # target and returning the exit status.
 STEPS: Dict[Tuple[str, str], Step] = {
@@ -467,6 +519,8 @@ STEPS: Dict[Tuple[str, str], Step] = {
     (CLAUDE, UPDATE): update_claude,
     (ANTIGRAVITY, INSTALL): install_antigravity,
     (ANTIGRAVITY, UPDATE): update_antigravity,
+    (CODEX, INSTALL): install_codex,
+    (CODEX, UPDATE): update_codex,
 }
 
 

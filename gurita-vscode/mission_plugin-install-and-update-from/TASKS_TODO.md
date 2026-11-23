@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Codex Install and Update Commands
-
-Give the install script its Codex install and update, run through the runner's session shell with the terminal's own input and output: the install runs `codex plugin marketplace add uHappyLogic/gurita-codex --ref <tag>` and then `codex plugin add gurita@gurita`, and the update runs `codex plugin marketplace remove gurita`, then that marketplace add at the newer tag, then `codex plugin add gurita@gurita`, in that order, each behind the previous one's success, never removing the installed plugin. Verified by pytest tests with a stand-in `codex` recording its calls, an update stopped by a failed step included.
-
----
-
 ## Install and Update Runs in a Terminal
 
 Have the Settings window start an install or update as a terminal whose own process is the packaged install script, opened and shown as a recipe run's terminal is, with a note of the run kept in the extension's state for the session, so that at most one goes at a time and the page draws **Check again** disabled meanwhile. When that terminal's process ends, the window reads its exit status from the terminal and reports how the run ended in a notification, a success adding the one sentence that running sessions of that harness must be restarted to use the new copy and a failure, a failed release lookup included, told as an error, and then runs the whole harness check afresh through the Check again code path. Verified by the extension's unit tests against the `vscode` stub for a successful run, a failed run, and a second run refused while one is going, the README describing the run.

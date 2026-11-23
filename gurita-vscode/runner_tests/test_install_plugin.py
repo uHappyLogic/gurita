@@ -10,7 +10,10 @@ the new release ships, and a staged copy failing its check with the old director
 Claude Code install and update run in the runner's session shell against a stand-in `claude` on
 `PATH` that records each call, its arguments and the directory it ran in: an install at each
 scope, an update over one scope and over several, and a failing command ending the run with a
-non-zero status."""
+non-zero status. The Codex install and update run the same way against a stand-in `codex`: the
+install's marketplace add at the tag and plugin add, the update's marketplace remove, add, and
+plugin add in that order with no plugin removed, and an update stopped by a failed step running
+none of the steps after it."""
 
 import io
 import json
@@ -648,3 +651,99 @@ def test_a_project_root_that_is_not_a_directory_is_refused_before_the_lookup(ins
 def test_claude_steps_are_registered(install):
     assert install.STEPS[("claude", "install")] is install.install_claude
     assert install.STEPS[("claude", "update")] is install.update_claude
+
+
+# Codex, against a stand-in `codex` recording its calls
+
+STAND_IN_CODEX = STAND_IN_CLAUDE.replace("$CLAUDE_CALLS", "$CODEX_CALLS").replace("$CLAUDE_FAIL", "$CODEX_FAIL")
+
+
+@pytest.fixture
+def stand_in_codex(tmp_path, monkeypatch):
+    """A stand-in `codex` first on `PATH`, logging its calls as the stand-in `claude` does, under
+    the runner's fallback session shell, `/bin/sh`."""
+    bin_dir = tmp_path / "codex_bin"
+    bin_dir.mkdir()
+    cli = bin_dir / "codex"
+    cli.write_text(STAND_IN_CODEX)
+    cli.chmod(cli.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+    log = tmp_path / "codex_calls.log"
+    monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}")
+    monkeypatch.delenv("SHELL", raising=False)
+    monkeypatch.delenv("CODEX_FAIL", raising=False)
+    monkeypatch.setenv("CODEX_CALLS", str(log))
+    return log
+
+
+def run_codex(install, project, action):
+    argv = ["codex", action, "--project", str(project)]
+    return install.main(argv, stub_reads(install, Recorder(), endpoint="2.1.0"))
+
+
+CODEX_ADD = ["plugin", "marketplace", "add", "uHappyLogic/gurita-codex", "--ref", "2.1.0"]
+CODEX_UPDATE = [
+    ["plugin", "marketplace", "remove", "gurita"],
+    CODEX_ADD,
+    ["plugin", "add", "gurita@gurita"],
+]
+
+
+def test_codex_install_adds_the_marketplace_at_the_tag_then_the_plugin(install, stand_in_codex, project):
+    assert run_codex(install, project, "install") == 0
+    root = os.path.realpath(project)
+    assert recorded_calls(stand_in_codex) == [
+        (root, CODEX_ADD),
+        (root, ["plugin", "add", "gurita@gurita"]),
+    ]
+
+
+def test_codex_update_removes_and_re_adds_the_marketplace_then_adds_the_plugin(install, stand_in_codex, project):
+    assert run_codex(install, project, "update") == 0
+    root = os.path.realpath(project)
+    calls = recorded_calls(stand_in_codex)
+    assert calls == [(root, words) for words in CODEX_UPDATE]
+    assert not any(words[:2] == ["plugin", "remove"] for _, words in calls)
+
+
+@pytest.mark.parametrize("failing_at", range(len(CODEX_UPDATE)))
+def test_an_update_stopped_by_a_failed_step_runs_no_later_step(install, stand_in_codex, project, monkeypatch, capsys, failing_at):
+    monkeypatch.setenv("CODEX_FAIL", " ".join(CODEX_UPDATE[failing_at]))
+    assert run_codex(install, project, "update") == 3
+    root = os.path.realpath(project)
+    assert recorded_calls(stand_in_codex) == [(root, words) for words in CODEX_UPDATE[: failing_at + 1]]
+
+
+def test_a_failed_codex_install_step_ends_the_run_with_a_non_zero_status(install, stand_in_codex, project, monkeypatch):
+    monkeypatch.setenv("CODEX_FAIL", " ".join(CODEX_ADD))
+    assert run_codex(install, project, "install") != 0
+    assert [words for _, words in recorded_calls(stand_in_codex)] == [CODEX_ADD]
+
+
+def test_codex_runs_in_the_runners_session_shell_at_the_root(install, project):
+    seen = []
+
+    def session(script, root):
+        seen.append((script, root))
+        return 0
+
+    target = install.Target(str(project))
+    assert install.install_codex("2.1.0", target, session) == 0
+    assert install.update_codex("2.1.0", target, session) == 0
+    assert seen == [
+        (
+            "codex plugin marketplace add uHappyLogic/gurita-codex --ref 2.1.0 && "
+            "codex plugin add gurita@gurita\n",
+            str(project),
+        ),
+        (
+            "codex plugin marketplace remove gurita && "
+            "codex plugin marketplace add uHappyLogic/gurita-codex --ref 2.1.0 && "
+            "codex plugin add gurita@gurita\n",
+            str(project),
+        ),
+    ]
+
+
+def test_codex_steps_are_registered(install):
+    assert install.STEPS[("codex", "install")] is install.install_codex
+    assert install.STEPS[("codex", "update")] is install.update_codex
