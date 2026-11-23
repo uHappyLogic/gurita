@@ -201,6 +201,31 @@
   </open-question>
   <open-question id="Several-scope display">
     <question>When Claude Code holds Gurita copies at several scopes that apply to the open project, does the Settings window show the scope names alone beside the version of the one copy that wins for the project, or each scope with its own version?</question>
+    <alternative id="Scope names, winner version">
+      Claude Code&apos;s line names every applying scope Gurita was detected at, in Claude Code&apos;s precedence order (local, project, user), with nothing marking which one wins, and shows one version, the winning copy&apos;s, which the check already picks today (`folderVersion` when the entry carries `readFromFolder`). No other scope&apos;s version is shown. The check script has to print the list of detected scope names beside the one copy it already selects, and nothing more.
+      <advantage>It is the smallest change to the check and the page. `harness_check.py` adds only a list of scope names to the `claude` object, the version and the failed-check reasoning stay about the one copy they already describe, and the line stays as short as the other two harnesses&apos; lines.</advantage>
+      <drawback>The person cannot tell which listed scope supplies the version shown, and a less specific copy at an older version stays hidden. They learn about it only after the winning copy is removed or disabled. This weakens the line as a guide if the sibling questions on Update targets or Update availability end up acting on a scope other than the winner.</drawback>
+    </alternative>
+    <alternative id="Scope names, winner marked">
+      As with the scope names and winner version, every applying detected scope is named and one version is shown, the winning copy&apos;s. The winning scope is set apart, for example by being named first as the scope in effect with the others listed after it as also installed. No version is shown for any scope that does not win. The check prints the scope names and which of them won.
+      <advantage>The person sees which copy the project actually runs and which version that is, while the check and the outcome naming still compare one version with one baseline. The added data is only the scope list and the winner&apos;s name, both of which the script&apos;s existing selection already computes.</advantage>
+      <drawback>The versions of the copies that do not win stay invisible, so a stale user-scope copy behind a current project-scope copy, the state this machine is close to, cannot be seen without leaving the window. If the Update-target sibling lets the person update a scope other than the winner, the window gives no version to choose by.</drawback>
+    </alternative>
+    <alternative id="Each scope with version, winner marked">
+      Every applying detected scope is shown with its own copy&apos;s version, read for each entry as the check reads the winner&apos;s (`folderVersion` where `readFromFolder` is present, `version` otherwise), and the winning scope is marked as the one in effect for the project. The check script prints one record per applying entry (scope and version) plus which of them won. The failed-check outcome is still the one the winning copy gives.
+      <advantage>It is the most complete picture. Which copy runs, which copies stand behind it, and how far each lags the others or the compared version can all be read off the window. This fits any outcome of the sibling questions on which scopes Update acts on and when Update is offered.</advantage>
+      <drawback>The check&apos;s JSON gains a per-entry list the script and its tests must now carry. The Claude Code line becomes several lines while Antigravity and Codex keep one. A version differing from the compared one on a scope that does not win is shown without being reported as a failed check, which may read as an inconsistency.</drawback>
+    </alternative>
+    <alternative id="Each scope with version, unmarked">
+      Every applying detected scope is shown with its own copy&apos;s version (`folderVersion` where `readFromFolder` is present), listed in Claude Code&apos;s precedence order (local, project, user). No marking tells which one wins, and the reader is left to the order and Claude Code&apos;s documented precedence. The check prints one scope and version record per applying entry.
+      <advantage>Every installed version can be seen, and the page needs no notion of a winner. It just draws the entries the check prints, in a fixed order, so the page logic stays a plain list.</advantage>
+      <drawback>The person has to know Claude Code&apos;s precedence rule to tell which version the project runs, and the failed-check line still speaks of one copy without saying which. A disabled entry, whose treatment the disabled-copy sibling settles, makes the order alone an even weaker guide to what is in effect.</drawback>
+    </alternative>
+    <alternative id="Winner version, differing versions noted">
+      Every applying detected scope is named and the winning scope is marked as in effect, with the winning copy&apos;s version shown once. A scope that does not win shows its own version only when it differs from the winner&apos;s. Scopes whose copies match the winner are named with no version of their own. The check prints one scope and version record per applying entry plus the winner. The page decides which versions to show.
+      <advantage>In the common case, where every copy is at one version, the line stays as short as a scope-names display. A lagging copy still shows itself the moment it exists, so nothing stale stays hidden and nothing redundant is repeated.</advantage>
+      <drawback>It needs the same per-entry data from the check as a full per-scope display, plus a comparison rule on the page that tests must cover. Because the shape of the line depends on the versions, it is harder to describe in the README and to read at a glance than either uniform form.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Disabled Claude Code copy">
     <question>When the Claude Code entry that wins for the open project is disabled, the harness check counts Gurita as not installed. How does the Settings window treat such a copy: is its scope shown as a detected scope, and is Install offered for a scope that already holds a disabled copy?</question>
