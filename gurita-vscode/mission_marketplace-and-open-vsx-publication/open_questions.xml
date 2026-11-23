@@ -825,6 +825,51 @@
   </open-question>
   <open-question id="Listing verification">
     <question>What must be observed before the mission counts the extension as live on both registries: the listing pages or a registry query alone, an install from the Extensions view of VS Code, an install in a fork that reads Open VSX, none of which is installed on this machine, or something else?</question>
+    <alternative id="Publish result only">
+      Nothing is observed after publication. The extension counts as live on both registries once the release skill&apos;s two publish commands, `vsce publish` for the Marketplace and `ovsx publish` for Open VSX, have both exited successfully. No listing page is opened, no registry is queried, and nothing is installed.
+      <advantage>It costs nothing beyond the release run itself, needs no fork and no change to the VS Code on this machine, and the skill can confirm it without anyone looking.</advantage>
+      <drawback>A successful upload is not a live listing. The Marketplace scans an uploaded version before it shows it and can hold it, so the mission could end on an extension nobody can install yet, and nothing confirms that the README, icon, and metadata the mission adds show as intended.</drawback>
+    </alternative>
+    <alternative id="Listing pages on both">
+      The maintainer opens the Marketplace listing page and the Open VSX listing page of `uhappylogic.gurita-vscode` and sees on each the published version, the listing README, the icon, and the metadata. Nothing is installed in any editor.
+      <advantage>It confirms exactly what a reader of each listing sees, so a README that renders badly, a missing icon, or wrong metadata shows up, and it needs no fork and leaves the hand-installed copy in VS Code alone.</advantage>
+      <drawback>It never shows that an editor can install the package from either registry, which is what the goal says the extension must do. It also needs a person looking at two pages, so whether an agent&apos;s task can carry it depends on how the sibling questions on maintainer-only work and the first publication step place the check.</drawback>
+    </alternative>
+    <alternative id="Registry query on both">
+      A command queries each registry for `uhappylogic.gurita-vscode` and checks that it reports the published version: `vsce show uhappylogic.gurita-vscode` or the Marketplace gallery query for the Marketplace, and the Open VSX API at `https://open-vsx.org/api/uhappylogic/gurita-vscode` for Open VSX. No listing page is looked at and nothing is installed.
+      <advantage>It is scriptable and repeatable, runs with tools already on this machine (`vsce` in `node_modules`, `curl`), needs no person and no fork, and gives a plain yes-or-no on each registry holding the version.</advantage>
+      <drawback>It shows the version is registered, not that the listing reads well or that an editor installs it, so a broken README rendering, a missing icon, or a package that fails to install all pass it.</drawback>
+    </alternative>
+    <alternative id="VS Code install, Open VSX page">
+      On the Marketplace side the maintainer removes the hand-installed `uhappylogic.gurita-vscode@0.1.0` from VS Code, finds the extension by search in VS Code&apos;s Extensions view, installs it from there, and sees the published version installed. On the Open VSX side the listing page is opened and shows the published version, README, and icon. No fork is installed.
+      <advantage>It exercises the real install path for the registry this machine&apos;s editor reads, the same search-and-install a Marketplace user takes, while staying within the tools already installed here.</advantage>
+      <drawback>The Open VSX half stops at the listing page, so the goal&apos;s install in the forks that read Open VSX is never shown, and the hand-installed copy must be removed first or the Extensions view shows the extension as already installed and proves nothing.</drawback>
+    </alternative>
+    <alternative id="VS Code install, Open VSX VSIX">
+      The Marketplace side is the Extensions-view install in VS Code as above, after removing the hand-installed copy. On the Open VSX side the VSIX that Open VSX serves for the published version is downloaded from its listing or API and installed into VS Code by file with `code --install-extension`, after the Marketplace copy is removed, and the published version is seen installed. No fork is installed.
+      <advantage>It proves that the package each registry serves installs and runs in an editor, without installing a fork on this machine.</advantage>
+      <drawback>The Open VSX half goes around a fork&apos;s gallery client, so a problem in how a fork finds or installs the extension from Open VSX, such as the engine floor a fork&apos;s older VS Code base refuses, is not seen, and it adds a download-and-reinstall step a fork user never takes.</drawback>
+    </alternative>
+    <alternative id="Install in VS Code and a fork">
+      The extension is installed from each registry through an editor&apos;s own Extensions view: VS Code from the Marketplace, after removing the hand-installed copy, and a fork that reads Open VSX, such as VSCodium, installed on this machine for the check (for example through Homebrew), from Open VSX. In each the published version is seen installed.
+      <advantage>It shows exactly what the goal states, the extension installing from the Extensions view of VS Code and of a fork that reads Open VSX, including whether the fork&apos;s editor version accepts the package&apos;s engine floor.</advantage>
+      <drawback>It puts a fork on the maintainer&apos;s machine that serves no other purpose, a cost repeated wherever the check is run again, and it needs a person driving two editors&apos; interfaces, so it is a maintainer step whose place depends on the sibling questions on maintainer-only work and the first publication step.</drawback>
+    </alternative>
+    <alternative id="Installs plus smoke check">
+      As the install in VS Code and a fork, and then in each editor the activity-bar icon is seen, the side-bar view opens and lists the repository&apos;s missions, and the Settings window opens and shows the packaged plugin version.
+      <advantage>It catches a package that installs but does not work, such as one missing a bundled file after a `.vscodeignore` or bundling change, in the very copies users receive from each registry.</advantage>
+      <drawback>It is the costliest check, a fork installed plus a hand walk through two editors, and the package checked is the same VSIX the release skill built and could have tried locally before publishing, so most of what it catches could be caught earlier and cheaper.</drawback>
+    </alternative>
+    <alternative id="VS Code install and smoke, Open VSX page">
+      On the Marketplace side the hand-installed copy is removed, the extension is installed from VS Code&apos;s Extensions view, and the activity-bar icon, the side-bar view listing the missions, and the Settings window with the packaged plugin version are seen working. On the Open VSX side the listing page shows the published version, README, and icon. No fork is installed.
+      <advantage>It shows a working extension installed from a registry with only the editor already on this machine, and checks the Open VSX listing as a reader sees it.</advantage>
+      <drawback>The goal&apos;s fork install is still not shown, and the smoke walk is a hand step in an editor that an agent cannot take.</drawback>
+    </alternative>
+    <alternative id="Command-line install and query">
+      Every check is a command an agent can run: the hand-installed copy is removed and the extension is installed into VS Code from the Marketplace by ID with `code --install-extension uhappylogic.gurita-vscode`, `code --list-extensions --show-versions` is checked for the published version, and the Open VSX API is queried for the published version. No listing page is looked at and no fork is installed.
+      <advantage>It proves an install from the Marketplace&apos;s gallery and Open VSX holding the version with no person at the screen, so the check can run inside an agent&apos;s task and be repeated after every later release.</advantage>
+      <drawback>It replaces the Extensions view the goal names with the command line and never installs from Open VSX into a fork, and it does not see what a listing reader sees, so a badly rendered README or a missing icon passes it.</drawback>
+    </alternative>
   </open-question>
   <open-question id="CI for the extension">
     <question>CI sets up no Node, so neither the extension&apos;s `node:test` tests nor a package build runs there. Does this mission add them to CI now that the extension is published, or do they stay checked only where the maintainer runs them?</question>
