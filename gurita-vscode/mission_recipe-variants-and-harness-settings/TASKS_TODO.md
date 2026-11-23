@@ -11,3 +11,9 @@ The extension stops reading `snippets/GURITA_USAGE.md`: its shipped recipes move
 The extension's recipe reader, `gurita-vscode/src/recipes.ts`, names the variant of every recipe of one block and no `####` sub-heading `default` instead of repeating the recipe's name, for the shipped recipe file and the own recipe file alike, the named single-task lines included, so that every recipe opens on a variant called `default`; a recipe of several `####` variants, as `Execute tasks` with `Normal difficulty` and `Critical tasks`, keeps the names written. Nothing migrates the stored copies, picks, or remembered selections that name a variant by its old name. It is verified by reader tests and by the mission page's dropdowns and the settings view showing `default`, with `gurita-vscode/README.md` matching.
 
 ---
+
+## Config Changes Add Custom Variants
+
+In the settings view's variant edits (`gurita-vscode/src/variantEdits.ts`, with the store overlay in `src/recipes.ts`), changing a line's harness, model, or effort on a shipped or own variant leaves that variant untouched and listed and adds beside it a stored variant named `custom N`, N the lowest number starting from 1 that no variant of the recipe carries, neither selected nor made the default, while a stored variant is changed in place and keeps its name; this replaces the recorded behaviour of a line edit's stored copy standing in for the variant it copies. Every stored variant remembers the variant it was made from, a named duplicate included, and Reset on it returns its lines to that variant's while keeping its name and its entry; Rename stays as it is, on a `default` included, and a deleted variant is restored as today. It is verified by `variantEdits` and settings-view tests showing a `default` unchanged beside its `custom 1` after an edit, a second edit of `custom 1` keeping the name, and a Reset restoring the lines under the same name, with `gurita-vscode/README.md` matching.
+
+---
