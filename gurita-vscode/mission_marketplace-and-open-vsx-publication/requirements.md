@@ -80,5 +80,7 @@ No Marketplace publisher, Open VSX namespace, or token for either is recorded as
 
 - **Preview flag.** The extension is published as a regular release. The manifest gains no `preview` entry, the extension goes out through the ordinary release channel on both registries, and neither listing carries a Preview badge. Nothing in the manifest or the release skill marks the extension's maturity beyond what its version number says.
 
+- **Issue and question links.** The manifest's `homepage` names `https://github.com/uHappyLogic/gurita/tree/main/gurita-vscode#readme`. The mission adds an extension bug form under `.github/ISSUE_TEMPLATE/`, asking for the extension's own version, the editor and its version, and the platform; `bugs` names it directly through `https://github.com/uHappyLogic/gurita/issues/new?template=<form>.yml`, and the form also appears in the issue chooser. `qna` names `https://github.com/uHappyLogic/gurita/discussions/new?category=q-a`.
+
 ## Out of Scope
 

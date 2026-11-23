@@ -1,38 +1,4 @@
 <open-questions>
-  <open-question id="Issue and question links">
-    <question>Where does a listing send a reader who looks for the project&apos;s home page, wants to report an issue, or wants to ask a question: which targets do the manifest&apos;s `homepage`, `bugs`, and `qna` entries name, the Marketplace&apos;s own Q&amp;A tab being one possibility for the last?</question>
-    <recommendation option="Extension bug form, Discussions">The existing bug form requires a plugin host, a plugin version, and the skill invoked, none of which an extension report has, so a form asking for the extension&apos;s version, the editor, and the platform is what makes a stranger&apos;s report reproducible, and questions go to the Discussions category the project already watches, the same way on both registries.</recommendation>
-    <alternative id="Extension bug form, Discussions">
-      Homepage: `homepage` names `https://github.com/uHappyLogic/gurita/tree/main/gurita-vscode#readme`. Issues: the mission adds an extension bug form under `.github/ISSUE_TEMPLATE/`, asking for the extension&apos;s own version, the editor and its version, and the platform, and `bugs` names it directly through `https://github.com/uHappyLogic/gurita/issues/new?template=&lt;form&gt;.yml`. The form also appears in the chooser. Questions: `qna` names `https://github.com/uHappyLogic/gurita/discussions/new?category=q-a`.
-      <advantage>An extension report arrives with the facts it is reproduced from rather than the plugin&apos;s host and version. Questions go to the watched Discussions category on both registries.</advantage>
-      <drawback>It adds a tracked issue form outside `gurita-vscode/` that has to be kept matching the extension&apos;s supported editors and platforms. The `bugs` URL breaks without warning if the form&apos;s file is ever renamed.</drawback>
-    </alternative>
-    <alternative id="Registry defaults">
-      Homepage: no `homepage` entry, so the pinned vsce derives the root `https://github.com/uHappyLogic/gurita#readme`, as the VSIX built on 2026-11-23 already carries. Issues: no `bugs` entry, so vsce derives the repository&apos;s issue list, `https://github.com/uHappyLogic/gurita/issues`. Questions: no `qna` entry, so the Marketplace&apos;s own Q&amp;A tab stays on, its default. The manifest gains none of the three entries.
-      <advantage>Nothing to write or keep current. The listing already shows a Learn link and a Support link taken from the `repository` entry, and the Marketplace Q&amp;A tab costs no setup.</advantage>
-      <drawback>The home page is the root README, which does not mention the extension (whether it will is the root-documents sibling&apos;s call). The issue list leads to a chooser whose only bug form asks for a plugin host and plugin version that an extension user cannot give. Marketplace Q&amp;A is a second question channel outside GitHub Discussions, and nothing in the repository watches it. The derived links go into the Marketplace manifest only, so Open VSX, which reads the package&apos;s own manifest entries (not checked here), may show no home page or issue link at all.</drawback>
-    </alternative>
-    <alternative id="Homepage only">
-      Homepage: `homepage` names the extension&apos;s own directory, `https://github.com/uHappyLogic/gurita/tree/main/gurita-vscode#readme`. Issues: no `bugs` entry, so it stays at the derived issue list, `https://github.com/uHappyLogic/gurita/issues`. Questions: no `qna` entry, so the Marketplace Q&amp;A tab stays on.
-      <advantage>One entry fixes the most misleading link: a reader who follows the home page lands on the extension&apos;s documentation, not on the plugin&apos;s root README.</advantage>
-      <drawback>Issue reports still land in the plugin&apos;s bug form, which asks for a plugin host and plugin version, and questions still go to the unwatched Marketplace tab. Open VSX may show no issue link, because nothing is written for `bugs`. What the directory page shows depends on which file the listing-README siblings put at `gurita-vscode/README.md`.</drawback>
-    </alternative>
-    <alternative id="Existing GitHub channels">
-      Homepage: `homepage` names `https://github.com/uHappyLogic/gurita/tree/main/gurita-vscode#readme`. Issues: `bugs` names the existing issue chooser, `https://github.com/uHappyLogic/gurita/issues/new/choose`, with `.github/ISSUE_TEMPLATE/` left as it stands. Questions: `qna` names the Discussions Q&amp;A category, `https://github.com/uHappyLogic/gurita/discussions/new?category=q-a`, the target the root README and the chooser&apos;s &quot;Ask a question&quot; link already use, which turns the Marketplace Q&amp;A tab into that link.
-      <advantage>Every question and report reaches the channels the project already runs and watches, Discussions and the issue forms, through the URLs the root README and `config.yml` already name. Being explicit manifest entries, they show the same way on both registries.</advantage>
-      <drawback>The chooser offers a bug form whose required Host dropdown lists only `claude`, `antigravity`, and `codex` and whose required version is the plugin&apos;s. An extension report must either be squeezed into that form or filed as a feature or proposal.</drawback>
-    </alternative>
-    <alternative id="Chooser, Q&amp;A off">
-      Homepage: `homepage` names `https://github.com/uHappyLogic/gurita/tree/main/gurita-vscode#readme`. Issues: `bugs` names the existing chooser, `https://github.com/uHappyLogic/gurita/issues/new/choose`, whose `config.yml` already carries the &quot;Ask a question&quot; link to Discussions. Questions: `qna` is `false`, so the Marketplace shows no Q&amp;A tab and the listing has no question link of its own. The issue templates stay as they stand.
-      <advantage>The listing offers no channel the project does not watch. The one support link reaches both the issue forms and the question route, so the manifest names the fewest targets.</advantage>
-      <drawback>A reader who looks on the listing for a place to ask finds nothing labelled for questions and has to guess that the issue link leads to one. Extension bug reports still meet the plugin-only bug form.</drawback>
-    </alternative>
-    <alternative id="Extension bug form, Marketplace Q&amp;A">
-      Homepage: `homepage` names `https://github.com/uHappyLogic/gurita/tree/main/gurita-vscode#readme`. Issues: the mission adds an extension bug form under `.github/ISSUE_TEMPLATE/`, and `bugs` names it through `https://github.com/uHappyLogic/gurita/issues/new?template=&lt;form&gt;.yml`. Questions: `qna` is `marketplace`, keeping the Marketplace&apos;s own Q&amp;A tab as the question channel.
-      <advantage>A reader asks on the listing they are already reading, with no GitHub account, while extension reports still get a form fitted to them.</advantage>
-      <drawback>Questions are split between Marketplace Q&amp;A and GitHub Discussions, and the maintainer has to watch a channel on a registry account. Open VSX has no Q&amp;A tab, so a reader there gets no question link at all. The added form outside `gurita-vscode/` also has to be maintained.</drawback>
-    </alternative>
-  </open-question>
   <open-question id="Engine floor for forks">
     <question>The manifest declares `engines.vscode` as `^1.143.0`, the version of the editor installed when the extension was first built, while it builds against `@types/vscode` 1.140.0, and a fork that reads Open VSX may be built on an earlier VS Code than the current one. Does the published package keep that floor or lower it, and to which version?</question>
     <applied-principle>Check tier claims against the live environment</applied-principle>
