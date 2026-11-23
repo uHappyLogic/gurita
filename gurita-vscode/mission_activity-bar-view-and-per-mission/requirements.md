@@ -105,5 +105,9 @@ The extension has no activity-bar container, side-bar view, tree data provider, 
 
 - **Command Palette commands.** The two existing command ids, `gurita.openMissionPane` and `gurita.refreshMissionPane`, are removed. The Command Palette offers one command of the extension's own beside the focus command VS Code generates for the view: a refresh command under a new id, with a title naming missions rather than the pane (such as Gurita: Refresh Missions). It re-reads the side-bar tree and every open mission and Settings window exactly as the side-bar's Refresh control does, and that control runs the same registered command. The commands behind New mission, Define mission, Settings, and opening a mission are hidden from the Command Palette through `menus.commandPalette` entries whose `when` is `false`.
 
+### Reading and refresh
+
+- **Read and watch lifetime.** The extension reads no mission and watches no file until the side-bar view is first resolved (its first `getChildren` call, the view's own activation) or a Gurita command first runs, and a window restored after a reload starts the read as the view's first resolution does. From then the live read and the one file watcher last until the extension deactivates, released neither when the view is hidden nor when every mission window is closed. Every debounced burst of file events re-reads what it touches whatever is visible: the side-bar tree is kept current while hidden, and a hidden mission window draws from the current read when it is shown, redrawn from its ready message. Every surface draws from that one read, so no stale flag exists for the tree or for any window.
+
 ## Out of Scope
 
