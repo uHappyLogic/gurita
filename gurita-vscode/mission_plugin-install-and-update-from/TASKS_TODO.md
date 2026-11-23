@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Copies From Another Source Detected
-
-Have the harness check detect, for Claude Code and Codex, when the existing Gurita copy or the marketplace named `gurita` comes from a source other than the harness's distribution repository (`uHappyLogic/gurita-claude`, `uHappyLogic/gurita-codex`), such as a local checkout registered as a directory marketplace, and have the Settings window state the source found and the CLI commands that would switch the harness to its distribution repository; Antigravity, whose listing names no source, is reported as before. Verified by the script's pytest tests on listings in this machine's directory-marketplace shape and in the distribution-repository shape the hands-on verification recorded, and by the extension's unit tests of the outcome and the drawn row, the README saying the same.
-
----
-
 ## Install Script With the Release Lookup
 
 Add the packaged stdlib Python script the install or update terminal will run, beside `harness_check.py`, with its first step: reading the tag of the latest published release of a harness's distribution repository through GitHub's `releases/latest` endpoint and, when that read fails, through the `/releases/latest` page redirect. When both reads fail it prints the cause and exits with a non-zero status before any install, update, or marketplace command runs, falling back to no other ref. Verified by pytest tests in `runner_tests/`, under both pytest runs, with the two reads stubbed: the endpoint answering, only the redirect answering, and both failing.

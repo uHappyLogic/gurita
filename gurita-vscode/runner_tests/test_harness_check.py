@@ -1,8 +1,11 @@
 """The harness check, gurita-vscode/harness_check.py: the copy each canned listing gives, Claude
 Code's chosen among the entries that apply to the project root with every applying scope listed,
 the winning one first and marked disabled when it is, Antigravity's and Codex's each not
-installed, installed, or installed but disabled, and the one JSON result the check prints, its session replaced by a stub that writes the files a real session would, so no
-shell session starts."""
+installed, installed, or installed but disabled, Claude Code's and Codex's copy or `gurita`
+marketplace from a source other than the distribution repository detected in listings of this
+machine's directory-marketplace shape and told apart from the distribution-repository shape the
+hands-on verification recorded, and the one JSON result the check prints, its session replaced
+by a stub that writes the files a real session would, so no shell session starts."""
 
 import json
 import os
@@ -232,6 +235,273 @@ def test_codex_unreadable_listing_is_an_error(check, text):
         check.codex_copy(text)
 
 
+# Sources: this machine's directory-marketplace shape against the distribution-repository shape
+# the hands-on verification recorded
+
+# `claude plugin marketplace list --json` as this machine prints it: `gurita` a directory
+# marketplace at the checkout, beside other marketplaces.
+CLAUDE_DIRECTORY_MARKETPLACES = [
+    {
+        "name": "claude-plugins-official",
+        "source": "github",
+        "repo": "anthropics/claude-plugins-official",
+        "installLocation": "/home/.claude/plugins/marketplaces/claude-plugins-official",
+    },
+    {"name": "gurita", "source": "directory", "path": "/work/gurita", "installLocation": "/work/gurita"},
+]
+
+# The `gurita` marketplace as the hands-on verification recorded it, added from the distribution
+# repository at a release's tag.
+CLAUDE_DISTRIBUTION_MARKETPLACE = {
+    "name": "gurita",
+    "source": "github",
+    "repo": "uHappyLogic/gurita-claude",
+    "ref": "2.0.0",
+    "installLocation": "/cfg/plugins/marketplaces/gurita",
+}
+
+
+def distribution_claude_entry(scope, project=None):
+    """A `gurita@gurita` entry as the hands-on verification recorded it: no `readFromFolder`."""
+    entry = {
+        "id": "gurita@gurita",
+        "version": "2.0.0",
+        "scope": scope,
+        "enabled": True,
+        "installPath": "/cfg/plugins/cache/gurita/gurita/2.0.0",
+        "installedAt": "2026-11-23T10:00:00.000Z",
+        "lastUpdated": "2026-11-23T10:00:00.000Z",
+        "projectEnabled": True,
+    }
+    if project is not None:
+        entry["projectPath"] = project
+    return entry
+
+
+def test_claude_directory_marketplace_is_another_source(check):
+    text = listing([claude_entry("user", "1.9.0", folder="2.0.0"), claude_entry("project", "1.9.0", ROOT, folder="2.0.0")])
+    assert check.claude_source(text, listing(CLAUDE_DIRECTORY_MARKETPLACES), ROOT) == "the directory /work/gurita"
+
+
+def test_claude_directory_marketplace_with_no_copy_is_another_source(check):
+    assert check.claude_source(listing([]), listing(CLAUDE_DIRECTORY_MARKETPLACES), ROOT) == "the directory /work/gurita"
+
+
+def test_claude_distribution_repository_is_no_other_source(check):
+    text = listing(
+        [
+            distribution_claude_entry("user"),
+            distribution_claude_entry("project", ROOT),
+            distribution_claude_entry("local", ROOT),
+        ]
+    )
+    assert check.claude_source(text, listing([CLAUDE_DISTRIBUTION_MARKETPLACE]), ROOT) is None
+
+
+@pytest.mark.parametrize(
+    "marketplace",
+    [
+        dict(CLAUDE_DISTRIBUTION_MARKETPLACE, ref="main"),
+        {k: v for k, v in CLAUDE_DISTRIBUTION_MARKETPLACE.items() if k != "ref"},
+        dict(CLAUDE_DISTRIBUTION_MARKETPLACE, repo="uhappylogic/gurita-claude"),
+        {"name": "gurita", "source": "git", "url": "https://github.com/uHappyLogic/gurita-claude.git"},
+        {"name": "gurita", "source": "git", "url": "git@github.com:uHappyLogic/gurita-claude.git"},
+    ],
+)
+def test_claude_distribution_repository_at_any_ref_or_url_form_is_no_other_source(check, marketplace):
+    assert check.claude_source(listing([distribution_claude_entry("user")]), listing([marketplace]), ROOT) is None
+
+
+def test_claude_no_gurita_marketplace_and_no_folder_is_no_other_source(check):
+    others = [entry for entry in CLAUDE_DIRECTORY_MARKETPLACES if entry["name"] != "gurita"]
+    assert check.claude_source(listing([distribution_claude_entry("user")]), listing(others), ROOT) is None
+    assert check.claude_source(listing([]), listing([]), ROOT) is None
+
+
+@pytest.mark.parametrize(
+    ("marketplace", "described"),
+    [
+        (
+            {"name": "gurita", "source": "github", "repo": "someone/gurita-claude"},
+            "the GitHub repository someone/gurita-claude",
+        ),
+        (
+            {"name": "gurita", "source": "git", "url": "https://example.com/gurita.git"},
+            "the Git repository https://example.com/gurita.git",
+        ),
+        (
+            {"name": "gurita", "source": "github", "repo": "uHappyLogic/gurita-codex"},
+            "the GitHub repository uHappyLogic/gurita-codex",
+        ),
+        ({"name": "gurita", "source": "url", "url": "https://example.com/m.json"}, "a url source at https://example.com/m.json"),
+    ],
+)
+def test_claude_other_marketplace_sources_are_described(check, marketplace, described):
+    assert check.claude_source(listing([]), listing([marketplace]), ROOT) == described
+
+
+def test_claude_folder_read_copy_beside_a_distribution_marketplace_is_another_source(check):
+    text = listing([claude_entry("project", "1.9.0", ROOT, folder="2.0.0")])
+    assert check.claude_source(text, listing([CLAUDE_DISTRIBUTION_MARKETPLACE]), ROOT) == "the folder /work/gurita/hosts/claude"
+
+
+def test_claude_folder_read_copy_of_another_project_does_not_count(check):
+    text = listing([claude_entry("project", "1.9.0", "/work/other", folder="2.0.0"), distribution_claude_entry("user")])
+    assert check.claude_source(text, listing([CLAUDE_DISTRIBUTION_MARKETPLACE]), ROOT) is None
+
+
+@pytest.mark.parametrize("text", ["not json", "{}"])
+def test_claude_unreadable_marketplace_listing_is_an_error(check, text):
+    with pytest.raises(check.ListingError):
+        check.claude_source(listing([]), text, ROOT)
+
+
+# `codex plugin list -m gurita --json` and `codex plugin marketplace list --json` as this machine
+# prints them: `gurita` a local marketplace rooted at the checkout's `hosts/codex`.
+CODEX_LOCAL_SOURCE = {"sourceType": "local", "source": "/work/gurita/hosts/codex"}
+CODEX_LOCAL_LISTING = json.dumps(
+    {
+        "installed": [
+            {
+                "pluginId": "gurita@gurita",
+                "name": "gurita",
+                "marketplaceName": "gurita",
+                "version": "1.9.0",
+                "installed": True,
+                "enabled": True,
+                "source": {"source": "local", "path": "/work/gurita/hosts/codex/plugins/gurita"},
+                "marketplaceSource": CODEX_LOCAL_SOURCE,
+                "installPolicy": "AVAILABLE",
+                "authPolicy": "ON_INSTALL",
+            }
+        ],
+        "available": [],
+    }
+)
+CODEX_LOCAL_MARKETPLACES = json.dumps(
+    {
+        "marketplaces": [
+            {"name": "openai-curated", "root": "/home/.codex/.tmp/plugins"},
+            {"name": "gurita", "root": "/work/gurita/hosts/codex", "marketplaceSource": CODEX_LOCAL_SOURCE},
+        ]
+    }
+)
+
+# The same two listings as the hands-on verification recorded them after the distribution
+# repository was added at a release's tag and the plugin added from it.
+CODEX_DISTRIBUTION_SOURCE = {"sourceType": "git", "source": "https://github.com/uHappyLogic/gurita-codex.git"}
+CODEX_DISTRIBUTION_MARKETPLACE = {
+    "name": "gurita",
+    "root": "/codex-home/.tmp/marketplaces/gurita",
+    "marketplaceSource": CODEX_DISTRIBUTION_SOURCE,
+}
+CODEX_DISTRIBUTION_LISTING = json.dumps(
+    {
+        "installed": [
+            {
+                "pluginId": "gurita@gurita",
+                "version": "2.0.0",
+                "installed": True,
+                "enabled": True,
+                "source": {"source": "local", "path": "/codex-home/.tmp/marketplaces/gurita/plugins/gurita"},
+                "marketplaceSource": CODEX_DISTRIBUTION_SOURCE,
+                "installPolicy": "AVAILABLE",
+                "authPolicy": "ON_INSTALL",
+            }
+        ],
+        "available": [],
+    }
+)
+
+
+def test_codex_local_marketplace_is_another_source(check):
+    assert check.codex_source(CODEX_LOCAL_LISTING, CODEX_LOCAL_MARKETPLACES) == "the local directory /work/gurita/hosts/codex"
+    empty = json.dumps({"installed": [], "available": []})
+    assert check.codex_source(empty, CODEX_LOCAL_MARKETPLACES) == "the local directory /work/gurita/hosts/codex", "with no copy"
+
+
+def test_codex_distribution_repository_is_no_other_source(check):
+    marketplaces = json.dumps({"marketplaces": [CODEX_DISTRIBUTION_MARKETPLACE]})
+    assert check.codex_source(CODEX_DISTRIBUTION_LISTING, marketplaces) is None
+    assert check.codex_source(json.dumps({"installed": [], "available": []}), marketplaces) is None
+
+
+def test_codex_no_gurita_marketplace_is_no_other_source(check):
+    marketplaces = json.dumps({"marketplaces": [{"name": "openai-curated", "root": "/home/.codex/.tmp/plugins"}]})
+    assert check.codex_source(json.dumps({"installed": [], "available": []}), marketplaces) is None
+
+
+def test_codex_other_git_repository_is_another_source(check):
+    other = {"sourceType": "git", "source": "https://github.com/someone/gurita-codex.git"}
+    marketplaces = json.dumps({"marketplaces": [dict(CODEX_DISTRIBUTION_MARKETPLACE, marketplaceSource=other)]})
+    assert check.codex_source(CODEX_DISTRIBUTION_LISTING, marketplaces) == "the Git repository https://github.com/someone/gurita-codex.git"
+
+
+def test_codex_copy_from_another_marketplace_source_is_another_source(check):
+    marketplaces = json.dumps({"marketplaces": []})
+    assert check.codex_source(CODEX_LOCAL_LISTING, marketplaces) == "the local directory /work/gurita/hosts/codex"
+
+
+@pytest.mark.parametrize("text", ["not json", "[]", "{}"])
+def test_codex_unreadable_marketplace_listing_is_an_error(check, text):
+    with pytest.raises(check.ListingError):
+        check.codex_source(CODEX_LOCAL_LISTING, text)
+
+
+def test_check_prints_the_source_found_and_none_for_the_distribution_repository(check, tmp_path):
+    root = str(tmp_path)
+    files = {}
+    files.update(found("claude", listing([claude_entry("user", "1.9.0", folder="2.0.0"), claude_entry("project", "1.9.0", root, folder="2.0.0")])))
+    files.update(found("claude.market", listing(CLAUDE_DIRECTORY_MARKETPLACES)))
+    files.update(found("codex", CODEX_LOCAL_LISTING))
+    files.update(found("codex.market", CODEX_LOCAL_MARKETPLACES))
+    files.update(found("antigravity", AGY_LISTING))
+    result = check.check(root, {}, fake_session(files, []))
+    assert result["claude"]["source"] == "the directory /work/gurita"
+    assert result["claude"]["installed"] is True
+    assert result["codex"]["source"] == "the local directory /work/gurita/hosts/codex"
+    assert result["codex"]["installed"] is True
+    assert "source" not in result["antigravity"], "Antigravity's listing names no source"
+
+    files = {}
+    files.update(found("claude", listing([distribution_claude_entry("user"), distribution_claude_entry("local", root)])))
+    files.update(found("claude.market", listing([CLAUDE_DISTRIBUTION_MARKETPLACE])))
+    files.update(found("codex", CODEX_DISTRIBUTION_LISTING))
+    files.update(found("codex.market", json.dumps({"marketplaces": [CODEX_DISTRIBUTION_MARKETPLACE]})))
+    result = check.check(root, {}, fake_session(files, []))
+    assert result["claude"] == {
+        "found": True,
+        "installed": True,
+        "version": "2.0.0",
+        "disabled": False,
+        "scopes": ["local", "user"],
+        "scope": "local",
+        "source": None,
+    }
+    assert result["codex"] == {"found": True, "installed": True, "version": "2.0.0", "disabled": False, "source": None}
+
+
+def test_check_failed_marketplace_listing_reports_its_error(check, tmp_path):
+    files = {}
+    files.update(found("claude", listing([distribution_claude_entry("user")])))
+    files.update(found("claude.market", "", status="1\n", err="marketplace listing failed\n"))
+    files.update(found("codex", CODEX_DISTRIBUTION_LISTING))
+    files.update({("codex.market", ".found"): ""})
+    result = check.check(str(tmp_path), {}, fake_session(files, []))
+    assert result["claude"] == {
+        "found": True,
+        "installed": False,
+        "version": None,
+        "disabled": False,
+        "scopes": [],
+        "scope": None,
+        "source": None,
+        "error": "the marketplace listing exited with status 1: marketplace listing failed",
+    }
+    assert result["codex"]["error"] == "the marketplace listing did not finish"
+    assert (result["codex"]["installed"], result["codex"]["source"]) == (False, None)
+
+
 # The composed session script
 
 
@@ -242,6 +512,9 @@ def test_script_looks_up_each_cli_and_runs_its_listing(check, tmp_path):
     assert "claude plugin list --json >" in script
     assert "agy plugin list --json >" in script
     assert "codex plugin list -m gurita --json >" in script
+    assert "claude plugin marketplace list --json >" in script
+    assert "codex plugin marketplace list --json >" in script
+    assert "agy plugin marketplace" not in script
 
 
 # The check, its session stubbed
@@ -271,6 +544,8 @@ def test_check_runs_one_session_in_the_runners_shell_and_reports_each_harness(ch
     files = {}
     files.update(found("claude", listing([claude_entry("project", "1.9.0", root, folder="2.0.0")])))
     files.update(found("codex", json.dumps({"installed": []})))
+    files.update(found("claude.market", listing([CLAUDE_DISTRIBUTION_MARKETPLACE])))
+    files.update(found("codex.market", json.dumps({"marketplaces": []})))
     calls = []
     environ = {"SHELL": "/bin/sh-not-in-family"}
     result = check.check(root, environ, fake_session(files, calls))
@@ -287,9 +562,10 @@ def test_check_runs_one_session_in_the_runners_shell_and_reports_each_harness(ch
             "scopes": ["project"],
             "scope": "project",
             "disabled": False,
+            "source": "the folder /work/gurita/hosts/claude",
         },
         "antigravity": {"found": False, "installed": False, "version": None, "disabled": False},
-        "codex": {"found": True, "installed": False, "version": None, "disabled": False},
+        "codex": {"found": True, "installed": False, "version": None, "disabled": False, "source": None},
     }
 
 
@@ -311,6 +587,7 @@ def test_check_failed_listing_reports_its_error(check, tmp_path):
     assert result["codex"]["error"].startswith("the listing printed no JSON")
     assert result["claude"]["error"] == "the listing did not finish"
     assert (result["claude"]["scopes"], result["claude"]["scope"], result["claude"]["disabled"]) == ([], None, False)
+    assert result["claude"]["source"] is None
 
 
 def test_check_leaves_no_run_directory(check, tmp_path):
@@ -339,6 +616,7 @@ def test_main_prints_claude_codes_scopes_and_a_disabled_winner(check, tmp_path, 
         "claude",
         listing([claude_entry("user", "2.0.0"), claude_entry("local", "2.0.0", root, enabled=False)]),
     )
+    files.update(found("claude.market", listing([CLAUDE_DISTRIBUTION_MARKETPLACE])))
     monkeypatch.setattr(check, "run_session", fake_session(files, []))
     assert check.main(["--project", root]) == 0
     printed = json.loads(capsys.readouterr().out)
@@ -349,8 +627,9 @@ def test_main_prints_claude_codes_scopes_and_a_disabled_winner(check, tmp_path, 
         "scopes": ["local", "user"],
         "scope": "local",
         "disabled": True,
+        "source": None,
     }
-    assert printed["codex"] == {"found": False, "installed": False, "version": None, "disabled": False}
+    assert printed["codex"] == {"found": False, "installed": False, "version": None, "disabled": False, "source": None}
 
 
 def test_main_prints_a_disabled_antigravity_and_codex_copy(check, tmp_path, monkeypatch, capsys):
@@ -370,12 +649,13 @@ def test_main_prints_a_disabled_antigravity_and_codex_copy(check, tmp_path, monk
             ),
         )
     )
+    files.update(found("codex.market", json.dumps({"marketplaces": [CODEX_DISTRIBUTION_MARKETPLACE]})))
     monkeypatch.setattr(check, "run_session", fake_session(files, []))
     assert check.main(["--project", root]) == 0
     printed = json.loads(capsys.readouterr().out)
     disabled = {"found": True, "installed": False, "version": None, "disabled": True}
     assert printed["antigravity"] == disabled
-    assert printed["codex"] == disabled
+    assert printed["codex"] == dict(disabled, source=None)
 
 
 def test_main_refuses_a_root_that_is_not_a_directory(check, tmp_path, monkeypatch, capsys):

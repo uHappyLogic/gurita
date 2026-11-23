@@ -250,6 +250,91 @@ test('the window says a disabled Antigravity or Codex copy must be enabled in th
   ], 'not installed stays told apart from disabled');
 });
 
+/** Each harness the window lists: its key, and the other-source line and commands drawn for it, or undefined without them. */
+function harnessSources(page: Page): [string, string | undefined, string | undefined][] {
+  const view = settingsView(page);
+  assert.ok(view !== undefined, 'the window is drawn');
+  return view
+    .all()
+    .filter((each) => each.tagName === 'li' && each.dataset.harness !== undefined)
+    .map((each) => [
+      each.dataset.harness as string,
+      each.all().find((child) => child.has('harness-source-line'))?.textContent,
+      each.all().find((child) => child.has('harness-source-commands'))?.textContent,
+    ]);
+}
+
+test('the window states the other source a Claude Code or Codex copy comes from and the commands that switch it to the distribution repository', () => {
+  const page = loadSettings();
+  const send = (claude: Record<string, unknown>, codex: Record<string, unknown>) =>
+    page.send({
+      type: 'harnessCheck',
+      check: {
+        state: 'checked',
+        harnesses: [
+          { key: 'claude', name: 'Claude Code', cli: 'claude', installed: '2.0.0', packaged: '2.0.0', scopes: ['project', 'user'], ...claude },
+          { key: 'antigravity', name: 'Antigravity', cli: 'agy', installed: '2.0.0', packaged: '2.0.0' },
+          { key: 'codex', name: 'Codex', cli: 'codex', packaged: '2.0.0', ...codex },
+        ],
+      },
+    });
+  const drawnButtons = () => buttons(page).map(shownName);
+  send({}, { installed: '2.0.0' });
+  assert.deepStrictEqual(harnessSources(page), [
+    ['claude', undefined, undefined],
+    ['antigravity', undefined, undefined],
+    ['codex', undefined, undefined],
+  ], 'the distribution repository, or no source read, draws no source');
+  const before = drawnButtons();
+
+  send(
+    {
+      source: {
+        found: 'the directory /work/gurita',
+        repository: 'uHappyLogic/gurita-claude',
+        commands: [
+          'claude plugin marketplace remove gurita',
+          'claude plugin marketplace add uHappyLogic/gurita-claude',
+          'claude plugin install gurita@gurita --scope user',
+          'claude plugin install gurita@gurita --scope project',
+        ],
+      },
+    },
+    {
+      failed: 'version',
+      installed: '1.9.0',
+      source: {
+        found: 'the local directory /work/gurita/hosts/codex',
+        repository: 'uHappyLogic/gurita-codex',
+        commands: ['codex plugin marketplace remove gurita', 'codex plugin marketplace add uHappyLogic/gurita-codex', 'codex plugin add gurita@gurita'],
+      },
+    },
+  );
+  assert.deepStrictEqual(harnessSources(page), [
+    [
+      'claude',
+      'The Gurita plugin comes from another source: the directory /work/gurita, not the distribution repository uHappyLogic/gurita-claude. To switch Claude Code to its distribution repository, run:',
+      'claude plugin marketplace remove gurita\nclaude plugin marketplace add uHappyLogic/gurita-claude\nclaude plugin install gurita@gurita --scope user\nclaude plugin install gurita@gurita --scope project',
+    ],
+    ['antigravity', undefined, undefined],
+    [
+      'codex',
+      'The Gurita plugin comes from another source: the local directory /work/gurita/hosts/codex, not the distribution repository uHappyLogic/gurita-codex. To switch Codex to its distribution repository, run:',
+      'codex plugin marketplace remove gurita\ncodex plugin marketplace add uHappyLogic/gurita-codex\ncodex plugin add gurita@gurita',
+    ],
+  ]);
+  assert.deepStrictEqual(harnessRows(page)[0], ['claude', undefined, ['Claude Code', 'Every check passes: Gurita 2.0.0 is installed, the packaged version.']], 'the status line is unchanged');
+  assert.deepStrictEqual(harnessScopeLines(page)[0], ['claude', 'In effect at project scope; also installed at user scope.'], 'the scopes line is unchanged');
+  const drawn = settingsView(page)?.all().filter((each) => each.has('harness-source')) ?? [];
+  assert.deepStrictEqual(drawn.map((each) => each.dataset.source), ['the directory /work/gurita', 'the local directory /work/gurita/hosts/codex']);
+  assert.deepStrictEqual(drawnButtons(), before, 'no control is added for another source');
+
+  const rules = stylesheetRules();
+  const source = rules.filter((rule) => rule.selectors.includes('.harness-list .harness-source'));
+  assert.strictEqual(source.length, 1, 'one rule lays the source out');
+  assert.strictEqual(source[0].declarations.get('flex-basis'), '100%', 'the source stands on a line of its own beneath the row');
+});
+
 test("the window's check again control asks for the check afresh, and a check that could not run shows its cause", () => {
   const page = loadSettings();
   page.send({ type: 'harnessCheck', check: { state: 'failed', cause: 'python3: not found' } });

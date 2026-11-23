@@ -14,7 +14,10 @@
 // disabled the status says, in place of plugin not installed, that the copy is disabled and must
 // be enabled in the harness itself: in Claude Code through its `/plugin` menu or
 // `claude plugin enable`, in Antigravity with `agy plugin enable gurita`, and in Codex through its
-// own plugin settings; the window adds no control of its own to enable it. Its check-again
+// own plugin settings; the window adds no control of its own to enable it. When Claude Code's or
+// Codex's Gurita copy or its marketplace named `gurita` comes from a source other than the
+// harness's distribution repository, the window states the source found and the CLI commands
+// that would switch the harness to that repository. Its check-again
 // control, disabled while a check runs, asks the extension to run the check afresh. The extension
 // runs the check on the first opening of the window in the extension's session and otherwise
 // posts the result it keeps. Beside each harness the window also shows whether it is enabled,
@@ -86,6 +89,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
     scopes?: string[];
     /** Set when the harness's copy, Claude Code's in effect at the first of `scopes`, is installed but disabled. */
     disabled?: true;
+    /** The other source the copy or the `gurita` marketplace comes from, with the commands that switch it to the distribution repository. */
+    source?: { found: string; repository: string; commands: string[] };
   }
 
   /** The harness check: running, every harness's outcome, or the cause it could not be run. */
@@ -309,6 +314,30 @@ declare function acquireVsCodeApi(): VsCodeApi;
   }
 
   /**
+   * The other source a harness's copy or `gurita` marketplace comes from, named, with the CLI
+   * commands, one per line, that would switch the harness to its distribution repository;
+   * undefined when the outcome names none.
+   */
+  function drawSource(outcome: HarnessOutcome): HTMLElement | undefined {
+    const source = outcome.source;
+    if (source === undefined) {
+      return undefined;
+    }
+    const part = element('div', undefined, 'harness-source');
+    part.dataset.source = source.found;
+    part.append(
+      element(
+        'p',
+        `The Gurita plugin comes from another source: ${source.found}, not the distribution repository ${source.repository}. ` +
+          `To switch ${outcome.name} to its distribution repository, run:`,
+        'harness-source-line',
+      ),
+      element('pre', source.commands.join('\n'), 'harness-source-commands'),
+    );
+    return part;
+  }
+
+  /**
    * A harness's enabled state and the one control that disables it while enabled and enables it
    * while disabled, posted to the extension, which stores the state and posts it again.
    */
@@ -370,6 +399,10 @@ declare function acquireVsCodeApi(): VsCodeApi;
       }
       if (settings?.state === 'read') {
         item.append(drawEnabled(key, outcome?.name ?? name, settings.enabled[key] !== false));
+      }
+      const source = outcome === undefined ? undefined : drawSource(outcome);
+      if (source !== undefined) {
+        item.append(source);
       }
       list.append(item);
     }

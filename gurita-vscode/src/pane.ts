@@ -1755,9 +1755,12 @@ export function pageShell(webview: vscode.Webview, script: vscode.Uri, title: st
   .settings { margin-top: 1em; }
   .settings h4 { margin: 0.8em 0 0.3em; }
   .harness-list { list-style: none; margin: 0 0 0.5em; padding: 0; }
-  .harness-list li { display: flex; gap: 0.8em; padding: 0.2em 0; }
+  .harness-list li { display: flex; flex-wrap: wrap; gap: 0.8em; padding: 0.2em 0; }
   .harness-list .harness-name { font-weight: 600; min-width: 8em; }
   .harness-list li.failed .harness-status { color: var(--vscode-errorForeground); }
+  .harness-list .harness-source { flex-basis: 100%; }
+  .harness-list .harness-source p { margin: 0.2em 0; }
+  .harness-list .harness-source pre { margin: 0.2em 0; white-space: pre-wrap; }
   .harness-list .harness-enabled { margin-left: auto; display: flex; align-items: center; gap: 0.5em; white-space: nowrap; }
   .harness-lists h5 { margin: 0.5em 0 0.2em; font-size: 1em; }
   .value-list { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0.5em; padding: 0.15em 0; }

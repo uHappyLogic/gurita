@@ -11,7 +11,10 @@
 // Antigravity's or Codex's one copy, is a state of its own, marked disabled, and fails the plugin
 // check. For Claude Code the outcome also names every scope at which a Gurita copy applying to the
 // project root was detected, the winning scope, the one in effect, first and the others after it.
-// This module imports nothing from `vscode`.
+// For Claude Code and Codex, when the Gurita copy or the marketplace named `gurita` comes from a
+// source other than the harness's distribution repository, the outcome names the source the script
+// found and the CLI commands that would switch the harness to that repository; Antigravity's
+// listing names no source, and its outcome carries none. This module imports nothing from `vscode`.
 
 import { execFile } from 'node:child_process';
 import * as fs from 'node:fs';
@@ -39,6 +42,26 @@ export const HARNESSES: readonly Harness[] = [
   { key: 'codex', name: 'Codex', cli: 'codex' },
 ];
 
+/** The distribution repository of each harness whose source the check reads, by its key. */
+export const DISTRIBUTION_REPOSITORIES: Readonly<Partial<Record<Harness['key'], string>>> = {
+  claude: 'uHappyLogic/gurita-claude',
+  codex: 'uHappyLogic/gurita-codex',
+};
+
+/** Claude Code's scopes in the order its switching commands install at them. */
+const CLAUDE_SCOPE_ORDER = ['user', 'project', 'local'];
+
+/**
+ * A harness's Gurita copy or `gurita` marketplace from a source other than its distribution
+ * repository: the source found, that repository, and the CLI commands, in order, that would switch
+ * the harness to it.
+ */
+export interface OtherSource {
+  found: string;
+  repository: string;
+  commands: string[];
+}
+
 /** The check of a harness that failed first: its CLI, its installed plugin, or that copy's version being older. */
 export type FailedCheck = 'cli' | 'plugin' | 'version';
 
@@ -65,6 +88,8 @@ export interface HarnessOutcome {
    * of `scopes`, or Antigravity's or Codex's one copy. The plugin check then fails.
    */
   disabled?: true;
+  /** Set when the copy or the `gurita` marketplace comes from another source; Claude Code's and Codex's alone. */
+  source?: OtherSource;
 }
 
 /** What a check gave: every harness's outcome, or the cause it could not be run. */
@@ -82,6 +107,8 @@ interface PrintedHarness {
   scope?: string | null;
   /** Whether the copy the harness holds, Claude Code's winning one, is installed but disabled. */
   disabled?: boolean;
+  /** Claude Code's and Codex's: the other source found, null when there is none. */
+  source?: string | null;
 }
 
 /** The packaged plugin version recorded in `file`, or undefined when it cannot be read. */
@@ -132,7 +159,8 @@ function printedHarness(value: unknown, key: string): PrintedHarness {
     !(entry.error === undefined || typeof entry.error === 'string') ||
     !(entry.scopes === undefined || (Array.isArray(entry.scopes) && entry.scopes.every((each) => typeof each === 'string'))) ||
     !(entry.scope === undefined || entry.scope === null || typeof entry.scope === 'string') ||
-    !(entry.disabled === undefined || typeof entry.disabled === 'boolean')
+    !(entry.disabled === undefined || typeof entry.disabled === 'boolean') ||
+    !(entry.source === undefined || entry.source === null || typeof entry.source === 'string')
   ) {
     throw new Error(`the harness check printed no result of its form for ${key}`);
   }
@@ -147,6 +175,32 @@ function detectedScopes(printed: PrintedHarness): string[] {
     return [...scopes];
   }
   return [winner, ...scopes.filter((each) => each !== winner)];
+}
+
+/**
+ * The CLI commands that would switch the harness `key` from another source to its distribution
+ * repository `repository`: the `gurita` marketplace removed and added again from that repository,
+ * then the copy installed again from it, on Claude Code at each of the detected `scopes`, whose
+ * copies the marketplace's removal uninstalls, and on Codex when `held`, a copy being installed or
+ * installed but disabled. Undefined for a harness whose source the check does not read.
+ */
+export function switchCommands(key: Harness['key'], scopes: readonly string[], held: boolean): string[] | undefined {
+  const repository = DISTRIBUTION_REPOSITORIES[key];
+  if (repository === undefined) {
+    return undefined;
+  }
+  if (key === 'claude') {
+    return [
+      'claude plugin marketplace remove gurita',
+      `claude plugin marketplace add ${repository}`,
+      ...CLAUDE_SCOPE_ORDER.filter((scope) => scopes.includes(scope)).map((scope) => `claude plugin install gurita@gurita --scope ${scope}`),
+    ];
+  }
+  return [
+    'codex plugin marketplace remove gurita',
+    `codex plugin marketplace add ${repository}`,
+    ...(held ? ['codex plugin add gurita@gurita'] : []),
+  ];
 }
 
 /**
@@ -182,6 +236,11 @@ export function harnessOutcomes(stdout: string, packaged: string | undefined): H
     }
     if (printed.disabled === true) {
       outcome.disabled = true;
+    }
+    const repository = DISTRIBUTION_REPOSITORIES[harness.key];
+    const commands = switchCommands(harness.key, scopes, printed.installed || printed.disabled === true);
+    if (typeof printed.source === 'string' && repository !== undefined && commands !== undefined) {
+      outcome.source = { found: printed.source, repository, commands };
     }
     if (!printed.found) {
       outcome.failed = 'cli';

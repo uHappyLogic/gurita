@@ -370,6 +370,31 @@ harness, true when Antigravity's `gurita` entry or Codex's installed `gurita@gur
 disabled and must be enabled in the harness itself, on Antigravity with `agy plugin enable gurita`
 and on Codex through its own plugin settings, and again adds no control of its own to enable it.
 
+For Claude Code and Codex the check also reads where the Gurita plugin comes from, in the same
+session (`claude plugin marketplace list --json`, `codex plugin marketplace list --json`). The
+plugin comes from another source when the marketplace named `gurita` is not the harness's
+distribution repository, `uHappyLogic/gurita-claude` or `uHappyLogic/gurita-codex` at any ref,
+for example a local checkout registered as a directory marketplace under the same name, or when,
+with that marketplace not another source, Claude Code's copy applying to the project is read from
+a folder or Codex's copy names another marketplace source; no `gurita` marketplace counts as no
+other source. `harness_check.py` prints Claude Code's and Codex's `source`, null for the
+distribution repository and otherwise the source found, for example `the directory
+/path/to/checkout`, and a marketplace listing that cannot be read is reported like an unreadable
+plugin listing. Beside the harness the window then states the source found and the CLI commands
+that would switch the harness to its distribution repository, for example for Claude Code:
+
+```
+claude plugin marketplace remove gurita
+claude plugin marketplace add uHappyLogic/gurita-claude
+claude plugin install gurita@gurita --scope user
+```
+
+The marketplace's removal uninstalls the copies installed from it, so Claude Code's commands
+install the copy again at each scope one was detected at, and Codex's end with
+`codex plugin add gurita@gurita` when a copy is held, enabled or disabled. The status line and
+its checks are unchanged by the source. Antigravity's listing names no source, so its copy is
+reported as before.
+
 The check runs the first time you open the Settings window after the extension starts. Its
 result is kept in the extension, with no timestamp and nothing stored, for the rest of that
 session: closing the window and opening it again, or showing it again after it was hidden, shows

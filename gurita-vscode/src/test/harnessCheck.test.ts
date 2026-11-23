@@ -3,7 +3,7 @@ import * as assert from 'node:assert';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { harnessOutcomes, readPackagedVersion, versionAtLeast } from '../harnessCheck';
+import { harnessOutcomes, readPackagedVersion, switchCommands, versionAtLeast } from '../harnessCheck';
 
 const PASSING = { found: true, installed: true, version: '2.0.0' };
 
@@ -112,6 +112,88 @@ test('a disabled Antigravity or Codex copy is a state of its own: marked disable
   assert.deepStrictEqual(installed[1], { key: 'antigravity', name: 'Antigravity', cli: 'agy', packaged: '2.0.0', installed: '2.0.0' }, 'installed is neither failed nor disabled');
   assert.strictEqual(installed[2].disabled, undefined);
   assert.throws(() => harnessOutcomes(print(PASSING, { ...DISABLED, disabled: 'yes' }), '2.0.0'), /for antigravity/);
+});
+
+test("a Claude Code or Codex copy from another source carries the source found and the commands that switch it to the distribution repository", () => {
+  const outcomes = harnessOutcomes(
+    print(
+      { found: true, installed: true, version: '2.0.0', scopes: ['project', 'user'], scope: 'project', disabled: false, source: 'the directory /work/gurita' },
+      PASSING,
+      { found: true, installed: true, version: '1.9.0', disabled: false, source: 'the local directory /work/gurita/hosts/codex' },
+    ),
+    '2.0.0',
+  );
+  assert.deepStrictEqual(outcomes[0], {
+    key: 'claude',
+    name: 'Claude Code',
+    cli: 'claude',
+    packaged: '2.0.0',
+    installed: '2.0.0',
+    scopes: ['project', 'user'],
+    source: {
+      found: 'the directory /work/gurita',
+      repository: 'uHappyLogic/gurita-claude',
+      commands: [
+        'claude plugin marketplace remove gurita',
+        'claude plugin marketplace add uHappyLogic/gurita-claude',
+        'claude plugin install gurita@gurita --scope user',
+        'claude plugin install gurita@gurita --scope project',
+      ],
+    },
+  });
+  assert.strictEqual(outcomes[0].failed, undefined, 'the source fails no check of its own');
+  assert.deepStrictEqual(outcomes[2], {
+    key: 'codex',
+    name: 'Codex',
+    cli: 'codex',
+    packaged: '2.0.0',
+    installed: '1.9.0',
+    failed: 'version',
+    source: {
+      found: 'the local directory /work/gurita/hosts/codex',
+      repository: 'uHappyLogic/gurita-codex',
+      commands: ['codex plugin marketplace remove gurita', 'codex plugin marketplace add uHappyLogic/gurita-codex', 'codex plugin add gurita@gurita'],
+    },
+  });
+  assert.strictEqual(outcomes[1].source, undefined, 'Antigravity carries no source');
+});
+
+test('the distribution repository, or no gurita marketplace, carries no source', () => {
+  const outcomes = harnessOutcomes(
+    print(
+      { found: true, installed: true, version: '2.0.0', scopes: ['user'], scope: 'user', disabled: false, source: null },
+      { ...PASSING, source: 'ignored' },
+      { found: true, installed: false, version: null, disabled: false, source: null },
+    ),
+    '2.0.0',
+  );
+  assert.strictEqual(outcomes[0].source, undefined);
+  assert.strictEqual(outcomes[1].source, undefined, "Antigravity's source is never read");
+  assert.strictEqual(outcomes[2].source, undefined);
+  assert.throws(() => harnessOutcomes(print({ ...PASSING, source: 3 }), '2.0.0'), /for claude/);
+});
+
+test('the switching commands reinstall at every detected Claude Code scope, and on Codex only over a held copy', () => {
+  assert.deepStrictEqual(switchCommands('claude', [], false), [
+    'claude plugin marketplace remove gurita',
+    'claude plugin marketplace add uHappyLogic/gurita-claude',
+  ]);
+  assert.deepStrictEqual(switchCommands('claude', ['local', 'user', 'project'], true)?.slice(2), [
+    'claude plugin install gurita@gurita --scope user',
+    'claude plugin install gurita@gurita --scope project',
+    'claude plugin install gurita@gurita --scope local',
+  ]);
+  assert.deepStrictEqual(switchCommands('codex', [], false), [
+    'codex plugin marketplace remove gurita',
+    'codex plugin marketplace add uHappyLogic/gurita-codex',
+  ]);
+  assert.deepStrictEqual(switchCommands('codex', [], true)?.slice(2), ['codex plugin add gurita@gurita']);
+  assert.strictEqual(switchCommands('antigravity', [], true), undefined);
+  const disabled = harnessOutcomes(
+    print(PASSING, PASSING, { found: true, installed: false, version: null, disabled: true, source: 'the local directory /x' }),
+    '2.0.0',
+  )[2];
+  assert.deepStrictEqual(disabled.source?.commands.slice(2), ['codex plugin add gurita@gurita'], 'a disabled copy is held');
 });
 
 test('a print not in the check script form throws', () => {

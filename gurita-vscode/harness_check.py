@@ -11,17 +11,24 @@ harness's CLI is looked up on the `PATH` the shell a chain runs in builds from t
 startup files. In that one session, started at ROOT with no input, it runs for each of Claude
 Code, Antigravity, and Codex the shell's `command -v` lookup of the CLI and, when the CLI is
 found, its listing (`claude plugin list --json`, `agy plugin list --json`,
-`codex plugin list -m gurita --json`), each listing's print, error print, and exit status
-written to a run-local file, so nothing the startup files print reaches the result.
+`codex plugin list -m gurita --json`) and, for Claude Code and Codex, its marketplace listing
+(`claude plugin marketplace list --json`, `codex plugin marketplace list --json`), each
+listing's print, error print, and exit status written to a run-local file, so nothing the
+startup files print reaches the result.
 
 It prints one JSON object on one line, keyed `claude`, `antigravity`, and `codex`, each holding
 `found` (whether the CLI was found), `installed` (whether an enabled Gurita copy is installed),
 `version` (the version that copy reads, null when none is installed or the entry carries no
 version), and `disabled` (whether the copy the harness holds is installed but disabled, its
 `installed` then false and its `version` null), so a copy is in one of three states: not
-installed, installed, or installed but disabled; and `error` beside them when the listing could
+installed, installed, or installed but disabled; and `error` beside them when a listing could
 not be read: it exited non-zero, did not finish within the session's time limit, or printed no
 JSON of the listing's shape, the copy then counted as not installed and not disabled. Claude
+Code's and Codex's results also hold `source`: null when neither the Gurita copy nor the
+marketplace named `gurita` comes from a source other than the harness's distribution repository
+(`uHappyLogic/gurita-claude`, `uHappyLogic/gurita-codex`), no `gurita` marketplace counting as
+none, and otherwise a description of the source found, for example `the directory /path`.
+Antigravity's listing names no source, and its result holds no `source`. Claude
 Code's result also holds `scopes` (every scope holding a `gurita@gurita` entry that applies to
 ROOT, the winning one first and the rest from the most specific down, empty when none applies or
 the listing could not be read) and `scope` (the winning scope, null when none applies), its
@@ -38,6 +45,14 @@ entry of the listing's `installed` array; a Codex entry reading `installed` fals
 installed, and an entry of either reading `enabled` false as installed but disabled; each enabled
 copy's version is its `version`.
 
+The source is read from the `gurita` entry of the marketplace listing: Claude Code's source a
+`github` one whose `repo` is the distribution repository or a `git` one whose `url` names it on
+GitHub, any ref allowed, and Codex's `marketplaceSource` a `git` one whose `source` names it on
+GitHub; any other `gurita` marketplace is another source. With the marketplace not another
+source, a Claude Code entry applying to ROOT that carries `readFromFolder` is read from that
+folder, another source, and a Codex `gurita@gurita` entry whose own `marketplaceSource` is not the
+distribution repository is from that source.
+
 The exit status is 0 whenever the result is printed; a ROOT that is not a directory prints one
 `Error:` line and exits 1.
 """
@@ -45,6 +60,7 @@ The exit status is 0 whenever the result is printed; a ROOT that is not a direct
 import argparse
 import json
 import os
+import re
 import shlex
 import signal
 import subprocess
@@ -66,11 +82,21 @@ CLAUDE = "claude"
 ANTIGRAVITY = "antigravity"
 CODEX = "codex"
 
-# Each harness: its result key, its CLI, and the listing's arguments after the CLI.
-HARNESSES: Tuple[Tuple[str, str, Tuple[str, ...]], ...] = (
-    (CLAUDE, "claude", ("plugin", "list", "--json")),
-    (ANTIGRAVITY, "agy", ("plugin", "list", "--json")),
-    (CODEX, "codex", ("plugin", "list", "-m", "gurita", "--json")),
+# Each harness: its result key, its CLI, the listing's arguments after the CLI, and the marketplace
+# listing's, None for a harness whose source is not read.
+HARNESSES: Tuple[Tuple[str, str, Tuple[str, ...], Optional[Tuple[str, ...]]], ...] = (
+    (CLAUDE, "claude", ("plugin", "list", "--json"), ("plugin", "marketplace", "list", "--json")),
+    (ANTIGRAVITY, "agy", ("plugin", "list", "--json"), None),
+    (CODEX, "codex", ("plugin", "list", "-m", "gurita", "--json"), ("plugin", "marketplace", "list", "--json")),
+)
+
+# Each harness's distribution repository, as a lower-cased GitHub `owner/repo`.
+DISTRIBUTION = {CLAUDE: "uhappylogic/gurita-claude", CODEX: "uhappylogic/gurita-codex"}
+MARKETPLACE_NAME = "gurita"
+GITHUB_URL = re.compile(
+    r"^(?:(?:https?|git|ssh)://(?:[^@/]+@)?|[^@/:]+@)?(?:www\.)?github\.com[:/]"
+    r"([^/]+)/([^/#?]+?)(?:\.git)?/?(?:[#?].*)?$",
+    re.IGNORECASE,
 )
 
 CLAUDE_PLUGIN_ID = "gurita@gurita"
@@ -80,6 +106,7 @@ SCOPE_RANK = {"user": 0, "project": 1, "local": 2}
 PROJECT_SCOPES = ("project", "local")
 
 FOUND_SUFFIX = ".found"
+MARKET_PREFIX = ".market"
 OUT_SUFFIX = ".out"
 ERR_SUFFIX = ".err"
 STATUS_SUFFIX = ".status"
@@ -99,17 +126,23 @@ def compose_script(run_dir: str) -> str:
     """The session's script: for each harness the CLI lookup and, when found, its listing,
     each outcome written to a file named for the harness in `run_dir`."""
     parts: List[str] = []
-    for key, cli, arguments in HARNESSES:
+    for key, cli, arguments, market in HARNESSES:
         base = shlex.quote(os.path.join(run_dir, key))
-        listing = " ".join(shlex.quote(word) for word in (cli,) + arguments)
-        parts.append(
-            f"if command -v {shlex.quote(cli)} >/dev/null 2>&1; then "
-            f": >{base}{FOUND_SUFFIX}; "
-            f"{listing} >{base}{OUT_SUFFIX} 2>{base}{ERR_SUFFIX} </dev/null; "
-            f"printf '%s\\n' \"$?\" >{base}{STATUS_SUFFIX}; "
-            "fi"
-        )
+        steps = [f": >{base}{FOUND_SUFFIX}; ", listing_step(cli, arguments, base)]
+        if market is not None:
+            steps.append(listing_step(cli, market, shlex.quote(os.path.join(run_dir, key + MARKET_PREFIX))))
+        parts.append(f"if command -v {shlex.quote(cli)} >/dev/null 2>&1; then " + "".join(steps) + "fi")
     return "\n".join(parts) + "\n"
+
+
+def listing_step(cli: str, arguments: Tuple[str, ...], base: str) -> str:
+    """One listing of the session script, its print, error print, and exit status written to the
+    files named by the quoted `base`."""
+    listing = " ".join(shlex.quote(word) for word in (cli,) + arguments)
+    return (
+        f"{listing} >{base}{OUT_SUFFIX} 2>{base}{ERR_SUFFIX} </dev/null; "
+        f"printf '%s\\n' \"$?\" >{base}{STATUS_SUFFIX}; "
+    )
 
 
 def run_session(argv: List[str], root: str, timeout: float) -> None:
@@ -231,6 +264,125 @@ def codex_copy(text: str) -> Copy:
     return NOT_INSTALLED
 
 
+def github_repository(url: str) -> Optional[str]:
+    """The lower-cased `owner/repo` a GitHub URL names, None for any other URL."""
+    match = GITHUB_URL.match(url.strip())
+    return None if match is None else f"{match.group(1)}/{match.group(2)}".lower()
+
+
+def text_value(entry: Dict[str, Any], key: str) -> Optional[str]:
+    value = entry.get(key)
+    return value if isinstance(value, str) and value else None
+
+
+def claude_marketplace_source(text: str) -> Optional[str]:
+    """The source of the `gurita` marketplace in Claude Code's marketplace listing when it is not
+    the distribution repository, None when it is or when no `gurita` marketplace is listed."""
+    entries = parse_json(text)
+    if not isinstance(entries, list):
+        raise ListingError("the marketplace listing is not a JSON array")
+    for entry in entries:
+        if not isinstance(entry, dict) or entry.get("name") != MARKETPLACE_NAME:
+            continue
+        kind = text_value(entry, "source")
+        repo = text_value(entry, "repo")
+        url = text_value(entry, "url")
+        path = text_value(entry, "path")
+        if kind == "github" and repo is not None:
+            if strip_git(repo.lower()) == DISTRIBUTION[CLAUDE]:
+                return None
+            return f"the GitHub repository {repo}"
+        if kind == "git" and url is not None:
+            if github_repository(url) == DISTRIBUTION[CLAUDE]:
+                return None
+            return f"the Git repository {url}"
+        if kind == "directory" and path is not None:
+            return f"the directory {path}"
+        location = path or url or repo or text_value(entry, "installLocation")
+        described = f"a {kind} source" if kind is not None else "a source of no named kind"
+        return f"{described} at {location}" if location is not None else described
+    return None
+
+
+def strip_git(repo: str) -> str:
+    """A GitHub `owner/repo` with a trailing slash and `.git` taken off."""
+    repo = repo.rstrip("/")
+    return repo[: -len(".git")] if repo.endswith(".git") else repo
+
+
+def claude_folder_source(text: str, root: str) -> Optional[str]:
+    """The folder a `gurita@gurita` entry applying to `root` in Claude Code's listing is read
+    from, None when no applying entry carries `readFromFolder`."""
+    entries = parse_json(text)
+    if not isinstance(entries, list):
+        raise ListingError("the listing is not a JSON array")
+    for entry in entries:
+        if not isinstance(entry, dict) or entry.get("id") != CLAUDE_PLUGIN_ID:
+            continue
+        scope = entry.get("scope")
+        if scope not in SCOPE_RANK:
+            continue
+        if scope in PROJECT_SCOPES:
+            project = entry.get("projectPath")
+            if not isinstance(project, str) or not same_path(project, root):
+                continue
+        folder = text_value(entry, "readFromFolder")
+        if folder is not None:
+            return f"the folder {folder}"
+    return None
+
+
+def claude_source(listing: str, marketplaces: str, root: str) -> Optional[str]:
+    """Where Claude Code's Gurita copy or its `gurita` marketplace comes from, when that is not the
+    distribution repository: the marketplace's source first, then the folder an applying copy is
+    read from."""
+    return claude_marketplace_source(marketplaces) or claude_folder_source(listing, root)
+
+
+def codex_marketplace_source(source: Any) -> Optional[str]:
+    """A Codex `marketplaceSource` described when it is not the distribution repository, None
+    when it is."""
+    if not isinstance(source, dict):
+        return "a source the listing does not name"
+    kind = text_value(source, "sourceType")
+    location = text_value(source, "source")
+    if kind == "git" and location is not None:
+        if github_repository(location) == DISTRIBUTION[CODEX]:
+            return None
+        return f"the Git repository {location}"
+    if kind == "local" and location is not None:
+        return f"the local directory {location}"
+    described = f"a {kind} source" if kind is not None else "a source of no named kind"
+    return f"{described} at {location}" if location is not None else described
+
+
+def codex_source(listing: str, marketplaces: str) -> Optional[str]:
+    """Where Codex's `gurita` marketplace or its Gurita copy comes from, when that is not the
+    distribution repository: the marketplace listing's `gurita` entry first, then the
+    `marketplaceSource` of the listing's installed `gurita@gurita` entry."""
+    parsed = parse_json(marketplaces)
+    entries = parsed.get("marketplaces") if isinstance(parsed, dict) else None
+    if not isinstance(entries, list):
+        raise ListingError("the marketplace listing holds no `marketplaces` array")
+    for entry in entries:
+        if isinstance(entry, dict) and entry.get("name") == MARKETPLACE_NAME:
+            if "marketplaceSource" not in entry:
+                root = text_value(entry, "root")
+                return f"the marketplace root {root}" if root is not None else "a source the listing does not name"
+            found = codex_marketplace_source(entry["marketplaceSource"])
+            if found is not None:
+                return found
+            break
+    copy = parse_json(listing)
+    installed = copy.get("installed") if isinstance(copy, dict) else None
+    if not isinstance(installed, list):
+        raise ListingError("the listing holds no `installed` array")
+    for entry in installed:
+        if isinstance(entry, dict) and entry.get("pluginId") == CODEX_PLUGIN_ID and "marketplaceSource" in entry:
+            return codex_marketplace_source(entry["marketplaceSource"])
+    return None
+
+
 def read_copy(key: str, text: str) -> Copy:
     """Antigravity's or Codex's copy, by the harness's key."""
     if key == ANTIGRAVITY:
@@ -246,36 +398,52 @@ def read_file(path: str) -> Optional[str]:
         return None
 
 
+def listing_text(base: str, what: str) -> str:
+    """The print of the listing named `what` whose files the session wrote under `base`, or a
+    ListingError saying why it could not be read."""
+    status = read_file(base + STATUS_SUFFIX)
+    if status is None:
+        raise ListingError(f"the {what} did not finish")
+    if status.strip() != "0":
+        detail = (read_file(base + ERR_SUFFIX) or "").strip().splitlines()
+        reason = f"the {what} exited with status {status.strip()}"
+        raise ListingError(f"{reason}: {detail[-1]}" if detail else reason)
+    return read_file(base + OUT_SUFFIX) or ""
+
+
 def harness_result(key: str, run_dir: str, root: str) -> Dict[str, Any]:
     """One harness's result from the files the session wrote for it in `run_dir`."""
     base = os.path.join(run_dir, key)
     result: Dict[str, Any] = {"found": False, "installed": False, "version": None, "disabled": False}
     if key == CLAUDE:
         result.update({"scopes": [], "scope": None})
+    if key in DISTRIBUTION:
+        result["source"] = None
     if not os.path.exists(base + FOUND_SUFFIX):
         return result
     result["found"] = True
-    status = read_file(base + STATUS_SUFFIX)
+    found: Dict[str, Any] = {}
     try:
-        if status is None:
-            raise ListingError("the listing did not finish")
-        if status.strip() != "0":
-            detail = (read_file(base + ERR_SUFFIX) or "").strip().splitlines()
-            reason = f"the listing exited with status {status.strip()}"
-            raise ListingError(f"{reason}: {detail[-1]}" if detail else reason)
-        text = read_file(base + OUT_SUFFIX) or ""
+        text = listing_text(base, "listing")
         if key == CLAUDE:
             claude = claude_copy(text, root)
             installed, version, disabled = claude.installed, claude.version, claude.disabled
-            result.update({"scopes": claude.scopes, "scope": claude.scope})
+            found.update({"scopes": claude.scopes, "scope": claude.scope})
         else:
             installed, version, disabled = read_copy(key, text)
+        if key in DISTRIBUTION:
+            marketplaces = listing_text(base + MARKET_PREFIX, "marketplace listing")
+            if key == CLAUDE:
+                found["source"] = claude_source(text, marketplaces, root)
+            else:
+                found["source"] = codex_source(text, marketplaces)
     except ListingError as error:
         result["error"] = str(error)
         return result
     result["installed"] = installed
     result["version"] = version
     result["disabled"] = disabled
+    result.update(found)
     return result
 
 
@@ -292,7 +460,7 @@ def check(
     try:
         argv = runner.session_shell(environ) + ["-c", compose_script(run_dir)]
         session(argv, root, timeout)
-        return {key: harness_result(key, run_dir, root) for key, _, _ in HARNESSES}
+        return {key: harness_result(key, run_dir, root) for key, _, _, _ in HARNESSES}
     finally:
         for name in os.listdir(run_dir):
             try:
