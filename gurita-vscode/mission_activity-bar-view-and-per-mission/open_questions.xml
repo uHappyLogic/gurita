@@ -78,6 +78,36 @@
   </open-question>
   <open-question id="Unreadable step or count">
     <question>Each mission&apos;s row in the side-bar tree shows the workflow step to run next and the counts of open questions and remaining tasks. The extension finds no next step when a read that choice needs failed, and holds a notice in place of a list when a mission&apos;s `open_questions.xml` or `TASKS_TODO.md` is missing or does not parse. What does a mission&apos;s row show in place of a step or a count that could not be read?</question>
+    <alternative id="Leave the fact out">
+      The row draws only the facts that read. A step or count that could not be read is left off the row with nothing in its place: no placeholder, no marker, and no cause on the row. The cause is shown only where the mission&apos;s page already shows it, the notice of the file that did not read in place of its list, once the mission&apos;s window is opened.
+      <advantage>It adds nothing to the tree. The row needs no new text, the extension gets no new state to draw, and the page&apos;s existing notice stays the one place a failed read is explained.</advantage>
+      <drawback>A failure reads as an absence. A row with no step looks like a mission with nothing to do, and a row with a missing count can be mistaken for one with no questions or no tasks unless a zero is always drawn. A failed git read, which today leaves the diagram with no filled block and no notice anywhere, is then explained nowhere. Whether an absence can be seen at all depends on how the sibling question Mission row layout places the facts on the row.</drawback>
+    </alternative>
+    <alternative id="Placeholder, cause in window">
+      Each step or count that could not be read is replaced, on its own, by one fixed placeholder (such as `?`) in the slot where its value would stand, and the facts that did read are drawn as usual. The row carries no cause. The cause is left to the mission&apos;s window, where the page&apos;s notice names the file and whether it is missing or does not parse.
+      <advantage>The row&apos;s shape stays the same whatever reads, so an unread fact cannot be mistaken for a zero count or for no next step. It costs one fixed string and no new detail to compose.</advantage>
+      <drawback>The row says that something failed but not what, so a person has to open the window to learn the cause, and a failed git read, the step&apos;s other cause, has no notice on the page to point to. A single character can be overlooked in a long list of missions.</drawback>
+    </alternative>
+    <alternative id="Placeholder, cause in hover">
+      Each step or count that could not be read is replaced, on its own, by one fixed placeholder in its slot, the facts that did read drawn as usual. The row&apos;s hover text names the cause of each unread fact: the file that is missing or does not parse, with its path, or for the step a failed git read. The row gets no warning icon or colour.
+      <advantage>The cause can be read from the side-bar without opening anything, the failed git read included, which the page explains nowhere today. Each fact still degrades on its own, so the counts that did read stay visible.</advantage>
+      <drawback>The hover text now carries a failure detail beside whatever the sibling question Mission row layout assigns to it, and the extension has to compose a cause for the step, which `nextStep` today reports only as undefined. Without a marker the failure is noticed only by someone who spots the placeholder.</drawback>
+    </alternative>
+    <alternative id="Placeholder, hover, warning mark">
+      Each step or count that could not be read is replaced, on its own, by one fixed placeholder in its slot, the facts that did read drawn as usual. The row&apos;s hover text names the cause of each unread fact (the file and whether it is missing or does not parse, or a failed git read), and the row as a whole carries a warning mark, such as a warning icon or a warning colour, while any of its facts could not be read.
+      <advantage>A failure is seen at a glance across every live mission and explained on hover, while the facts that did read stay on the row.</advantage>
+      <drawback>The mark takes a slot of the row that the sibling question Mission row layout may already give to the running marker or to the step, so its viability depends on that assignment, and a mark and a running marker on one row have to be told apart. It is the most added text and state of the options.</drawback>
+    </alternative>
+    <alternative id="One unreadable state for row">
+      When any of the step and the two counts could not be read, the row draws none of the three. It shows one fixed failure word (such as `unreadable`) in their place, with a warning mark, and its hover text names every cause. A row whose facts all read is drawn as usual.
+      <advantage>One fixed state per row, the same whatever failed, matching the one failure state today&apos;s pane draws for a failed read. Because a failed question document or task list often leaves the step unchosen too, the row seldom has much left to show anyway.</advantage>
+      <drawback>It hides facts that did read, such as the open-question count while only the task list fails, which still yields a step. The warning mark depends on the slot the sibling question Mission row layout leaves free.</drawback>
+    </alternative>
+    <alternative id="Cause written in the slot">
+      Each step or count that could not be read is replaced, on its own, by a short text of its cause written in the slot itself, such as `TASKS_TODO.md missing`, `open_questions.xml does not parse`, or `git read failed`, the facts that did read drawn as usual. No separate hover detail or warning mark is added for it.
+      <advantage>The cause can be read on the row itself without hovering or opening anything, and nothing beyond the row&apos;s own text is needed.</advantage>
+      <drawback>The cause text is far longer than a count, so a native tree row, which cuts off long text, may show a mangled or partly hidden cause and push the title or the other facts out of view. How much room there is depends on the slots the sibling question Mission row layout gives each fact.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Mission window tab title">
     <question>Each mission opens in a window of its own in the editor area, several at once beside the Settings window, and an editor tab shows a title and optionally an icon. Today&apos;s tab row shows each mission&apos;s title with its path as a tooltip, and two missions in different scopes may carry the same title. What does a mission window&apos;s editor tab show so that several open missions can be told apart?</question>
