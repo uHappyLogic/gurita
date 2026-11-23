@@ -642,6 +642,36 @@
   </open-question>
   <open-question id="Extension missions in plugin notes">
     <question>`/release-plugin` composes the plugin&apos;s release notes from every mission finished since the last tag, whatever its scope, so the next plugin release would list the missions scoped to `gurita-vscode/`. Do those missions stay in the plugin&apos;s release notes, or does `/release-plugin` leave them out once the extension has releases of its own?</question>
+    <alternative id="Keep every mission">
+      `/release-plugin` stays as it is: step 5 keeps every mission `missions.py missions .` lists as finished since the last tag, whatever its scope, so the three extension missions already finished after `2.0.0` and every later mission scoped to `gurita-vscode/` get full sections in the plugin&apos;s `CHANGELOG.md` entry and GitHub release, beside the extension&apos;s own release notes. This mission changes nothing in the skill, and a later mission may still split the notes.
+      <advantage>Nothing in `/release-plugin` changes, and the root changelog stays the one complete record of everything finished in the repository, so no mission&apos;s record depends on how the extension&apos;s own notes are composed.</advantage>
+      <drawback>Plugin users, who install from the `gurita-&lt;host&gt;` distribution repositories that carry no extension, read sections about changes their release does not contain, and each extension mission&apos;s summary is published twice, once in each product&apos;s notes.</drawback>
+    </alternative>
+    <alternative id="Exclude by scope">
+      `/release-plugin`&apos;s step 5 drops every finished mission whose path lies under `gurita-vscode/`, from the next plugin release on, the three extension missions already finished after `2.0.0` included; a mission scoped elsewhere, the root included, stays in the plugin&apos;s notes even when it changed the extension. The test is the path field `missions .` already prints, so no new query is needed.
+      <advantage>The plugin&apos;s notes describe only what the plugin&apos;s users receive, through a one-line, mechanical filter on a field the skill already reads, with no cutoff date or tag to track.</advantage>
+      <drawback>The three missions finished before the extension has a release of its own appear in no plugin notes, so they are recorded publicly only if the extension&apos;s notes take them up, which turns on how the sibling question on the release notes source settles; a root-scoped mission that changes only the extension still lands in the plugin&apos;s notes.</drawback>
+    </alternative>
+    <alternative id="Exclude after first extension release">
+      `/release-plugin`&apos;s step 5 drops a finished mission whose path lies under `gurita-vscode/` only when it was finished after the extension&apos;s first release, so the three extension missions already finished after `2.0.0`, and any finished before that first release, stay as full sections in the next plugin release&apos;s notes, and later ones are left to the extension&apos;s own notes.
+      <advantage>Every extension mission gets exactly one public record: those predating the extension&apos;s releases in the plugin&apos;s notes, the rest in the extension&apos;s, with none dropped and none duplicated.</advantage>
+      <drawback>The skill needs a cutoff it can read, the extension&apos;s first release, which exists only in whatever form the sibling questions on the extension&apos;s tag and release commit give it, and the rule keeps a one-off transition branch in `/release-plugin` for good.</drawback>
+    </alternative>
+    <alternative id="Exclude by changed files">
+      `/release-plugin`&apos;s step 5 drops a finished mission whenever every file its task commits changed lies under `gurita-vscode/`, whatever its scope, and keeps any mission that changed a file outside it, the plugin&apos;s `core/`, tools, or docs among them; it applies from the next plugin release on, the three already finished extension missions included.
+      <advantage>The rule follows what each mission actually changed rather than where it was placed, so a root-scoped mission that touched only the extension leaves the plugin&apos;s notes and an extension mission that also changed a plugin file stays in them.</advantage>
+      <drawback>The skill must read each kept mission&apos;s task commits and their file lists, which `missions` and `summary` do not print, adding per-mission history reads and a judgment on mixed missions to a release step that today reads two queries; the three already finished missions&apos; public record depends on the extension&apos;s notes source as under the scope rule.</drawback>
+    </alternative>
+    <alternative id="Separate extension section">
+      `/release-plugin` keeps every finished mission, but step 5 composes the missions whose path lies under `gurita-vscode/` into one section of their own at the end of the plugin&apos;s entry, headed as the VS Code extension&apos;s, apart from the plugin&apos;s per-mission sections, in full as today.
+      <advantage>No mission&apos;s record is lost whatever the extension&apos;s own notes become, while a plugin user can see at a glance which changes are not part of the plugin.</advantage>
+      <drawback>The extension&apos;s changes are still published in the plugin&apos;s changelog and GitHub release and again in the extension&apos;s notes, and the skill gains a grouping rule and a second section shape to keep.</drawback>
+    </alternative>
+    <alternative id="Pointer line only">
+      `/release-plugin` composes no section for a mission whose path lies under `gurita-vscode/`; in their place the plugin&apos;s entry carries one line naming those missions&apos; titles and pointing at where the extension&apos;s own notes stand.
+      <advantage>Plugin readers keep a trace that the extension changed in the same interval without reading its detail, and the detail is published once, in the extension&apos;s notes.</advantage>
+      <drawback>The line needs a stable target to point at, which exists only if the sibling questions on the extension&apos;s changelog and GitHub release give it one, and the three missions already finished are reduced to titles if the extension&apos;s notes do not take them up.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Bundled plugin state">
     <question>A package bundles the missions tool, the fixed console lines, and the plugin version from the checkout it is built from. From which state of the repository may an extension release be built: any `main`, or only one whose bundled sources (`core/tools/missions.py`, `docs/skill-reference.md`, `VERSION`) are those of a released plugin version?</question>
