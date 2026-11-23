@@ -7,7 +7,7 @@
 //
 // Under Harnesses the window lists Claude Code, Antigravity, and Codex, each with the checks it
 // passed or the one that failed first, named: CLI not found, Gurita plugin not installed, or
-// installed version differing from the packaged one, with the versions read; and its check-again
+// installed version older than the packaged one, with the versions read; and its check-again
 // control, disabled while a check runs, asks the extension to run the check afresh. The extension
 // runs the check on the first opening of the window in the extension's session and otherwise
 // posts the result it keeps. Beside each harness the window also shows whether it is enabled,
@@ -217,7 +217,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
   const FAILED_CHECKS: Record<FailedCheck, string> = {
     cli: 'CLI not found',
     plugin: 'Gurita plugin not installed',
-    version: 'Installed version differs from the packaged one',
+    version: 'Installed version older than the packaged one',
   };
 
   const vscode = acquireVsCodeApi();
@@ -256,7 +256,9 @@ declare function acquireVsCodeApi(): VsCodeApi;
     const installed = outcome.installed ?? 'unknown';
     const packaged = outcome.packaged ?? 'unknown';
     if (outcome.failed === undefined) {
-      return `Every check passes: Gurita ${installed} is installed, the packaged version.`;
+      return installed === packaged
+        ? `Every check passes: Gurita ${installed} is installed, the packaged version.`
+        : `Every check passes: Gurita ${installed} is installed, newer than the packaged ${packaged}.`;
     }
     if (outcome.failed === 'cli') {
       return `${FAILED_CHECKS.cli}: the runner's shell finds no ${outcome.cli} command.`;

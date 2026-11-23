@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Installed Version Compared as a Minimum
-
-Make the harness check's `version` check a minimum instead of an equality: an installed copy older than the packaged version fails it, and one equal to or newer than it passes, the versions ordered as bare MAJOR.MINOR.PATCH, with the Settings window's and the README's wording for the failed check saying older rather than differing. The check stays offline, comparing with the packaged version alone. Verified by the extension's unit tests covering an older, an equal, and a newer installed copy.
-
----
-
 ## Claude Code Detected Scopes in the Check
 
 Have `harness_check.py` print, for Claude Code, every scope holding a `gurita@gurita` copy that applies to the project root, which of them won, and whether the winner is disabled, and have the Settings window show them: the winning scope first as the one in effect, the others as also installed, one version, the winner's, and a disabled winner's scope marked disabled with the statement that the copy must be enabled in Claude Code itself, through its `/plugin` menu or `claude plugin enable`. The window needs this to show where an installed copy stands and, in later tasks, which scopes Install and Update act on. Verified by the script's pytest tests on listings holding one scope, several scopes, and a disabled winning scope, and by the extension's unit tests of the outcome and the drawn row, the README's harness-check section saying the same.

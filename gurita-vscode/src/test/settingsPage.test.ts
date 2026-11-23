@@ -119,7 +119,7 @@ test('the window names beside each harness the check that failed, or that every 
   page.send(CHECKED);
   assert.deepStrictEqual(harnessRows(page), [
     ['claude', undefined, ['Claude Code', 'Every check passes: Gurita 2.0.0 is installed, the packaged version.']],
-    ['antigravity', 'version', ['Antigravity', 'Installed version differs from the packaged one: installed 1.9.0, packaged 2.0.0.']],
+    ['antigravity', 'version', ['Antigravity', 'Installed version older than the packaged one: installed 1.9.0, packaged 2.0.0.']],
     ['codex', 'cli', ['Codex', "CLI not found: the runner's shell finds no codex command."]],
   ]);
   page.send({
@@ -136,7 +136,23 @@ test('the window names beside each harness the check that failed, or that every 
   assert.deepStrictEqual(harnessRows(page), [
     ['claude', 'plugin', ['Claude Code', 'Gurita plugin not installed.']],
     ['antigravity', 'plugin', ['Antigravity', 'Gurita plugin not installed: the listing exited with status 1: boom']],
-    ['codex', 'version', ['Codex', 'Installed version differs from the packaged one: installed unknown, packaged 2.0.0.']],
+    ['codex', 'version', ['Codex', 'Installed version older than the packaged one: installed unknown, packaged 2.0.0.']],
+  ]);
+  page.send({
+    type: 'harnessCheck',
+    check: {
+      state: 'checked',
+      harnesses: [
+        { key: 'claude', name: 'Claude Code', cli: 'claude', installed: '2.1.0', packaged: '2.0.0' },
+        { key: 'antigravity', name: 'Antigravity', cli: 'agy', installed: '2.0.0', packaged: '2.0.0' },
+        { key: 'codex', name: 'Codex', cli: 'codex', failed: 'version', installed: '1.9.0', packaged: '2.0.0' },
+      ],
+    },
+  });
+  assert.deepStrictEqual(harnessRows(page), [
+    ['claude', undefined, ['Claude Code', 'Every check passes: Gurita 2.1.0 is installed, newer than the packaged 2.0.0.']],
+    ['antigravity', undefined, ['Antigravity', 'Every check passes: Gurita 2.0.0 is installed, the packaged version.']],
+    ['codex', 'version', ['Codex', 'Installed version older than the packaged one: installed 1.9.0, packaged 2.0.0.']],
   ]);
 });
 

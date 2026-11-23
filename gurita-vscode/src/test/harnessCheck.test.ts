@@ -3,7 +3,7 @@ import * as assert from 'node:assert';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { harnessOutcomes, readPackagedVersion } from '../harnessCheck';
+import { harnessOutcomes, readPackagedVersion, versionAtLeast } from '../harnessCheck';
 
 const PASSING = { found: true, installed: true, version: '2.0.0' };
 
@@ -19,20 +19,47 @@ test('every check passing gives each harness its installed version and no failed
   ]);
 });
 
-test('the first failed check is named: CLI not found, then plugin not installed, then version differing', () => {
+test('the first failed check is named: CLI not found, then plugin not installed, then version older', () => {
   const failed = (claude: unknown, packaged: string | undefined = '2.0.0') => harnessOutcomes(print(claude), packaged)[0].failed;
   assert.strictEqual(failed({ found: false, installed: false, version: null }), 'cli');
   assert.strictEqual(failed({ found: true, installed: false, version: null }), 'plugin');
   assert.strictEqual(failed({ found: true, installed: false, version: null, error: 'the listing did not finish' }), 'plugin');
   assert.strictEqual(failed({ found: true, installed: true, version: '1.9.0' }), 'version');
   assert.strictEqual(failed({ found: true, installed: true, version: null }), 'version', 'a copy reading no version');
-  assert.strictEqual(harnessOutcomes(print(PASSING), undefined)[0].failed, 'version', 'no packaged version to match');
+  assert.strictEqual(failed({ found: true, installed: true, version: 'v2.0.0' }), 'version', 'a copy reading no bare MAJOR.MINOR.PATCH');
+  assert.strictEqual(harnessOutcomes(print(PASSING), undefined)[0].failed, 'version', 'no packaged version to meet');
   assert.strictEqual(failed(PASSING), undefined);
   assert.strictEqual(
     harnessOutcomes(print({ found: true, installed: false, version: null, error: 'boom' }), '2.0.0')[0].detail,
     'boom',
     "the listing's error is carried",
   );
+});
+
+test('the installed version is compared with the packaged one as a minimum: older fails, equal and newer pass', () => {
+  const outcome = (version: string) => harnessOutcomes(print({ found: true, installed: true, version }), '2.0.0')[0];
+  for (const older of ['1.9.0', '1.99.99', '0.10.0']) {
+    assert.strictEqual(outcome(older).failed, 'version', `${older} is older`);
+    assert.strictEqual(outcome(older).installed, older);
+  }
+  assert.strictEqual(outcome('2.0.0').failed, undefined, 'an equal copy passes');
+  for (const newer of ['2.0.1', '2.1.0', '3.0.0', '10.0.0']) {
+    assert.strictEqual(outcome(newer).failed, undefined, `${newer} is newer`);
+    assert.strictEqual(outcome(newer).installed, newer);
+  }
+  assert.strictEqual(harnessOutcomes(print({ found: true, installed: true, version: '2.9.9' }), '2.10.0')[0].failed, 'version', 'parts are ordered as numbers');
+  assert.strictEqual(harnessOutcomes(print({ found: true, installed: true, version: '2.10.0' }), '2.9.9')[0].failed, undefined, 'parts are ordered as numbers');
+});
+
+test('a version is at least another only when both are bare MAJOR.MINOR.PATCH', () => {
+  assert.strictEqual(versionAtLeast('2.0.0', '2.0.0'), true);
+  assert.strictEqual(versionAtLeast('2.0.1', '2.0.0'), true);
+  assert.strictEqual(versionAtLeast('1.9.9', '2.0.0'), false);
+  assert.strictEqual(versionAtLeast(null, '2.0.0'), false);
+  assert.strictEqual(versionAtLeast('2.0.0', undefined), false);
+  assert.strictEqual(versionAtLeast('2.0', '2.0.0'), false);
+  assert.strictEqual(versionAtLeast('2.0.0-beta', '2.0.0'), false);
+  assert.strictEqual(versionAtLeast('2.0.0', 'unknown'), false);
 });
 
 test('a print not in the check script form throws', () => {

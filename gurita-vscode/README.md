@@ -337,14 +337,16 @@ starts its chains in, it looks up each harness's CLI (`claude`, `agy`, `codex`) 
 reads which Gurita copy that harness has installed (`claude plugin list --json`,
 `agy plugin list --json`, `codex plugin list -m gurita --json`). The extension then compares each
 installed copy's version with the plugin version the package was built from, the one
-`scripts/bundle.js` recorded in `bundled/plugin_version.txt`. Beside each harness the window either
-says that every check passes, with the version installed, or names the first of the three checks
-that failed:
+`scripts/bundle.js` recorded in `bundled/plugin_version.txt`, as a minimum: a copy equal to or
+newer than it passes and an older one fails, the versions ordered as bare MAJOR.MINOR.PATCH, and a
+version in any other form failing. The check compares with that packaged version alone and reads
+nothing over the network. Beside each harness the window either says that every check passes,
+with the version installed, or names the first of the three checks that failed:
 
 - **CLI not found**: the runner's shell finds no such command.
 - **Gurita plugin not installed**: the harness lists no enabled Gurita copy for the project, or
   its listing could not be read, the reason shown after the check's name.
-- **Installed version differs from the packaged one**: the installed and the packaged versions
+- **Installed version older than the packaged one**: the installed and the packaged versions
   are both shown.
 
 The check runs the first time you open the Settings window after the extension starts. Its

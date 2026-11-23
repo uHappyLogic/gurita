@@ -3,9 +3,10 @@
 // `--project`; it looks up each harness's CLI in the runner's session shell and reads which Gurita
 // copy each has installed, and prints one JSON object keyed `claude`, `antigravity`, and `codex`.
 // Each harness's outcome is the first of its three checks that failed, in order: its CLI not
-// found, the Gurita plugin not installed, or the installed copy's version differing from the
-// packaged one, the version `scripts/bundle.js` recorded in `bundled/plugin_version.txt`; or every
-// check passing. A check that could not be run at all carries its cause verbatim, classified by
+// found, the Gurita plugin not installed, or the installed copy's version older than the packaged
+// one, the version `scripts/bundle.js` recorded in `bundled/plugin_version.txt`, a copy equal to or
+// newer than it passing, the versions ordered as bare MAJOR.MINOR.PATCH; or every check passing.
+// The packaged version is the only one compared with, so the check reads nothing over the network. A check that could not be run at all carries its cause verbatim, classified by
 // nothing. This module imports nothing from `vscode`.
 
 import { execFile } from 'node:child_process';
@@ -34,7 +35,7 @@ export const HARNESSES: readonly Harness[] = [
   { key: 'codex', name: 'Codex', cli: 'codex' },
 ];
 
-/** The check of a harness that failed first: its CLI, its installed plugin, or that copy's version. */
+/** The check of a harness that failed first: its CLI, its installed plugin, or that copy's version being older. */
 export type FailedCheck = 'cli' | 'plugin' | 'version';
 
 /** One harness's outcome as the settings view draws it. */
@@ -73,6 +74,33 @@ export function readPackagedVersion(file: string): string | undefined {
   }
 }
 
+/** The numeric parts of a bare MAJOR.MINOR.PATCH version, or undefined for any other text. */
+export function versionParts(version: string): [number, number, number] | undefined {
+  const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(version.trim());
+  return match === null ? undefined : [Number(match[1]), Number(match[2]), Number(match[3])];
+}
+
+/**
+ * Whether the installed version `installed` is at least the packaged version `packaged`, both
+ * ordered as bare MAJOR.MINOR.PATCH; a version missing or not in that form is never at least it.
+ */
+export function versionAtLeast(installed: string | null | undefined, packaged: string | undefined): boolean {
+  if (installed === null || installed === undefined || packaged === undefined) {
+    return false;
+  }
+  const have = versionParts(installed);
+  const want = versionParts(packaged);
+  if (have === undefined || want === undefined) {
+    return false;
+  }
+  for (let index = 0; index < 3; index += 1) {
+    if (have[index] !== want[index]) {
+      return have[index] > want[index];
+    }
+  }
+  return true;
+}
+
 function printedHarness(value: unknown, key: string): PrintedHarness {
   const entry = value as Record<string, unknown> | null | undefined;
   if (
@@ -89,9 +117,9 @@ function printedHarness(value: unknown, key: string): PrintedHarness {
 }
 
 /**
- * Every harness's outcome from the script's print `stdout`, the installed versions compared with
- * the packaged version `packaged`, undefined when it could not be read, which no installed copy
- * then matches. A print not in the script's form throws.
+ * Every harness's outcome from the script's print `stdout`, each installed version compared with
+ * the packaged version `packaged` as a minimum, undefined when it could not be read, which no
+ * installed copy then meets. A print not in the script's form throws.
  */
 export function harnessOutcomes(stdout: string, packaged: string | undefined): HarnessOutcome[] {
   let parsed: unknown;
@@ -119,7 +147,7 @@ export function harnessOutcomes(stdout: string, packaged: string | undefined): H
       outcome.failed = 'cli';
     } else if (!printed.installed) {
       outcome.failed = 'plugin';
-    } else if (packaged === undefined || printed.version !== packaged) {
+    } else if (!versionAtLeast(printed.version, packaged)) {
       outcome.failed = 'version';
     }
     return outcome;
