@@ -88,5 +88,9 @@ Nothing in the extension installs or updates the plugin on any harness, and noth
 
 - **Copy from another source.** Where a harness's existing Gurita copy, or its marketplace named `gurita`, comes from a source other than the distribution repository, for example a local checkout registered as a directory marketplace under the same name and plugin id, the window detects that source and, for that harness, neither installs nor updates: the control is refused or not offered, and the window states the source found and the CLI commands that would switch the harness to its distribution repository. A harness registered to the distribution repository, or holding no `gurita` marketplace, is installed and updated as usual. On Antigravity, whose listing names no source, the copy is acted on like any other.
 
+### Antigravity install and update
+
+- **Install mechanism.** The Antigravity install is done by a packaged stdlib Python script standing beside `harness_check.py`: it downloads the distribution repository's archive at the published release ref with `urllib` and extracts it with `tarfile`, stripping the archive's top directory, directly into `~/.gemini/config/plugins/gurita`. No shell pipeline and no `agy` command take part.
+
 ## Out of Scope
 
