@@ -62,6 +62,8 @@ Nothing in the extension installs or updates the plugin on any harness, and noth
 
 - **Scope selection.** The Claude Code row carries one Install control, like the other harnesses. A click on it opens VS Code's own quick pick (`showQuickPick`, which the extension already uses to pick a starting variant) listing user, project, and local, each with a one-line description of where it is recorded: user settings, the project's shared `.claude/settings.json`, or the project's local settings. The install runs at the scope picked, a dismissed pick installs nothing, and nothing is selected or stored on the page.
 
+- **Install beside an existing copy.** While Claude Code holds a Gurita copy at one or more scopes that apply to the open project, the Settings window still offers Install for Claude Code, at every one of the three scopes (user, project, local) that holds no copy applying to the project, whether that scope is more or less specific than the copy that wins. A scope already holding an applying copy is not offered for Install, that copy being reached through Update. Copies at project or local scope recorded for other project roots do not count, since they do not apply to the open project.
+
 ### Running an install or update
 
 - **Install run form.** An install or update started from the Settings window runs in a terminal the extension opens and shows, as a recipe run does, so its output and any prompt are visible and answerable there. The extension also watches that terminal's process end, taking its exit status through the terminal or through a VS Code task run in the terminal panel, and the window then reports how the run ended, success or failure, beside the harness or in a notification.
