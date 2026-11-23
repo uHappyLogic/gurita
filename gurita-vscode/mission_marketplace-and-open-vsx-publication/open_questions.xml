@@ -43,6 +43,31 @@
   </open-question>
   <open-question id="First published version">
     <question>The manifest&apos;s version has read `0.1.0` since it was created, through three missions that changed the extension. Which version number does the first publication carry?</question>
+    <alternative id="Keep 0.1.0">
+      The first publication carries `0.1.0`, the version the manifest and `package-lock.json` already hold, with no bump before it; versioning stays the extension&apos;s own, separate from the plugin&apos;s `VERSION`.
+      <advantage>Nothing has ever been published under any number, so `0.1.0` is free on both registries and needs no edit to the manifest or the lock file: the first public version is the first version the extension ever had, and later releases count up from it.</advantage>
+      <drawback>`0.1.0` already names several different builds: the hand-installed VSIXs built across three missions that changed the extension, among them the `uhappylogic.gurita-vscode@0.1.0` installed in this machine&apos;s VS Code, so the public `0.1.0` is not distinguishable by version from those copies and an editor holding one sees no newer version to update to.</drawback>
+    </alternative>
+    <alternative id="Next 0.x version">
+      The first publication carries a pre-1.0 version above `0.1.0`, such as `0.2.0`, written into the manifest and both sites of `package-lock.json` before it is packaged; versioning stays the extension&apos;s own, separate from the plugin&apos;s `VERSION`, and the extension stays in the 0.x range that signals an interface still settling.
+      <advantage>The public version is distinct from every hand-built `0.1.0` copy, so the three missions of change since the manifest was created show as a version step and a hand-installed copy reads as older than the listing, while the 0.x range keeps the extension free to change its views, settings, and recipe handling without a major bump.</advantage>
+      <drawback>The number is a bump that records no release of its own: there was never a published `0.1.0`, so a reader of the listing&apos;s version history sees the extension begin at a later number with nothing before it, and a 0.x version can read to a listing visitor as unfinished, which the preview flag question may already say in another way.</drawback>
+    </alternative>
+    <alternative id="Version 1.0.0">
+      The first publication carries `1.0.0`, written into the manifest and both sites of `package-lock.json` before it is packaged; versioning stays the extension&apos;s own, separate from the plugin&apos;s `VERSION`, and the public release is declared the extension&apos;s first stable one.
+      <advantage>A first public listing is the point at which strangers start installing it, and `1.0.0` marks exactly that moment while leaving every 0.x number to the hand-built history, so later semantic-version steps (a breaking change to settings or recipe handling being a major bump) carry their usual meaning to users from the start.</advantage>
+      <drawback>It claims a stability the extension has not shown in public use: it has been run only by the maintainer, on macOS and Linux and Windows only through Remote-WSL, so the first breaking change found by outside users costs a `2.0.0` soon after; whether a stable number fits depends on how the preview flag question settles.</drawback>
+    </alternative>
+    <alternative id="Match plugin version">
+      The first publication carries the plugin&apos;s current version, `2.0.0` today, read from the root `VERSION`, and the extension&apos;s version is written into the manifest and `package-lock.json` to equal it, setting aside the earlier mission&apos;s decision that the extension has a version of its own starting at `0.1.0`.
+      <advantage>The extension&apos;s version then says which plugin release it was packaged with, which today nothing does: the bundled `plugin_version.txt` shows only in the Settings window&apos;s harness check, while a matching listing version would tell a user at a glance which installed plugin copy the extension expects.</advantage>
+      <drawback>It reverses a recorded decision of the mission that built the extension and ties two release streams that move independently: an extension-only fix would need a plugin version to exist for it or break the match, the three extension missions already landed after `2.0.0` with no plugin release, and keeping the match would draw `set_version.py` and `/release-plugin` into the extension&apos;s versioning, which the earlier mission left untouched.</drawback>
+    </alternative>
+    <alternative id="Decide at release time">
+      The mission records no number: the maintainer chooses the version when running the extension&apos;s release skill for the first publication, and the manifest keeps `0.1.0` until then.
+      <advantage>The number is chosen with the finished listing in front of the maintainer, after the README, icon, preview flag, and engine floor have settled, so it reflects the state actually being published rather than a guess made before any of that work.</advantage>
+      <drawback>No task can rely on the number: the changelog&apos;s first entry, release notes, and any tag the release creates are written without knowing it, and leaving the choice to the run only works if the release skill takes the version as its input, which the version source question has not settled; it also defers a choice the question was raised to make now.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Version source at release">
     <question>Does the extension&apos;s release skill take the version to release as an argument and write it into `package.json` and `package-lock.json` itself, as `/release-plugin` writes the plugin&apos;s, or does it release whatever version the manifest already holds after a bump made by hand?</question>
