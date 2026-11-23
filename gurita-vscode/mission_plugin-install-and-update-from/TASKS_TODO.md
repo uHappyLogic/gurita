@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Verify Claude Code Plugin Commands Hands-On
-
-Run every Claude Code command the mission will use against a throwaway `CLAUDE_CONFIG_DIR` and a scratch project directory, fetching from the real `uHappyLogic/gurita-claude`: `claude plugin marketplace add --scope` at user, project, and local with a source carrying the release's tag, the same add again over an existing `gurita` declaration, `claude plugin install gurita@gurita --scope`, `claude plugin marketplace update gurita`, the scoped `claude plugin update gurita@gurita -s`, and the plugin and marketplace listings afterwards. Record each command's print, prompts, exit status, and duration, the source form that carries a ref, and the settings file each scope wrote, as dated facts in this mission's `## Relevant starting state`. Done when the facts stand in `requirements.md` and the real installation's `claude plugin list --json` prints what it printed before.
-
----
-
 ## Verify Codex Plugin Commands Hands-On
 
 Run every Codex command the mission will use against a throwaway `CODEX_HOME`, fetching from the real `uHappyLogic/gurita-codex`: `codex plugin marketplace add uHappyLogic/gurita-codex --ref <tag>` and its `uHappyLogic/gurita-codex@<tag>` form, `codex plugin add gurita@gurita`, then the update order `codex plugin marketplace remove gurita`, the add again, and `codex plugin add gurita@gurita` over the copy still standing, with `codex plugin list -m gurita --json` read after each step. Record each command's print, prompts, exit status, and duration as dated facts in this mission's `## Relevant starting state`. Done when the facts stand in `requirements.md` and the real installation's `codex plugin list -m gurita --json` prints what it printed before.
