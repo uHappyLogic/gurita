@@ -267,6 +267,26 @@
   </open-question>
   <open-question id="Release commit subject">
     <question>Does an extension release make a commit of its own, and under which subject, given that `/release-plugin` recognises its own interrupted run by a `HEAD` subject of exactly `Release: &lt;VERSION&gt;`?</question>
+    <alternative id="No release commit">
+      The extension&apos;s release skill makes no commit and writes nothing to the tree: it builds and publishes the version the manifest already holds, and whatever a release needs in the repository (a version bump in `gurita-vscode/package.json` and `package-lock.json`, any changelog entry) is committed beforehand by hand under ordinary subjects. No release marker is introduced, `/release-plugin` is left untouched, and the skill does not recognise an interrupted run from `HEAD`&apos;s subject.
+      <advantage>No subject the extension writes can ever be read by `/release-plugin` as its own `Release: &lt;VERSION&gt;`, because no extension release commit exists; the skill stays a pure build-and-publish step with no commit logic and no new marker for any reader to learn.</advantage>
+      <drawback>Viable only if the sibling questions on the version source and the extension changelog leave the skill nothing to write; the log then records no point at which a version was released, and the skill must detect a resumed run some other way, for instance by querying the registries, so the history alone cannot say which commit any published version was built from.</drawback>
+    </alternative>
+    <alternative id="Distinct Extension-release marker">
+      The release skill makes one commit of its own, holding only what the release writes into the tree (the extension&apos;s version slots and any changelog entry), under a new marker that does not open with `Release:`, `Extension-release: &lt;VERSION&gt;` with the version as the whole descriptor. The skill recognises its own interrupted run by a `HEAD` subject of exactly that string, as `/release-plugin` recognises its own, and `/release-plugin` is left untouched.
+      <advantage>The two release kinds are told apart by the marker alone: no exact or prefix match on `Release:` can reach an extension release, a version number shared by the plugin and the extension never makes the two subjects equal, and each skill keeps the same one-line resumption test.</advantage>
+      <drawback>A new marker joins the workflow&apos;s subject vocabulary and must be documented beside `Release:`, and a reader looking for every release in the log needs two patterns rather than one.</drawback>
+    </alternative>
+    <alternative id="Release marker, scoped descriptor">
+      The release skill makes one commit of its own, holding only what the release writes into the tree, under the existing `Release:` marker with a descriptor naming the extension ahead of the version, for example `Release: gurita-vscode &lt;VERSION&gt;`. The skill recognises its own interrupted run by an exact `HEAD` subject of that form; `/release-plugin`&apos;s exact test for `Release: &lt;VERSION&gt;` is left untouched and cannot match it, since the descriptor differs.
+      <advantage>Every release of either artifact sits under one marker, so one `^Release:` search lists them all while each subject still names what was released, and `/release-plugin`&apos;s exact-match resumption check is unaffected without any edit.</advantage>
+      <drawback>Any present or future reader keyed on the `Release:` prefix rather than the exact subject (a log filter, release-note composition reading the range&apos;s subjects) would take an extension release for a plugin one, so the safety rests on every such reader matching exactly and on the descriptor being parsed to tell the two apart.</drawback>
+    </alternative>
+    <alternative id="Shared subject, tightened plugin check">
+      The release skill makes one commit of its own under the plugin&apos;s exact form, `Release: &lt;VERSION&gt;` with the extension&apos;s version, and `/release-plugin`&apos;s resumption detection is changed so that a matching subject counts only when that commit also changed the root `VERSION` (or another plugin-only file) to `&lt;VERSION&gt;`; the extension skill applies the mirror test on `gurita-vscode/package.json`.
+      <advantage>One uniform release subject for the whole repository, with each skill&apos;s resumption test keyed on what the commit actually changed rather than on its wording alone.</advantage>
+      <drawback>It edits `/release-plugin`, a working release path, to defend against a collision another choice would never create, and the subject alone no longer says which artifact a release commit released, so a plugin and an extension release of the same version number produce identical subjects in the log.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Extension release tag">
     <question>Every tag in the repository is a bare plugin version, and `/release-plugin` takes the nearest tag reachable from `HEAD` as the last plugin release, whatever its name. Does an extension release create a git tag, in what form, and how does `/release-plugin`&apos;s lookup keep finding the last plugin release?</question>
