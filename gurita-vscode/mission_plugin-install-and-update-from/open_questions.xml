@@ -136,35 +136,6 @@
       <drawback>Ships a feature whose central commands were never run by anyone, so an unexpected prompt that blocks a run, an `agy plugin install` that accepts only a directory, or an output shape the window misreads reaches users first; the help text has already proved incomplete once, `agy plugin install --help` answering with an error rather than a usage.</drawback>
     </alternative>
   </open-question>
-  <open-question id="Confirmation before install">
-    <question>An install or update changes a harness&apos;s configuration, and at Claude Code&apos;s project scope the project&apos;s own `.claude/settings.json`. Does a click on Install or Update in the Settings window start it at once, or does the window ask for a confirmation first?</question>
-    <recommendation option="Start at once">The click is the consent, as with the window&apos;s other controls, none of which asks first: an install or update brings the release the person asked for into their own harness configuration, and a confirmation shown on every run is one people learn to click through.</recommendation>
-    <alternative id="Start at once">
-      No confirmation on any harness or scope: a click on Install or Update starts the install or update immediately, the click itself being the person&apos;s consent, and the window then reports how it ended.
-      <advantage>The fewest steps and the least new code: the page posts one more message and the window runs it, keeping the Settings window as direct as its Enabled/Disabled and Check again controls, none of which asks first, and adding no dialog the tests must stub.</advantage>
-      <drawback>A stray click changes a harness&apos;s configuration with no way to back out short of undoing it by hand, the window having no uninstall control, and at Claude Code&apos;s project scope it writes the project&apos;s tracked `.claude/settings.json`, a change shared with everyone who pulls the repository; how much this matters depends on whether the scope choice (owned by the scope-selection question) already puts a deliberate second step between the click and the run.</drawback>
-    </alternative>
-    <alternative id="Modal confirm always">
-      Every Install and Update, on every harness and at every scope, first opens a VS Code modal warning dialog that names the harness, the scope, the release it will fetch, and what it changes (for Claude Code project scope, the project&apos;s `.claude/settings.json`), with a confirming button and Cancel; nothing runs unless the person confirms.
-      <advantage>One uniform rule that guards every configuration change, using VS Code&apos;s own dialog as the window already uses VS Code&apos;s own input box and error notification, so the page itself stays buttons and dropdowns only and the dialog is testable against the existing `vscode` stub.</advantage>
-      <drawback>Adds a click to every install and update, including the routine per-user ones whose change touches only the person&apos;s own harness configuration, and a confirmation shown every time trains the person to click through it, weakening it exactly where it would matter most.</drawback>
-    </alternative>
-    <alternative id="Modal confirm for project scope">
-      Only an install or update that writes into the open project&apos;s shared configuration, Claude Code&apos;s project scope with its tracked `.claude/settings.json`, first opens a VS Code modal warning dialog naming the scope and the file it changes, with a confirming button and Cancel; every per-user install or update (Claude Code user and local scopes, Antigravity, Codex) starts at once.
-      <advantage>Puts the extra step exactly where a click reaches beyond the person&apos;s own machine, a change to a file collaborators receive, while keeping the common per-user path one click, so the dialog is rare enough to be read.</advantage>
-      <drawback>Two behaviours for one control to explain and test, and the line it draws can be argued: local scope also writes a file under the project root (`.claude/settings.local.json`), which this option treats as per-user, and a per-user update that replaces an existing copy (an Antigravity directory&apos;s content, for instance) still starts with no warning.</drawback>
-    </alternative>
-    <alternative id="In-page confirm always">
-      Every Install and Update, on every harness and at every scope, uses a two-step control inside the Settings page itself: the first click turns the button into a confirming state that states what will change (harness, scope, and for Claude Code project scope the `.claude/settings.json` file), with a way to cancel, and only a second click starts the run; no VS Code dialog is opened.
-      <advantage>A confirmation that never blocks the editor or pulls focus out of the window, and keeps the whole interaction on the page beside the harness it concerns.</advantage>
-      <drawback>Adds page state the page does not have today (a pending-confirmation state per harness, its reset on cancel, on another click, or on a re-render after a check) to draw and test against the DOM stand-in, and a second click on the same spot is easier to make by reflex than a modal dialog&apos;s distinct button, so it guards less firmly.</drawback>
-    </alternative>
-    <alternative id="In-page confirm for project scope">
-      Only an install or update at Claude Code&apos;s project scope, the one that writes the project&apos;s tracked `.claude/settings.json`, uses the in-page two-step control (a first click turning the button into a confirming state naming the file, a second click starting the run, with a way to cancel); every per-user install or update starts on the first click, and no VS Code dialog is opened.
-      <advantage>Keeps the confirmation rare and on the page, guarding only the change that reaches collaborators while leaving every per-user action one click and the editor never blocked.</advantage>
-      <drawback>Combines the costs of the two narrower choices: new per-harness pending state on the page and two behaviours for one control, while the in-page second click still guards less firmly than a modal dialog and local-scope and per-user replacing updates go unguarded.</drawback>
-    </alternative>
-  </open-question>
   <open-question id="Antigravity update of directory">
     <question>Antigravity has no update command. When an update from the Settings window brings a newer release into the existing plugin directory `~/.gemini/config/plugins/gurita`, are the new files laid over the old ones, which keeps files the new release no longer ships, or is the directory&apos;s content replaced whole?</question>
     <alternative id="Staged swap">

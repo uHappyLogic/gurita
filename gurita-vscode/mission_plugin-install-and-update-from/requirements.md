@@ -80,5 +80,7 @@ Nothing in the extension installs or updates the plugin on any harness, and noth
 
 - **Update control availability.** Update is offered for every harness whose check found the CLI and an installed Gurita copy. The version comparison does not gate it: a copy whose version matches the compared version gets the same enabled Update control as one that differs, and the check line beside it still reports whether the versions differ.
 
+- **No confirmation.** A click on Install or Update starts the install or update at once, on every harness and at every scope, the click itself being the person's consent. The window asks for no confirmation first and then reports how the run ended.
+
 ## Out of Scope
 
