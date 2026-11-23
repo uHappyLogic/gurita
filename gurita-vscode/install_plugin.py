@@ -4,9 +4,16 @@
 Stdlib only, Python 3.9 or later, shipped in the extension's package beside `harness_check.py`
 and runnable by hand outside the editor.
 
-    install_plugin.py HARNESS ACTION
+    install_plugin.py HARNESS ACTION [--project ROOT] [--scope SCOPE]...
 
 HARNESS is one of `claude`, `antigravity`, and `codex`, ACTION one of `install` and `update`.
+ROOT is the project root a harness CLI's commands run at, the current directory when it is not
+given; a ROOT that is not a directory prints one `Error:` line and exits 1. `--scope`, one of
+`user`, `project`, and `local`, is taken by Claude Code alone and required there: an install
+takes exactly one, the scope it installs at, and an update one or more, the scopes at which a
+Gurita copy was detected. A scope given to another harness, a Claude Code install given none or
+several, or an update given none prints one `Error:` line and exits 1. These refusals come
+before the release lookup, so nothing is read and nothing runs.
 
 Its first step reads the tag of the latest published release of the harness's distribution
 repository (`uHappyLogic/gurita-claude`, `uHappyLogic/gurita-antigravity`,
@@ -21,6 +28,20 @@ falling back to no other ref.
 
 With the tag read it carries out ACTION for HARNESS at that tag; a harness and action whose
 steps the script does not hold print one `Error:` line and exit 1.
+
+On Claude Code the commands run as one chain in one session of the runner's session shell (its
+`session_shell`: `$SHELL -i` for the sh, bash, zsh family, `/bin/sh` otherwise), started at
+ROOT with the terminal's own input and output, each command behind the previous one's success,
+so a harness CLI is found on the `PATH` a recipe run finds it on and any prompt is answerable in
+the terminal. The marketplace source is `uHappyLogic/gurita-claude#<tag>`, the distribution
+repository at the release's tag. An install at SCOPE runs
+`claude plugin marketplace add --scope SCOPE <source>` and then
+`claude plugin install gurita@gurita --scope SCOPE`. An update over its scopes, taken in the
+order user, project, local whatever order they were given in, re-runs that marketplace add at
+each of them with the new tag, moving the `gurita` declaration there and removing nothing, then
+runs `claude plugin marketplace update gurita`, then `claude plugin update gurita@gurita -s
+SCOPE` for each. A command that fails ends the chain, and the script exits with the session's
+status, non-zero.
 
 On Antigravity no shell pipeline and no `agy` command take part. Both actions download the
 distribution repository's archive at the tag,
@@ -40,7 +61,9 @@ import argparse
 import io
 import json
 import os
+import shlex
 import shutil
+import subprocess
 import sys
 import tarfile
 import tempfile
@@ -48,7 +71,17 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path, PurePosixPath
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, NamedTuple, Optional, Sequence, Tuple
+
+# The extension's directory is packaged into the VSIX, so importing the runner from it must
+# leave no __pycache__ behind there.
+sys.dont_write_bytecode = True
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+if SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, SCRIPT_DIR)
+
+import runner  # noqa: E402
 
 CLAUDE = "claude"
 ANTIGRAVITY = "antigravity"
@@ -58,6 +91,9 @@ HARNESSES = (CLAUDE, ANTIGRAVITY, CODEX)
 INSTALL = "install"
 UPDATE = "update"
 ACTIONS = (INSTALL, UPDATE)
+
+# Claude Code's scopes, in the order an update takes them.
+SCOPES = ("user", "project", "local")
 
 # Each harness's distribution repository, as GitHub's `owner/repo`.
 REPOSITORY = {
@@ -182,7 +218,103 @@ def latest_tag(repository: str, reads: Tuple[Tuple[str, Read], ...] = READS) -> 
     )
 
 
-Step = Callable[[str], int]
+class Target(NamedTuple):
+    """Where a step acts: the project root a harness CLI's commands run at and, on Claude Code,
+    the scopes it acts on, in the order user, project, local."""
+
+    root: str
+    scopes: Tuple[str, ...] = ()
+
+
+# A step runs with the release's tag and its target and returns the exit status.
+Step = Callable[[str, Target], int]
+
+
+def resolve_target(harness: str, action: str, project: Optional[str], scopes: Optional[Sequence[str]]) -> Target:
+    """The target the command line names, or an InstallError when its root is not a directory or
+    its scopes do not fit the harness and action."""
+    root = os.path.abspath(project if project is not None else os.getcwd())
+    if not os.path.isdir(root):
+        raise InstallError(f"the project root {root} is not a directory")
+    given = list(scopes or ())
+    if harness != CLAUDE:
+        if given:
+            raise InstallError(f"{harness} takes no --scope, its plugin being installed per user")
+        return Target(root)
+    ordered = tuple(scope for scope in SCOPES if scope in given)
+    if not ordered:
+        raise InstallError(f"a Claude Code {action} needs --scope")
+    if action == INSTALL and len(given) != 1:
+        raise InstallError("a Claude Code install takes exactly one --scope")
+    return Target(root, ordered)
+
+
+# The session the harness CLIs' commands run in.
+
+
+def run_session(script: str, root: str, environ: Optional[Dict[str, str]] = None) -> int:
+    """Run `script` in one session of the runner's session shell, started at `root` with the
+    terminal's own input and output; the session's exit status, a session ended by a signal
+    giving 128 plus its number."""
+    environ = dict(os.environ) if environ is None else environ
+    sys.stdout.flush()
+    process = subprocess.Popen(runner.session_shell(environ) + ["-c", script], cwd=root, env=environ)
+    status = runner.wait_for_shell(process)
+    return 128 - status if status < 0 else status
+
+
+def chain(commands: Sequence[Sequence[str]]) -> str:
+    """The session script running `commands` in order, each behind the previous one's success,
+    every word quoted."""
+    return " && ".join(" ".join(shlex.quote(word) for word in command) for command in commands) + "\n"
+
+
+Session = Callable[[str, str], int]
+
+
+# Claude Code: the marketplace registered at the scope from the distribution repository at the
+# tag, then the plugin installed or updated there.
+
+CLAUDE_CLI = "claude"
+CLAUDE_MARKETPLACE = "gurita"
+CLAUDE_PLUGIN_ID = "gurita@gurita"
+
+
+def claude_source(tag: str) -> str:
+    """The marketplace source naming the distribution repository at `tag`."""
+    return f"{REPOSITORY[CLAUDE]}#{tag}"
+
+
+def claude_marketplace_add(tag: str, scope: str) -> List[str]:
+    return [CLAUDE_CLI, "plugin", "marketplace", "add", "--scope", scope, claude_source(tag)]
+
+
+def claude_install_commands(tag: str, scope: str) -> List[List[str]]:
+    """An install at `scope`: the marketplace added there at `tag`, then the plugin installed."""
+    return [
+        claude_marketplace_add(tag, scope),
+        [CLAUDE_CLI, "plugin", "install", CLAUDE_PLUGIN_ID, "--scope", scope],
+    ]
+
+
+def claude_update_commands(tag: str, scopes: Sequence[str]) -> List[List[str]]:
+    """An update over `scopes`: the marketplace re-added at each at `tag`, the marketplace
+    refreshed, then the plugin updated at each."""
+    return (
+        [claude_marketplace_add(tag, scope) for scope in scopes]
+        + [[CLAUDE_CLI, "plugin", "marketplace", "update", CLAUDE_MARKETPLACE]]
+        + [[CLAUDE_CLI, "plugin", "update", CLAUDE_PLUGIN_ID, "-s", scope] for scope in scopes]
+    )
+
+
+def install_claude(tag: str, target: Target, session: Session = run_session) -> int:
+    """Install the release at `tag` at the target's one scope."""
+    return session(chain(claude_install_commands(tag, target.scopes[0])), target.root)
+
+
+def update_claude(tag: str, target: Target, session: Session = run_session) -> int:
+    """Move every target scope to the release at `tag`."""
+    return session(chain(claude_update_commands(tag, target.scopes)), target.root)
 
 
 # Antigravity: the archive at the tag, extracted into the global plugin directory.
@@ -276,9 +408,13 @@ def antigravity_archive(tag: str, opener: Callable[..., object]) -> Tuple[str, b
 
 
 def install_antigravity(
-    tag: str, home: Optional[Path] = None, opener: Callable[..., object] = open_url
+    tag: str,
+    target: Optional[Target] = None,
+    home: Optional[Path] = None,
+    opener: Callable[..., object] = open_url,
 ) -> int:
-    """Download the release at `tag` and extract it directly into the plugin directory."""
+    """Download the release at `tag` and extract it directly into the plugin directory; the
+    target is not read, the plugin being installed per user."""
     url, data = antigravity_archive(tag, opener)
     destination = antigravity_plugin_dir(home)
     extract_archive(data, url, destination)
@@ -287,10 +423,13 @@ def install_antigravity(
 
 
 def update_antigravity(
-    tag: str, home: Optional[Path] = None, opener: Callable[..., object] = open_url
+    tag: str,
+    target: Optional[Target] = None,
+    home: Optional[Path] = None,
+    opener: Callable[..., object] = open_url,
 ) -> int:
     """Download the release at `tag` into a staging directory, check it, and only then replace
-    the plugin directory with it, keeping no backup."""
+    the plugin directory with it, keeping no backup; the target is not read."""
     url, data = antigravity_archive(tag, opener)
     destination = antigravity_plugin_dir(home)
     config = gemini_config_dir(home)
@@ -321,9 +460,11 @@ def update_antigravity(
     return 0
 
 
-# The install and update steps, by harness and action, each run with the release's tag and
-# returning the exit status.
+# The install and update steps, by harness and action, each run with the release's tag and its
+# target and returning the exit status.
 STEPS: Dict[Tuple[str, str], Step] = {
+    (CLAUDE, INSTALL): install_claude,
+    (CLAUDE, UPDATE): update_claude,
     (ANTIGRAVITY, INSTALL): install_antigravity,
     (ANTIGRAVITY, UPDATE): update_antigravity,
 }
@@ -332,11 +473,12 @@ STEPS: Dict[Tuple[str, str], Step] = {
 def run(
     harness: str,
     action: str,
+    target: Target,
     reads: Tuple[Tuple[str, Read], ...] = READS,
     steps: Optional[Dict[Tuple[str, str], Step]] = None,
 ) -> int:
     """Read the latest release's tag of `harness`'s distribution repository, then carry out
-    `action` at that tag; the exit status."""
+    `action` at that tag on `target`; the exit status."""
     steps = STEPS if steps is None else steps
     repository = REPOSITORY[harness]
     tag = latest_tag(repository, reads)
@@ -345,7 +487,7 @@ def run(
     step = steps.get((harness, action))
     if step is None:
         raise InstallError(f"this script holds no {action} for {harness}")
-    return step(tag)
+    return step(tag, target)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -356,6 +498,18 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("harness", choices=HARNESSES, help="the harness to install or update on")
     parser.add_argument("action", choices=ACTIONS, help="whether to install or update")
+    parser.add_argument(
+        "--project",
+        metavar="ROOT",
+        help="the project root the harness CLI's commands run at (default: the current directory)",
+    )
+    parser.add_argument(
+        "--scope",
+        action="append",
+        choices=SCOPES,
+        help="a Claude Code scope: the one an install installs at, or, repeated, each one an "
+        "update acts on",
+    )
     return parser
 
 
@@ -366,7 +520,8 @@ def main(
 ) -> int:
     args = build_parser().parse_args(argv)
     try:
-        return run(args.harness, args.action, reads, steps)
+        target = resolve_target(args.harness, args.action, args.project, args.scope)
+        return run(args.harness, args.action, target, reads, steps)
     except InstallError as error:
         sys.stdout.flush()
         sys.stderr.write(f"Error: {error}\n")

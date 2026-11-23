@@ -6,11 +6,16 @@ failing, which prints the cause and exits non-zero before any install or update 
 no other ref fallen back to. The reads' own handling of an answer is driven through a stand-in
 opener, so no test contacts the network. The Antigravity install and staged-swap update run
 against local archives under an overridden home: a fresh install, an update leaving exactly what
-the new release ships, and a staged copy failing its check with the old directory untouched."""
+the new release ships, and a staged copy failing its check with the old directory untouched. The
+Claude Code install and update run in the runner's session shell against a stand-in `claude` on
+`PATH` that records each call, its arguments and the directory it ran in: an install at each
+scope, an update over one scope and over several, and a failing command ending the run with a
+non-zero status."""
 
 import io
 import json
 import os
+import stat
 import tarfile
 import urllib.error
 import urllib.request
@@ -49,7 +54,7 @@ class Recorder:
         return read
 
     def step(self, name, status=0):
-        def run(tag):
+        def run(tag, target):
             self.calls.append((name, tag))
             return status
 
@@ -65,6 +70,11 @@ def stub_reads(install, recorder, endpoint=None, redirect=None):
         else:
             reads.append((name, recorder.answering(name, tag)))
     return tuple(reads)
+
+
+def arguments(harness, action):
+    """The command line naming `harness` and `action`, with the one scope Claude Code needs."""
+    return [harness, action] + (["--scope", "user"] if harness == "claude" else [])
 
 
 def all_steps(recorder):
@@ -89,7 +99,7 @@ def all_steps(recorder):
 def test_endpoint_answering_gives_its_tag_and_the_redirect_is_not_read(install, capsys, harness, repository):
     recorder = Recorder()
     reads = stub_reads(install, recorder, endpoint="2.1.0", redirect="9.9.9")
-    status = install.main([harness, "install"], reads, all_steps(recorder))
+    status = install.main(arguments(harness, "install"), reads, all_steps(recorder))
     assert status == 0
     assert recorder.calls == [("endpoint", repository), (f"{harness} install", "2.1.0")]
     assert capsys.readouterr().out == f"Latest release of {repository}: 2.1.0\n"
@@ -113,7 +123,7 @@ def test_only_the_redirect_answering_gives_its_tag(install, capsys):
 def test_both_reads_failing_prints_the_cause_and_exits_non_zero_before_any_step(install, capsys):
     recorder = Recorder()
     reads = stub_reads(install, recorder, endpoint=None, redirect=None)
-    status = install.main(["claude", "install"], reads, all_steps(recorder))
+    status = install.main(arguments("claude", "install"), reads, all_steps(recorder))
     assert status != 0
     assert recorder.calls == [
         ("endpoint", "uHappyLogic/gurita-claude"),
@@ -138,7 +148,7 @@ def test_a_step_status_is_the_exit_status(install):
 def test_a_harness_and_action_with_no_step_is_refused_after_the_lookup(install, capsys):
     recorder = Recorder()
     reads = stub_reads(install, recorder, endpoint="2.1.0")
-    assert install.main(["claude", "update"], reads, {}) == 1
+    assert install.main(arguments("claude", "update"), reads, {}) == 1
     assert capsys.readouterr().err == "Error: this script holds no update for claude\n"
 
 
@@ -396,7 +406,7 @@ def test_a_staged_copy_failing_its_check_leaves_the_old_directory_untouched(inst
     before = tree(plugin_dir(home))
     capsys.readouterr()
     recorder = Recorder()
-    steps = {("antigravity", "update"): lambda tag: install.update_antigravity(tag, home=home, opener=archive_opener(archive_bytes(files), []))}
+    steps = {("antigravity", "update"): lambda tag, target: install.update_antigravity(tag, home=home, opener=archive_opener(archive_bytes(files), []))}
     status = install.main(["antigravity", "update"], stub_reads(install, recorder, endpoint="2.1.0"), steps)
     assert status == 1
     assert tree(plugin_dir(home)) == before == old
@@ -452,3 +462,189 @@ def test_a_member_reaching_outside_the_directory_is_refused(install, home, tmp_p
 def test_antigravity_steps_are_registered(install):
     assert install.STEPS[("antigravity", "install")] is install.install_antigravity
     assert install.STEPS[("antigravity", "update")] is install.update_antigravity
+
+
+# Claude Code, against a stand-in `claude` recording its calls
+
+STAND_IN_CLAUDE = """#!/bin/sh
+{
+  pwd -P
+  for word in "$@"; do printf '\\t%s' "$word"; done
+  printf '\\n'
+} | tr -d '\\n' >>"$CLAUDE_CALLS"
+printf '\\n' >>"$CLAUDE_CALLS"
+if [ -n "$CLAUDE_FAIL" ]; then
+  case "$*" in
+    "$CLAUDE_FAIL") exit 3 ;;
+  esac
+fi
+exit 0
+"""
+
+
+@pytest.fixture
+def stand_in_claude(tmp_path, monkeypatch):
+    """A stand-in `claude` first on `PATH`, appending one line per call to a log: the directory it
+    ran in, then each argument, tab-separated. The session shell is the runner's fallback,
+    `/bin/sh`, so no startup file of the person running the tests takes part."""
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    cli = bin_dir / "claude"
+    cli.write_text(STAND_IN_CLAUDE)
+    cli.chmod(cli.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+    log = tmp_path / "claude_calls.log"
+    monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}")
+    monkeypatch.delenv("SHELL", raising=False)
+    monkeypatch.delenv("CLAUDE_FAIL", raising=False)
+    monkeypatch.setenv("CLAUDE_CALLS", str(log))
+    return log
+
+
+@pytest.fixture
+def project(tmp_path):
+    directory = tmp_path / "project"
+    directory.mkdir()
+    return directory
+
+
+def recorded_calls(log):
+    """Each recorded call as the directory it ran in and its argument list."""
+    if not log.exists():
+        return []
+    calls = []
+    for line in log.read_text().splitlines():
+        directory, *words = line.split("\t")
+        calls.append((directory, words))
+    return calls
+
+
+def run_claude(install, project, action, *scopes):
+    argv = ["claude", action, "--project", str(project)]
+    for scope in scopes:
+        argv += ["--scope", scope]
+    return install.main(argv, stub_reads(install, Recorder(), endpoint="2.1.0"))
+
+
+SOURCE = "uHappyLogic/gurita-claude#2.1.0"
+
+
+@pytest.mark.parametrize("scope", ["user", "project", "local"])
+def test_claude_install_adds_the_marketplace_at_the_scope_then_installs_there(install, stand_in_claude, project, scope):
+    assert run_claude(install, project, "install", scope) == 0
+    root = os.path.realpath(project)
+    assert recorded_calls(stand_in_claude) == [
+        (root, ["plugin", "marketplace", "add", "--scope", scope, SOURCE]),
+        (root, ["plugin", "install", "gurita@gurita", "--scope", scope]),
+    ]
+
+
+def test_claude_update_over_one_scope(install, stand_in_claude, project):
+    assert run_claude(install, project, "update", "project") == 0
+    root = os.path.realpath(project)
+    assert recorded_calls(stand_in_claude) == [
+        (root, ["plugin", "marketplace", "add", "--scope", "project", SOURCE]),
+        (root, ["plugin", "marketplace", "update", "gurita"]),
+        (root, ["plugin", "update", "gurita@gurita", "-s", "project"]),
+    ]
+
+
+def test_claude_update_over_several_scopes_takes_them_user_project_local(install, stand_in_claude, project):
+    assert run_claude(install, project, "update", "local", "user", "project") == 0
+    root = os.path.realpath(project)
+    assert recorded_calls(stand_in_claude) == [
+        (root, ["plugin", "marketplace", "add", "--scope", "user", SOURCE]),
+        (root, ["plugin", "marketplace", "add", "--scope", "project", SOURCE]),
+        (root, ["plugin", "marketplace", "add", "--scope", "local", SOURCE]),
+        (root, ["plugin", "marketplace", "update", "gurita"]),
+        (root, ["plugin", "update", "gurita@gurita", "-s", "user"]),
+        (root, ["plugin", "update", "gurita@gurita", "-s", "project"]),
+        (root, ["plugin", "update", "gurita@gurita", "-s", "local"]),
+    ]
+
+
+@pytest.mark.parametrize(
+    "action,scopes,failing,ran",
+    [
+        ("install", ("project",), f"plugin marketplace add --scope project {SOURCE}", 1),
+        ("update", ("user", "local"), "plugin marketplace update gurita", 3),
+        ("update", ("user", "local"), "plugin update gurita@gurita -s user", 4),
+    ],
+)
+def test_a_failing_claude_command_ends_the_run_with_a_non_zero_status(
+    install, stand_in_claude, project, monkeypatch, action, scopes, failing, ran
+):
+    monkeypatch.setenv("CLAUDE_FAIL", failing)
+    assert run_claude(install, project, action, *scopes) != 0
+    calls = recorded_calls(stand_in_claude)
+    assert len(calls) == ran
+    assert " ".join(calls[-1][1]) == failing
+
+
+def test_claude_runs_in_the_runners_session_shell_at_the_root(install, runner, project):
+    seen = []
+
+    def session(script, root):
+        seen.append((script, root))
+        return 0
+
+    target = install.Target(str(project), ("user",))
+    assert install.install_claude("2.1.0", target, session) == 0
+    script, root = seen[0]
+    assert root == str(project)
+    assert script == (
+        "claude plugin marketplace add --scope user 'uHappyLogic/gurita-claude#2.1.0' && "
+        "claude plugin install gurita@gurita --scope user\n"
+    )
+
+
+def test_the_session_uses_the_runners_shell_and_the_terminals_own_streams(install, runner, project, monkeypatch):
+    started = []
+
+    class Process:
+        def wait(self):
+            return 5
+
+    def popen(argv, **options):
+        started.append((argv, options))
+        return Process()
+
+    monkeypatch.setattr(install.subprocess, "Popen", popen)
+    environ = {"SHELL": "/bin/sh-not-in-family", "PATH": "/usr/bin"}
+    assert install.run_session("true\n", str(project), environ) == 5
+    argv, options = started[0]
+    assert argv == runner.session_shell(environ) + ["-c", "true\n"]
+    assert options == {"cwd": str(project), "env": environ}
+
+
+@pytest.mark.parametrize(
+    "argv,cause",
+    [
+        (["claude", "install"], "a Claude Code install needs --scope"),
+        (["claude", "update"], "a Claude Code update needs --scope"),
+        (["claude", "install", "--scope", "user", "--scope", "local"], "a Claude Code install takes exactly one --scope"),
+        (["codex", "install", "--scope", "user"], "codex takes no --scope"),
+        (["antigravity", "update", "--scope", "user"], "antigravity takes no --scope"),
+    ],
+)
+def test_scopes_that_do_not_fit_are_refused_before_the_lookup(install, capsys, argv, cause):
+    recorder = Recorder()
+    status = install.main(argv, stub_reads(install, recorder, endpoint="2.1.0"), all_steps(recorder))
+    assert status == 1
+    assert recorder.calls == []
+    err = capsys.readouterr().err
+    assert err.count("\n") == 1
+    assert err.startswith(f"Error: {cause}")
+
+
+def test_a_project_root_that_is_not_a_directory_is_refused_before_the_lookup(install, tmp_path, capsys):
+    recorder = Recorder()
+    missing = tmp_path / "missing"
+    argv = ["claude", "install", "--scope", "user", "--project", str(missing)]
+    assert install.main(argv, stub_reads(install, recorder, endpoint="2.1.0"), all_steps(recorder)) == 1
+    assert recorder.calls == []
+    assert capsys.readouterr().err == f"Error: the project root {missing} is not a directory\n"
+
+
+def test_claude_steps_are_registered(install):
+    assert install.STEPS[("claude", "install")] is install.install_claude
+    assert install.STEPS[("claude", "update")] is install.update_claude

@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Claude Code Install and Update Commands
-
-Give the install script its Claude Code install and update, run through the runner's session shell at the project root with the terminal's own input and output: an install at a given scope runs `claude plugin marketplace add --scope <scope>` on `uHappyLogic/gurita-claude` with a source carrying the release's tag and then `claude plugin install gurita@gurita --scope <scope>`, and an update over the given detected scopes re-runs that marketplace add at each of them with the new tag, then `claude plugin marketplace update gurita`, then `claude plugin update gurita@gurita -s <scope>` for each, in the order user, project, local. A command that fails ends the run with a non-zero status. Verified by pytest tests with a stand-in `claude` recording its calls, for an install at each scope and an update over one scope and over several.
-
----
-
 ## Codex Install and Update Commands
 
 Give the install script its Codex install and update, run through the runner's session shell with the terminal's own input and output: the install runs `codex plugin marketplace add uHappyLogic/gurita-codex --ref <tag>` and then `codex plugin add gurita@gurita`, and the update runs `codex plugin marketplace remove gurita`, then that marketplace add at the newer tag, then `codex plugin add gurita@gurita`, in that order, each behind the previous one's success, never removing the installed plugin. Verified by pytest tests with a stand-in `codex` recording its calls, an update stopped by a failed step included.
