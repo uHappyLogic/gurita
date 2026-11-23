@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Side-Bar Tree of Live Missions
-
-Contribute an activity-bar container, its icon the tracked SVG under `gurita-vscode/media/`, holding one side-bar view: a native tree with one leaf row per live mission and no child rows, the row's label the mission's title, its description the next workflow step's name followed by both counts in a compact form such as "Derive tasks · 3 questions · 2 tasks", its icon a spinning `ThemeIcon` while the mission's run is going and a steady mission icon otherwise, and its tooltip all five facts spelled out in full beside the mission's path, a click on the row opening nothing yet. Each step or count that could not be read is replaced, on its own, by one fixed placeholder in its slot, never a zero count, with the row's hover text naming the cause (the missing or unparsable file with its path, or for the step a failed git read) and no warning icon or colour. The view's first resolution starts the session's read and the tree is redrawn on every re-read and at every run's start and end; verified by tests of the rows against a tree stand-in added to the `vscode` stub, a check of the manifest, and the packaged VSIX carrying the icon, with `gurita-vscode/README.md` describing the view.
-
----
-
 ## Side-Bar View Message With No Mission Row
 
 Show both states in which the side-bar view has no mission row to draw through the tree view's own `message` property (`TreeView.message`), the tree returning no mission row: today's line `No mission is live.` with no mission live, and today's failure line `The live missions could not be read.` followed by the cause as the read gave it when the live read fails, a successful read with missions clearing the message. Nothing is added to the manifest for either state, with no welcome content, context key, or placeholder row, and the view's other contents stay as they are; verified by tests of the message in the three states against the `vscode` stub, with `gurita-vscode/README.md` naming both lines.

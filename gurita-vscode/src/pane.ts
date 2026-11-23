@@ -153,8 +153,8 @@
 // task is still unresolved.
 //
 // The live read belongs to the extension's session, not to the panel: the extension reads no
-// mission and watches no file until a Gurita command first runs, and that first command starts the
-// session's live read, which, with the one file system watcher over the mission documents under
+// mission and watches no file until the side-bar view is first resolved or a Gurita command first
+// runs, and whichever comes first starts the session's live read, which, with the one file system watcher over the mission documents under
 // the project root, created with the first live read that succeeds, lasts until the extension
 // deactivates, released neither when the panel is hidden nor when it is closed. The watcher's
 // events are debounced so that a burst of writes causes one re-read, made whatever is visible. A
@@ -165,7 +165,8 @@
 // posts to the panel only while it is shown; a hidden or closed panel's page is drawn from the
 // current read by the ready message it posts when shown or opened, so no stale flag is kept. The
 // refresh control on the page and the refresh command each re-read everything, as a fallback. Git
-// state is not watched.
+// state is not watched. Every re-read the session keeps, a full one or a burst's, is told to the
+// side-bar view's tree (`missionTree.ts`), which redraws its rows from it.
 // The page stays on the mission it shows unless that mission is no longer live, when it falls back
 // to the first.
 
@@ -468,7 +469,8 @@ let watcher: { root: string; disposables: vscode.Disposable[] } | undefined;
 
 /**
  * The debounce gathering the watcher's events into one re-read, created when the session's live
- * read starts and kept until the extension deactivates: undefined until a Gurita command first runs.
+ * read starts and kept until the extension deactivates: undefined until the side-bar view is first
+ * resolved or a Gurita command first runs.
  */
 let queue: RefreshQueue | undefined;
 
@@ -486,6 +488,63 @@ let harnessCheck: HarnessCheck | undefined;
 
 /** The number of harness checks started, so only the latest one started keeps its result. */
 let checks = 0;
+
+/** What is called after every re-read the session's live read keeps, a full one or a burst's. */
+const readListeners: (() => void)[] = [];
+
+/** One live mission as the session's live read holds it: its documents and what its workflow draws. */
+export interface SessionMission {
+  mission: LiveMission;
+  documents: MissionDocuments;
+  workflow: MissionWorkflow;
+}
+
+/** The session's live read: not yet settled, the live missions in the order printed, or the failure's cause. */
+export type SessionRead = { state: 'pending' } | { state: 'read'; missions: SessionMission[] } | { state: 'failed'; cause: string };
+
+/** The session's live read as it stands. */
+export function sessionRead(): SessionRead {
+  if (current !== undefined) {
+    const shown = current;
+    return {
+      state: 'read',
+      missions: shown.live.map((mission) => ({
+        mission,
+        documents: shown.documents.get(mission.path) as MissionDocuments,
+        workflow: shown.workflows.get(mission.path) as MissionWorkflow,
+      })),
+    };
+  }
+  return failure !== undefined ? { state: 'failed', cause: failure } : { state: 'pending' };
+}
+
+/** Calls `listener` after every re-read the session's live read keeps, until the returned disposable is disposed. */
+export function onSessionRead(listener: () => void): vscode.Disposable {
+  readListeners.push(listener);
+  return {
+    dispose(): void {
+      const index = readListeners.indexOf(listener);
+      if (index >= 0) {
+        readListeners.splice(index, 1);
+      }
+    },
+  };
+}
+
+/** Tells every listener that the session's live read kept a re-read. */
+function readKept(): void {
+  for (const listener of [...readListeners]) {
+    listener();
+  }
+}
+
+/**
+ * Starts the session's live read when nothing has started it yet, as the side-bar view's first
+ * resolution does; a read already started is left as it stands.
+ */
+export function startLiveRead(context: vscode.ExtensionContext): void {
+  startSession(context);
+}
 
 /**
  * Re-reads everything the session's live read holds, starting the session when no command has
@@ -704,6 +763,7 @@ async function flushEvents(context: vscode.ExtensionContext, batch: RefreshBatch
     shown.documents.set(mission.path, documents);
     shown.workflows.set(mission.path, workflows[index]);
   });
+  readKept();
   const target = shownPanel();
   if (target !== undefined) {
     await post(target, publish(context, shown));
@@ -832,6 +892,7 @@ async function answer(context: vscode.ExtensionContext): Promise<void> {
       failure = read.cause;
     }
     settled = sequence;
+    readKept();
     const target = shownPanel();
     if (target === undefined) {
       return;

@@ -18,9 +18,27 @@
   ],
   "main": "./out/extension.js",
   "activationEvents": [
-    "onCommand:gurita.openMissionPane"
+    "onCommand:gurita.openMissionPane",
+    "onView:gurita.missions"
   ],
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "gurita",
+          "title": "Gurita",
+          "icon": "media/activity-bar.svg"
+        }
+      ]
+    },
+    "views": {
+      "gurita": [
+        {
+          "id": "gurita.missions",
+          "name": "Missions"
+        }
+      ]
+    },
     "commands": [
       {
         "command": "gurita.openMissionPane",
