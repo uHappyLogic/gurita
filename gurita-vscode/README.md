@@ -106,10 +106,12 @@ from that root:
   its fixed name), and last the **Settings** control, which opens the settings view (see below).
 - Under the selected tab, the mission's page: the workflow diagram, the recipe buttons of the
   recipes that fit the step its diagram fills, each with a dropdown of its variants beside it
-  (see The recipes a page lists), and two
+  (see The recipes a page lists), the **New task** button with its dropdown in a row of its own,
+  and directly beneath that row two
   panes behind one row of two headers, **Open questions**, holding the question view parsed from
   `open_questions.xml`, and **Remaining tasks**, holding the remaining task headings of
-  `TASKS_TODO.md` and the **New task** button. The two headers are of equal width and together
+  `TASKS_TODO.md`. **New task** stands above the headers rather than inside either pane, so it is
+  drawn on every mission page whichever pane is shown and whatever step the diagram fills. The two headers are of equal width and together
   fill the pane's whole width, and only the selected pane's content is shown beneath them. A
   page opens on **Remaining tasks** when git holds at least one `Requirements-review:` commit
   for the mission (the count the workflow diagram reads) and no question is open, and on **Open

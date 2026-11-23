@@ -23,11 +23,12 @@
 // such as "additional review round 2". The block of the step to run next, which the extension
 // chooses and posts, is filled purple, and no block is filled when the extension chose none; the
 // diagram is display only, its blocks no buttons, gating nothing. Below
-// it stand the recipe buttons and then two panes behind one row of two headers, Open questions and
-// Remaining tasks, of equal width and together filling the pane's whole width, with only the
-// selected pane's content beneath them: the question view in Open questions, and in Remaining
-// tasks the remaining task headings with the new-task button, posting the page's mission, all
-// drawn from the parse the extension posts. A page opens on the pane the extension posts as the
+// it stand the recipe buttons, then the new-task button, posting the page's mission, in a row of
+// its own drawn on every mission page whichever pane is shown and at every step, and then two
+// panes behind one row of two headers directly beneath it, Open questions and Remaining tasks, of
+// equal width and together filling the pane's whole width, with only the selected pane's content
+// beneath them: the question view in Open questions, and in Remaining tasks the remaining task
+// headings, all drawn from the parse the extension posts. A page opens on the pane the extension posts as the
 // mission's default, Remaining tasks when git holds at least one review commit for it and no
 // question is open and Open questions otherwise, Open questions too when none is posted. A pane
 // header the person clicks stays selected through every redraw while its mission stays shown; it
@@ -1472,13 +1473,10 @@ declare function acquireVsCodeApi(): VsCodeApi;
     return view;
   }
 
-  /** The Remaining tasks pane: the New task button above the remaining task headings. */
-  function drawTasks(mission: Mission, busy: boolean): HTMLElement {
-    const view = element('section', undefined, 'pane tasks');
-    view.setAttribute('role', 'tabpanel');
-    view.setAttribute('aria-label', 'Remaining tasks');
-    const head = element('div', undefined, 'controls');
-    head.append(
+  /** The New task button's row of its own, drawn above the pane headers whichever pane is shown. */
+  function drawNewTask(mission: Mission, busy: boolean): HTMLElement {
+    const row = element('div', undefined, 'controls new-task');
+    row.append(
       fixedEntry(
         'discussTask',
         mission.buttons?.discussTask,
@@ -1490,7 +1488,14 @@ declare function acquireVsCodeApi(): VsCodeApi;
         (variant) => vscode.postMessage({ type: 'taskButton', mission: mission.path, variant }),
       ),
     );
-    view.append(head);
+    return row;
+  }
+
+  /** The Remaining tasks pane: the remaining task headings. */
+  function drawTasks(mission: Mission): HTMLElement {
+    const view = element('section', undefined, 'pane tasks');
+    view.setAttribute('role', 'tabpanel');
+    view.setAttribute('aria-label', 'Remaining tasks');
     const part = mission.tasks;
     if (part.state === 'failed') {
       view.append(drawNotice(part.notice));
@@ -1711,8 +1716,9 @@ declare function acquireVsCodeApi(): VsCodeApi;
   }
 
   /**
-   * The two panes: one row of two headers of equal width, Open questions and Remaining tasks, and
-   * beneath it the selected pane's content alone. The headers stay enabled while a chain runs.
+   * The two panes: the New task button's row, then one row of two headers of equal width, Open
+   * questions and Remaining tasks, directly beneath it, and beneath them the selected pane's
+   * content alone. The headers stay enabled while a chain runs.
    */
   function drawPanes(mission: Mission, busy: boolean): HTMLElement {
     const panes = element('section', undefined, 'panes');
@@ -1727,7 +1733,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
       tab.dataset.focus = `pane-${pane}`;
       headers.append(tab);
     }
-    panes.append(headers, shown === 'tasks' ? drawTasks(mission, busy) : drawQuestions(mission, busy));
+    panes.append(drawNewTask(mission, busy), headers, shown === 'tasks' ? drawTasks(mission) : drawQuestions(mission, busy));
     return panes;
   }
 

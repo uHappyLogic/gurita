@@ -264,7 +264,7 @@ type PaneName = 'questions' | 'tasks';
 
 /** The page's action buttons with each pane shown: its recipe buttons, its question card's buttons, and New task. */
 const ACTIONS: Record<PaneName, string[]> = {
-  questions: ['review', 'complete', 'Discuss', 'Answer', 'Answer with recommendation', 'Answer with this alternative'],
+  questions: ['review', 'complete', 'New task', 'Discuss', 'Answer', 'Answer with recommendation', 'Answer with this alternative'],
   tasks: ['review', 'complete', 'New task'],
 };
 
@@ -836,9 +836,6 @@ test('a dropdown beside each fixed-name button offers its variants and stands on
       if (pane === 'tasks' && ['Discuss', 'Answer', 'Answer with recommendation'].includes(label)) {
         continue;
       }
-      if (pane === 'questions' && label === 'New task') {
-        continue;
-      }
       const dropdown = dropdownBeside(page, label);
       assert.ok(dropdown !== undefined, `a dropdown stands beside ${label}`);
       assert.strictEqual(dropdown.getAttribute('aria-label'), `The variant of ${label}`);
@@ -1221,16 +1218,68 @@ test('a mission page draws one row of two pane headers with only the selected pa
   assert.ok(texts(page).includes('1 / 2'));
   assert.ok(texts(page).includes('Discuss'));
   assert.ok(!texts(page).includes('First Task'));
-  assert.ok(!texts(page).includes('New task'));
   named(page, 'Remaining tasks').click();
   assert.strictEqual(shownPane(page), 'tasks');
   assert.ok(texts(page).includes('First Task'));
-  assert.ok(texts(page).includes('New task'));
   assert.ok(!texts(page).includes('1 / 2'));
   assert.ok(!texts(page).includes('Discuss'));
-  const tasksPane = page.root.all().filter((each) => each.has('pane'))[0];
-  assert.ok(tasksPane.all().some((each) => each.textContent === 'New task'), 'New task stands inside Remaining tasks');
   assert.strictEqual(page.root.all().filter((each) => each.tagName === 'h3' && ['Open questions', 'Remaining tasks'].includes(each.textContent)).length, 0);
+});
+
+/** Asserts the New task button stands in a row of its own directly above the pane headers, and nowhere inside a pane. */
+function assertNewTaskAbovePanes(page: Page): void {
+  const newTask = named(page, 'New task');
+  const panes = page.root.all().filter((each) => each.has('panes'));
+  assert.strictEqual(panes.length, 1);
+  const rows = panes[0].children as FakeElement[];
+  const headers = rows.findIndex((each) => each.has('pane-tabs'));
+  assert.ok(headers > 0, 'a row stands above the pane headers');
+  const row = rows[headers - 1];
+  assert.ok(row.has('new-task'), 'the row directly above the headers is the New task row');
+  assert.ok(row.all().includes(newTask), 'New task stands in that row');
+  assert.deepStrictEqual(
+    row.all().filter((each) => each.tagName === 'button').map(shownName),
+    ['New task'],
+    'the row holds New task alone',
+  );
+  for (const pane of page.root.all().filter((each) => each.has('pane'))) {
+    assert.ok(!pane.all().includes(newTask), 'New task stands in no pane');
+    assert.ok(!pane.all().some((each) => each.textContent === 'New task'), 'no pane draws New task');
+  }
+}
+
+test('the New task button stands above the pane headers with either pane shown, and not inside Remaining tasks', () => {
+  for (const step of ['define', 'first-review', 'additional-review', 'derive', 'execute', 'follow-up', 'finish', undefined]) {
+    const page = loadPage();
+    page.send({
+      type: 'live',
+      missions: [mission(ALPHA, 'Alpha', step === undefined ? {} : { step }), mission(BETA, 'Beta')],
+      running: [],
+    });
+    assert.strictEqual(shownPane(page), 'questions');
+    assertNewTaskAbovePanes(page);
+    assert.strictEqual(named(page, 'New task').disabled, false);
+    named(page, 'Remaining tasks').click();
+    assert.strictEqual(shownPane(page), 'tasks');
+    assertNewTaskAbovePanes(page);
+    assert.ok(texts(page).includes('First Task'));
+    named(page, 'Open questions').click();
+    named(page, 'New task').click();
+    assert.deepStrictEqual(page.posted.slice(-1), [{ type: 'taskButton', mission: ALPHA }]);
+  }
+
+  // A page that opens on Open questions draws it too, and a run for the mission disables it with either pane shown.
+  const page = loadPage();
+  page.send({ ...(liveWith('questions', 'tasks') as object), running: [ALPHA] });
+  eachPane(page, () => {
+    assertNewTaskAbovePanes(page);
+    assert.strictEqual(named(page, 'New task').disabled, true);
+  });
+  page.send(liveWith('questions', 'tasks'));
+  eachPane(page, () => {
+    assertNewTaskAbovePanes(page);
+    assert.strictEqual(named(page, 'New task').disabled, false);
+  });
 });
 
 test('a page opens on the default pane the extension posts, Open questions when none is posted', () => {

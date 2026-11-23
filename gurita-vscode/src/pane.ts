@@ -50,7 +50,7 @@
 // through the same run path: on a question's card the discuss, answer, and answer-with-
 // recommendation buttons, on an alternative on that card the answer-with-alternative button,
 // and on the pane at the tab row's end, in its failure state too, the two mission-starting
-// buttons, and on a mission's page, inside its Remaining tasks pane, the new-task button. The
+// buttons, and on a mission's page, in its row above the pane headers, the new-task button. The
 // Short Title and the Alternative Id come from the card clicked, every typed value from
 // VS Code's own input box, one line per value, and each value reaches its line only as its
 // `GURITA_*` session variable. The discuss button always asks for an optional discussion note,
