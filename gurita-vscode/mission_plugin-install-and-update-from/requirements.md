@@ -78,6 +78,8 @@ Nothing in the extension installs or updates the plugin on any harness, and noth
 
 - **Check after install.** Whenever an install or update ends, whether it succeeded or failed, the window runs the whole harness check afresh by itself, for all three harnesses, exactly as Check again does and through that one code path, and the new result replaces the kept one for every harness.
 
+- **Restart notice.** After every install or update that succeeds, on any of the three harnesses, the window adds one sentence to whatever reports how the run ended, for example a VS Code information notification: running sessions of that harness must be restarted to use the new copy. The sentence is the same for every harness and is shown whether or not the version changed, and nothing on the page persists it.
+
 ### Install and Update controls
 
 - **Update control availability.** Update is offered for every harness whose check found the CLI and an installed Gurita copy. The version comparison does not gate it: a copy whose version matches the compared version gets the same enabled Update control as one that differs, and the check line beside it still reports whether the versions differ.
