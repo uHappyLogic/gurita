@@ -56,5 +56,9 @@ Nothing in the extension installs or updates the plugin on any harness, and noth
 
 - **Published release ref.** The latest published release of a harness's distribution repository is the one GitHub marks as latest for it: the newest release that is neither a draft nor a prerelease, or one a maintainer marked as latest. The extension reads it through GitHub's `releases/latest` endpoint or the `/releases/latest` page redirect and passes that release's tag to the harness's install path as an explicit ref: to Codex as `uHappyLogic/gurita-codex@<tag>` or `--ref <tag>`, to Antigravity as `archive/refs/tags/<tag>.tar.gz`, and to Claude Code through a marketplace source that carries the ref. An update reads the latest release again and moves the harness to its tag.
 
+### Claude Code scopes
+
+- **Marketplace registration scope.** For a Claude Code install made from the Settings window, the `gurita` marketplace is registered at the same scope as the install. A project or local install first runs `claude plugin marketplace add --scope <project|local>` on the distribution repository `uHappyLogic/gurita-claude`, its source carrying the release's ref as the published release ref decision states, which declares the marketplace in `.claude/settings.json` for a project install or `.claude/settings.local.json` for a local one, and then runs `claude plugin install gurita@gurita --scope <project|local>`, whether or not the marketplace is already known at user scope. A user-scope install registers the marketplace at user scope.
+
 ## Out of Scope
 
