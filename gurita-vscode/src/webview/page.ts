@@ -56,10 +56,13 @@
 // the failure state: a dropdown beside each, drawn as its arrow alone, offers the variants the
 // button can run by their bare names and stands on the one selected, the one remembered for the
 // recipe, per mission for the buttons on a mission's page and once per project for the two
-// mission-starting buttons, else the recipe's default, a question card holding one dropdown beside
-// its Alternatives heading shared by its answer-with-alternative buttons; picking another posts it
-// with the button, and its mission for a button on a mission's page, to the extension, which
-// remembers it and posts the page again. Each button shows its name with the selected variant's
+// mission-starting buttons, else the recipe's default. Each answer-with-alternative button on a
+// question card has a dropdown of its own beside it, standing on the variant remembered for that
+// alternative of that question on the mission, else the default, so a pick on one alternative
+// leaves every other button where it stood; picking another posts it with the button, and its
+// mission for a button on a mission's page, or with the mission, the Short Title, and the
+// Alternative Id for an answer-with-alternative button, to the extension, which remembers it and
+// posts the page again. Each button shows its name with the selected variant's
 // name beneath it, with that variant's lines as written in its hover text, its click posting that
 // variant's name; a button the extension posts with no variant, every one it could run having a
 // line on a disabled harness, stays drawn but disabled, with no dropdown, and one posted with
@@ -203,6 +206,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
     recipes: RecipePart;
     /** What the fixed-name buttons on its page run, which their dropdowns, labels, and hover text show. */
     buttons?: FixedButtons;
+    /** What each alternative's answer-with-alternative button on its question cards runs, each with a dropdown of its own. */
+    alternativeButtons?: AlternativeButtonEntry[];
   }
 
   type RecipeGroup = 'shipped' | 'own';
@@ -248,6 +253,13 @@ declare function acquireVsCodeApi(): VsCodeApi;
 
   /** What each fixed-name button runs, by the button; a button whose recipe cannot be read or run is left out. */
   type FixedButtons = Partial<Record<FixedButton, FixedButtonEntry>>;
+
+  /** What the answer-with-alternative button of one alternative of a question runs, by the question's Short Title and the Alternative Id. */
+  interface AlternativeButtonEntry {
+    question: string;
+    alternative: string;
+    entry: FixedButtonEntry;
+  }
 
   interface PreviewTask {
     state: 'resolved' | 'missing';
@@ -565,27 +577,36 @@ declare function acquireVsCodeApi(): VsCodeApi;
   }
 
   /**
-   * The dropdown beside a fixed-name button, or beside the alternatives of a question's card for
-   * their answer-with-alternative buttons, which share it, drawn as its arrow alone: one option per
-   * variant `entry` offers, in order, by its bare name, standing on the selected one, and
-   * none while the button offers no variant or nothing is posted for it. Picking another posts it
-   * to the extension with the button and, for a button on a mission's page, its mission, and the
-   * extension remembers it and posts the page again.
+   * The dropdown beside a fixed-name button, drawn as its arrow alone: one option per variant
+   * `entry` offers, in order, by its bare name, standing on the selected one, and none while the
+   * button offers no variant or nothing is posted for it. `focus` is its focus key, and picking
+   * another option hands `onPick` the variant's name.
    */
-  function fixedDropdown(key: FixedButton, entry: FixedButtonEntry | undefined, label: string, mission?: string): HTMLSelectElement | undefined {
+  function buttonDropdown(entry: FixedButtonEntry | undefined, label: string, focus: string, onPick: (variant: string) => void): HTMLSelectElement | undefined {
     if (entry?.state !== 'offered') {
       return undefined;
     }
     const choice = variantSelect(`The variant of ${label}`);
-    choice.dataset.focus = `button-variant-${key}`;
+    choice.dataset.focus = focus;
     variantOptions(choice, entry.variants, entry.selected);
     choice.addEventListener('change', () => {
       const variant = entry.variants[Number(choice.value)];
       if (variant !== undefined) {
-        vscode.postMessage({ type: 'selectButtonVariant', button: key, mission, variant: variant.name });
+        onPick(variant.name);
       }
     });
     return choice;
+  }
+
+  /**
+   * The dropdown beside a fixed-name button, as `buttonDropdown` draws it. Picking another posts it
+   * to the extension with the button and, for a button on a mission's page, its mission, and the
+   * extension remembers it and posts the page again.
+   */
+  function fixedDropdown(key: FixedButton, entry: FixedButtonEntry | undefined, label: string, mission?: string): HTMLSelectElement | undefined {
+    return buttonDropdown(entry, label, `button-variant-${key}`, (variant) =>
+      vscode.postMessage({ type: 'selectButtonVariant', button: key, mission, variant }),
+    );
   }
 
   /** A fixed-name button with its dropdown beside it, as `fixedButton` and `fixedDropdown` draw them. */
@@ -599,13 +620,37 @@ declare function acquireVsCodeApi(): VsCodeApi;
     mission: string | undefined,
     onClick: (variant: string | undefined) => void,
   ): HTMLElement {
+    return buttonEntry(fixedButton(entry, label, hover, className, busy, onClick), fixedDropdown(key, entry, label, mission));
+  }
+
+  /** A button with the dropdown beside it, when one is drawn, in one entry. */
+  function buttonEntry(node: HTMLButtonElement, dropdown: HTMLSelectElement | undefined): HTMLElement {
     const item = element('span', undefined, 'recipe-entry');
-    item.append(fixedButton(entry, label, hover, className, busy, onClick));
-    const dropdown = fixedDropdown(key, entry, label, mission);
+    item.append(node);
     if (dropdown !== undefined) {
       item.append(dropdown);
     }
     return item;
+  }
+
+  /**
+   * The answer-with-alternative button of the alternative `alternative` on the card of the
+   * question `question`, with its own dropdown beside it, as the extension posts that
+   * alternative's entry: the button shows and runs the variant its own dropdown stands on, and a
+   * pick posts the mission, the Short Title, the Alternative Id, and the variant, so the extension
+   * remembers it for that alternative alone. `index` is the alternative's place on the card, which
+   * keys the dropdown's focus.
+   */
+  function alternativeEntry(mission: Mission, question: Question, alternative: Alternative, index: number, busy: boolean): HTMLElement {
+    const entry = mission.alternativeButtons?.find((each) => each.question === question.id && each.alternative === alternative.id)?.entry;
+    const label = 'Answer with this alternative';
+    const node = fixedButton(entry, label, `Record ${alternative.id} as the decision`, 'action', busy, (variant) =>
+      vscode.postMessage({ type: 'alternativeButton', mission: mission.path, question: question.id, alternative: alternative.id, variant }),
+    );
+    const dropdown = buttonDropdown(entry, label, `alternative-variant-${index}`, (variant) =>
+      vscode.postMessage({ type: 'selectAlternativeVariant', mission: mission.path, question: question.id, alternative: alternative.id, variant }),
+    );
+    return buttonEntry(node, dropdown);
   }
 
   function save(): void {
@@ -1345,24 +1390,13 @@ declare function acquireVsCodeApi(): VsCodeApi;
 
     if (question.alternatives.length > 0) {
       const part = element('div', undefined, 'slot');
-      const alternativesHead = element('div', undefined, 'alternatives-head');
-      alternativesHead.append(element('h5', 'Alternatives'));
-      const shared = mission.buttons?.answerWithAlternative;
-      const dropdown = fixedDropdown('answerWithAlternative', shared, 'Answer with this alternative', mission.path);
-      if (dropdown !== undefined) {
-        alternativesHead.append(dropdown);
-      }
-      part.append(alternativesHead);
-      for (const alternative of question.alternatives) {
+      part.append(element('h5', 'Alternatives'));
+      for (const [index, alternative] of question.alternatives.entries()) {
         const picked = pick !== undefined && alternative.id === pick.option;
         const entry = element('div', undefined, picked ? 'alternative picked' : 'alternative');
         const line = element('div', undefined, 'alternative-head');
         line.append(element('h6', picked ? `${alternative.id} (picked)` : alternative.id));
-        line.append(
-          fixedButton(shared, 'Answer with this alternative', `Record ${alternative.id} as the decision`, 'action', busy, (variant) =>
-            vscode.postMessage({ type: 'alternativeButton', mission: mission.path, question: question.id, alternative: alternative.id, variant }),
-          ),
-        );
+        line.append(alternativeEntry(mission, question, alternative, index, busy));
         entry.append(line);
         if (alternative.text !== '') {
           entry.append(element('p', alternative.text));

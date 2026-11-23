@@ -1601,14 +1601,13 @@ test("every fixed-name button is posted with the variants it can run and the lin
       discussQuestion: shipped('discussQuestion', true),
       answerQuestion: shipped('answerQuestion'),
       answerWithRecommendation: shipped('answerWithRecommendation'),
-      answerWithAlternative: shipped('answerWithAlternative'),
       discussTask: shipped('discussTask'),
     };
 
     assert.deepStrictEqual(
       await buttonsAfter({ type: 'ready' }),
       initial,
-      'with no pick each button stands on its first listed variant, the shipped one, an own variant the button cannot run left out of its dropdown',
+      'with no pick each button stands on its first listed variant, the shipped one, an own variant the button cannot run left out of its dropdown, the answer-with-alternative buttons posted per alternative instead',
     );
     send({ type: 'settingsOpened' });
 
@@ -1734,6 +1733,15 @@ test("a fixed-name button's dropdown selection is remembered in workspaceState, 
       assert.ok(entry.state === 'offered', `${key} offers variants`);
       return [entry.variants.map((each) => each.name), entry.variants[entry.selected].name];
     };
+    /** The names the answer-with-alternative button of `alternative` on the card of `question` offers and the one it stands on, as `message` posts it for `mission`. */
+    const alternativeDropdown = (message: Record<string, unknown>, mission: string, question: string, alternative: string): [string[], string] => {
+      const page = (message as unknown as { missions: { path: string; alternativeButtons: { question: string; alternative: string; entry: PostedButton }[] }[] }).missions.find(
+        (each) => each.path === mission,
+      );
+      const entry = page?.alternativeButtons.find((each) => each.question === question && each.alternative === alternative)?.entry;
+      assert.ok(entry?.state === 'offered', `${alternative} of ${question} offers variants`);
+      return [entry.variants.map((each) => each.name), entry.variants[entry.selected].name];
+    };
     /** Sends a button's click and returns the runner's arguments of the terminal it starts, or undefined when it starts none. */
     const click = async (message: unknown, values: string[] = []) => {
       const count = created.length;
@@ -1749,7 +1757,9 @@ test("a fixed-name button's dropdown selection is remembered in workspaceState, 
 
     let live = await liveAfter({ type: 'ready' });
     assert.deepStrictEqual(dropdown(live, NU, 'discussQuestion'), [['default', 'Gemini'], 'default'], 'with nothing remembered the dropdown stands on the default');
-    assert.deepStrictEqual(dropdown(live, NU, 'answerWithAlternative'), [['default', 'Sonnet'], 'default']);
+    assert.deepStrictEqual(alternativeDropdown(live, NU, 'Pane Layout', 'keep'), [['default', 'Sonnet'], 'default']);
+    assert.deepStrictEqual(alternativeDropdown(live, NU, 'Pane Layout', 'drop'), [['default', 'Sonnet'], 'default']);
+    assert.strictEqual(postedButtons(live, NU).answerWithAlternative, undefined, 'no one entry is posted for every alternative of the page');
     assert.deepStrictEqual(dropdown(live, NU, 'discussGoal'), [['default', 'Opus'], 'default']);
     assert.deepStrictEqual(dropdown(live, NU, 'discussTask'), [['default'], 'default'], 'a looped variant the button cannot run is not offered');
 
@@ -1761,12 +1771,25 @@ test("a fixed-name button's dropdown selection is remembered in workspaceState, 
     const entry = postedButtons(live, NU).discussQuestion;
     assert.ok(entry.state === 'offered');
     assert.deepStrictEqual(entry.lines, [SELECTION_OWN_TEXT.split('\n')[3]], 'the label and hover text follow the selection');
-    live = await liveAfter({ type: 'selectButtonVariant', button: 'answerWithAlternative', mission: NU, variant: 'Sonnet' });
-    assert.deepStrictEqual(workspaceState.get('gurita.variantSelections'), { [NU]: { 'discuss-open-question': 'Gemini', 'answer-open-question-with-alternative': 'Sonnet' } });
-    assert.deepStrictEqual(dropdown(live, NU, 'answerWithAlternative')[1], 'Sonnet', "the card's one dropdown for its alternatives stands on it");
-    for (const mission of [OMICRON, PI]) {
-      await liveAfter({ type: 'selectButtonVariant', button: 'answerWithAlternative', mission, variant: 'Sonnet' });
-    }
+    // An answer-with-alternative button's selection is remembered per mission, question, and alternative.
+    live = await liveAfter({ type: 'selectAlternativeVariant', mission: NU, question: 'Pane Layout', alternative: 'drop', variant: 'Sonnet' });
+    assert.deepStrictEqual(workspaceState.get('gurita.alternativeVariantSelections'), { [NU]: { 'Pane Layout': { drop: 'Sonnet' } } });
+    assert.deepStrictEqual(workspaceState.get('gurita.variantSelections'), { [NU]: { 'discuss-open-question': 'Gemini' } }, "the other buttons' selections are untouched");
+    assert.deepStrictEqual(alternativeDropdown(live, NU, 'Pane Layout', 'drop')[1], 'Sonnet', "the alternative's own dropdown stands on it");
+    assert.deepStrictEqual(alternativeDropdown(live, NU, 'Pane Layout', 'keep')[1], 'default', 'every other alternative stays where it stood');
+    assert.deepStrictEqual(alternativeDropdown(live, XI, 'Pane Layout', 'drop')[1], 'default', "another mission's card keeps its own selection");
+    const alternativeEntry = (live as unknown as { missions: { path: string; alternativeButtons: { alternative: string; entry: PostedButton }[] }[] }).missions
+      .find((each) => each.path === NU)
+      ?.alternativeButtons.find((each) => each.alternative === 'drop')?.entry;
+    assert.ok(alternativeEntry?.state === 'offered');
+    assert.deepStrictEqual(alternativeEntry.lines, [SELECTION_OWN_TEXT.split('\n')[9]], "the button's label and hover text follow its own selection");
+    await liveAfter({ type: 'selectAlternativeVariant', mission: OMICRON, question: 'Pane Layout', alternative: 'drop', variant: 'Sonnet' });
+    await liveAfter({ type: 'selectAlternativeVariant', mission: PI, question: 'Pane Layout', alternative: 'keep', variant: 'Sonnet' });
+    assert.deepStrictEqual(workspaceState.get('gurita.alternativeVariantSelections'), {
+      [NU]: { 'Pane Layout': { drop: 'Sonnet' } },
+      [OMICRON]: { 'Pane Layout': { drop: 'Sonnet' } },
+      [PI]: { 'Pane Layout': { keep: 'Sonnet' } },
+    });
     live = await liveAfter({ type: 'selectButtonVariant', button: 'discussQuestion', mission: RHO, variant: 'Gemini' });
     const remembered = () => workspaceState.get('gurita.variantSelections') as Record<string, Record<string, string>>;
     assert.deepStrictEqual(remembered()[RHO], { 'discuss-open-question': 'Gemini' });
@@ -1780,15 +1803,31 @@ test("a fixed-name button's dropdown selection is remembered in workspaceState, 
     assert.deepStrictEqual(dropdown(live, NU, 'discussQuestion')[1], 'Gemini');
 
     // A pick the latest answer did not post is remembered nowhere.
-    const before = JSON.stringify([workspaceState.get('gurita.variantSelections'), workspaceState.get('gurita.projectVariantSelections')]);
+    const before = JSON.stringify([
+      workspaceState.get('gurita.variantSelections'),
+      workspaceState.get('gurita.projectVariantSelections'),
+      workspaceState.get('gurita.alternativeVariantSelections'),
+    ]);
     const from = posted.length;
+    send({ type: 'selectButtonVariant', button: 'answerWithAlternative', mission: NU, variant: 'Sonnet' });
+    send({ type: 'selectAlternativeVariant', mission: NU, question: 'Pane Layout', alternative: 'keep', variant: 'No such variant' });
+    send({ type: 'selectAlternativeVariant', mission: NU, question: 'Pane Layout', alternative: 'no such alternative', variant: 'Sonnet' });
+    send({ type: 'selectAlternativeVariant', mission: NU, question: 'No Such Question', alternative: 'keep', variant: 'Sonnet' });
+    send({ type: 'selectAlternativeVariant', mission: 'other/mission_zeta/', question: 'Pane Layout', alternative: 'keep', variant: 'Sonnet' });
     send({ type: 'selectButtonVariant', button: 'discussQuestion', mission: NU, variant: 'No such variant' });
     send({ type: 'selectButtonVariant', button: 'discussTask', mission: NU, variant: 'Looped' });
     send({ type: 'selectButtonVariant', button: 'discussQuestion', mission: 'other/mission_zeta/', variant: 'Gemini' });
     send({ type: 'selectButtonVariant', button: 'noSuchButton', mission: NU, variant: 'Gemini' });
     send({ type: 'selectButtonVariant', button: 'defineMission', variant: 'Opus' });
     await new Promise((resolve) => setTimeout(resolve, 50));
-    assert.strictEqual(JSON.stringify([workspaceState.get('gurita.variantSelections'), workspaceState.get('gurita.projectVariantSelections')]), before);
+    assert.strictEqual(
+      JSON.stringify([
+        workspaceState.get('gurita.variantSelections'),
+        workspaceState.get('gurita.projectVariantSelections'),
+        workspaceState.get('gurita.alternativeVariantSelections'),
+      ]),
+      before,
+    );
     assert.deepStrictEqual(posted.slice(from), [], 'nor posts the pages again');
 
     // A click runs the variant selected, and only when the latest answer posted the button standing on it.
@@ -1798,7 +1837,9 @@ test("a fixed-name button's dropdown selection is remembered in workspaceState, 
     assert.match((await click({ type: 'questionButton', button: 'discussQuestion', mission: NU, question: 'Pane Layout', variant: 'Gemini' }, [''])) ?? '', / chain -- agy -i "\/gurita:discuss-open-question/);
     assert.strictEqual(await click({ type: 'alternativeButton', mission: XI, question: 'Pane Layout', alternative: 'drop', variant: 'Sonnet' }), undefined, "another mission's page keeps its own selection");
     assert.match((await click({ type: 'questionButton', button: 'discussQuestion', mission: XI, question: 'Pane Layout', variant: 'default' }, [''])) ?? '', / chain -- claude "\/gurita:discuss-open-question/, 'and runs it');
-    assert.match((await click({ type: 'alternativeButton', mission: OMICRON, question: 'Pane Layout', alternative: 'drop', variant: 'Sonnet' })) ?? '', /--model "sonnet"/, "the card's alternatives share one selection");
+    assert.strictEqual(await click({ type: 'alternativeButton', mission: OMICRON, question: 'Pane Layout', alternative: 'keep', variant: 'Sonnet' }), undefined, "a pick on one alternative leaves the card's other buttons where they stood");
+    assert.match((await click({ type: 'alternativeButton', mission: OMICRON, question: 'Pane Layout', alternative: 'drop', variant: 'Sonnet' })) ?? '', /--model "sonnet"/, 'each button runs the variant its own dropdown stands on');
+    assert.strictEqual(await click({ type: 'alternativeButton', mission: PI, question: 'Pane Layout', alternative: 'drop', variant: 'Sonnet' }), undefined);
     assert.match((await click({ type: 'alternativeButton', mission: PI, question: 'Pane Layout', alternative: 'keep', variant: 'Sonnet' })) ?? '', /--model "sonnet"/);
     assert.strictEqual(await click({ type: 'missionButton', button: 'discussGoal', variant: 'default' }, ['A goal']), undefined);
     assert.match((await click({ type: 'missionButton', button: 'discussGoal', variant: 'Opus' }, ['A goal'])) ?? '', / chain -- claude "\/gurita:discuss-mission-goal \${GURITA_GOAL}" --model "opus"/);
@@ -1824,6 +1865,8 @@ test("a fixed-name button's dropdown selection is remembered in workspaceState, 
     assert.deepStrictEqual(dropdown(live, NU, 'discussGoal'), [['default'], 'default']);
     assert.deepStrictEqual(workspaceState.get('gurita.variantSelections'), {}, 'the remembered variants are dropped');
     assert.deepStrictEqual(workspaceState.get('gurita.projectVariantSelections'), {});
+    assert.deepStrictEqual(workspaceState.get('gurita.alternativeVariantSelections'), {});
+    assert.deepStrictEqual(alternativeDropdown(live, NU, 'Pane Layout', 'drop'), [['default'], 'default']);
 
     // A mission-starting button's selection reaches the failure state too.
     fs.writeFileSync(path.join(files, 'recipes.md'), SELECTION_OWN_TEXT);

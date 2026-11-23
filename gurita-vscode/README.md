@@ -531,14 +531,15 @@ Seven buttons run a recipe by its fixed name, whatever the step: **Discuss**, **
 its alternatives, **New task**, and the two mission-starting buttons, **New mission** and **Define
 mission**. They pick a variant as the recipe buttons do. Beside each stands a dropdown of its
 recipe's variants, drawn as its arrow alone and listing, opened, the variants in the recipe's
-order, each by its bare name with no mark for your own; a question card holds one such dropdown,
-also drawn as its arrow alone, beside its **Alternatives** heading, shared by all its **Answer
-with this alternative** buttons. The dropdown offers only the variants the button can run: a variant holding a placeholder the button has no value for, a looped variant,
+order, each by its bare name with no mark for your own. Every **Answer with this alternative**
+button has such a dropdown of its own beside it, one per alternative on the card, so each
+alternative's button carries its own variant choice and no dropdown is shared between them. The
+dropdown offers only the variants the button can run: a variant holding a placeholder the button has no value for, a looped variant,
 one of no line, and one with at least one line on a disabled harness are left out of it.
 
 The dropdown stands on the variant selected, and the button's label, its hover text, and a click
-all follow it. Each button, every **Answer with this alternative** button included, shows its
-name and, beneath it, the name of the variant selected, always and exactly as the variant is
+all follow it. Each button, every **Answer with this alternative** button included, standing on
+its own dropdown's variant, shows its name and, beneath it, the name of the variant selected, always and exactly as the variant is
 named, in the recipe buttons' form, with that variant's lines as written in its hover text, so
 **Define mission** on the shipped `define-mission-goal` reads `default` beneath its name. A
 click runs the variant the dropdown shows, and only when the pane's last post of the button stood
@@ -546,9 +547,13 @@ on that variant; picking another variant starts nothing, so these dropdowns stay
 run is going.
 
 The variant you select is remembered in VS Code's storage for the open workspace (the extension's
-`workspaceState`). For the five buttons on a mission's page it is remembered per recipe on each
-mission, keyed by the mission's path, in the same map as the recipe buttons' selections, so every
-card of a mission shares its selection. For **New mission** and **Define mission**, which belong
+`workspaceState`). For **Discuss**, **Answer**, **Answer with recommendation**, and **New task**
+it is remembered per recipe on each mission, keyed by the mission's path, in the same map as the
+recipe buttons' selections, so every card of a mission shares its selection. For each **Answer
+with this alternative** button it is remembered per mission, question, and alternative, keyed by
+the mission's path, the question's Short Title, and the Alternative Id, in a map of its own, so a
+pick on one alternative leaves every other alternative's button, on that card and on every
+other, where it stood, and a click runs the variant its own button stands on. For **New mission** and **Define mission**, which belong
 to no mission, it is remembered once per project, as a map from recipe name to variant name. A
 remembered selection always wins over the default picked in the settings view, and picking a new
 default leaves it standing. With nothing remembered, or with the remembered variant left out of

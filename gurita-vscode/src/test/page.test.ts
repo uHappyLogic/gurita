@@ -708,19 +708,33 @@ const FIXED_BUTTONS: [string, string, string][] = [
 /** The two mission-starting buttons, posted with the pages and the failure state rather than with a mission. */
 const STARTING_KEYS = ['discussGoal', 'defineMission'];
 
+/** A mission as `mission` builds it, enough of its questions to post a button per alternative. */
+interface BuiltMission {
+  questions: { state: string; questions?: { id: string; alternatives: { id: string }[] }[] };
+}
+
 /**
- * A live message for Alpha and Beta, the two mission-starting buttons of `entries` posted with the pages
- * and the other five with each mission, every mission built by `build`.
+ * A live message for Alpha and Beta, the two mission-starting buttons of `entries` posted with the pages,
+ * its answer-with-alternative entry posted once for every alternative of every question of each mission,
+ * and the other four with each mission, every mission built by `build`.
  */
 function liveButtons(entries: Record<string, unknown>, running: string[] = [], build: (missionPath: string, title: string) => unknown = mission): unknown {
   const starting = Object.fromEntries(Object.entries(entries).filter(([key]) => STARTING_KEYS.includes(key)));
-  const onPage = Object.fromEntries(Object.entries(entries).filter(([key]) => !STARTING_KEYS.includes(key)));
+  const onPage = Object.fromEntries(Object.entries(entries).filter(([key]) => !STARTING_KEYS.includes(key) && key !== 'answerWithAlternative'));
+  const withButtons = (missionPath: string, title: string) => {
+    const built = build(missionPath, title) as BuiltMission;
+    const entry = entries.answerWithAlternative;
+    const alternativeButtons =
+      entry === undefined
+        ? []
+        : (built.questions.questions ?? []).flatMap((question) =>
+            question.alternatives.map((alternative) => ({ question: question.id, alternative: alternative.id, entry })),
+          );
+    return { ...built, buttons: onPage, alternativeButtons };
+  };
   return {
     type: 'live',
-    missions: [
-      { ...(build(ALPHA, 'Alpha') as object), buttons: onPage },
-      { ...(build(BETA, 'Beta') as object), buttons: onPage },
-    ],
+    missions: [withButtons(ALPHA, 'Alpha'), withButtons(BETA, 'Beta')],
     running,
     buttons: starting,
   };
@@ -826,11 +840,21 @@ function twoAlternatives(missionPath: string, title: string): unknown {
   return built;
 }
 
+/** The entry holding the button `drawn`. */
+function entryOf(page: Page, drawn: FakeElement): FakeElement {
+  const entry = page.root.all().find((each) => each.has('recipe-entry') && each.children.includes(drawn));
+  assert.ok(entry !== undefined, 'the button stands in an entry');
+  return entry;
+}
+
 /** The dropdown drawn beside the button labelled `label`, in the entry holding it, or undefined when none stands there. */
 function dropdownBeside(page: Page, label: string): FakeElement | undefined {
-  const drawn = named(page, label);
-  const entry = page.root.all().find((each) => each.has('recipe-entry') && each.children.includes(drawn));
-  return entry?.children.find((child): child is FakeElement => child instanceof FakeElement && child.tagName === 'select');
+  return entryOf(page, named(page, label)).children.find((child): child is FakeElement => child instanceof FakeElement && child.tagName === 'select');
+}
+
+/** The dropdowns drawn beside the answer-with-alternative buttons, in the card's order. */
+function alternativeDropdowns(page: Page): FakeElement[] {
+  return page.root.all().filter((each) => each.tagName === 'select' && each.getAttribute('aria-label') === 'The variant of Answer with this alternative');
 }
 
 test('a dropdown beside each fixed-name button offers its variants and stands on the one selected, its pick, the label, and a click following it', () => {
@@ -855,8 +879,8 @@ test('a dropdown beside each fixed-name button offers its variants and stands on
   page.send(liveButtons(offered(1), [], twoAlternatives));
   const besides: Record<string, [string, string, boolean][]> = {};
   eachPane(page, (pane) => {
-    for (const [label] of FIXED_BUTTONS.filter(([label]) => label !== 'Answer with this alternative')) {
-      if (pane === 'tasks' && ['Discuss', 'Answer', 'Answer with recommendation'].includes(label)) {
+    for (const [label] of FIXED_BUTTONS) {
+      if (pane === 'tasks' && ['Discuss', 'Answer', 'Answer with recommendation', 'Answer with this alternative'].includes(label)) {
         continue;
       }
       const dropdown = dropdownBeside(page, label);
@@ -871,21 +895,18 @@ test('a dropdown beside each fixed-name button offers its variants and stands on
     ['Fable', '0', false],
     ['Opus', '1', true],
   ];
-  assert.deepStrictEqual(
-    besides,
-    Object.fromEntries(FIXED_BUTTONS.filter(([label]) => label !== 'Answer with this alternative').map(([label]) => [label, selectedOpus])),
-  );
+  assert.deepStrictEqual(besides, Object.fromEntries(FIXED_BUTTONS.map(([label]) => [label, selectedOpus])));
 
-  // The question card holds one dropdown for its answer-with-alternative buttons, beside its Alternatives heading.
-  const shared = page.root.all().filter((each) => each.tagName === 'select' && each.getAttribute('aria-label') === 'The variant of Answer with this alternative');
-  assert.strictEqual(shared.length, 1, 'one dropdown per question card');
-  const head = page.root.all().find((each) => each.has('alternatives-head'));
-  assert.ok(head !== undefined && head.children.includes(shared[0]), 'it stands beside the Alternatives heading');
-  assertArrowOnly(shared[0]);
-  assert.deepStrictEqual(options(shared[0]), selectedOpus);
+  // Each answer-with-alternative button has a dropdown of its own beside it, and none is shared beside the Alternatives heading.
   const alternatives = buttons(page).filter((each) => shownName(each) === 'Answer with this alternative');
   assert.strictEqual(alternatives.length, 2);
-  for (const each of alternatives) {
+  const own = alternativeDropdowns(page);
+  assert.strictEqual(own.length, 2, 'one dropdown per alternative');
+  assert.ok(!page.root.all().some((each) => each.has('alternatives-head')), 'no dropdown stands beside the Alternatives heading');
+  for (const [index, each] of alternatives.entries()) {
+    assert.ok(entryOf(page, each).children.includes(own[index]), 'each dropdown stands beside its own button');
+    assertArrowOnly(own[index]);
+    assert.deepStrictEqual(options(own[index]), selectedOpus);
     assert.deepStrictEqual(recipeParts(each), ['Answer with this alternative', 'Opus']);
     assert.strictEqual(each.title, 'claude -p "/gurita:answerWithAlternative" --model "opus" --effort high;');
   }
@@ -893,14 +914,14 @@ test('a dropdown beside each fixed-name button offers its variants and stands on
   // A pick posts the variant with the button, and the mission for a button on a mission's page.
   let count = page.posted.length;
   (dropdownBeside(page, 'Discuss') as FakeElement).change('0');
-  shared[0].change('0');
+  own[1].change('0');
   (dropdownBeside(page, 'New mission') as FakeElement).change('0');
   (dropdownBeside(page, 'Define mission') as FakeElement).change('1');
   named(page, 'Remaining tasks').click();
   (dropdownBeside(page, 'New task') as FakeElement).change('0');
   assert.deepStrictEqual(page.posted.slice(count), [
     { type: 'selectButtonVariant', button: 'discussQuestion', mission: ALPHA, variant: 'Fable' },
-    { type: 'selectButtonVariant', button: 'answerWithAlternative', mission: ALPHA, variant: 'Fable' },
+    { type: 'selectAlternativeVariant', mission: ALPHA, question: 'Pane Layout', alternative: 'drop', variant: 'Fable' },
     { type: 'selectButtonVariant', button: 'discussGoal', variant: 'Fable' },
     { type: 'selectButtonVariant', button: 'defineMission', variant: 'Opus' },
     { type: 'selectButtonVariant', button: 'discussTask', mission: ALPHA, variant: 'Fable' },
@@ -942,6 +963,80 @@ test('a dropdown beside each fixed-name button offers its variants and stands on
   });
 });
 
+test("each answer-with-alternative button draws, picks, and runs the variant its own dropdown stands on, whatever another alternative's stands on", () => {
+  const page = loadPage();
+  /** The entry of one alternative's button, offering a shipped Fable and an own Opus variant, standing on the one at `selected`. */
+  const entry = (selected: number) => ({
+    state: 'offered',
+    lines: [`claude -p "/gurita:answer-open-question-with-alternative" --model "${['fable', 'opus'][selected]}" --effort high;`],
+    variants: [
+      { name: 'Fable', own: false },
+      { name: 'Opus', own: true },
+    ],
+    selected,
+  });
+  /** A live message for Alpha alone, its first card's keep and drop buttons standing on the variants at `keep` and `drop`. */
+  const send = (keep: unknown, drop: unknown) =>
+    page.send({
+      type: 'live',
+      missions: [
+        {
+          ...(twoAlternatives(ALPHA, 'Alpha') as object),
+          buttons: {},
+          alternativeButtons: [
+            { question: 'Pane Layout', alternative: 'keep', entry: keep },
+            { question: 'Pane Layout', alternative: 'drop', entry: drop },
+          ],
+        },
+      ],
+      running: [],
+      buttons: {},
+    });
+  const shown = () => {
+    const drawn = buttons(page).filter((each) => shownName(each) === 'Answer with this alternative');
+    return drawn.map((each) => [recipeParts(each), each.title, options(entryOf(page, each).children.find((child): child is FakeElement => child instanceof FakeElement && child.tagName === 'select') as FakeElement).map(([, , picked]) => picked)]);
+  };
+
+  send(entry(0), entry(1));
+  assert.deepStrictEqual(shown(), [
+    [['Answer with this alternative', 'Fable'], 'claude -p "/gurita:answer-open-question-with-alternative" --model "fable" --effort high;', [true, false]],
+    [['Answer with this alternative', 'Opus'], 'claude -p "/gurita:answer-open-question-with-alternative" --model "opus" --effort high;', [false, true]],
+  ], 'each button and its dropdown stand on the variant posted for its own alternative');
+
+  // A pick on one alternative posts that alternative alone, and nothing runs.
+  let count = page.posted.length;
+  alternativeDropdowns(page)[0].change('1');
+  assert.deepStrictEqual(page.posted.slice(count), [{ type: 'selectAlternativeVariant', mission: ALPHA, question: 'Pane Layout', alternative: 'keep', variant: 'Opus' }]);
+
+  // Each click posts the variant its own button stands on.
+  count = page.posted.length;
+  for (const each of buttons(page).filter((node) => shownName(node) === 'Answer with this alternative')) {
+    each.click();
+  }
+  assert.deepStrictEqual(page.posted.slice(count), [
+    { type: 'alternativeButton', mission: ALPHA, question: 'Pane Layout', alternative: 'keep', variant: 'Fable' },
+    { type: 'alternativeButton', mission: ALPHA, question: 'Pane Layout', alternative: 'drop', variant: 'Opus' },
+  ]);
+
+  // Posted again with keep on Opus, keep follows and drop stays where it stood.
+  send(entry(1), entry(1));
+  assert.deepStrictEqual(shown().map(([parts, , picked]) => [parts, picked]), [
+    [['Answer with this alternative', 'Opus'], [false, true]],
+    [['Answer with this alternative', 'Opus'], [false, true]],
+  ]);
+
+  // A button posted with no variant is drawn disabled with no dropdown; one posted with nothing shows its name alone, with none.
+  send({ state: 'disabled', cause: 'Every variant has a line on a disabled harness.' }, entry(0));
+  const [keep, drop] = buttons(page).filter((each) => shownName(each) === 'Answer with this alternative');
+  assert.strictEqual(keep.disabled, true);
+  assert.strictEqual(alternativeDropdowns(page).length, 1);
+  assert.ok(entryOf(page, drop).children.includes(alternativeDropdowns(page)[0]), 'the other alternative keeps its own dropdown');
+  page.send({ type: 'live', missions: [{ ...(twoAlternatives(ALPHA, 'Alpha') as object), buttons: {} }], running: [], buttons: {} });
+  assert.strictEqual(alternativeDropdowns(page).length, 0);
+  assert.deepStrictEqual(recipeParts(buttons(page).filter((each) => shownName(each) === 'Answer with this alternative')[1]), ['Answer with this alternative']);
+  assert.strictEqual(buttons(page).filter((each) => shownName(each) === 'Answer with this alternative')[1].title, 'Record drop as the decision');
+});
+
 test('a fixed-name button posted with no variant, every one left out for a disabled harness, stays drawn but disabled, with no dropdown', () => {
   const page = loadPage();
   const cause = 'Every variant of the recipe this button can run has a line on a disabled harness.';
@@ -954,9 +1049,7 @@ test('a fixed-name button posted with no variant, every one left out for a disab
         assert.strictEqual(drawn.disabled, true, `${label} is disabled`);
         assert.deepStrictEqual(recipeParts(drawn), [label], `${label} shows its name alone`);
         assert.strictEqual(drawn.title, `${hover}\n${cause}`);
-        if (label !== 'Answer with this alternative') {
-          assert.strictEqual(dropdownBeside(page, label), undefined, `no dropdown stands beside ${label}`);
-        }
+        assert.strictEqual(dropdownBeside(page, label), undefined, `no dropdown stands beside ${label}`);
       }
     }
     const section = page.root.all().find((each) => each.has('recipes')) as FakeElement;

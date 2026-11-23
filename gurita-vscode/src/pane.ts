@@ -41,7 +41,12 @@
 // otherwise the first offered. The selection is remembered as
 // the recipe list's is, per recipe on the mission for the buttons on a mission's page, and once
 // per project, in `workspaceState` under a key of its own, for the two mission-starting buttons,
-// and a remembered variant its recipe no longer carries is dropped at the next answer. A button
+// and a remembered variant its recipe no longer carries is dropped at the next answer. The
+// answer-with-alternative button is posted once per alternative of each question the mission's
+// question view shows, each with a dropdown and a selection of its own, remembered in
+// `workspaceState` under a third key per mission, question, and alternative, so a pick on one
+// alternative leaves every other button where it stood and a click runs the variant its own
+// button stands on. A button
 // whose every variant it could run is left out for a disabled harness is posted with none and
 // drawn disabled, and one whose recipe cannot be read or run is left out, showing its name alone,
 // its click telling why in an error notification. A click runs the variant selected only when the
@@ -177,15 +182,21 @@ import {
   stageRecipes,
 } from './recipes';
 import {
+  ALTERNATIVE_SELECTIONS_KEY,
+  AlternativeSelections,
   PROJECT_SELECTIONS_KEY,
   ProjectSelections,
   SELECTIONS_KEY,
   Selections,
+  alternativeSelection,
+  dropStaleAlternativeSelections,
   dropStaleProjectSelections,
   dropStaleSelections,
   missionSelections,
+  readAlternativeSelections,
   readProjectSelections,
   readSelections,
+  rememberAlternativeSelection,
   rememberSelection,
 } from './selections';
 import { ReadVariantRef, readVariantStore, variantStoreFile } from './variantStore';
@@ -256,6 +267,7 @@ type PageMessage =
   | { type: 'missionButton'; button: MissionButton; variant: string }
   | { type: 'taskButton'; mission: string; variant: string }
   | { type: 'selectButtonVariant'; button: FixedButton; mission?: string; variant: string }
+  | { type: 'selectAlternativeVariant'; mission: string; question: string; alternative: string; variant: string }
   | { type: 'previewLoop'; mission: string; recipe: string; variant: string }
   | { type: 'startLoop'; mission: string; recipe: string; overrides: Record<string, string> }
   | { type: 'settingsOpened' }
@@ -303,11 +315,15 @@ type RecipePart = { state: 'read'; recipes: PageRecipe[] } | { state: 'failed'; 
 /** One of the seven buttons outside the recipe list, each running the recipe of its fixed name. */
 type FixedButton = keyof typeof BUTTON_RECIPES;
 
-/** A fixed-name button on a mission's page, its dropdown's selection remembered per recipe on that mission. */
-type PageButton = Exclude<FixedButton, MissionButton>;
+/**
+ * A fixed-name button on a mission's page, its dropdown's selection remembered per recipe on that
+ * mission; the answer-with-alternative buttons, one per alternative, each with a dropdown and a
+ * selection of its own, are posted apart.
+ */
+type PageButton = Exclude<FixedButton, MissionButton | 'answerWithAlternative'>;
 
-/** The fixed-name buttons on a mission's page, posted with each mission. */
-const PAGE_BUTTONS: readonly PageButton[] = ['discussQuestion', 'answerQuestion', 'answerWithRecommendation', 'answerWithAlternative', 'discussTask'];
+/** The fixed-name buttons on a mission's page posted once with each mission, by the button. */
+const PAGE_BUTTONS: readonly PageButton[] = ['discussQuestion', 'answerQuestion', 'answerWithRecommendation', 'discussTask'];
 
 /** The two mission-starting buttons, belonging to no mission, their dropdowns' selections remembered once per project. */
 const STARTING_BUTTONS: readonly MissionButton[] = ['discussGoal', 'defineMission'];
@@ -341,6 +357,17 @@ type ButtonPost =
 /** What the latest answer posted for each fixed-name button of one scope, by the button. */
 type ButtonPosts = Partial<Record<FixedButton, ButtonPost>>;
 
+/**
+ * What the answer-with-alternative button of one alternative on a question's card runs, as its own
+ * dropdown, label, and hover text show it: the question's Short Title, the Alternative Id, and the
+ * button's entry, the variant selected the one remembered for that alternative, else the default.
+ */
+interface AlternativeButtonEntry {
+  question: string;
+  alternative: string;
+  entry: FixedButtonEntry;
+}
+
 /** A message the extension posts to the page. */
 type PaneMessage =
   | {
@@ -351,7 +378,7 @@ type PaneMessage =
        * pane its page opens on, and the recipe list its page shows, the recipes that fit that step.
        */
       missions: ({ path: string; state: string; title: string } & MissionDocuments &
-        MissionWorkflow & { recipes: RecipePart; buttons: FixedButtons })[];
+        MissionWorkflow & { recipes: RecipePart; buttons: FixedButtons; alternativeButtons: AlternativeButtonEntry[] })[];
       /** The paths of the missions with a running runner, whose pages are drawn as running. */
       running: string[];
       /** What the two mission-starting buttons run, which their dropdowns, labels, and hover text show. */
@@ -395,8 +422,9 @@ interface HeldPreview {
 
 /**
  * What the latest answer posted: the project root, the live missions' paths, the recipes each
- * mission's page listed, the fixed-name buttons each mission's page drew, and the Short Titles
- * each mission's question view showed, each with its alternatives' ids.
+ * mission's page listed, the fixed-name buttons each mission's page drew, the Short Titles each
+ * mission's question view showed, each with its alternatives' ids, and the answer-with-alternative
+ * button each of those alternatives drew, by mission, Short Title, and Alternative Id.
  */
 interface Posted {
   root: string;
@@ -404,6 +432,7 @@ interface Posted {
   recipes: Map<string, PageRecipe[]>;
   buttons: Map<string, ButtonPosts>;
   questions: Map<string, Map<string, Set<string>>>;
+  alternatives: Map<string, Map<string, Map<string, ButtonPost>>>;
 }
 
 /**
@@ -513,6 +542,8 @@ export function openMissionPane(context: vscode.ExtensionContext): void {
         void runTaskButton(context, message.mission, message.variant);
       } else if (message?.type === 'selectButtonVariant') {
         void selectButtonVariant(context, created, message.button, message.mission, message.variant);
+      } else if (message?.type === 'selectAlternativeVariant') {
+        void selectAlternativeVariant(context, created, message.mission, message.question, message.alternative, message.variant);
       } else if (message?.type === 'previewLoop') {
         void previewLoop(context, created, message.mission, message.recipe, message.variant);
       } else if (message?.type === 'startLoop') {
@@ -827,13 +858,42 @@ async function postPages(context: vscode.ExtensionContext, target: vscode.Webvie
 }
 
 /**
- * What each of the fixed-name buttons `keys` runs, out of the merged list `read`, as `buttonRecipe`
- * offers it, the variant name `remembered` holds for each recipe the dropdown selection remembered
- * for it: the variants its dropdown offers, every variant with a line on a disabled harness left
- * out, and the one selected, with its lines; or no variant, every one it could run left out, the button drawn disabled. A button whose
- * recipe cannot be read or run is left out of the entries and shows its name alone. Beside the
- * entries posted, what each button's click and dropdown are checked against, a refused one with
- * its cause.
+ * What the fixed-name button `key` runs, out of the merged list `read`, as `buttonRecipe` offers
+ * it, `remembered` the variant name its dropdown's selection remembers: the variants its dropdown
+ * offers, every variant with a line on a disabled harness left out, and the one selected, with its
+ * lines; or no variant, every one it could run left out, the button drawn disabled. A button whose
+ * recipe cannot be read or run gets no entry and shows its name alone. Beside the entry posted,
+ * what the button's click and dropdown are checked against, a refused one with its cause.
+ */
+function fixedButton(read: RecipeRead, key: FixedButton, remembered: string | undefined): { entry?: FixedButtonEntry; post: ButtonPost } {
+  const name = BUTTON_RECIPES[key];
+  if (read.state === 'failed') {
+    return { post: { state: 'refused', cause: `The recipes could not be read: ${read.cause}` } };
+  }
+  const found = buttonRecipe(read.recipes, name, BUTTON_PLACEHOLDERS[key], remembered, read.disabled);
+  if (found.state === 'found') {
+    const lines = [...found.variant.lines];
+    return {
+      entry: {
+        state: 'offered',
+        lines,
+        variants: found.variants.map((variant) => ({ name: variant.name, own: variant.own })),
+        selected: found.selected,
+      },
+      post: { state: 'offered', recipe: found.recipe.name, lines, variants: found.variants.map((variant) => variant.name), selected: found.selected },
+    };
+  }
+  if (found.state === 'disabled') {
+    return { entry: { state: 'disabled', cause: found.cause }, post: { state: 'disabled' } };
+  }
+  return { post: { state: 'refused', cause: found.cause } };
+}
+
+/**
+ * What each of the fixed-name buttons `keys` runs, as `fixedButton` gives it, the variant name
+ * `remembered` holds for each recipe the dropdown selection remembered for it, a button whose
+ * recipe cannot be read or run left out of the entries; beside them, what each button's click and
+ * dropdown are checked against.
  */
 function fixedButtons(
   read: RecipeRead,
@@ -843,26 +903,65 @@ function fixedButtons(
   const entries: FixedButtons = {};
   const posts: ButtonPosts = {};
   for (const key of keys) {
-    const name = BUTTON_RECIPES[key];
-    if (read.state === 'failed') {
-      posts[key] = { state: 'refused', cause: `The recipes could not be read: ${read.cause}` };
-      continue;
+    const { entry, post } = fixedButton(read, key, remembered.get(BUTTON_RECIPES[key]));
+    if (entry !== undefined) {
+      entries[key] = entry;
     }
-    const found = buttonRecipe(read.recipes, name, BUTTON_PLACEHOLDERS[key], remembered.get(name), read.disabled);
-    if (found.state === 'found') {
-      const lines = [...found.variant.lines];
-      entries[key] = {
-        state: 'offered',
-        lines,
-        variants: found.variants.map((variant) => ({ name: variant.name, own: variant.own })),
-        selected: found.selected,
-      };
-      posts[key] = { state: 'offered', recipe: found.recipe.name, lines, variants: found.variants.map((variant) => variant.name), selected: found.selected };
-    } else if (found.state === 'disabled') {
-      entries[key] = { state: 'disabled', cause: found.cause };
-      posts[key] = { state: 'disabled' };
-    } else {
-      posts[key] = { state: 'refused', cause: found.cause };
+    posts[key] = post;
+  }
+  return { entries, posts };
+}
+
+/** The answer-with-alternative selections the project's `workspaceState` remembers, by mission path, Short Title, and Alternative Id. */
+function storedAlternativeSelections(context: vscode.ExtensionContext): AlternativeSelections {
+  return readAlternativeSelections(context.workspaceState.get(ALTERNATIVE_SELECTIONS_KEY));
+}
+
+/**
+ * The answer-with-alternative selections, every remembered variant the recipe those buttons run,
+ * in the merged list `read`, no longer carries dropped from `workspaceState`, so its button falls
+ * back to the recipe's current default. A failed read drops nothing.
+ */
+function liveAlternativeSelections(context: vscode.ExtensionContext, read: RecipeRead): AlternativeSelections {
+  const selections = storedAlternativeSelections(context);
+  if (read.state === 'failed') {
+    return selections;
+  }
+  const kept = dropStaleAlternativeSelections(selections, read.recipes.find((recipe) => recipe.name === BUTTON_RECIPES.answerWithAlternative));
+  if (kept === undefined) {
+    return selections;
+  }
+  void context.workspaceState.update(ALTERNATIVE_SELECTIONS_KEY, kept);
+  return kept;
+}
+
+/**
+ * What the answer-with-alternative button of every alternative the question view of the mission at
+ * `mission` shows runs, out of the merged list `read`, each standing on the variant remembered for
+ * that alternative in `selections`, else the recipe's default, as `fixedButton` gives it; a button
+ * whose recipe cannot be read or run left out of the entries. Beside them, what each button's
+ * click and dropdown are checked against, by Short Title and Alternative Id.
+ */
+function alternativeButtons(
+  read: RecipeRead,
+  mission: string,
+  documents: MissionDocuments,
+  selections: AlternativeSelections,
+): { entries: AlternativeButtonEntry[]; posts: Map<string, Map<string, ButtonPost>> } {
+  const entries: AlternativeButtonEntry[] = [];
+  const posts = new Map<string, Map<string, ButtonPost>>();
+  if (documents.questions.state !== 'read') {
+    return { entries, posts };
+  }
+  for (const question of documents.questions.questions) {
+    const byAlternative = posts.get(question.id) ?? new Map<string, ButtonPost>();
+    posts.set(question.id, byAlternative);
+    for (const alternative of question.alternatives) {
+      const { entry, post } = fixedButton(read, 'answerWithAlternative', alternativeSelection(selections, mission, question.id, alternative.id));
+      if (entry !== undefined) {
+        entries.push({ question: question.id, alternative: alternative.id, entry });
+      }
+      byAlternative.set(alternative.id, post);
     }
   }
   return { entries, posts };
@@ -874,21 +973,26 @@ function fixedButtons(
  */
 function publish(context: vscode.ExtensionContext, shown: Current): PaneMessage {
   const selections = liveSelections(context, shown.live, shown.recipes);
+  const chosen = liveAlternativeSelections(context, shown.recipes);
   const starting = fixedButtons(shown.recipes, STARTING_BUTTONS, new Map(Object.entries(projectSelections(context, shown.recipes))));
   startingPosts = starting.posts;
   const buttons = new Map<string, ButtonPosts>();
+  const alternatives = new Map<string, Map<string, Map<string, ButtonPost>>>();
   const missions = shown.live.map((mission) => {
     const workflow = shown.workflows.get(mission.path) as MissionWorkflow;
     const documents = shown.documents.get(mission.path) as MissionDocuments;
     const remembered = missionSelections(selections, mission.path);
     const fixed = fixedButtons(shown.recipes, PAGE_BUTTONS, remembered);
     buttons.set(mission.path, fixed.posts);
+    const perAlternative = alternativeButtons(shown.recipes, mission.path, documents, chosen);
+    alternatives.set(mission.path, perAlternative.posts);
     return {
       ...mission,
       ...documents,
       ...workflow,
       recipes: missionRecipes(shown.recipes, workflow.step, documents.facts.questionsEmpty === false, remembered),
       buttons: fixed.entries,
+      alternativeButtons: perAlternative.entries,
     };
   });
   const questions = new Map<string, Map<string, Set<string>>>();
@@ -911,6 +1015,7 @@ function publish(context: vscode.ExtensionContext, shown: Current): PaneMessage 
     recipes: new Map(missions.map((mission) => [mission.path, mission.recipes.state === 'read' ? mission.recipes.recipes : []])),
     buttons,
     questions,
+    alternatives,
   };
   return { type: 'live', missions, running: runningMissions(), buttons: starting.entries };
 }
@@ -1006,6 +1111,39 @@ async function selectButtonVariant(
   } else {
     return;
   }
+  await postPages(context, target);
+}
+
+/**
+ * Remembers the variant named `variant` as the one selected in the dropdown beside the
+ * answer-with-alternative button of the alternative `alternative` on the card of the question
+ * `question` of the live mission at `mission`, in the project's `workspaceState`, per mission,
+ * question, and alternative, so every other alternative's button stays where it stood, and posts
+ * the pages again with it selected. A mission, question, alternative, or variant the latest answer
+ * did not post that button offering remembers nothing.
+ */
+async function selectAlternativeVariant(
+  context: vscode.ExtensionContext,
+  target: vscode.WebviewPanel,
+  mission: unknown,
+  question: unknown,
+  alternative: unknown,
+  variant: unknown,
+): Promise<void> {
+  if (posted === undefined || typeof mission !== 'string' || typeof question !== 'string' || typeof alternative !== 'string' || typeof variant !== 'string') {
+    return;
+  }
+  if (!posted.missions.has(mission)) {
+    return;
+  }
+  const post = posted.alternatives.get(mission)?.get(question)?.get(alternative);
+  if (post?.state !== 'offered' || !post.variants.includes(variant)) {
+    return;
+  }
+  await context.workspaceState.update(
+    ALTERNATIVE_SELECTIONS_KEY,
+    rememberAlternativeSelection(storedAlternativeSelections(context), mission, question, alternative, variant),
+  );
   await postPages(context, target);
 }
 
@@ -1814,7 +1952,16 @@ const PROMPTS: Record<string, { prompt: string; placeHolder?: string }> = {
  * notification naming the cause, and every other click yields nothing.
  */
 function postedButton(posts: ButtonPosts | undefined, button: FixedButton, variant: unknown): { name: string; lines: string[] } | undefined {
-  const post = posts?.[button];
+  return postedRun(posts?.[button], variant);
+}
+
+/**
+ * The recipe's name and the lines a fixed-name button posted as `post` runs when clicked with its
+ * dropdown standing on the variant named `variant`: only when it was posted standing on that
+ * variant. A button posted as refused is told in an error notification naming the cause, and
+ * every other click yields nothing.
+ */
+function postedRun(post: ButtonPost | undefined, variant: unknown): { name: string; lines: string[] } | undefined {
   if (post?.state === 'refused') {
     void vscode.window.showErrorMessage(post.cause);
     return undefined;
@@ -1891,7 +2038,8 @@ async function runQuestionButton(
 /**
  * Runs the answer-with-alternative button of the alternative `alternative` on the card of the
  * question `question`, the Short Title and the Alternative Id both from the card clicked, the
- * lines those of the variant named `variant` the latest answer posted the card's dropdown standing on.
+ * lines those of the variant named `variant` the latest answer posted that alternative's own
+ * dropdown standing on.
  */
 function runAlternativeButton(context: vscode.ExtensionContext, mission: string, question: string, alternative: string, variant: unknown): void {
   if (posted === undefined || !posted.missions.has(mission) || !shown(mission, question, alternative)) {
@@ -1900,7 +2048,7 @@ function runAlternativeButton(context: vscode.ExtensionContext, mission: string,
   if (refuseWhileRunning(mission)) {
     return;
   }
-  const recipe = postedButton(posted.buttons.get(mission), 'answerWithAlternative', variant);
+  const recipe = postedRun(posted.alternatives.get(mission)?.get(question)?.get(alternative), variant);
   if (recipe === undefined) {
     return;
   }
@@ -2086,7 +2234,6 @@ function pageShell(webview: vscode.Webview, script: vscode.Uri): string {
   .card .question-text { box-sizing: border-box; height: 9em; overflow-y: auto; border-top: none; margin-top: 0; }
   .alternative { margin: 0.4em 0 0; padding: 0; }
   .alternative-head { display: flex; align-items: center; gap: 0.6em; }
-  .alternatives-head { display: flex; align-items: center; gap: 0.6em; }
   .alternative.picked h6 { color: var(--vscode-textLink-foreground); }
   .panes { margin-top: 1em; }
   .pane-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; border-bottom: 1px solid var(--vscode-panel-border); }
