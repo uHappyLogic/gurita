@@ -66,5 +66,9 @@ No Marketplace publisher, Open VSX namespace, or token for either is recorded as
 
 - **Open VSX namespace ownership.** The mission claims ownership of the `uhappylogic` namespace on Open VSX, but only as far as filing the claim. The claim is filed with the first maintainer-only tasks, directly after the namespace is created, and that task counts as done once the claim's issue exists. The mission records nothing further about it and ends whether or not the claim has been granted: publication does not wait for the claim, and granting is left to Open VSX outside the mission.
 
+### Listing icon
+
+- **Listing icon design.** The listing icon shows the activity-bar icon's three arms as filled outlines in the same geometry, filled white or the activity bar's near-white `#d7dae0`, on a filled square in the banner's darker violet `#9333ea`.
+
 ## Out of Scope
 

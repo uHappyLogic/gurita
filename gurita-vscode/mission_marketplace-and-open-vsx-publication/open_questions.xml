@@ -1,38 +1,4 @@
 <open-questions>
-  <open-question id="Listing icon design">
-    <question>What does the icon on the two listings show: the three arms of the activity-bar icon, arms from the README banner, or another drawing, and in which colours on which background?</question>
-    <recommendation option="Three arms in white on a violet tile">The three arms are separate shapes, and a filled tile holds them together as one mark that reads the same at thumbnail size on the white Marketplace page and in a dark Extensions view, where bare violet arms reach only about 4:1 contrast against either background; the tile&apos;s colour comes from the banner&apos;s palette and the arms keep the tested geometry.</recommendation>
-    <alternative id="Three arms in white on a violet tile">
-      The listing icon shows the activity-bar icon&apos;s three arms as filled outlines in the same geometry, filled white or the activity bar&apos;s near-white `#d7dae0`, on a filled square in the banner&apos;s darker violet `#9333ea`.
-      <advantage>A saturated brand-coloured tile is recognizable at thumbnail size and reads the same on light and dark pages. Light arms on deep violet give strong contrast, and the colours come straight from the banner&apos;s palette.</advantage>
-      <drawback>The listing looks like neither existing drawing as shown: the activity bar has no tile and the banner has no violet field. A coloured square is also the common app-icon look and less distinctive in itself than a bare shape. The tile has to be part of whatever produces the raster, a condition set by the production question.</drawback>
-    </alternative>
-    <alternative id="Three arms in violet, transparent">
-      The listing icon shows the activity-bar icon&apos;s drawing unchanged in shape: the three octopus arms as filled outlines, the geometry `scripts/render_icon.py` builds from `assets/banner.txt` and `assets/icon-centre-arm.txt`, scaled to the listing square. The arms are filled in one colour, the banner&apos;s violet `#a855f7`, instead of the activity bar&apos;s `#d7dae0`. The background is transparent.
-      <advantage>One drawing serves the activity bar and both listings, and it already exists in tested geometry. The banner&apos;s violet ties the icon to the README banner a reader of the repository sees, and a mid-tone violet stays visible on both the white Marketplace page and a dark Extensions view.</advantage>
-      <drawback>A transparent icon depends on whatever page it stands on: a mid-tone violet has less contrast on a dark theme than on white, and thin arm outlines with no tile behind them can read as faint at listing size. The generator has to take a colour it does not take today. How easily the geometry reaches a raster is a condition set by the production question.</drawback>
-    </alternative>
-    <alternative id="Three arms in violet on a dark tile">
-      The listing icon shows the activity-bar icon&apos;s three arms as filled outlines, in the same geometry, filled in the banner&apos;s violet `#a855f7`, on a filled square background in a dark colour such as the editor&apos;s dark-theme background (around `#1e1e1e`).
-      <advantage>The icon carries its own background, so it looks the same on every page and theme it appears on. It keeps the banner&apos;s violet as the brand colour and the activity-bar drawing as the shape.</advantage>
-      <drawback>A dark square stands out as a heavy block on the white Marketplace page, and violet on near-black has only moderate contrast. It also adds a background colour that appears in neither existing drawing and has to be chosen and kept. How the tile and the arms reach a raster is a condition set by the production question.</drawback>
-    </alternative>
-    <alternative id="Three arms in light grey on a dark tile">
-      The listing icon is the activity-bar icon as the editor shows it in a dark theme: the three arms as filled outlines in the same geometry and in the activity bar&apos;s own colour, `#d7dae0`, on a filled dark square around `#1e1e1e`. No violet is used.
-      <advantage>It is the closest match to what an installed user sees in the activity bar, so the listing and the installed extension are recognizably one thing. Light grey on near-black has the strongest contrast of the arm-based options at small sizes.</advantage>
-      <drawback>Grey on black has no brand colour and none of the README banner&apos;s palette, so it looks generic among other monochrome icons in search results. The dark tile is heavy on the white Marketplace page. A light grey on a transparent background would vanish on white, so this colour needs the tile.</drawback>
-    </alternative>
-    <alternative id="Banner arms as text art">
-      The listing icon is a crop of the README banner itself: one or more of its arms drawn as the fixed-grid ASCII text of `assets/banner.txt`, in the banner&apos;s three colours (violet `#a855f7`, darker violet `#9333ea`, slate `#64748b`) from `assets/banner-colors.txt`, on a transparent background as the banner stands in the README.
-      <advantage>The listing carries the project&apos;s existing visual identity exactly as the repository&apos;s landing page shows it, with nothing new to draw, and its colours and characters already have a tracked source.</advantage>
-      <drawback>Text art scaled into a 128-pixel square becomes small glyphs that read as noise rather than arms, and the banner&apos;s wide row does not crop well into a square. Rendering text to a raster also depends on a monospace font at render time, which neither renderer controls today. Whether that can be made reproducible is a condition set by the production question.</drawback>
-    </alternative>
-    <alternative id="New purpose-made drawing">
-      The listing icon is a new drawing made for the square listing format and not taken from either existing drawing, for example a whole octopus with head and arms or a monogram. It is drawn in the banner&apos;s violet palette on a transparent background, and the activity-bar icon and the banner stay as they are.
-      <advantage>It can be designed for how listings actually show icons, square and seen from thumbnail size up to 128 pixels, rather than adapted from an activity-bar glyph or a wide text banner.</advantage>
-      <drawback>It adds a third drawing with no tracked source and no generator, to be designed and kept consistent with the other two, and it breaks the visual link between the listing and the activity-bar icon a user sees after installing. Judging a new drawing&apos;s quality needs a person&apos;s eye, so the work cannot be verified the way the generated icon is. How it is produced and kept is a condition set by the production question.</drawback>
-    </alternative>
-  </open-question>
   <open-question id="Listing README file">
     <question>The package carries `gurita-vscode/README.md`, whose first sections are for a person building the extension from the checkout. Which file do the listings show as the README: that file rewritten for a person installing from a listing, or a separate file the package carries in its place, and where do the building, packaging, and hand-install sections then stand?</question>
     <recommendation option="Rewrite README, build file beside it">The listing then shows only what a person installing needs, the use documentation keeps one home, and the checkout-only build steps get a dedicated file a contributor finds beside it, with vsce&apos;s default README lookup and the `package` script unchanged.</recommendation>
@@ -441,7 +407,6 @@
   </open-question>
   <open-question id="Listing icon production">
     <question>The pinned vsce refuses an SVG file as the manifest&apos;s icon, and the repository tracks no raster image and no script that writes one. How is the listing icon&apos;s raster file produced and kept: by a tracked generator checked by a test, as the activity-bar icon is, by a hand conversion with a local tool, or some other way, and is the file committed or written at package time?</question>
-    <depends-on question="Listing icon design" option="Three arms in white on a violet tile"/>
     <recommendation option="Stdlib generator, committed, tested">It repeats the pattern the repository&apos;s other two images follow, a tracked drawing, a stdlib generator, a committed output, and a drift test that both pytest runs and CI already execute, and filled outlines on a flat tile need only a small scanline fill and a `zlib` PNG writer, with no new dependency.</recommendation>
     <alternative id="Stdlib generator, committed, tested">
       A stdlib-only Python script under `scripts/` (a new renderer or an extension of `scripts/render_icon.py`) rasterizes the listing icon itself from tracked plain-text drawings and writes it as a PNG through `zlib` and `struct`, with no external tool; the PNG is committed under `gurita-vscode/media/`, named by the manifest&apos;s `icon` entry, regenerated by re-running the script and never edited by hand; a pytest test beside `tests/test_icon.py` checks that the committed file is a well-formed PNG of the listing size and equals what the generator produces.
