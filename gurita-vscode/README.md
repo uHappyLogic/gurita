@@ -18,7 +18,7 @@ not published to any marketplace: it is built from this repository and installed
 - `python3`, 3.9 or later, on `PATH`: the extension runs the bundled missions tool and its own
   runner with it.
 - `git`: the project root is the top level of a git work tree.
-- `claude` and, for the Antigravity variants, `agy`, each with the Gurita plugin installed, on the
+- `claude` and, for the `agy` lines, `agy`, each with the Gurita plugin installed, on the
   `PATH` of the shell the runner starts.
 - macOS or Linux. On Windows only through Remote-WSL, where the extension runs on the Linux side.
 
@@ -384,12 +384,12 @@ first fenced block beneath the sub-heading:
 ### Execute tasks
 Stage: execute tasks
 
-#### Claude Code
+#### Normal difficulty
 ```
 claude "/gurita:complete-all-tasks --mission <path>" --dangerously-skip-permissions --model "opus" --effort high; # interactive
 ```
 
-#### Claude Code (critical tasks)
+#### Critical tasks
 ```
 claude "/gurita:complete-all-tasks --mission <path>" --dangerously-skip-permissions --model "opus" --effort xhigh; # interactive
 ```
@@ -536,28 +536,30 @@ The package ships `snippets/GURITA_USAGE.md` as `bundled/GURITA_USAGE.md`, read 
 the `###` blocks under its one recipe section, the `## Recipes` heading, are recipes, listed in
 the file's order with no heading of their own on the page; the blocks under `## Manual use` are
 for reading only, and the notes on running the `agy` lines stand as prose at the top of the
-recipe section. A chain shipped for both harnesses is one recipe with one `####` variant per
-copy, `Claude Code` first and `Antigravity` second, so its button runs the Claude Code copy until
-a variant can be chosen; every other shipped recipe is one fenced block with no `####`
-sub-heading, a recipe of one variant named by its heading.
+recipe section. Each chain is shipped once, not once per harness: a line is moved onto the other
+harness from its harness dropdown in the settings view (see Variants above), so no recipe is
+grouped into one copy per harness. `Execute tasks` is the one shipped recipe with `####`
+variants, named for the work rather than a harness; every other shipped recipe is one fenced
+block with no `####` sub-heading, a recipe of one variant named by its heading. A stored copy of
+a variant the file no longer holds, such as an `Antigravity` variant an earlier copy of the file
+shipped, stays listed as a stored variant of its recipe, after the shipped one.
 
 Every chain in the file declares the one step it runs, once for the whole recipe, and spans no
 other:
 
-- **first review round**: `First run`, with a Claude Code and an Antigravity variant.
-- **additional review round**: `Requirements iteration`, with a Claude Code and an Antigravity
-  variant, and `Mixed-agent requirements review (Gemini reviews, Claude annotates)`, one block
+- **first review round**: `First run`, one block of `claude` lines.
+- **additional review round**: `Requirements iteration`, one block of `claude` lines, and `Mixed-agent requirements review (Gemini reviews, Claude annotates)`, one block
   mixing `agy` and `claude` lines.
-- **derive tasks**: `Prepare tasks`, the answer sweep and `derive-tasks`, with a Claude Code and
-  an Antigravity variant.
-- **execute tasks**: `Execute tasks`, whose three variants each hold one `complete-all-tasks` line
-  alone: `Claude Code` (`opus` at `high`), `Antigravity` (`claude-opus-5-5` at `high`), and
-  `Claude Code (critical tasks)` (`opus` at `xhigh`, since `high` is the ceiling on `agy`); and
+- **derive tasks**: `Prepare tasks`, the answer sweep and `derive-tasks`, one block of `claude`
+  lines.
+- **execute tasks**: `Execute tasks`, whose two variants each hold one `claude`
+  `complete-all-tasks` line alone: `Normal difficulty` (`opus` at `high`) and `Critical tasks`
+  (`opus` at `xhigh`); and
   the looped recipe, `Execute tasks one at a time`, whose only line is the slot line
   `<single-task line>` (see the looped task run below). No execution chain holds an answer sweep
   or a `derive-tasks` line: a mission's tasks are derived by `Prepare tasks` before an execution
   chain completes them.
-- **finish**: `Finish mission`, with a Claude Code and an Antigravity variant.
+- **finish**: `Finish mission`, one `claude` line.
 
 A page filling **derive tasks** thus lists `Prepare tasks` beside the two additional review round
 chains, and one filling **execute tasks** `Execute tasks` and `Execute tasks one at a time`. No

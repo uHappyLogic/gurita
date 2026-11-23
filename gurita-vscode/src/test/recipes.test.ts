@@ -10,6 +10,7 @@ import {
   firstVariant,
   isHeadless,
   mergeRecipes,
+  overlayVariantStore,
   ownRecipesFile,
   PAIRED_STAGES,
   pageRecipes,
@@ -22,6 +23,7 @@ import {
   stageRecipes,
   Variant,
 } from '../recipes';
+import { parseVariantStore } from '../variantStore';
 import { WORKFLOW_STEPS, WorkflowStep } from '../workflow';
 
 const FIXTURES = path.join(__dirname, '..', '..', 'src', 'test', 'fixtures', 'recipes');
@@ -410,14 +412,13 @@ test('no shipped execute variant holds a derive-tasks line, each holding its com
   assert.deepStrictEqual(
     byName(recipes, 'Execute tasks').variants.map((variant) => [variant.name, variant.lines]),
     [
-      ['Claude Code', ['claude "/gurita:complete-all-tasks --mission <path>" --dangerously-skip-permissions --model "opus" --effort high; # interactive']],
-      ['Antigravity', ['agy -i "/gurita:complete-all-tasks --mission <path>" --dangerously-skip-permissions --model "claude-opus-5-5" --effort high; # interactive']],
+      ['Normal difficulty', ['claude "/gurita:complete-all-tasks --mission <path>" --dangerously-skip-permissions --model "opus" --effort high; # interactive']],
       [
-        'Claude Code (critical tasks)',
+        'Critical tasks',
         ['claude "/gurita:complete-all-tasks --mission <path>" --dangerously-skip-permissions --model "opus" --effort xhigh; # interactive'],
       ],
     ],
-    'one execution recipe, its variants Claude Code at high, Antigravity at high, and Claude Code at xhigh',
+    'one execution recipe, its two variants named without a harness, the opus line at high and at xhigh',
   );
   for (const retired of ['Execute tasks of normal difficulty', 'Execute tasks (critical tasks)']) {
     assert.ok(!recipes.some((recipe) => recipe.name.startsWith(retired)), retired);
@@ -427,26 +428,14 @@ test('no shipped execute variant holds a derive-tasks line, each holding its com
   ]);
 });
 
-test('each shipped chain run on two harnesses is one recipe with a Claude Code and an Antigravity variant, no chain heading naming a harness', () => {
+test('First run, Requirements iteration, Prepare tasks, and Finish mission are each one block with no `####`, and no shipped chain but the mixed-agent one holds a variant named for or run on Antigravity', () => {
   const recipes = parseShippedRecipes(fs.readFileSync(SNIPPETS, 'utf8'), SNIPPETS);
   const variants = (name: string) =>
     byName(recipes, name).variants.map((variant) => [variant.name, variant.lines.map((line) => line.split(' ')[0])]);
-  assert.deepStrictEqual(variants('First run'), [
-    ['Claude Code', ['claude', 'claude', 'claude', 'claude']],
-    ['Antigravity', ['agy', 'agy', 'agy', 'agy']],
-  ]);
-  assert.deepStrictEqual(variants('Requirements iteration'), [
-    ['Claude Code', ['claude', 'claude', 'claude', 'claude']],
-    ['Antigravity', ['agy', 'agy', 'agy', 'agy']],
-  ]);
-  assert.deepStrictEqual(variants('Prepare tasks'), [
-    ['Claude Code', ['claude', 'claude']],
-    ['Antigravity', ['agy', 'agy']],
-  ]);
-  assert.deepStrictEqual(variants('Finish mission'), [
-    ['Claude Code', ['claude']],
-    ['Antigravity', ['agy']],
-  ]);
+  assert.deepStrictEqual(variants('First run'), [['First run', ['claude', 'claude', 'claude', 'claude']]]);
+  assert.deepStrictEqual(variants('Requirements iteration'), [['Requirements iteration', ['claude', 'claude', 'claude', 'claude']]]);
+  assert.deepStrictEqual(variants('Prepare tasks'), [['Prepare tasks', ['claude', 'claude']]]);
+  assert.deepStrictEqual(variants('Finish mission'), [['Finish mission', ['claude']]]);
   assert.deepStrictEqual(variants('Mixed-agent requirements review (Gemini reviews, Claude annotates)'), [
     ['Mixed-agent requirements review (Gemini reviews, Claude annotates)', ['agy', 'claude', 'claude', 'claude']],
   ]);
@@ -459,11 +448,43 @@ test('each shipped chain run on two harnesses is one recipe with a Claude Code a
       ['Single task with Opus High (Antigravity)', 1],
     ],
   );
+  for (const recipe of recipes.filter((each) => !single.includes(each) && each.name !== 'Mixed-agent requirements review (Gemini reviews, Claude annotates)')) {
+    for (const variant of recipe.variants) {
+      assert.ok(!variant.lines.some((line) => line.startsWith('agy ')), `${recipe.name} / ${variant.name} ships no Antigravity line`);
+      assert.ok(!/Claude Code|Antigravity/.test(variant.name), `${recipe.name} / ${variant.name} names no harness`);
+    }
+  }
   const named = recipes.filter((recipe) => /\((Claude Code|Antigravity)\)$/.test(recipe.name)).map((recipe) => recipe.name);
   assert.deepStrictEqual(named, single.map((recipe) => recipe.name), 'only the single-task lines name their harness in the heading');
   for (const name of Object.values(BUTTON_RECIPES)) {
     assert.deepStrictEqual(byName(recipes, name).variants.map((variant) => variant.name), [name], name);
   }
+});
+
+test('a stored copy of a shipped variant the file no longer holds stays listed as a stored variant of its recipe', () => {
+  const recipes = parseShippedRecipes(fs.readFileSync(SNIPPETS, 'utf8'), SNIPPETS);
+  const file = '/home/someone/.gurita/variants.json';
+  const lines = ['agy -p "/gurita:finish-mission --mission <path>" --dangerously-skip-permissions --model "claude-opus-5-5" --effort medium;'];
+  const store = parseVariantStore(
+    JSON.stringify({
+      variants: [{ recipe: 'Finish mission', name: 'Antigravity', lines, copies: { name: 'Antigravity', origin: 'shipped' } }],
+      hidden: [{ recipe: 'Execute tasks', name: 'Antigravity', origin: 'shipped' }],
+    }),
+    file,
+  );
+  const overlaid = overlayVariantStore(recipes, store, file);
+  assert.deepStrictEqual(
+    byName(overlaid, 'Finish mission').variants.map((variant) => [variant.name, variant.own, variant.stored === true, variant.lines]),
+    [
+      ['Finish mission', false, false, byName(recipes, 'Finish mission').variants[0].lines],
+      ['Antigravity', true, true, lines],
+    ],
+  );
+  assert.deepStrictEqual(
+    byName(overlaid, 'Execute tasks').variants.map((variant) => variant.name),
+    ['Normal difficulty', 'Critical tasks'],
+    'a hiding record of a removed variant hides nothing that stands',
+  );
 });
 
 test("every single-task line this repository's rule file names is a shipped single-task heading", () => {

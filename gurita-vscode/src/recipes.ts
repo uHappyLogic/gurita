@@ -6,9 +6,9 @@
 // blocks beneath its sub-headings are read, and of a variant name repeated within one recipe the
 // first is kept. The same form is read in the shipped file and in a person's own file. The shipped
 // snippet file yields only the recipes under its one recipe section, its `## Recipes` heading, each
-// in the shipped group, a chain run on several harnesses being one recipe with one variant per
-// copy; a person's own recipe file is a flat list of `###` recipes. An own
-// recipe carrying a shipped recipe's name replaces neither that recipe nor any of its variants:
+// in the shipped group, each chain shipped once and not once per harness; a person's own recipe
+// file is a flat list of `###` recipes. An own recipe carrying a shipped recipe's name replaces
+// neither that recipe nor any of its variants:
 // its variants join the shipped recipe, listed after the shipped variants under their own names and
 // marked as the person's own, an own variant carrying a shipped variant's name kept as a second
 // entry beside it; every other own recipe is listed after the shipped recipes, which keep the

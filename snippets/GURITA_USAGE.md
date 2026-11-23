@@ -8,7 +8,7 @@ A `Stage:` line beneath a chain's heading, once for the whole recipe, names the 
 
 ## Recipes
 
-Each `###` heading is one recipe, its name the button's. A recipe whose chain runs on more than one harness holds one `####` variant per copy, each a sub-heading naming the variant above its own fenced block, and a recipe of one block and no `####` is a recipe of one variant.
+Each `###` heading is one recipe, its name the button's. A recipe of several variants holds one `####` sub-heading per variant, naming it above its own fenced block, and a recipe of one block and no `####` is a recipe of one variant.
 
 On Antigravity:
 Run every line from the project root: `agy` uses the working directory as its workspace, so no `--add-dir` is needed.
@@ -19,8 +19,6 @@ Model mapping: `fable` → `gemini-4-argon`, `opus` → `claude-opus-5-5`.
 
 ### First run
 Stage: first review round
-
-#### Claude Code
 ```
 claude -p "/gurita:specify-mission-starting-state --mission <path>" --dangerously-skip-permissions --model "fable" --effort xhigh;
 claude -p "/gurita:review-mission-requirements --mission <path>" --dangerously-skip-permissions --model "fable" --effort xhigh;
@@ -28,31 +26,13 @@ claude -p "/gurita:provide-alternatives-to-all-open-questions --mission <path>" 
 claude "/gurita:recommend-all-open-questions --mission <path>" --dangerously-skip-permissions --model "fable" --effort xhigh; # interactive
 ```
 
-#### Antigravity
-```
-agy -p "/gurita:specify-mission-starting-state --mission <path>" --dangerously-skip-permissions --model "gemini-4-argon" --effort medium;
-agy -p "/gurita:review-mission-requirements --mission <path>" --dangerously-skip-permissions --model "gemini-4-argon" --effort medium;
-agy -p "/gurita:provide-alternatives-to-all-open-questions --mission <path>" --dangerously-skip-permissions --model "claude-opus-5-5" --effort high;
-agy -i "/gurita:recommend-all-open-questions --mission <path>" --dangerously-skip-permissions --model "gemini-4-argon" --effort medium; # interactive
-```
-
 ### Requirements iteration
 Stage: additional review round
-
-#### Claude Code
 ```
 claude -p "/gurita:answer-all-open-questions-with-recommendation --mission <path>" --dangerously-skip-permissions --model "fable" --effort high;
 claude -p "/gurita:review-mission-requirements --mission <path>" --dangerously-skip-permissions --model "fable" --effort high;
 claude -p "/gurita:provide-alternatives-to-all-open-questions --mission <path>" --dangerously-skip-permissions --model "opus" --effort high;
 claude "/gurita:recommend-all-open-questions --mission <path>" --dangerously-skip-permissions --model "fable" --effort xhigh; # interactive
-```
-
-#### Antigravity
-```
-agy -p "/gurita:answer-all-open-questions-with-recommendation --mission <path>" --dangerously-skip-permissions --model "gemini-4-argon" --effort medium;
-agy -p "/gurita:review-mission-requirements --mission <path>" --dangerously-skip-permissions --model "gemini-4-argon" --effort medium;
-agy -p "/gurita:provide-alternatives-to-all-open-questions --mission <path>" --dangerously-skip-permissions --model "claude-opus-5-5" --effort high;
-agy -i "/gurita:recommend-all-open-questions --mission <path>" --dangerously-skip-permissions --model "gemini-4-argon" --effort medium; # interactive
 ```
 
 ### Mixed-agent requirements review (Gemini reviews, Claude annotates)
@@ -66,35 +46,20 @@ claude -p "/gurita:answer-all-open-questions-with-recommendation --mission <path
 
 ### Prepare tasks
 Stage: derive tasks
-
-#### Claude Code
 ```
 claude -p "/gurita:answer-all-open-questions-with-recommendation --mission <path>" --dangerously-skip-permissions --model "fable" --effort high;
 claude -p "/gurita:derive-tasks --mission <path>" --dangerously-skip-permissions --model "fable" --effort xhigh;
 ```
 
-#### Antigravity
-```
-agy -p "/gurita:answer-all-open-questions-with-recommendation --mission <path>" --dangerously-skip-permissions --model "gemini-4-argon" --effort medium;
-agy -p "/gurita:derive-tasks --mission <path>" --dangerously-skip-permissions --model "gemini-4-argon" --effort medium;
-```
-
 ### Execute tasks
 Stage: execute tasks
 
-#### Claude Code
+#### Normal difficulty
 ```
 claude "/gurita:complete-all-tasks --mission <path>" --dangerously-skip-permissions --model "opus" --effort high; # interactive
 ```
 
-#### Antigravity
-```
-agy -i "/gurita:complete-all-tasks --mission <path>" --dangerously-skip-permissions --model "claude-opus-5-5" --effort high; # interactive
-```
-
-#### Claude Code (critical tasks)
-
-`high` is the ceiling on `agy`, so critical tasks run on Claude Code at `xhigh`.
+#### Critical tasks
 ```
 claude "/gurita:complete-all-tasks --mission <path>" --dangerously-skip-permissions --model "opus" --effort xhigh; # interactive
 ```
@@ -124,15 +89,8 @@ agy -p "/gurita:complete-task --mission <path> <Task Title>" --dangerously-skip-
 
 ### Finish mission
 Stage: finish
-
-#### Claude Code
 ```
 claude -p "/gurita:finish-mission --mission <path>" --dangerously-skip-permissions --model "opus" --effort high;
-```
-
-#### Antigravity
-```
-agy -p "/gurita:finish-mission --mission <path>" --dangerously-skip-permissions --model "claude-opus-5-5" --effort medium;
 ```
 
 ### discuss-open-question

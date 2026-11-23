@@ -58,7 +58,11 @@ test("the shipped recipe file's lines give the lists their models and efforts, a
   for (const effort of ['medium', 'high', 'xhigh']) {
     assert.ok(lists.claude.efforts?.includes(effort), effort);
   }
-  assert.deepStrictEqual([...lists.antigravity.models].sort(), ['claude-opus-5-5', 'gemini-4-argon']);
+  assert.deepStrictEqual(
+    lists.antigravity,
+    { models: ['gemini-4-argon', 'claude-opus-5-5'], efforts: ['medium', 'high'] },
+    "Antigravity's lists come from the mixed-agent chain's agy line and the Antigravity single-task line",
+  );
   assert.deepStrictEqual(lists.codex, { models: [] });
 });
 
