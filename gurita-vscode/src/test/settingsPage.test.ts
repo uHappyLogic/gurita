@@ -215,6 +215,41 @@ test("the window names Claude Code's detected scopes, the one in effect first wi
   assert.deepStrictEqual(harnessRows(page)[0], ['claude', 'plugin', ['Claude Code', 'Gurita plugin not installed.']]);
 });
 
+test('the window says a disabled Antigravity or Codex copy must be enabled in the harness itself, and draws no control to enable it', () => {
+  const page = loadSettings();
+  const send = (antigravity: Record<string, unknown>, codex: Record<string, unknown>) =>
+    page.send({
+      type: 'harnessCheck',
+      check: {
+        state: 'checked',
+        harnesses: [
+          { key: 'claude', name: 'Claude Code', cli: 'claude', installed: '2.0.0', packaged: '2.0.0', scopes: ['user'] },
+          { key: 'antigravity', name: 'Antigravity', cli: 'agy', packaged: '2.0.0', ...antigravity },
+          { key: 'codex', name: 'Codex', cli: 'codex', packaged: '2.0.0', ...codex },
+        ],
+      },
+    });
+  const drawnButtons = () => buttons(page).map(shownName);
+  send({}, {});
+  const before = drawnButtons();
+  send({ failed: 'plugin', disabled: true }, { failed: 'plugin', disabled: true });
+  assert.deepStrictEqual(harnessRows(page).slice(1), [
+    ['antigravity', 'plugin', ['Antigravity', 'Gurita plugin disabled: the copy is disabled and must be enabled in Antigravity itself, with agy plugin enable gurita.']],
+    ['codex', 'plugin', ['Codex', 'Gurita plugin disabled: the copy is disabled and must be enabled in Codex itself, through its own plugin settings.']],
+  ]);
+  assert.deepStrictEqual(harnessScopeLines(page).slice(1), [
+    ['antigravity', undefined],
+    ['codex', undefined],
+  ], 'no scopes line for a harness with no scopes');
+  assert.deepStrictEqual(drawnButtons(), before, 'no enable control of its own is added for a disabled copy');
+
+  send({ failed: 'plugin' }, { failed: 'plugin', detail: 'the listing did not finish' });
+  assert.deepStrictEqual(harnessRows(page).slice(1), [
+    ['antigravity', 'plugin', ['Antigravity', 'Gurita plugin not installed.']],
+    ['codex', 'plugin', ['Codex', 'Gurita plugin not installed: the listing did not finish']],
+  ], 'not installed stays told apart from disabled');
+});
+
 test("the window's check again control asks for the check afresh, and a check that could not run shows its cause", () => {
   const page = loadSettings();
   page.send({ type: 'harnessCheck', check: { state: 'failed', cause: 'python3: not found' } });

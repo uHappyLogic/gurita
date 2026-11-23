@@ -99,6 +99,21 @@ test("Claude Code's detected scopes are carried with the winning scope first, an
   assert.throws(() => harnessOutcomes(print({ ...PASSING, scopes: ['user'], disabled: 'no' }), '2.0.0'), /for claude/);
 });
 
+test('a disabled Antigravity or Codex copy is a state of its own: marked disabled, failing the plugin check, beside not installed and installed', () => {
+  const DISABLED = { found: true, installed: false, version: null, disabled: true };
+  const NOT_INSTALLED = { found: true, installed: false, version: null, disabled: false };
+  const outcomes = harnessOutcomes(print(PASSING, DISABLED, DISABLED), '2.0.0');
+  assert.deepStrictEqual(outcomes[1], { key: 'antigravity', name: 'Antigravity', cli: 'agy', packaged: '2.0.0', failed: 'plugin', disabled: true });
+  assert.deepStrictEqual(outcomes[2], { key: 'codex', name: 'Codex', cli: 'codex', packaged: '2.0.0', failed: 'plugin', disabled: true });
+  const absent = harnessOutcomes(print(PASSING, NOT_INSTALLED, NOT_INSTALLED), '2.0.0');
+  assert.deepStrictEqual(absent[1], { key: 'antigravity', name: 'Antigravity', cli: 'agy', packaged: '2.0.0', failed: 'plugin' }, 'not installed is not disabled');
+  assert.strictEqual(absent[2].disabled, undefined);
+  const installed = harnessOutcomes(print(PASSING, { ...PASSING, disabled: false }, { ...PASSING, disabled: false }), '2.0.0');
+  assert.deepStrictEqual(installed[1], { key: 'antigravity', name: 'Antigravity', cli: 'agy', packaged: '2.0.0', installed: '2.0.0' }, 'installed is neither failed nor disabled');
+  assert.strictEqual(installed[2].disabled, undefined);
+  assert.throws(() => harnessOutcomes(print(PASSING, { ...DISABLED, disabled: 'yes' }), '2.0.0'), /for antigravity/);
+});
+
 test('a print not in the check script form throws', () => {
   assert.throws(() => harnessOutcomes('not json', '2.0.0'), /printed no JSON/);
   assert.throws(() => harnessOutcomes('[]', '2.0.0'), /no JSON object/);

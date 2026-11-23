@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Disabled Antigravity and Codex Copies Reported
-
-Have the harness check report a disabled Antigravity or Codex copy as a state of its own, installed but disabled, beside the not-installed and installed states, and have the Settings window say for it that the copy is disabled and must be enabled in the harness itself, on Antigravity with `agy plugin enable gurita` and on Codex through its own plugin settings. Verified by the script's pytest tests on a disabled entry of each listing and by the extension's unit tests of the outcome and the drawn row, the README saying the same.
-
----
-
 ## Copies From Another Source Detected
 
 Have the harness check detect, for Claude Code and Codex, when the existing Gurita copy or the marketplace named `gurita` comes from a source other than the harness's distribution repository (`uHappyLogic/gurita-claude`, `uHappyLogic/gurita-codex`), such as a local checkout registered as a directory marketplace, and have the Settings window state the source found and the CLI commands that would switch the harness to its distribution repository; Antigravity, whose listing names no source, is reported as before. Verified by the script's pytest tests on listings in this machine's directory-marketplace shape and in the distribution-repository shape the hands-on verification recorded, and by the extension's unit tests of the outcome and the drawn row, the README saying the same.

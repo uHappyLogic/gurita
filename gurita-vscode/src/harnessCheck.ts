@@ -7,9 +7,10 @@
 // one, the version `scripts/bundle.js` recorded in `bundled/plugin_version.txt`, a copy equal to or
 // newer than it passing, the versions ordered as bare MAJOR.MINOR.PATCH; or every check passing.
 // The packaged version is the only one compared with, so the check reads nothing over the network. A check that could not be run at all carries its cause verbatim, classified by
-// nothing. For Claude Code the outcome also names every scope at which a Gurita copy applying to
-// the project root was detected, the winning scope, the one in effect, first and the others after
-// it, and whether that winning copy is disabled, a disabled winner failing the plugin check.
+// nothing. A copy the harness holds installed but disabled, Claude Code's winning copy or
+// Antigravity's or Codex's one copy, is a state of its own, marked disabled, and fails the plugin
+// check. For Claude Code the outcome also names every scope at which a Gurita copy applying to the
+// project root was detected, the winning scope, the one in effect, first and the others after it.
 // This module imports nothing from `vscode`.
 
 import { execFile } from 'node:child_process';
@@ -59,7 +60,10 @@ export interface HarnessOutcome {
    * effect, first and the others after it as also installed; Claude Code's alone, when any.
    */
   scopes?: string[];
-  /** Set when the winning copy, at the first of `scopes`, is disabled. */
+  /**
+   * Set when the harness's copy is installed but disabled: Claude Code's winning copy, at the first
+   * of `scopes`, or Antigravity's or Codex's one copy. The plugin check then fails.
+   */
   disabled?: true;
 }
 
@@ -76,7 +80,7 @@ interface PrintedHarness {
   scopes?: string[];
   /** Claude Code's: the winning scope, null when none applies. */
   scope?: string | null;
-  /** Claude Code's: whether the winning copy is disabled. */
+  /** Whether the copy the harness holds, Claude Code's winning one, is installed but disabled. */
   disabled?: boolean;
 }
 
@@ -175,9 +179,9 @@ export function harnessOutcomes(stdout: string, packaged: string | undefined): H
     const scopes = detectedScopes(printed);
     if (scopes.length > 0) {
       outcome.scopes = scopes;
-      if (printed.disabled === true) {
-        outcome.disabled = true;
-      }
+    }
+    if (printed.disabled === true) {
+      outcome.disabled = true;
     }
     if (!printed.found) {
       outcome.failed = 'cli';

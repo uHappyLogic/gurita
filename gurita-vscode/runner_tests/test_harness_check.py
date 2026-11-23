@@ -1,7 +1,7 @@
 """The harness check, gurita-vscode/harness_check.py: the copy each canned listing gives, Claude
 Code's chosen among the entries that apply to the project root with every applying scope listed,
-the winning one first and marked disabled when it is, and the one JSON result the
-check prints, its session replaced by a stub that writes the files a real session would, so no
+the winning one first and marked disabled when it is, Antigravity's and Codex's each not
+installed, installed, or installed but disabled, and the one JSON result the check prints, its session replaced by a stub that writes the files a real session would, so no
 shell session starts."""
 
 import json
@@ -174,16 +174,18 @@ AGY_LISTING = listing(
 
 
 def test_antigravity_gurita_entry_is_the_copy(check):
-    assert check.antigravity_copy(AGY_LISTING) == (True, "1.9.0")
+    assert check.antigravity_copy(AGY_LISTING) == (True, "1.9.0", False)
 
 
 def test_antigravity_without_gurita_is_not_installed(check):
-    assert check.antigravity_copy(listing([{"name": "other", "version": "0.1.0"}])) == (False, None)
+    assert check.antigravity_copy(listing([{"name": "other", "version": "0.1.0"}])) == (False, None, False)
 
 
-def test_antigravity_disabled_gurita_is_not_installed(check):
-    text = listing([{"name": "gurita", "enabled": False, "version": "1.9.0"}])
-    assert check.antigravity_copy(text) == (False, None)
+def test_antigravity_disabled_gurita_is_installed_but_disabled(check):
+    text = listing([{"name": "gurita", "enabled": False, "version": "1.9.0", "path": "/home/.gemini/config/plugins/gurita"}])
+    copy = check.antigravity_copy(text)
+    assert copy == (False, None, True)
+    assert copy.disabled is True
 
 
 def test_antigravity_unreadable_listing_is_an_error(check):
@@ -204,18 +206,24 @@ CODEX_LISTING = json.dumps(
 
 
 def test_codex_installed_gurita_is_the_copy(check):
-    assert check.codex_copy(CODEX_LISTING) == (True, "1.9.0")
+    assert check.codex_copy(CODEX_LISTING) == (True, "1.9.0", False)
 
 
 def test_codex_empty_installed_is_not_installed(check):
-    assert check.codex_copy(json.dumps({"installed": [], "available": []})) == (False, None)
+    assert check.codex_copy(json.dumps({"installed": [], "available": []})) == (False, None, False)
 
 
-@pytest.mark.parametrize("field", ["installed", "enabled"])
-def test_codex_uninstalled_or_disabled_is_not_installed(check, field):
-    entry = {"pluginId": "gurita@gurita", "version": "1.9.0", "installed": True, "enabled": True}
-    entry[field] = False
-    assert check.codex_copy(json.dumps({"installed": [entry]})) == (False, None)
+@pytest.mark.parametrize("enabled", [True, False])
+def test_codex_uninstalled_entry_is_not_installed(check, enabled):
+    entry = {"pluginId": "gurita@gurita", "version": "1.9.0", "installed": False, "enabled": enabled}
+    assert check.codex_copy(json.dumps({"installed": [entry]})) == (False, None, False)
+
+
+def test_codex_disabled_gurita_is_installed_but_disabled(check):
+    entry = {"pluginId": "gurita@gurita", "version": "1.9.0", "installed": True, "enabled": False}
+    copy = check.codex_copy(json.dumps({"installed": [entry], "available": []}))
+    assert copy == (False, None, True)
+    assert copy.disabled is True
 
 
 @pytest.mark.parametrize("text", ["[]", "{}", ""])
@@ -280,8 +288,8 @@ def test_check_runs_one_session_in_the_runners_shell_and_reports_each_harness(ch
             "scope": "project",
             "disabled": False,
         },
-        "antigravity": {"found": False, "installed": False, "version": None},
-        "codex": {"found": True, "installed": False, "version": None},
+        "antigravity": {"found": False, "installed": False, "version": None, "disabled": False},
+        "codex": {"found": True, "installed": False, "version": None, "disabled": False},
     }
 
 
@@ -295,6 +303,7 @@ def test_check_failed_listing_reports_its_error(check, tmp_path):
         "found": True,
         "installed": False,
         "version": None,
+        "disabled": False,
         "error": "the listing exited with status 1: listing failed",
     }
     assert result["codex"]["found"] is True
@@ -321,7 +330,7 @@ def test_main_prints_one_json_line(check, tmp_path, monkeypatch, capsys):
     assert check.main(["--project", str(tmp_path)]) == 0
     out = capsys.readouterr().out
     assert out.count("\n") == 1
-    assert json.loads(out)["antigravity"] == {"found": True, "installed": True, "version": "1.9.0"}
+    assert json.loads(out)["antigravity"] == {"found": True, "installed": True, "version": "1.9.0", "disabled": False}
 
 
 def test_main_prints_claude_codes_scopes_and_a_disabled_winner(check, tmp_path, monkeypatch, capsys):
@@ -341,7 +350,32 @@ def test_main_prints_claude_codes_scopes_and_a_disabled_winner(check, tmp_path, 
         "scope": "local",
         "disabled": True,
     }
-    assert printed["codex"] == {"found": False, "installed": False, "version": None}
+    assert printed["codex"] == {"found": False, "installed": False, "version": None, "disabled": False}
+
+
+def test_main_prints_a_disabled_antigravity_and_codex_copy(check, tmp_path, monkeypatch, capsys):
+    root = str(tmp_path)
+    files = {}
+    files.update(found("antigravity", listing([{"name": "gurita", "enabled": False, "version": "2.0.0"}])))
+    files.update(
+        found(
+            "codex",
+            json.dumps(
+                {
+                    "installed": [
+                        {"pluginId": "gurita@gurita", "version": "2.0.0", "installed": True, "enabled": False}
+                    ],
+                    "available": [],
+                }
+            ),
+        )
+    )
+    monkeypatch.setattr(check, "run_session", fake_session(files, []))
+    assert check.main(["--project", root]) == 0
+    printed = json.loads(capsys.readouterr().out)
+    disabled = {"found": True, "installed": False, "version": None, "disabled": True}
+    assert printed["antigravity"] == disabled
+    assert printed["codex"] == disabled
 
 
 def test_main_refuses_a_root_that_is_not_a_directory(check, tmp_path, monkeypatch, capsys):

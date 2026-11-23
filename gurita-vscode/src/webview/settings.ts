@@ -10,9 +10,11 @@
 // installed version older than the packaged one, with the versions read. For Claude Code it also
 // names every scope a Gurita copy applying to the project was detected at: the winning scope first,
 // as the one in effect, the others after it as also installed, with the one version the status
-// shows being the winner's; a disabled winner's scope is marked disabled, and the status then says
-// the copy must be enabled in Claude Code itself, through its `/plugin` menu or
-// `claude plugin enable`. Its check-again
+// shows being the winner's; a disabled winner's scope is marked disabled. For a copy installed but
+// disabled the status says, in place of plugin not installed, that the copy is disabled and must
+// be enabled in the harness itself: in Claude Code through its `/plugin` menu or
+// `claude plugin enable`, in Antigravity with `agy plugin enable gurita`, and in Codex through its
+// own plugin settings; the window adds no control of its own to enable it. Its check-again
 // control, disabled while a check runs, asks the extension to run the check afresh. The extension
 // runs the check on the first opening of the window in the extension's session and otherwise
 // posts the result it keeps. Beside each harness the window also shows whether it is enabled,
@@ -82,7 +84,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
     detail?: string;
     /** The scopes a copy was detected at, the one in effect first; Claude Code's alone. */
     scopes?: string[];
-    /** Set when the copy in effect, at the first of `scopes`, is disabled. */
+    /** Set when the harness's copy, Claude Code's in effect at the first of `scopes`, is installed but disabled. */
     disabled?: true;
   }
 
@@ -228,9 +230,13 @@ declare function acquireVsCodeApi(): VsCodeApi;
     plugin: 'Gurita plugin not installed',
     version: 'Installed version older than the packaged one',
   };
-  /** What the window says of a Claude Code copy in effect that is disabled. */
-  const DISABLED_COPY_LINE =
-    'Gurita plugin disabled: the copy in effect is disabled and must be enabled in Claude Code itself, through its /plugin menu or claude plugin enable.';
+  /** What the window says of a harness's copy that is installed but disabled, by the harness's key. */
+  const DISABLED_COPY_LINES: Record<string, string> = {
+    claude:
+      'Gurita plugin disabled: the copy in effect is disabled and must be enabled in Claude Code itself, through its /plugin menu or claude plugin enable.',
+    antigravity: 'Gurita plugin disabled: the copy is disabled and must be enabled in Antigravity itself, with agy plugin enable gurita.',
+    codex: 'Gurita plugin disabled: the copy is disabled and must be enabled in Codex itself, through its own plugin settings.',
+  };
 
   const vscode = acquireVsCodeApi();
   const root = document.getElementById('root') as HTMLElement;
@@ -275,8 +281,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
     if (outcome.failed === 'cli') {
       return `${FAILED_CHECKS.cli}: the runner's shell finds no ${outcome.cli} command.`;
     }
-    if (outcome.failed === 'plugin' && outcome.disabled === true) {
-      return DISABLED_COPY_LINE;
+    if (outcome.failed === 'plugin' && outcome.disabled === true && DISABLED_COPY_LINES[outcome.key] !== undefined) {
+      return DISABLED_COPY_LINES[outcome.key];
     }
     if (outcome.failed === 'plugin') {
       return outcome.detail !== undefined ? `${FAILED_CHECKS.plugin}: ${outcome.detail}` : `${FAILED_CHECKS.plugin}.`;

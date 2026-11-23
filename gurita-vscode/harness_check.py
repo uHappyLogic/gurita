@@ -15,15 +15,17 @@ found, its listing (`claude plugin list --json`, `agy plugin list --json`,
 written to a run-local file, so nothing the startup files print reaches the result.
 
 It prints one JSON object on one line, keyed `claude`, `antigravity`, and `codex`, each holding
-`found` (whether the CLI was found), `installed` (whether a Gurita copy is installed), and
+`found` (whether the CLI was found), `installed` (whether an enabled Gurita copy is installed),
 `version` (the version that copy reads, null when none is installed or the entry carries no
-version), and `error` beside them when the listing could not be read: it exited non-zero, did
-not finish within the session's time limit, or printed no JSON of the listing's shape, the copy
-then counted as not installed. Claude Code's result also holds `scopes` (every scope holding a
-`gurita@gurita` entry that applies to ROOT, the winning one first and the rest from the most
-specific down, empty when none applies or the listing could not be read), `scope` (the winning
-scope, null when none applies), and `disabled` (whether the winning entry reads `enabled`
-false).
+version), and `disabled` (whether the copy the harness holds is installed but disabled, its
+`installed` then false and its `version` null), so a copy is in one of three states: not
+installed, installed, or installed but disabled; and `error` beside them when the listing could
+not be read: it exited non-zero, did not finish within the session's time limit, or printed no
+JSON of the listing's shape, the copy then counted as not installed and not disabled. Claude
+Code's result also holds `scopes` (every scope holding a `gurita@gurita` entry that applies to
+ROOT, the winning one first and the rest from the most specific down, empty when none applies or
+the listing could not be read) and `scope` (the winning scope, null when none applies), its
+`disabled` saying whether the winning entry reads `enabled` false.
 
 Claude Code's copy is chosen among the `gurita@gurita` entries that apply to ROOT: the
 `user`-scope entry and every `project`- or `local`-scope entry whose `projectPath` equals ROOT,
@@ -32,8 +34,9 @@ other projects' entries and `synced` entries ignored, `local` winning over `proj
 and marked disabled. Its version is `folderVersion` whenever the entry carries `readFromFolder`
 and `version` otherwise.
 Antigravity's copy is the `gurita` entry of the listing's array, Codex's the `gurita@gurita`
-entry of the listing's `installed` array, each counted not installed when it reads `enabled`
-(or, for Codex, `installed`) false; each copy's version is its `version`.
+entry of the listing's `installed` array; a Codex entry reading `installed` false counts as not
+installed, and an entry of either reading `enabled` false as installed but disabled; each enabled
+copy's version is its `version`.
 
 The exit status is 0 whenever the result is printed; a ROOT that is not a directory prints one
 `Error:` line and exits 1.
@@ -185,34 +188,50 @@ def claude_copy(text: str, root: str) -> ClaudeCopy:
     return ClaudeCopy(True, entry_version(winner, key), scopes, scopes[0], False)
 
 
-def antigravity_copy(text: str) -> Tuple[bool, Optional[str]]:
-    """Whether Antigravity's listing holds an enabled Gurita copy, and its version."""
+class Copy(NamedTuple):
+    """What Antigravity's or Codex's listing holds: whether an enabled Gurita copy is installed
+    and its version, and whether the copy it holds is installed but disabled."""
+
+    installed: bool
+    version: Optional[str]
+    disabled: bool
+
+
+NOT_INSTALLED = Copy(False, None, False)
+DISABLED = Copy(False, None, True)
+
+
+def antigravity_copy(text: str) -> Copy:
+    """Whether Antigravity's listing holds an enabled Gurita copy and its version, or a disabled one."""
     entries = parse_json(text)
     if not isinstance(entries, list):
         raise ListingError("the listing is not a JSON array")
     for entry in entries:
         if isinstance(entry, dict) and entry.get("name") == ANTIGRAVITY_PLUGIN_NAME:
             if entry.get("enabled") is False:
-                return False, None
-            return True, entry_version(entry, "version")
-    return False, None
+                return DISABLED
+            return Copy(True, entry_version(entry, "version"), False)
+    return NOT_INSTALLED
 
 
-def codex_copy(text: str) -> Tuple[bool, Optional[str]]:
-    """Whether Codex's listing holds an installed, enabled Gurita copy, and its version."""
+def codex_copy(text: str) -> Copy:
+    """Whether Codex's listing holds an installed, enabled Gurita copy and its version, or an
+    installed, disabled one."""
     listing = parse_json(text)
     installed = listing.get("installed") if isinstance(listing, dict) else None
     if not isinstance(installed, list):
         raise ListingError("the listing holds no `installed` array")
     for entry in installed:
         if isinstance(entry, dict) and entry.get("pluginId") == CODEX_PLUGIN_ID:
-            if entry.get("installed") is False or entry.get("enabled") is False:
-                return False, None
-            return True, entry_version(entry, "version")
-    return False, None
+            if entry.get("installed") is False:
+                return NOT_INSTALLED
+            if entry.get("enabled") is False:
+                return DISABLED
+            return Copy(True, entry_version(entry, "version"), False)
+    return NOT_INSTALLED
 
 
-def read_copy(key: str, text: str) -> Tuple[bool, Optional[str]]:
+def read_copy(key: str, text: str) -> Copy:
     """Antigravity's or Codex's copy, by the harness's key."""
     if key == ANTIGRAVITY:
         return antigravity_copy(text)
@@ -230,9 +249,9 @@ def read_file(path: str) -> Optional[str]:
 def harness_result(key: str, run_dir: str, root: str) -> Dict[str, Any]:
     """One harness's result from the files the session wrote for it in `run_dir`."""
     base = os.path.join(run_dir, key)
-    result: Dict[str, Any] = {"found": False, "installed": False, "version": None}
+    result: Dict[str, Any] = {"found": False, "installed": False, "version": None, "disabled": False}
     if key == CLAUDE:
-        result.update({"scopes": [], "scope": None, "disabled": False})
+        result.update({"scopes": [], "scope": None})
     if not os.path.exists(base + FOUND_SUFFIX):
         return result
     result["found"] = True
@@ -246,16 +265,17 @@ def harness_result(key: str, run_dir: str, root: str) -> Dict[str, Any]:
             raise ListingError(f"{reason}: {detail[-1]}" if detail else reason)
         text = read_file(base + OUT_SUFFIX) or ""
         if key == CLAUDE:
-            copy = claude_copy(text, root)
-            installed, version = copy.installed, copy.version
-            result.update({"scopes": copy.scopes, "scope": copy.scope, "disabled": copy.disabled})
+            claude = claude_copy(text, root)
+            installed, version, disabled = claude.installed, claude.version, claude.disabled
+            result.update({"scopes": claude.scopes, "scope": claude.scope})
         else:
-            installed, version = read_copy(key, text)
+            installed, version, disabled = read_copy(key, text)
     except ListingError as error:
         result["error"] = str(error)
         return result
     result["installed"] = installed
     result["version"] = version
+    result["disabled"] = disabled
     return result
 
 

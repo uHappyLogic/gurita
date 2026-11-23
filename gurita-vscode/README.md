@@ -344,8 +344,9 @@ nothing over the network. Beside each harness the window either says that every 
 with the version installed, or names the first of the three checks that failed:
 
 - **CLI not found**: the runner's shell finds no such command.
-- **Gurita plugin not installed**: the harness lists no enabled Gurita copy for the project, or
-  its listing could not be read, the reason shown after the check's name.
+- **Gurita plugin not installed**: the harness lists no Gurita copy for the project, or its
+  listing could not be read, the reason shown after the check's name. A copy the harness lists
+  installed but disabled is told apart from this, as described below.
 - **Installed version older than the packaged one**: the installed and the packaged versions
   are both shown.
 
@@ -361,6 +362,13 @@ When the winning copy is disabled, its scope is marked disabled, even beside an 
 less specific scope, and in place of **Gurita plugin not installed** the window says the copy in
 effect is disabled and must be enabled in Claude Code itself, through its `/plugin` menu or
 `claude plugin enable`; the window adds no control of its own to enable it.
+
+Antigravity and Codex likewise each report a disabled copy as a state of its own, installed but
+disabled, beside not installed and installed: `harness_check.py` prints `disabled` for every
+harness, true when Antigravity's `gurita` entry or Codex's installed `gurita@gurita` entry reads
+`enabled` false. In place of **Gurita plugin not installed** the window then says the copy is
+disabled and must be enabled in the harness itself, on Antigravity with `agy plugin enable gurita`
+and on Codex through its own plugin settings, and again adds no control of its own to enable it.
 
 The check runs the first time you open the Settings window after the extension starts. Its
 result is kept in the extension, with no timestamp and nothing stored, for the rest of that
