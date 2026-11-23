@@ -1,9 +1,11 @@
 // The extension's own build step, run from the `vscode:prepublish` script so that every
-// `vsce package` runs it. It copies the plugin's missions tool and the shipped snippet file
-// verbatim into `bundled/`, and writes beside them `fixed_lines.tsv`: one line per row of the
-// `## Fixed console lines` table of docs/skill-reference.md, its kind, a tab, and its line,
+// `vsce package` runs it. It copies the plugin's missions tool and the extension's own shipped
+// recipe file, `shipped_recipes.md`, verbatim into `bundled/`, and writes beside them
+// `fixed_lines.tsv`: one line per row of the `## Fixed console lines` table of
+// docs/skill-reference.md, its kind, a tab, and its line,
 // and `plugin_version.txt`: the repository's `VERSION`, the plugin version the package is
-// built from, as one line. Nothing it writes is tracked.
+// built from, as one line. It empties `bundled/` first, so the package carries no file an earlier
+// build wrote. Nothing it writes is tracked.
 'use strict';
 
 const fs = require('node:fs');
@@ -15,7 +17,7 @@ const BUNDLED = path.join(EXTENSION_ROOT, 'bundled');
 
 const COPIES = [
   [path.join(REPO_ROOT, 'core', 'tools', 'missions.py'), 'missions.py'],
-  [path.join(REPO_ROOT, 'snippets', 'GURITA_USAGE.md'), 'GURITA_USAGE.md'],
+  [path.join(EXTENSION_ROOT, 'shipped_recipes.md'), 'shipped_recipes.md'],
 ];
 const REFERENCE = path.join(REPO_ROOT, 'docs', 'skill-reference.md');
 const SECTION = '## Fixed console lines';
@@ -81,6 +83,7 @@ function pluginVersion() {
 
 const rows = fixedLineRows();
 const version = pluginVersion();
+fs.rmSync(BUNDLED, { recursive: true, force: true });
 fs.mkdirSync(BUNDLED, { recursive: true });
 for (const [source, name] of COPIES) {
   fs.copyFileSync(source, path.join(BUNDLED, name));

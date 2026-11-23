@@ -5,10 +5,10 @@
 // first fenced block beneath the `###` heading. Once a recipe holds a `####` sub-heading only the
 // blocks beneath its sub-headings are read, and of a variant name repeated within one recipe the
 // first is kept. The same form is read in the shipped file and in a person's own file. The shipped
-// snippet file yields only the recipes under its one recipe section, its `## Recipes` heading, each
-// in the shipped group, each chain shipped once and not once per harness; a person's own recipe
-// file is a flat list of `###` recipes. An own recipe carrying a shipped recipe's name replaces
-// neither that recipe nor any of its variants:
+// recipe file, `shipped_recipes.md`, yields only the recipes under its one recipe section, its
+// `## Recipes` heading, each in the shipped group, each chain shipped once and not once per
+// harness; a person's own recipe file is a flat list of `###` recipes. An own recipe carrying a
+// shipped recipe's name replaces neither that recipe nor any of its variants:
 // its variants join the shipped recipe, listed after the shipped variants under their own names and
 // marked as the person's own, an own variant carrying a shipped variant's name kept as a second
 // entry beside it; every other own recipe is listed after the shipped recipes, which keep the
@@ -55,7 +55,7 @@ import { Harness, VariantValues, readLine, variantValues } from './lineValues';
 import { ReadVariantRef, StoredVariant, VariantOrigin, VariantRef, VariantStore, readVariantStore } from './variantStore';
 import type { WorkflowStep } from './workflow';
 
-/** The one heading of the shipped snippet file whose `###` blocks are recipes. */
+/** The one heading of the shipped recipe file whose `###` blocks are recipes. */
 export const RECIPE_SECTION = 'Recipes';
 
 /** `shipped` for a recipe of the shipped file, or `own` for an own recipe that joins no shipped one. */
@@ -313,7 +313,7 @@ function classify(block: Block, group: RecipeGroup, own: boolean, file: string):
   };
 }
 
-/** Reads the shipped snippet file's text: the `###` blocks under its recipe section only, the first of a repeated name kept. */
+/** Reads the shipped recipe file's text: the `###` blocks under its recipe section only, the first of a repeated name kept. */
 export function parseShippedRecipes(text: string, file: string): Recipe[] {
   const recipes: Recipe[] = [];
   const seen = new Set<string>();
@@ -527,7 +527,7 @@ export function defaultVariant(recipe: Recipe): Variant {
 }
 
 /**
- * Reads the shipped snippet file and, when given and present, a person's own recipe file, merges
+ * Reads the shipped recipe file and, when given and present, a person's own recipe file, merges
  * them, and lays the variant store at `storeFile`, when given, over the merged list. A missing own
  * file holds no recipe and a missing store file nothing; any other read failure throws.
  */

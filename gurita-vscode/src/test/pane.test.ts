@@ -273,10 +273,10 @@ test("the pane posts each page's recipes in the shipped file's order, then its o
     git(root, 'add', '.');
     git(root, 'commit', '-q', '-m', `Mission-definition: ${GAMMA}`);
     const files = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-recipes-'));
-    fs.writeFileSync(path.join(files, 'GURITA_USAGE.md'), SHIPPED_TEXT);
+    fs.writeFileSync(path.join(files, 'shipped_recipes.md'), SHIPPED_TEXT);
     fs.writeFileSync(path.join(files, 'recipes.md'), OWN_TEXT);
     packaged.set('bundled/missions.py', path.join(__dirname, '..', '..', '..', 'core', 'tools', 'missions.py'));
-    packaged.set('bundled/GURITA_USAGE.md', path.join(files, 'GURITA_USAGE.md'));
+    packaged.set('bundled/shipped_recipes.md', path.join(files, 'shipped_recipes.md'));
     workspace.folders = [{ uri: { fsPath: root } }];
     workspace.settings = { ownRecipesFile: path.join(files, 'recipes.md') };
     const from = posted.length;
@@ -386,7 +386,7 @@ test('a selected variant is remembered per recipe on one mission in workspaceSta
   try {
     const root = project(DELTA, EPSILON);
     const files = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-recipes-'));
-    fs.writeFileSync(path.join(files, 'GURITA_USAGE.md'), SHIPPED_TEXT);
+    fs.writeFileSync(path.join(files, 'shipped_recipes.md'), SHIPPED_TEXT);
     fs.writeFileSync(path.join(files, 'recipes.md'), OWN_TEXT);
     fs.mkdirSync(path.join(fakeHome, '.gurita'));
     // The settings view's pick of a default: Antigravity, the second shipped variant.
@@ -395,7 +395,7 @@ test('a selected variant is remembered per recipe on one mission in workspaceSta
       JSON.stringify({ defaults: [{ recipe: 'First run', name: 'Antigravity', origin: 'shipped' }] }),
     );
     packaged.set('bundled/missions.py', path.join(__dirname, '..', '..', '..', 'core', 'tools', 'missions.py'));
-    packaged.set('bundled/GURITA_USAGE.md', path.join(files, 'GURITA_USAGE.md'));
+    packaged.set('bundled/shipped_recipes.md', path.join(files, 'shipped_recipes.md'));
     workspace.folders = [{ uri: { fsPath: root } }];
     workspace.settings = { ownRecipesFile: path.join(files, 'recipes.md') };
     workspaceState.clear();
@@ -513,10 +513,10 @@ test('the first opening of the settings view runs the check once, every later op
   fs.writeFileSync(stubbed.print, JSON.stringify(CHECK_PRINT) + '\n');
   fs.writeFileSync(path.join(dir, 'plugin_version.txt'), '2.0.0\n');
   const files = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-recipes-'));
-  fs.writeFileSync(path.join(files, 'GURITA_USAGE.md'), SHIPPED_TEXT);
+  fs.writeFileSync(path.join(files, 'shipped_recipes.md'), SHIPPED_TEXT);
   fs.writeFileSync(path.join(files, 'recipes.md'), OWN_TEXT);
   packaged.set('bundled/missions.py', path.join(__dirname, '..', '..', '..', 'core', 'tools', 'missions.py'));
-  packaged.set('bundled/GURITA_USAGE.md', path.join(files, 'GURITA_USAGE.md'));
+  packaged.set('bundled/shipped_recipes.md', path.join(files, 'shipped_recipes.md'));
   packaged.set('harness_check.py', stubbed.script);
   packaged.set('bundled/plugin_version.txt', path.join(dir, 'plugin_version.txt'));
   workspace.folders = [{ uri: { fsPath: root } }];
@@ -614,9 +614,9 @@ test("disabling a harness is stored in the variant store's harness part and leav
   try {
     const root = project(THETA);
     const files = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-recipes-'));
-    fs.writeFileSync(path.join(files, 'GURITA_USAGE.md'), HARNESS_SHIPPED_TEXT);
+    fs.writeFileSync(path.join(files, 'shipped_recipes.md'), HARNESS_SHIPPED_TEXT);
     packaged.set('bundled/missions.py', path.join(__dirname, '..', '..', '..', 'core', 'tools', 'missions.py'));
-    packaged.set('bundled/GURITA_USAGE.md', path.join(files, 'GURITA_USAGE.md'));
+    packaged.set('bundled/shipped_recipes.md', path.join(files, 'shipped_recipes.md'));
     packaged.set('runner.py', path.join(__dirname, '..', '..', 'runner.py'));
     workspace.folders = [{ uri: { fsPath: root } }];
     workspace.settings = { ownRecipesFile: path.join(files, 'recipes.md') };
@@ -740,14 +740,14 @@ test("the settings view's model and effort lists are derived from the recipe lin
   process.env.HOME = fakeHome;
   try {
     const files = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-recipes-'));
-    fs.writeFileSync(path.join(files, 'GURITA_USAGE.md'), HARNESS_SHIPPED_TEXT);
+    fs.writeFileSync(path.join(files, 'shipped_recipes.md'), HARNESS_SHIPPED_TEXT);
     fs.writeFileSync(path.join(files, 'recipes.md'), `${OWN_TEXT}
 ### Codex finish
 \`\`\`
 codex exec "/gurita:finish-mission --mission <path>" -m gpt-5.5;
 \`\`\`
 `);
-    packaged.set('bundled/GURITA_USAGE.md', path.join(files, 'GURITA_USAGE.md'));
+    packaged.set('bundled/shipped_recipes.md', path.join(files, 'shipped_recipes.md'));
     workspace.settings = { ownRecipesFile: path.join(files, 'recipes.md') };
     const store = path.join(fakeHome, '.gurita', 'variants.json');
     fs.mkdirSync(path.dirname(store));
@@ -873,10 +873,10 @@ test('the settings view lists every recipe with its variants and carries out eac
   try {
     const root = project(IOTA);
     const files = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-recipes-'));
-    fs.writeFileSync(path.join(files, 'GURITA_USAGE.md'), HARNESS_SHIPPED_TEXT);
+    fs.writeFileSync(path.join(files, 'shipped_recipes.md'), HARNESS_SHIPPED_TEXT);
     fs.writeFileSync(path.join(files, 'recipes.md'), VARIANT_OWN_TEXT);
     packaged.set('bundled/missions.py', path.join(__dirname, '..', '..', '..', 'core', 'tools', 'missions.py'));
-    packaged.set('bundled/GURITA_USAGE.md', path.join(files, 'GURITA_USAGE.md'));
+    packaged.set('bundled/shipped_recipes.md', path.join(files, 'shipped_recipes.md'));
     packaged.set('runner.py', path.join(__dirname, '..', '..', 'runner.py'));
     workspace.folders = [{ uri: { fsPath: root } }];
     workspace.settings = { ownRecipesFile: path.join(files, 'recipes.md') };
@@ -1016,10 +1016,10 @@ test("a pick in a line's dropdown replaces the value the line carries through th
   try {
     const root = project(KAPPA);
     const files = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-recipes-'));
-    fs.writeFileSync(path.join(files, 'GURITA_USAGE.md'), HARNESS_SHIPPED_TEXT);
+    fs.writeFileSync(path.join(files, 'shipped_recipes.md'), HARNESS_SHIPPED_TEXT);
     fs.writeFileSync(path.join(files, 'recipes.md'), OWN_TEXT);
     packaged.set('bundled/missions.py', path.join(__dirname, '..', '..', '..', 'core', 'tools', 'missions.py'));
-    packaged.set('bundled/GURITA_USAGE.md', path.join(files, 'GURITA_USAGE.md'));
+    packaged.set('bundled/shipped_recipes.md', path.join(files, 'shipped_recipes.md'));
     packaged.set('runner.py', path.join(__dirname, '..', '..', 'runner.py'));
     workspace.folders = [{ uri: { fsPath: root } }];
     workspace.settings = { ownRecipesFile: path.join(files, 'recipes.md') };
@@ -1115,7 +1115,7 @@ test("a pick in a line's dropdown replaces the value the line carries through th
     assert.strictEqual(inputBoxes.length, 0, 'a pick asks for nothing in an input box');
 
     assert.strictEqual(fs.readFileSync(path.join(files, 'recipes.md'), 'utf8'), OWN_TEXT, 'the own recipe file is never written');
-    assert.strictEqual(fs.readFileSync(path.join(files, 'GURITA_USAGE.md'), 'utf8'), HARNESS_SHIPPED_TEXT, 'the shipped file is never written');
+    assert.strictEqual(fs.readFileSync(path.join(files, 'shipped_recipes.md'), 'utf8'), HARNESS_SHIPPED_TEXT, 'the shipped file is never written');
     assert.strictEqual(execFileSync('git', ['status', '--porcelain', '--ignored'], { cwd: root, encoding: 'utf8' }), '', "nothing is written into the project's tree");
   } finally {
     process.env.HOME = home;
@@ -1132,10 +1132,10 @@ test("a pick in a line's harness dropdown rewrites the line onto the picked harn
   try {
     const root = project(SIGMA);
     const files = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-recipes-'));
-    fs.writeFileSync(path.join(files, 'GURITA_USAGE.md'), HARNESS_SHIPPED_TEXT);
+    fs.writeFileSync(path.join(files, 'shipped_recipes.md'), HARNESS_SHIPPED_TEXT);
     fs.writeFileSync(path.join(files, 'recipes.md'), OWN_TEXT);
     packaged.set('bundled/missions.py', path.join(__dirname, '..', '..', '..', 'core', 'tools', 'missions.py'));
-    packaged.set('bundled/GURITA_USAGE.md', path.join(files, 'GURITA_USAGE.md'));
+    packaged.set('bundled/shipped_recipes.md', path.join(files, 'shipped_recipes.md'));
     packaged.set('runner.py', path.join(__dirname, '..', '..', 'runner.py'));
     workspace.folders = [{ uri: { fsPath: root } }];
     workspace.settings = { ownRecipesFile: path.join(files, 'recipes.md') };
@@ -1209,7 +1209,7 @@ test("a pick in a line's harness dropdown rewrites the line onto the picked harn
     assert.strictEqual(inputBoxes.length, 0, 'a pick asks for nothing in an input box');
 
     assert.strictEqual(fs.readFileSync(path.join(files, 'recipes.md'), 'utf8'), OWN_TEXT, 'the own recipe file is never written');
-    assert.strictEqual(fs.readFileSync(path.join(files, 'GURITA_USAGE.md'), 'utf8'), HARNESS_SHIPPED_TEXT, 'the shipped file is never written');
+    assert.strictEqual(fs.readFileSync(path.join(files, 'shipped_recipes.md'), 'utf8'), HARNESS_SHIPPED_TEXT, 'the shipped file is never written');
     assert.strictEqual(execFileSync('git', ['status', '--porcelain', '--ignored'], { cwd: root, encoding: 'utf8' }), '', "nothing is written into the project's tree");
   } finally {
     process.env.HOME = home;
@@ -1250,10 +1250,10 @@ test("the settings view lists the named single-task lines and carries out each l
   try {
     const root = project(LAMBDA);
     const files = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-recipes-'));
-    fs.writeFileSync(path.join(files, 'GURITA_USAGE.md'), HARNESS_SHIPPED_TEXT);
+    fs.writeFileSync(path.join(files, 'shipped_recipes.md'), HARNESS_SHIPPED_TEXT);
     fs.writeFileSync(path.join(files, 'recipes.md'), LINE_OWN_TEXT);
     packaged.set('bundled/missions.py', path.join(__dirname, '..', '..', '..', 'core', 'tools', 'missions.py'));
-    packaged.set('bundled/GURITA_USAGE.md', path.join(files, 'GURITA_USAGE.md'));
+    packaged.set('bundled/shipped_recipes.md', path.join(files, 'shipped_recipes.md'));
     packaged.set('runner.py', path.join(__dirname, '..', '..', 'runner.py'));
     workspace.folders = [{ uri: { fsPath: root } }];
     workspace.settings = { ownRecipesFile: path.join(files, 'recipes.md') };
@@ -1392,7 +1392,7 @@ test("the settings view lists the named single-task lines and carries out each l
     assert.strictEqual(fs.readFileSync(store, 'utf8'), before);
 
     assert.strictEqual(fs.readFileSync(path.join(files, 'recipes.md'), 'utf8'), LINE_OWN_TEXT, 'the own recipe file is never written');
-    assert.strictEqual(fs.readFileSync(path.join(files, 'GURITA_USAGE.md'), 'utf8'), HARNESS_SHIPPED_TEXT, 'the shipped file is never written');
+    assert.strictEqual(fs.readFileSync(path.join(files, 'shipped_recipes.md'), 'utf8'), HARNESS_SHIPPED_TEXT, 'the shipped file is never written');
     assert.strictEqual(execFileSync('git', ['status', '--porcelain', '--ignored'], { cwd: root, encoding: 'utf8' }), '', "nothing is written into the project's tree");
   } finally {
     process.env.HOME = home;
@@ -1482,10 +1482,10 @@ test("every fixed-name button is posted with the variants it can run and the lin
   try {
     const root = project(MU);
     const files = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-recipes-'));
-    fs.writeFileSync(path.join(files, 'GURITA_USAGE.md'), BUTTON_SHIPPED_TEXT);
+    fs.writeFileSync(path.join(files, 'shipped_recipes.md'), BUTTON_SHIPPED_TEXT);
     fs.writeFileSync(path.join(files, 'recipes.md'), BUTTON_OWN_TEXT);
     packaged.set('bundled/missions.py', path.join(__dirname, '..', '..', '..', 'core', 'tools', 'missions.py'));
-    packaged.set('bundled/GURITA_USAGE.md', path.join(files, 'GURITA_USAGE.md'));
+    packaged.set('bundled/shipped_recipes.md', path.join(files, 'shipped_recipes.md'));
     packaged.set('runner.py', path.join(__dirname, '..', '..', 'runner.py'));
     workspace.folders = [{ uri: { fsPath: root } }];
     workspace.settings = { ownRecipesFile: path.join(files, 'recipes.md') };
@@ -1623,10 +1623,10 @@ test("a fixed-name button's dropdown selection is remembered in workspaceState, 
     git(root, 'add', '.');
     git(root, 'commit', '-q', '-m', 'Questions');
     const files = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-recipes-'));
-    fs.writeFileSync(path.join(files, 'GURITA_USAGE.md'), BUTTON_SHIPPED_TEXT);
+    fs.writeFileSync(path.join(files, 'shipped_recipes.md'), BUTTON_SHIPPED_TEXT);
     fs.writeFileSync(path.join(files, 'recipes.md'), SELECTION_OWN_TEXT);
     packaged.set('bundled/missions.py', path.join(__dirname, '..', '..', '..', 'core', 'tools', 'missions.py'));
-    packaged.set('bundled/GURITA_USAGE.md', path.join(files, 'GURITA_USAGE.md'));
+    packaged.set('bundled/shipped_recipes.md', path.join(files, 'shipped_recipes.md'));
     packaged.set('runner.py', path.join(__dirname, '..', '..', 'runner.py'));
     workspace.folders = [{ uri: { fsPath: root } }];
     workspace.settings = { ownRecipesFile: path.join(files, 'recipes.md') };

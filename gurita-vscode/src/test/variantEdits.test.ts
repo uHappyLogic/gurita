@@ -26,7 +26,7 @@ const FIXTURES = path.join(__dirname, '..', '..', 'src', 'test', 'fixtures', 're
 const SHIPPED = path.join(FIXTURES, 'shipped.md');
 const OWN = path.join(FIXTURES, 'own.md');
 const STORE = path.join(FIXTURES, 'store.json');
-const SNIPPETS = path.join(__dirname, '..', '..', '..', 'snippets', 'GURITA_USAGE.md');
+const SHIPPED_RECIPES = path.join(__dirname, '..', '..', 'shipped_recipes.md');
 
 /** The recipe list the two Markdown files yield, before any store is laid over it. */
 function base(): Recipe[] {
@@ -411,7 +411,7 @@ test("a line running a gurita: skill on a known harness is drawn as the skill's 
 });
 
 test('every line of every shipped recipe gets the row its text gives, the slot line keeping its text', () => {
-  const shipped = parseShippedRecipes(fs.readFileSync(SNIPPETS, 'utf8'), SNIPPETS);
+  const shipped = parseShippedRecipes(fs.readFileSync(SHIPPED_RECIPES, 'utf8'), SHIPPED_RECIPES);
   const listed = settingsRecipes(shipped, emptyVariantStore(), '/home/x/.gurita/variants.json', []);
   for (const recipe of listed) {
     for (const variant of recipe.variants) {

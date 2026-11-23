@@ -5,10 +5,10 @@ import * as path from 'node:path';
 import { readLine, readSkill, replaceEffort, replaceModel, rewriteHarness, variantValues } from '../lineValues';
 import { Recipe, SLOT_LINE, isHeadless, parseShippedRecipes } from '../recipes';
 
-const SNIPPETS = path.join(__dirname, '..', '..', '..', 'snippets', 'GURITA_USAGE.md');
+const SHIPPED_RECIPES = path.join(__dirname, '..', '..', 'shipped_recipes.md');
 
 function shippedRecipe(name: string): Recipe {
-  const recipes = parseShippedRecipes(fs.readFileSync(SNIPPETS, 'utf8'), SNIPPETS);
+  const recipes = parseShippedRecipes(fs.readFileSync(SHIPPED_RECIPES, 'utf8'), SHIPPED_RECIPES);
   const found = recipes.find((recipe) => recipe.name === name);
   assert.ok(found, `no shipped recipe named ${name}`);
   return found;
@@ -184,7 +184,7 @@ test('a harness pick rewrites a shipped agy line onto claude in both forms', () 
 });
 
 test('every shipped claude or agy line with both flags rewrites onto the other harness and back to itself, its form, skill, and other words kept', () => {
-  const recipes = parseShippedRecipes(fs.readFileSync(SNIPPETS, 'utf8'), SNIPPETS);
+  const recipes = parseShippedRecipes(fs.readFileSync(SHIPPED_RECIPES, 'utf8'), SHIPPED_RECIPES);
   const lines = recipes.flatMap((recipe) => recipe.variants.flatMap((variant) => variant.lines));
   let rewritten = 0;
   for (const line of lines) {

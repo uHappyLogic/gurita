@@ -10,7 +10,7 @@
 // Open questions and Remaining tasks, chosen from the same count: Remaining tasks when git holds
 // at least one review commit for the mission and no question is open, and Open questions
 // otherwise, a failed git read included; and the recipe list its page shows, out of the recipes
-// read afresh from the shipped snippet file and the person's own recipe file: only those whose
+// read afresh from the shipped recipe file and the person's own recipe file: only those whose
 // declared stage is the step its diagram fills, beside them the additional review round's when
 // derive tasks is filled and follow up tasks' when finish is, and every undeclared recipe, or every
 // recipe when no step is chosen, laid out within that by the page's other rules, the shipped
@@ -650,7 +650,7 @@ async function flushEvents(context: vscode.ExtensionContext, target: vscode.Webv
 }
 
 /**
- * Reads the shipped snippet file and the person's own recipe file into the merged recipe list, the
+ * Reads the shipped recipe file and the person's own recipe file into the merged recipe list, the
  * per-user variant store laid over it.
  */
 function readAllRecipes(context: vscode.ExtensionContext): Recipe[] {
@@ -658,11 +658,11 @@ function readAllRecipes(context: vscode.ExtensionContext): Recipe[] {
   return readRecipes(files.shipped, files.own, files.store);
 }
 
-/** The shipped snippet file, the person's own recipe file, and the per-user variant store file. */
+/** The shipped recipe file, the person's own recipe file, and the per-user variant store file. */
 function recipeFiles(context: vscode.ExtensionContext): { shipped: string; own: string; store: string } {
   const setting = vscode.workspace.getConfiguration('gurita').get<string>('ownRecipesFile');
   const home = os.homedir();
-  return { shipped: context.asAbsolutePath('bundled/GURITA_USAGE.md'), own: ownRecipesFile(setting, home), store: variantStoreFile(home) };
+  return { shipped: context.asAbsolutePath('bundled/shipped_recipes.md'), own: ownRecipesFile(setting, home), store: variantStoreFile(home) };
 }
 
 /** The commands of the harnesses the settings view disabled, read afresh from the variant store file. */
@@ -671,7 +671,7 @@ function readDisabled(): Harness[] {
 }
 
 /**
- * Reads the shipped snippet file and the person's own recipe file into the merged list, with the
+ * Reads the shipped recipe file and the person's own recipe file into the merged list, with the
  * harnesses the settings view disabled, or the cause they could not be read.
  */
 function readRecipeList(context: vscode.ExtensionContext): RecipeRead {
@@ -1154,7 +1154,7 @@ function editList(
 }
 
 /**
- * The recipes and variants the settings view lists, read afresh: the shipped snippet file and the
+ * The recipes and variants the settings view lists, read afresh: the shipped recipe file and the
  * person's own recipe file merged, the variant store laid over them, as `settingsRecipes` lists
  * them, or the cause they could not be read.
  */
@@ -1169,7 +1169,7 @@ function readVariantList(context: vscode.ExtensionContext): VariantsRead {
 }
 
 /**
- * The named single-task lines the settings view lists, read afresh: the shipped snippet file and
+ * The named single-task lines the settings view lists, read afresh: the shipped recipe file and
  * the person's own recipe file merged, the variant store laid over them, as `settingsLines` lists
  * them, or the cause they could not be read.
  */

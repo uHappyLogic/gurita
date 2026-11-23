@@ -18,7 +18,7 @@ import {
 import { VariantStoreError, emptyVariantStore, parseVariantStore, readVariantStore } from '../variantStore';
 
 const FILE = '/home/someone/.gurita/variants.json';
-const SNIPPETS = path.join(__dirname, '..', '..', '..', 'snippets', 'GURITA_USAGE.md');
+const SHIPPED_RECIPES = path.join(__dirname, '..', '..', 'shipped_recipes.md');
 
 /** Lines on each harness, a shell step, the slot line, and a command the extension does not know. */
 const LINES = [
@@ -51,7 +51,7 @@ test('each harness has a model list and one effort list read from the lines, Cod
 
 test("the shipped recipe file's lines give the lists their models and efforts, and no Codex model", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-harness-lists-'));
-  const lists = readHarnessLists(SNIPPETS, path.join(dir, 'recipes.md'), path.join(dir, 'variants.json'));
+  const lists = readHarnessLists(SHIPPED_RECIPES, path.join(dir, 'recipes.md'), path.join(dir, 'variants.json'));
   for (const model of ['fable', 'opus', 'sonnet']) {
     assert.ok(lists.claude.models.includes(model), model);
   }
@@ -123,7 +123,7 @@ test('an overlay field not an array of text is refused, naming the file', () => 
 
 test('the lists are read from the shipped, own, and stored lines, and an edit is written to the variant store file', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-harness-lists-'));
-  const shipped = path.join(dir, 'GURITA_USAGE.md');
+  const shipped = path.join(dir, 'shipped_recipes.md');
   const own = path.join(dir, 'recipes.md');
   const storeFile = path.join(dir, '.gurita', 'variants.json');
   fs.writeFileSync(

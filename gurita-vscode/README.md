@@ -50,8 +50,8 @@ Every Node command runs under Node 22 through nvm, in a subshell, from the repos
   and the page script against a small stand-in for the DOM. Nothing runs inside an editor.
 - `npm run package` runs `vsce package`, which first runs the `vscode:prepublish` script: the
   compile, then `scripts/bundle.js`, the extension's own build step, which copies
-  `core/tools/missions.py` and `snippets/GURITA_USAGE.md` verbatim into `bundled/` and writes
-  `bundled/fixed_lines.tsv` from the `## Fixed console lines` table of
+  `core/tools/missions.py` and the extension's shipped recipe file, `gurita-vscode/shipped_recipes.md`,
+  verbatim into a freshly emptied `bundled/` and writes `bundled/fixed_lines.tsv` from the `## Fixed console lines` table of
   `docs/skill-reference.md`, one `kind<TAB>line` row per table line, and
   `bundled/plugin_version.txt`, the repository's `VERSION` as one line. Every package therefore
   carries the missions tool, the recipes, the fixed lines, and the plugin version of the
@@ -534,10 +534,14 @@ way in the failure state.
 
 ### The shipped recipe file
 
-The package ships `snippets/GURITA_USAGE.md` as `bundled/GURITA_USAGE.md`, read at run time. Only
-the `###` blocks under its one recipe section, the `## Recipes` heading, are recipes, listed in
-the file's order with no heading of their own on the page; the blocks under `## Manual use` are
-for reading only, and the notes on running the `agy` lines stand as prose at the top of the
+The shipped recipes are the extension's own file, `gurita-vscode/shipped_recipes.md`, which the
+package ships as `bundled/shipped_recipes.md`, read at run time. The extension does not read
+`snippets/GURITA_USAGE.md`: that file stays in the repository as a document for running the
+chains by hand, holding the same recipes beside its `## Manual use` blocks with nothing checking
+one copy against the other, and a change to the shipped recipes is made in
+`gurita-vscode/shipped_recipes.md`. Only the `###` blocks under the shipped file's one recipe
+section, the `## Recipes` heading, are recipes, listed in the file's order with no heading of
+their own on the page, and the notes on running the `agy` lines stand as prose at the top of the
 recipe section. Each chain is shipped once, not once per harness: a line is moved onto the other
 harness from its harness dropdown in the settings view (see Variants above), so no recipe is
 grouped into one copy per harness. `Execute tasks` is the one shipped recipe with `####`

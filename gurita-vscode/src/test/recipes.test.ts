@@ -29,7 +29,7 @@ import { WORKFLOW_STEPS, WorkflowStep } from '../workflow';
 const FIXTURES = path.join(__dirname, '..', '..', 'src', 'test', 'fixtures', 'recipes');
 const SHIPPED = path.join(FIXTURES, 'shipped.md');
 const OWN = path.join(FIXTURES, 'own.md');
-const SNIPPETS = path.join(__dirname, '..', '..', '..', 'snippets', 'GURITA_USAGE.md');
+const SHIPPED_RECIPES = path.join(__dirname, '..', '..', 'shipped_recipes.md');
 
 function shipped(): Recipe[] {
   return parseShippedRecipes(fs.readFileSync(SHIPPED, 'utf8'), SHIPPED);
@@ -369,7 +369,7 @@ function stageLineCounts(text: string): Map<string, number> {
 }
 
 test('every shipped chain declares exactly one step, and no shipped recipe declares follow up tasks', () => {
-  const recipes = parseShippedRecipes(fs.readFileSync(SNIPPETS, 'utf8'), SNIPPETS);
+  const recipes = parseShippedRecipes(fs.readFileSync(SHIPPED_RECIPES, 'utf8'), SHIPPED_RECIPES);
   const buttons: readonly string[] = Object.values(BUTTON_RECIPES);
   const chains = recipes.filter((recipe) => !buttons.includes(recipe.name) && !firstVariant(recipe).singleTask);
   assert.deepStrictEqual(
@@ -384,7 +384,7 @@ test('every shipped chain declares exactly one step, and no shipped recipe decla
       ['shipped', 'Finish mission', 'finish'],
     ],
   );
-  const counts = stageLineCounts(fs.readFileSync(SNIPPETS, 'utf8'));
+  const counts = stageLineCounts(fs.readFileSync(SHIPPED_RECIPES, 'utf8'));
   assert.deepStrictEqual([...counts.keys()], recipes.map((recipe) => recipe.name));
   for (const recipe of recipes) {
     const declares = chains.includes(recipe);
@@ -398,7 +398,7 @@ test('every shipped chain declares exactly one step, and no shipped recipe decla
 });
 
 test('no shipped execute variant holds a derive-tasks line, each holding its complete-all-tasks line alone or the slot line', () => {
-  const recipes = parseShippedRecipes(fs.readFileSync(SNIPPETS, 'utf8'), SNIPPETS);
+  const recipes = parseShippedRecipes(fs.readFileSync(SHIPPED_RECIPES, 'utf8'), SHIPPED_RECIPES);
   const execute = recipes.filter((recipe) => recipe.stage === 'execute');
   assert.deepStrictEqual(execute.map((recipe) => recipe.name), ['Execute tasks', 'Execute tasks one at a time']);
   for (const recipe of execute) {
@@ -429,7 +429,7 @@ test('no shipped execute variant holds a derive-tasks line, each holding its com
 });
 
 test('First run, Requirements iteration, Prepare tasks, and Finish mission are each one block with no `####`, and no shipped chain but the mixed-agent one holds a variant named for or run on Antigravity', () => {
-  const recipes = parseShippedRecipes(fs.readFileSync(SNIPPETS, 'utf8'), SNIPPETS);
+  const recipes = parseShippedRecipes(fs.readFileSync(SHIPPED_RECIPES, 'utf8'), SHIPPED_RECIPES);
   const variants = (name: string) =>
     byName(recipes, name).variants.map((variant) => [variant.name, variant.lines.map((line) => line.split(' ')[0])]);
   assert.deepStrictEqual(variants('First run'), [['First run', ['claude', 'claude', 'claude', 'claude']]]);
@@ -462,7 +462,7 @@ test('First run, Requirements iteration, Prepare tasks, and Finish mission are e
 });
 
 test('a stored copy of a shipped variant the file no longer holds stays listed as a stored variant of its recipe', () => {
-  const recipes = parseShippedRecipes(fs.readFileSync(SNIPPETS, 'utf8'), SNIPPETS);
+  const recipes = parseShippedRecipes(fs.readFileSync(SHIPPED_RECIPES, 'utf8'), SHIPPED_RECIPES);
   const file = '/home/someone/.gurita/variants.json';
   const lines = ['agy -p "/gurita:finish-mission --mission <path>" --dangerously-skip-permissions --model "claude-opus-5-5" --effort medium;'];
   const store = parseVariantStore(
@@ -488,7 +488,7 @@ test('a stored copy of a shipped variant the file no longer holds stays listed a
 });
 
 test("every single-task line this repository's rule file names is a shipped single-task heading", () => {
-  const recipes = parseShippedRecipes(fs.readFileSync(SNIPPETS, 'utf8'), SNIPPETS);
+  const recipes = parseShippedRecipes(fs.readFileSync(SHIPPED_RECIPES, 'utf8'), SHIPPED_RECIPES);
   const rules = fs.readFileSync(path.join(__dirname, '..', '..', '..', 'task_line_rules.txt'), 'utf8');
   const named = new Set(
     rules
@@ -588,7 +588,7 @@ test('the stage filter holds the shipped recipes, the own group, and the unfilla
 });
 
 test('each step lists exactly the shipped chains that fit it, and no step chosen lists every chain', () => {
-  const recipes = parseShippedRecipes(fs.readFileSync(SNIPPETS, 'utf8'), SNIPPETS);
+  const recipes = parseShippedRecipes(fs.readFileSync(SHIPPED_RECIPES, 'utf8'), SHIPPED_RECIPES);
   const at = (step: WorkflowStep | undefined) =>
     pageRecipes(stageRecipes(recipes, step), ['path']).map((entry) => [entry.group, entry.name]);
   const review = [
@@ -775,8 +775,8 @@ test('a discuss-new-task recipe holds the issue description as a known placehold
   assert.match(short.cause, /has no value for: <issue description>\./);
 });
 
-test('the shipped snippet file carries every button recipe as one Claude Code block, discuss-new-task its one interactive line', () => {
-  const file = path.join(__dirname, '..', '..', '..', 'snippets', 'GURITA_USAGE.md');
+test('the shipped recipe file carries every button recipe as one Claude Code block, discuss-new-task its one interactive line', () => {
+  const file = path.join(__dirname, '..', '..', 'shipped_recipes.md');
   const recipes = parseShippedRecipes(fs.readFileSync(file, 'utf8'), file);
   for (const name of Object.values(BUTTON_RECIPES)) {
     assert.strictEqual(byName(recipes, name).group, 'shipped');
@@ -794,7 +794,7 @@ test('the shipped snippet file carries every button recipe as one Claude Code bl
 });
 
 test('the shipped discuss-open-question recipe carries the optional note directly after the Short Title', () => {
-  const file = path.join(__dirname, '..', '..', '..', 'snippets', 'GURITA_USAGE.md');
+  const file = path.join(__dirname, '..', '..', 'shipped_recipes.md');
   const recipes = parseShippedRecipes(fs.readFileSync(file, 'utf8'), file);
   const recipe = runs(recipes, BUTTON_RECIPES.discussQuestion);
   assert.deepStrictEqual(recipe.lines, [
