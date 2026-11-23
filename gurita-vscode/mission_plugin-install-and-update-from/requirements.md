@@ -110,5 +110,9 @@ Nothing in the extension installs or updates the plugin on any harness, and noth
 
 - **Hands-on verification.** Before any code is built on them, the mission runs every install, update, and marketplace command it will use against a separate, throwaway configuration home per harness: an overridden config directory where the CLI honours one (`CLAUDE_CONFIG_DIR` for Claude Code, `CODEX_HOME` for Codex) and an overridden `HOME` for Antigravity's `~/.gemini/config/plugins/gurita`, with a scratch project directory standing in for the project root at Claude Code's project and local scopes. The runs fetch from the real distribution repositories, each command's print, prompts, exit status, and duration are observed, and the findings are recorded as dated facts in the mission's starting state. The real installations on the maintainer's machine are left untouched.
 
+### Codex update
+
+- **Update steps.** A Codex update moves the marketplace registration to the newer tag by removing it and adding it again, and then installs the plugin again over the copy still standing: `codex plugin marketplace remove gurita`, then `codex plugin marketplace add uHappyLogic/gurita-codex --ref <tag>` (or `uHappyLogic/gurita-codex@<tag>`), then `codex plugin add gurita@gurita`, run in that order in one run, each behind the previous one's success. The update itself never removes the installed plugin.
+
 ## Out of Scope
 
