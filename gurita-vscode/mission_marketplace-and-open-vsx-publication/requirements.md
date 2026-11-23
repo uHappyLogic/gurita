@@ -88,6 +88,8 @@ No Marketplace publisher, Open VSX namespace, or token for either is recorded as
 
 - **First published version.** The first publication carries a pre-1.0 version above `0.1.0`, such as `0.2.0`, written into the manifest and both sites of `package-lock.json` before it is packaged. Versioning stays the extension's own, separate from the plugin's `VERSION`, and the extension stays in the 0.x range that signals an interface still settling.
 
+- **Order with the plugin-install mission.** No ordering between this mission and `gurita-vscode/mission_plugin-install-and-update-from/` is recorded as a decision: the scope gate already orders the two, since the other mission is started and holds `gurita-vscode/` until its finish, so this mission's task entry, and with it the release skill and the first publication, can only follow that finish. The published package carries the install and update feature already on `main`, the listing README keeps that feature's documentation (`### Installing and updating the plugin`) as part of the Settings window's use, and the manifest description and the demo GIF stay exactly as their own decisions fix them, with no wording added to advertise the feature.
+
 ### Publisher and namespace
 
 - **Open VSX namespace ownership.** The mission claims ownership of the `uhappylogic` namespace on Open VSX, but only as far as filing the claim. The claim is filed with the first maintainer-only tasks, directly after the namespace is created, and that task counts as done once the claim's issue exists. The mission records nothing further about it and ends whether or not the claim has been granted: publication does not wait for the claim, and granting is left to Open VSX outside the mission.
