@@ -49,8 +49,13 @@
 // variant, as the extension posts them, a variant none of whose lines is readable showing its name
 // alone, carries that variant's lines as written in its hover text, and starts that variant's
 // chain for the page's mission when clicked, and a selected variant holding a placeholder the
-// extension does not know is shown as a non-runnable entry naming it and its file. The buttons
-// outside the recipe list, which run a recipe by its fixed name, carry no dropdown.
+// extension does not know is shown as a non-runnable entry naming it and its file. The seven buttons
+// outside the recipe list, which run a recipe by its fixed name, carry no dropdown, and each shows
+// what it runs in the recipe list's form, as the extension posts it with the pages and with the
+// failure state: its name with the distinct harnesses, models, and efforts of its recipe's
+// default, the one picked in the settings view, with that variant's lines as written in its hover
+// text, and its name alone, with a hover text saying what it does, when the recipe could not be
+// read or run, a variant none of whose lines is readable also showing its name alone.
 // A looped recipe's button asks the extension for its preview instead, drawn on the page beneath
 // the recipes: every remaining task with the line the rules give it or as unresolved, naming the
 // missing line, and above them what the runner said about a missing or unreadable rule file,
@@ -209,6 +214,25 @@ declare function acquireVsCodeApi(): VsCodeApi;
 
   type RecipePart = { state: 'read'; recipes: PageRecipe[] } | { state: 'failed'; cause: string };
 
+  /** One of the seven buttons outside the recipe list, each running the recipe of its fixed name. */
+  type FixedButton =
+    | 'discussQuestion'
+    | 'answerQuestion'
+    | 'answerWithRecommendation'
+    | 'answerWithAlternative'
+    | 'discussGoal'
+    | 'defineMission'
+    | 'discussTask';
+
+  /** What a fixed-name button runs, as the extension posts it: its default variant's lines and their values. */
+  interface FixedButtonEntry {
+    lines: string[];
+    values: VariantValues;
+  }
+
+  /** What each fixed-name button runs, by the button; a button whose recipe cannot be read or run is left out. */
+  type FixedButtons = Partial<Record<FixedButton, FixedButtonEntry>>;
+
   interface PreviewTask {
     state: 'resolved' | 'missing';
     name: string;
@@ -319,8 +343,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
     | { state: 'failed'; cause: string };
 
   type PaneMessage =
-    | { type: 'live'; missions: Mission[]; running: string[] }
-    | { type: 'liveFailure'; cause: string }
+    | { type: 'live'; missions: Mission[]; running: string[]; buttons?: FixedButtons }
+    | { type: 'liveFailure'; cause: string; buttons?: FixedButtons }
     | { type: 'running'; missions: string[] }
     | { type: 'preview'; mission: string; recipe: string; lines: string[]; names: string[]; result: PreviewRead }
     | { type: 'loopStarted'; mission: string }
@@ -392,8 +416,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
     plugin: 'Gurita plugin not installed',
     version: 'Installed version differs from the packaged one',
   };
-  /** The buttons on a question's card, each with its label and hover text. */
-  const QUESTION_BUTTONS: [string, string, string][] = [
+  /** The buttons on a question's card, each with its label and the hover text it shows while its recipe cannot be read. */
+  const QUESTION_BUTTONS: [FixedButton, string, string][] = [
     ['discussQuestion', 'Discuss', 'Type an optional note and open an interactive discussion of this question'],
     ['answerQuestion', 'Answer', 'Record an answer you type as the decision'],
     ['answerWithRecommendation', 'Answer with recommendation', "Record this question's recommendation as the decision"],
@@ -432,6 +456,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
   let drawn: 'nothing' | 'live' | 'failure' = 'nothing';
   /** Each mission's preview, by its path, while it stands on the page. */
   const previews = new Map<string, Preview>();
+  /** What each fixed-name button runs, as the extension last posted it with the pages or the failure state. */
+  let fixed: FixedButtons = {};
   /** Whether the settings view stands beneath the tab row in place of the mission page or the failure state. */
   let settingsShown = false;
   /** The harness check the extension last posted, drawn by the settings view; undefined until one is posted. */
@@ -478,6 +504,24 @@ declare function acquireVsCodeApi(): VsCodeApi;
   function action(text: string, className: string, busy: boolean, onClick: () => void): HTMLButtonElement {
     const node = button(text, className, onClick);
     node.disabled = busy;
+    return node;
+  }
+
+  /**
+   * A fixed-name button, in the form the recipe list's buttons take: its name, then the values its
+   * recipe's default variant carries, as the extension posts them, when any is readable, with that
+   * variant's lines as written in its hover text, and its name alone with `hover` as its hover text
+   * when its recipe could not be read or run. Drawn disabled while `busy`, when given.
+   */
+  function fixedButton(key: FixedButton, label: string, hover: string, className: string, busy: boolean | undefined, onClick: () => void): HTMLButtonElement {
+    const node = busy === undefined ? button('', className, onClick) : action('', className, busy, onClick);
+    node.append(element('span', label, 'recipe-name'));
+    const entry = fixed[key];
+    const values = entry === undefined ? '' : valuesLabel(entry.values);
+    if (values !== '') {
+      node.append(element('span', values, 'recipe-values'));
+    }
+    node.title = entry === undefined ? hover : entry.lines.join('\n');
     return node;
   }
 
@@ -1023,10 +1067,12 @@ declare function acquireVsCodeApi(): VsCodeApi;
     const refresh = button('Refresh', 'control', () => vscode.postMessage({ type: 'refresh' }));
     refresh.title = 'Re-read the live missions and their documents';
     const starting = element('div', undefined, 'starting');
-    const discuss = button('New mission', 'recipe', () => vscode.postMessage({ type: 'missionButton', button: 'discussGoal' }));
-    discuss.title = 'Type a goal and open an interactive discussion of it';
-    const define = button('Define mission', 'recipe', () => vscode.postMessage({ type: 'missionButton', button: 'defineMission' }));
-    define.title = 'Type a goal and its scope and define the mission';
+    const discuss = fixedButton('discussGoal', 'New mission', 'Type a goal and open an interactive discussion of it', 'recipe', undefined, () =>
+      vscode.postMessage({ type: 'missionButton', button: 'discussGoal' }),
+    );
+    const define = fixedButton('defineMission', 'Define mission', 'Type a goal and its scope and define the mission', 'recipe', undefined, () =>
+      vscode.postMessage({ type: 'missionButton', button: 'defineMission' }),
+    );
     starting.append(discuss, define);
     const settings = button(SETTINGS_LABEL, 'control', () => showSettings(true));
     settings.title = 'Open the settings view';
@@ -1140,11 +1186,11 @@ declare function acquireVsCodeApi(): VsCodeApi;
     title.title = question.id;
     const actions = element('div', undefined, 'card-actions');
     for (const [kind, label, hover] of QUESTION_BUTTONS) {
-      const run = action(label, 'action', busy, () =>
-        vscode.postMessage({ type: 'questionButton', button: kind, mission: mission.path, question: question.id }),
+      actions.append(
+        fixedButton(kind, label, hover, 'action', busy, () =>
+          vscode.postMessage({ type: 'questionButton', button: kind, mission: mission.path, question: question.id }),
+        ),
       );
-      run.title = hover;
-      actions.append(run);
     }
     head.append(title, actions);
     body.append(head);
@@ -1170,11 +1216,11 @@ declare function acquireVsCodeApi(): VsCodeApi;
         const entry = element('div', undefined, picked ? 'alternative picked' : 'alternative');
         const line = element('div', undefined, 'alternative-head');
         line.append(element('h6', picked ? `${alternative.id} (picked)` : alternative.id));
-        const answer = action('Answer with this alternative', 'action', busy, () =>
-          vscode.postMessage({ type: 'alternativeButton', mission: mission.path, question: question.id, alternative: alternative.id }),
+        line.append(
+          fixedButton('answerWithAlternative', 'Answer with this alternative', `Record ${alternative.id} as the decision`, 'action', busy, () =>
+            vscode.postMessage({ type: 'alternativeButton', mission: mission.path, question: question.id, alternative: alternative.id }),
+          ),
         );
-        answer.title = `Record ${alternative.id} as the decision`;
-        line.append(answer);
         entry.append(line);
         if (alternative.text !== '') {
           entry.append(element('p', alternative.text));
@@ -1270,9 +1316,11 @@ declare function acquireVsCodeApi(): VsCodeApi;
     view.setAttribute('role', 'tabpanel');
     view.setAttribute('aria-label', 'Remaining tasks');
     const head = element('div', undefined, 'controls');
-    const add = action('New task', 'action', busy, () => vscode.postMessage({ type: 'taskButton', mission: mission.path }));
-    add.title = 'Type an issue and open an interactive discussion of it into tasks for this mission';
-    head.append(add);
+    head.append(
+      fixedButton('discussTask', 'New task', 'Type an issue and open an interactive discussion of it into tasks for this mission', 'action', busy, () =>
+        vscode.postMessage({ type: 'taskButton', mission: mission.path }),
+      ),
+    );
     view.append(head);
     const part = mission.tasks;
     if (part.state === 'failed') {
@@ -1577,6 +1625,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
     if (message.type === 'live') {
       missions = message.missions;
       running = new Set(message.running ?? []);
+      fixed = message.buttons ?? {};
       drawn = 'live';
       for (const mission of [...previews.keys()]) {
         if (!missions.some((each) => each.path === mission)) {
@@ -1585,6 +1634,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
       }
       draw();
     } else if (message.type === 'liveFailure') {
+      fixed = message.buttons ?? {};
       drawn = 'failure';
       picked = undefined;
       drawFailure(message.cause);

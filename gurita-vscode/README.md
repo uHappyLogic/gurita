@@ -293,9 +293,9 @@ Each variant has these controls, every one carried out in your per-user variant 
 A duplicate's name and a new name are each asked for in VS Code's own input box, one box per
 value; the box refuses an empty name and one another variant of the recipe already carries, and
 the name is kept with its outer spaces trimmed. Pressing Escape changes nothing. Every edit is
-shown at once in the view and on the mission pages, whose recipe lists are read again, and the
-fixed-name buttons, which read their recipe afresh at every click, run the changed default at
-their next click. An edit that cannot be made, or a variant store that cannot be read or written,
+shown at once in the view and on the mission pages, whose recipe lists are read again, the
+fixed-name buttons' labels and hover text included, in the failure state too; those buttons also
+read their recipe afresh at every click, so they run the default their label shows. An edit that cannot be made, or a variant store that cannot be read or written,
 is told in an error notification and writes nothing. When the variants cannot be read, the view
 says so with the cause beneath it.
 
@@ -465,6 +465,16 @@ page's last list did not show selected starts nothing. The buttons that run a re
 name (on the question card and its alternatives, **New task**, **New mission**, and **Define
 mission**) carry no dropdown and always run their recipe's default, and their recipes are never
 listed on the page.
+
+Each of those seven buttons shows what it runs in the same form as a recipe button: its name and,
+beneath it, the distinct harnesses, models, and efforts of its recipe's default, the variant picked
+in the settings view or, while none is picked, the first listed, with that variant's lines as
+written in its hover text, so **Define mission** on the shipped `define-mission-goal` reads
+`claude · sonnet · medium`. A default whose lines carry no readable value shows the name alone,
+and so does a button whose recipe cannot be read or run (no recipe of its name, or a default
+holding a placeholder the button has no value for), its hover text then saying what the button
+does. Disabling a harness does not change these labels, since it does not reach these buttons.
+The two mission-starting buttons are drawn this way in the failure state too.
 
 ### The shipped recipe file
 

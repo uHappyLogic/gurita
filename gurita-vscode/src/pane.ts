@@ -31,6 +31,10 @@
 // and a recipe or variant the latest answer did not list, selected, on that mission's page starts
 // nothing. The
 // buttons outside the chains, untouched by the step, each run the default variant of the recipe of its fixed name, its shipped variants and those an own recipe of the same name adds, the variant store laid over them, read afresh at the click,
+// and each is posted with the pages and with the failure state as what that default runs, its
+// lines and the distinct harnesses, models, and efforts they carry, which the button's label and
+// hover text show, a button whose recipe cannot be read or run left out so it shows its name
+// alone; they run
 // through the same run path: on a question's card the discuss, answer, and answer-with-
 // recommendation buttons, on an alternative on that card the answer-with-alternative button,
 // and on the pane at the tab row's end, in its failure state too, the two mission-starting
@@ -95,9 +99,9 @@
 // pick in its dropdowns as a variant's line pick is. A stored line reaches the merged recipe list
 // under its name, so the looped run's lines, the rule file, and the override list see it as any
 // named line. Every edit posts the variant and line lists and the harness lists
-// again, and the pages with their recipes re-read, so the mission pages' dropdowns show it at
-// once and the fixed-name buttons, which read their recipe afresh at each click, at the next
-// click. The
+// again, and the pages with their recipes re-read, or the failure state again while it stands, so
+// the mission pages' dropdowns and the fixed-name buttons' labels show it at once, the buttons
+// reading their recipe afresh at each click too. The
 // extension posts the
 // paths of the missions with a running runner to the page when a run starts and when its terminal closes, and
 // with every redraw, so a hidden pane shown again draws them too; a click that still reaches the
@@ -166,7 +170,7 @@ import {
   readHarnessStates,
   setHarnessEnabled,
 } from './harnessSettings';
-import type { Harness } from './lineValues';
+import { Harness, VariantValues, variantValues } from './lineValues';
 import { FileEventKind, RefreshBatch, RefreshQueue, WATCHED_PATTERN, eventEffect } from './refresh';
 import { OPTIONAL_PLACEHOLDERS } from './placeholders';
 import { CHECK_SCRIPT, CheckResult, HARNESSES, PLUGIN_VERSION_FILE, readPackagedVersion, runHarnessCheck } from './harnessCheck';
@@ -238,6 +242,20 @@ type LinesRead = ({ state: 'read' } & SettingsLines) | { state: 'failed'; cause:
 /** The recipe list one mission's page shows, or the cause the recipes could not be read. */
 type RecipePart = { state: 'read'; recipes: PageRecipe[] } | { state: 'failed'; cause: string };
 
+/** One of the seven buttons outside the recipe list, each running the recipe of its fixed name. */
+type FixedButton = keyof typeof BUTTON_RECIPES;
+
+/** What a fixed-name button runs, as its label and hover text show it: its default variant's lines and their values. */
+interface FixedButtonEntry {
+  /** The variant's lines as written, placeholders included. */
+  lines: string[];
+  /** The harnesses, models, and efforts its lines carry, which the button shows with its name. */
+  values: VariantValues;
+}
+
+/** What each fixed-name button runs, by the button; a button whose recipe cannot be read or run is left out. */
+type FixedButtons = Partial<Record<FixedButton, FixedButtonEntry>>;
+
 /** A message the extension posts to the page. */
 type PaneMessage =
   | {
@@ -250,8 +268,15 @@ type PaneMessage =
       missions: ({ path: string; state: string; title: string } & MissionDocuments & MissionWorkflow & { recipes: RecipePart })[];
       /** The paths of the missions with a running runner, whose pages are drawn as running. */
       running: string[];
+      /** What each fixed-name button runs, which its label and hover text show. */
+      buttons: FixedButtons;
     }
-  | { type: 'liveFailure'; cause: string }
+  | {
+      type: 'liveFailure';
+      cause: string;
+      /** What each fixed-name button runs, the two mission-starting buttons drawn in the failure state too. */
+      buttons: FixedButtons;
+    }
   | {
       type: 'running';
       /** The paths of the missions with a running runner, whose pages are drawn as running. */
@@ -310,6 +335,9 @@ interface Current {
 let panel: vscode.WebviewPanel | undefined;
 let posted: Posted | undefined;
 let current: Current | undefined;
+
+/** The cause of the failure state the latest answer posted, kept while it stands so an edit can post it again. */
+let failure: string | undefined;
 
 /** The watcher over the mission documents, and the project root it was created over. */
 let watcher: { root: string; disposables: vscode.Disposable[] } | undefined;
@@ -442,6 +470,7 @@ export function openMissionPane(context: vscode.ExtensionContext): void {
         panel = undefined;
         posted = undefined;
         current = undefined;
+        failure = undefined;
         stale = false;
         previews.clear();
         harnessCheck = undefined;
@@ -639,13 +668,58 @@ async function answer(context: vscode.ExtensionContext, target: vscode.WebviewPa
       workflows: new Map(read.missions.map((mission, index) => [mission.path, workflows[index]])),
       recipes: readRecipeList(context),
     };
+    failure = undefined;
     message = publish(context, current);
   } else {
     posted = undefined;
     current = undefined;
-    message = { type: 'liveFailure', cause: read.cause };
+    failure = read.cause;
+    message = failureMessage(context, read.cause);
   }
   await post(target, message);
+}
+
+/** The failure state's message for `cause`, with what each fixed-name button runs, the recipes read afresh. */
+function failureMessage(context: vscode.ExtensionContext, cause: string): PaneMessage {
+  return { type: 'liveFailure', cause, buttons: fixedButtons(readRecipeList(context)) };
+}
+
+/**
+ * Posts the pages again after an edit in the settings view, their recipes re-read, so the recipe
+ * list's dropdowns and the fixed-name buttons' labels show it at once: the mission pages when the
+ * latest answer drew them, and the failure state, its buttons re-read, when it drew that.
+ */
+async function postPages(context: vscode.ExtensionContext, target: vscode.WebviewPanel): Promise<void> {
+  if (panel !== target) {
+    return;
+  }
+  if (current !== undefined) {
+    current.recipes = readRecipeList(context);
+    await post(target, publish(context, current));
+  } else if (failure !== undefined) {
+    await post(target, failureMessage(context, failure));
+  }
+}
+
+/**
+ * What each of the seven fixed-name buttons runs, out of the merged list `read`: the lines of its
+ * recipe's default variant, the default picked in the settings view or else the first listed,
+ * with the distinct harnesses, models, and efforts they carry. A button whose recipe cannot be
+ * read or run, as its click would refuse it, is left out and shows its name alone. Disabling a
+ * harness does not reach the buttons, so every variant counts.
+ */
+function fixedButtons(read: RecipeRead): FixedButtons {
+  const buttons: FixedButtons = {};
+  if (read.state === 'failed') {
+    return buttons;
+  }
+  for (const key of Object.keys(BUTTON_RECIPES) as FixedButton[]) {
+    const found = buttonRecipe(read.recipes, BUTTON_RECIPES[key], BUTTON_PLACEHOLDERS[key]);
+    if (found.state === 'found') {
+      buttons[key] = { lines: [...found.variant.lines], values: variantValues(found.variant.lines) };
+    }
+  }
+  return buttons;
 }
 
 /**
@@ -683,7 +757,7 @@ function publish(context: vscode.ExtensionContext, shown: Current): PaneMessage 
     recipes: new Map(missions.map((mission) => [mission.path, mission.recipes.state === 'read' ? mission.recipes.recipes : []])),
     questions,
   };
-  return { type: 'live', missions, running: runningMissions() };
+  return { type: 'live', missions, running: runningMissions(), buttons: fixedButtons(shown.recipes) };
 }
 
 /**
@@ -808,10 +882,7 @@ async function enableHarness(context: vscode.ExtensionContext, target: vscode.We
     );
   }
   await post(target, { type: 'harnessSettings', settings: readHarnessSettings() });
-  if (current !== undefined && panel === target) {
-    current.recipes = readRecipeList(context);
-    await post(target, publish(context, current));
-  }
+  await postPages(context, target);
 }
 
 /** Each harness's model and effort lists, read afresh, or the cause they could not be read. */
@@ -1301,10 +1372,7 @@ async function postVariantEdit(context: vscode.ExtensionContext, target: vscode.
   await post(target, { type: 'variants', variants: readVariantList(context) });
   await post(target, { type: 'singleTaskLines', lines: readLineList(context) });
   await post(target, { type: 'harnessLists', lists: readListsOf(context) });
-  if (current !== undefined && panel === target) {
-    current.recipes = readRecipeList(context);
-    await post(target, publish(context, current));
-  }
+  await postPages(context, target);
 }
 
 async function post(target: vscode.WebviewPanel, message: PaneMessage): Promise<void> {
@@ -1421,6 +1489,17 @@ const MISSION_BUTTONS: Record<MissionButton, { recipe: string; typed: string[] }
   defineMission: { recipe: BUTTON_RECIPES.defineMission, typed: ['goal', 'scope'] },
 };
 
+/** The placeholders each fixed-name button holds a value for, its click and its label alike. */
+const BUTTON_PLACEHOLDERS: Record<FixedButton, readonly string[]> = {
+  discussQuestion: ['path', 'Short Title', ...QUESTION_BUTTONS.discussQuestion.typed],
+  answerQuestion: ['path', 'Short Title', ...QUESTION_BUTTONS.answerQuestion.typed],
+  answerWithRecommendation: ['path', 'Short Title', ...QUESTION_BUTTONS.answerWithRecommendation.typed],
+  answerWithAlternative: ['path', 'Short Title', 'Alternative Id'],
+  discussGoal: MISSION_BUTTONS.discussGoal.typed,
+  defineMission: MISSION_BUTTONS.defineMission.typed,
+  discussTask: ['path', 'issue description'],
+};
+
 /** The input box's prompt for each typed value. */
 const PROMPTS: Record<string, { prompt: string; placeHolder?: string }> = {
   'answer text': { prompt: 'The answer, recorded as the decision' },
@@ -1507,7 +1586,7 @@ async function runQuestionButton(
   if (refuseWhileRunning(mission)) {
     return;
   }
-  const recipe = readButtonRecipe(context, spec.recipe, ['path', 'Short Title', ...spec.typed]);
+  const recipe = readButtonRecipe(context, spec.recipe, BUTTON_PLACEHOLDERS[button]);
   if (recipe === undefined) {
     return;
   }
@@ -1530,7 +1609,7 @@ function runAlternativeButton(context: vscode.ExtensionContext, mission: string,
   if (refuseWhileRunning(mission)) {
     return;
   }
-  const recipe = readButtonRecipe(context, BUTTON_RECIPES.answerWithAlternative, ['path', 'Short Title', 'Alternative Id']);
+  const recipe = readButtonRecipe(context, BUTTON_RECIPES.answerWithAlternative, BUTTON_PLACEHOLDERS.answerWithAlternative);
   if (recipe === undefined) {
     return;
   }
@@ -1553,7 +1632,7 @@ async function runTaskButton(context: vscode.ExtensionContext, mission: string):
   if (refuseWhileRunning(mission)) {
     return;
   }
-  const recipe = readButtonRecipe(context, BUTTON_RECIPES.discussTask, ['path', 'issue description']);
+  const recipe = readButtonRecipe(context, BUTTON_RECIPES.discussTask, BUTTON_PLACEHOLDERS.discussTask);
   if (recipe === undefined) {
     return;
   }
@@ -1591,7 +1670,7 @@ async function runMissionButton(context: vscode.ExtensionContext, button: Missio
   if (spec === undefined) {
     return;
   }
-  const recipe = readButtonRecipe(context, spec.recipe, spec.typed);
+  const recipe = readButtonRecipe(context, spec.recipe, BUTTON_PLACEHOLDERS[button]);
   if (recipe === undefined) {
     return;
   }
@@ -1695,7 +1774,7 @@ function pageShell(webview: vscode.Webview, script: vscode.Uri): string {
   .card h4, .card h5, .card h6, .card p, .card ul { margin: 0; padding: 0; }
   .card ul { list-style: none; }
   .card h4, .card h5, .card h6 { font-size: 1em; }
-  .card-head { display: flex; align-items: center; gap: 0.6em; flex-wrap: nowrap; height: 2em; }
+  .card-head { display: flex; align-items: center; gap: 0.6em; flex-wrap: nowrap; min-height: 2em; }
   .card-head .short-title { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .card-actions { display: flex; gap: 0.3em; flex-shrink: 0; }
   .card .slot { margin: 0; padding: 0.5em 0 0; border-top: 1px solid var(--vscode-panel-border); margin-top: 0.5em; }
@@ -1716,7 +1795,7 @@ function pageShell(webview: vscode.Webview, script: vscode.Uri): string {
   select.recipe-variant { background: var(--vscode-dropdown-background); color: var(--vscode-dropdown-foreground); border: 1px solid var(--vscode-dropdown-border); font: inherit; max-width: 14em; }
   button.recipe { background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; padding: 0.3em 0.9em; cursor: pointer; font: inherit; }
   button.recipe:hover:not(:disabled) { background: var(--vscode-button-hoverBackground); }
-  button.recipe .recipe-values { display: block; font-size: 0.85em; opacity: 0.8; }
+  button.recipe .recipe-values, button.action .recipe-values { display: block; font-size: 0.85em; opacity: 0.8; }
   .recipe-unknown { border: 1px dashed var(--vscode-inputValidation-warningBorder); padding: 0.3em 0.9em; opacity: 0.85; }
   .preview { border-top: 1px solid var(--vscode-panel-border); margin-top: 1em; }
   .preview-tasks { border-collapse: collapse; margin: 0.5em 0; width: 100%; }

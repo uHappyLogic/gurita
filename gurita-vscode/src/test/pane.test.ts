@@ -261,76 +261,82 @@ async function postedOf(type: string, from: number): Promise<Record<string, unkn
 }
 
 test("the pane posts each page's recipes in the shipped file's order, then its own, each with the values its first variant's lines carry", async () => {
-  const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-')));
-  git(root, 'init', '-q');
-  fs.mkdirSync(path.join(root, GAMMA), { recursive: true });
-  fs.writeFileSync(path.join(root, GAMMA, 'requirements.md'), '# Gamma mission\n\n## Goal\n\nA goal.\n');
-  fs.writeFileSync(path.join(root, GAMMA, 'open_questions.xml'), '<open-questions/>\n');
-  fs.writeFileSync(path.join(root, GAMMA, 'TASKS_TODO.md'), '# TASKS TODO\n');
-  git(root, 'add', '.');
-  git(root, 'commit', '-q', '-m', `Mission-definition: ${GAMMA}`);
-  const files = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-recipes-'));
-  fs.writeFileSync(path.join(files, 'GURITA_USAGE.md'), SHIPPED_TEXT);
-  fs.writeFileSync(path.join(files, 'recipes.md'), OWN_TEXT);
-  packaged.set('bundled/missions.py', path.join(__dirname, '..', '..', '..', 'core', 'tools', 'missions.py'));
-  packaged.set('bundled/GURITA_USAGE.md', path.join(files, 'GURITA_USAGE.md'));
-  workspace.folders = [{ uri: { fsPath: root } }];
-  workspace.settings = { ownRecipesFile: path.join(files, 'recipes.md') };
-  const from = posted.length;
-  send({ type: 'ready' });
-  const live = (await postedOf('live', from)) as { missions: { path: string; recipes: { state: string; recipes: unknown[] } }[] };
-  assert.deepStrictEqual(live.missions.map((each) => each.path), [GAMMA]);
-  const recipes = live.missions[0].recipes;
-  assert.strictEqual(recipes.state, 'read');
-  assert.deepStrictEqual(recipes.recipes, [
-    {
-      kind: 'runnable',
-      name: 'First run',
-      group: 'shipped',
-      lines: [
-        'claude -p "/gurita:review-mission-requirements --mission <path>" --model "fable" --effort xhigh;',
-        'claude -p "/gurita:provide-alternatives-to-all-open-questions --mission <path>" --model "opus" --effort high;',
-        'claude -p "/gurita:recommend-all-open-questions --mission <path>" --model "fable" --effort xhigh;',
-      ],
-      values: { harnesses: ['claude'], models: ['fable', 'opus'], efforts: ['xhigh', 'high'] },
-      variants: [
-        { name: 'Claude Code', own: false },
-        { name: 'Antigravity', own: false },
-        { name: 'First run', own: true },
-      ],
-      selected: 0,
-    },
-    {
-      kind: 'looped',
-      name: 'Execute tasks one at a time',
-      group: 'shipped',
-      lines: ['<single-task line>'],
-      values: { harnesses: [], models: [], efforts: [] },
-      variants: [{ name: 'Execute tasks one at a time', own: false }],
-      selected: 0,
-    },
-    {
-      kind: 'runnable',
-      name: 'Mixed review',
-      group: 'shipped',
-      lines: ['agy -p "/gurita:review-mission-requirements --mission <path>" --model "gemini-4-argon" --effort medium;'],
-      values: { harnesses: ['agy'], models: ['gemini-4-argon'], efforts: ['medium'] },
-      variants: [{ name: 'Mixed review', own: false }],
-      selected: 0,
-    },
-    {
-      kind: 'runnable',
-      name: 'Mine everywhere',
-      group: 'own',
-      lines: ['echo <path>'],
-      values: { harnesses: [], models: [], efforts: [] },
-      variants: [{ name: 'Mine everywhere', own: true }],
-      selected: 0,
-    },
-  ]);
-  const count = created.length;
-  send({ type: 'runRecipe', mission: GAMMA, recipe: 'First run', variant: 'Claude Code' });
-  assert.deepStrictEqual(created.slice(count).map((terminal) => terminal.name), [`Gurita: First run (${GAMMA})`], 'a click runs the listed variant');
+  const home = process.env.HOME;
+  process.env.HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-home-'));
+  try {
+    const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-')));
+    git(root, 'init', '-q');
+    fs.mkdirSync(path.join(root, GAMMA), { recursive: true });
+    fs.writeFileSync(path.join(root, GAMMA, 'requirements.md'), '# Gamma mission\n\n## Goal\n\nA goal.\n');
+    fs.writeFileSync(path.join(root, GAMMA, 'open_questions.xml'), '<open-questions/>\n');
+    fs.writeFileSync(path.join(root, GAMMA, 'TASKS_TODO.md'), '# TASKS TODO\n');
+    git(root, 'add', '.');
+    git(root, 'commit', '-q', '-m', `Mission-definition: ${GAMMA}`);
+    const files = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-recipes-'));
+    fs.writeFileSync(path.join(files, 'GURITA_USAGE.md'), SHIPPED_TEXT);
+    fs.writeFileSync(path.join(files, 'recipes.md'), OWN_TEXT);
+    packaged.set('bundled/missions.py', path.join(__dirname, '..', '..', '..', 'core', 'tools', 'missions.py'));
+    packaged.set('bundled/GURITA_USAGE.md', path.join(files, 'GURITA_USAGE.md'));
+    workspace.folders = [{ uri: { fsPath: root } }];
+    workspace.settings = { ownRecipesFile: path.join(files, 'recipes.md') };
+    const from = posted.length;
+    send({ type: 'ready' });
+    const live = (await postedOf('live', from)) as { missions: { path: string; recipes: { state: string; recipes: unknown[] } }[] };
+    assert.deepStrictEqual(live.missions.map((each) => each.path), [GAMMA]);
+    const recipes = live.missions[0].recipes;
+    assert.strictEqual(recipes.state, 'read');
+    assert.deepStrictEqual(recipes.recipes, [
+      {
+        kind: 'runnable',
+        name: 'First run',
+        group: 'shipped',
+        lines: [
+          'claude -p "/gurita:review-mission-requirements --mission <path>" --model "fable" --effort xhigh;',
+          'claude -p "/gurita:provide-alternatives-to-all-open-questions --mission <path>" --model "opus" --effort high;',
+          'claude -p "/gurita:recommend-all-open-questions --mission <path>" --model "fable" --effort xhigh;',
+        ],
+        values: { harnesses: ['claude'], models: ['fable', 'opus'], efforts: ['xhigh', 'high'] },
+        variants: [
+          { name: 'Claude Code', own: false },
+          { name: 'Antigravity', own: false },
+          { name: 'First run', own: true },
+        ],
+        selected: 0,
+      },
+      {
+        kind: 'looped',
+        name: 'Execute tasks one at a time',
+        group: 'shipped',
+        lines: ['<single-task line>'],
+        values: { harnesses: [], models: [], efforts: [] },
+        variants: [{ name: 'Execute tasks one at a time', own: false }],
+        selected: 0,
+      },
+      {
+        kind: 'runnable',
+        name: 'Mixed review',
+        group: 'shipped',
+        lines: ['agy -p "/gurita:review-mission-requirements --mission <path>" --model "gemini-4-argon" --effort medium;'],
+        values: { harnesses: ['agy'], models: ['gemini-4-argon'], efforts: ['medium'] },
+        variants: [{ name: 'Mixed review', own: false }],
+        selected: 0,
+      },
+      {
+        kind: 'runnable',
+        name: 'Mine everywhere',
+        group: 'own',
+        lines: ['echo <path>'],
+        values: { harnesses: [], models: [], efforts: [] },
+        variants: [{ name: 'Mine everywhere', own: true }],
+        selected: 0,
+      },
+    ]);
+    const count = created.length;
+    send({ type: 'runRecipe', mission: GAMMA, recipe: 'First run', variant: 'Claude Code' });
+    assert.deepStrictEqual(created.slice(count).map((terminal) => terminal.name), [`Gurita: First run (${GAMMA})`], 'a click runs the listed variant');
+  } finally {
+    process.env.HOME = home;
+  }
 });
 
 const DELTA = 'tools/mission_delta/';
@@ -1262,6 +1268,146 @@ test("the settings view lists the named single-task lines and carries out each l
 
     assert.strictEqual(fs.readFileSync(path.join(files, 'recipes.md'), 'utf8'), LINE_OWN_TEXT, 'the own recipe file is never written');
     assert.strictEqual(fs.readFileSync(path.join(files, 'GURITA_USAGE.md'), 'utf8'), HARNESS_SHIPPED_TEXT, 'the shipped file is never written');
+    assert.strictEqual(execFileSync('git', ['status', '--porcelain', '--ignored'], { cwd: root, encoding: 'utf8' }), '', "nothing is written into the project's tree");
+  } finally {
+    process.env.HOME = home;
+  }
+});
+
+/** A mission no earlier test holds a run for. */
+const MU = 'pkg/mission_mu/';
+
+/** The lines of the seven fixed-name button recipes in the fixed-button test's shipped file, by button. */
+const BUTTON_LINES: Record<string, string> = {
+  discussQuestion: 'claude "/gurita:discuss-open-question --mission <path> <Short Title>. <note>" --model "fable" --effort xhigh; # interactive',
+  answerQuestion: 'claude -p "/gurita:answer-open-question --mission <path> <Short Title>. <answer text>" --model "fable" --effort high;',
+  answerWithRecommendation: 'claude -p "/gurita:answer-open-question-with-recommendation --mission <path> <Short Title>" --model "opus" --effort high;',
+  answerWithAlternative: 'claude -p "/gurita:answer-open-question-with-alternative --mission <path> <Short Title>. <Alternative Id>" --model "fable" --effort medium;',
+  discussGoal: 'claude "/gurita:discuss-mission-goal <goal>" --model "fable" --effort xhigh; # interactive',
+  defineMission: 'claude -p "/gurita:define-mission-goal --at <scope> <goal>" --model "sonnet" --effort medium;',
+  discussTask: 'claude "/gurita:discuss-new-task --mission <path> <issue description>" --model "opus" --effort xhigh; # interactive',
+};
+
+/** The fixed name of the recipe each button runs. */
+const BUTTON_NAMES: Record<string, string> = {
+  discussQuestion: 'discuss-open-question',
+  answerQuestion: 'answer-open-question',
+  answerWithRecommendation: 'answer-open-question-with-recommendation',
+  answerWithAlternative: 'answer-open-question-with-alternative',
+  discussGoal: 'discuss-mission-goal',
+  defineMission: 'define-mission-goal',
+  discussTask: 'discuss-new-task',
+};
+
+/** The shipped file of the fixed-button test: the recipe-list test's recipes and the seven button recipes. */
+const BUTTON_SHIPPED_TEXT = `${SHIPPED_TEXT}${Object.keys(BUTTON_LINES)
+  .map((key) => `\n### ${BUTTON_NAMES[key]}\n\`\`\`\n${BUTTON_LINES[key]}\n\`\`\`\n`)
+  .join('')}`;
+
+/** The own file of the fixed-button test: one more variant for three of the button recipes. */
+const BUTTON_OWN_TEXT = `### discuss-open-question
+\`\`\`
+agy -i "/gurita:discuss-open-question --mission <path> <Short Title>. <note>" --model "gemini-4-argon" --effort medium; # interactive
+claude -p "/gurita:recommend-all-open-questions --mission <path>" --model "opus" --effort high;
+\`\`\`
+
+### define-mission-goal
+\`\`\`
+echo <goal> <scope>
+\`\`\`
+
+### discuss-new-task
+\`\`\`
+claude -p "/gurita:complete-task --mission <path> <Task Title>" --model "opus" --effort high;
+\`\`\`
+`;
+
+/** What a fixed-name button is posted as running: its lines and the values they carry. */
+interface PostedButton {
+  lines: string[];
+  values: { harnesses: string[]; models: string[]; efforts: string[] };
+}
+
+test("every fixed-name button is posted with the lines and values of its recipe's default, following a default picked in the settings view, in the failure state too", async () => {
+  const home = process.env.HOME;
+  const fakeHome = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-home-'));
+  process.env.HOME = fakeHome;
+  try {
+    const root = project(MU);
+    const files = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-recipes-'));
+    fs.writeFileSync(path.join(files, 'GURITA_USAGE.md'), BUTTON_SHIPPED_TEXT);
+    fs.writeFileSync(path.join(files, 'recipes.md'), BUTTON_OWN_TEXT);
+    packaged.set('bundled/missions.py', path.join(__dirname, '..', '..', '..', 'core', 'tools', 'missions.py'));
+    packaged.set('bundled/GURITA_USAGE.md', path.join(files, 'GURITA_USAGE.md'));
+    packaged.set('runner.py', path.join(__dirname, '..', '..', 'runner.py'));
+    workspace.folders = [{ uri: { fsPath: root } }];
+    workspace.settings = { ownRecipesFile: path.join(files, 'recipes.md') };
+    workspaceState.clear();
+    /** Sends `message` and returns the buttons of the next message of `type` posted after it. */
+    const buttonsAfter = async (message: unknown, type = 'live') => {
+      const from = posted.length;
+      send(message);
+      return ((await postedOf(type, from)) as { buttons: Record<string, PostedButton> }).buttons;
+    };
+    const shipped = (key: string, harnesses: string[], models: string[], efforts: string[]): PostedButton => ({
+      lines: [BUTTON_LINES[key]],
+      values: { harnesses, models, efforts },
+    });
+    const initial = {
+      discussQuestion: shipped('discussQuestion', ['claude'], ['fable'], ['xhigh']),
+      answerQuestion: shipped('answerQuestion', ['claude'], ['fable'], ['high']),
+      answerWithRecommendation: shipped('answerWithRecommendation', ['claude'], ['opus'], ['high']),
+      answerWithAlternative: shipped('answerWithAlternative', ['claude'], ['fable'], ['medium']),
+      discussGoal: shipped('discussGoal', ['claude'], ['fable'], ['xhigh']),
+      defineMission: shipped('defineMission', ['claude'], ['sonnet'], ['medium']),
+      discussTask: shipped('discussTask', ['claude'], ['opus'], ['xhigh']),
+    };
+
+    assert.deepStrictEqual(await buttonsAfter({ type: 'ready' }), initial, 'with no pick each button runs its first listed variant, the shipped one');
+    send({ type: 'settingsOpened' });
+
+    // A pick of a two-line own variant: the button carries both lines and their distinct values.
+    let buttons = await buttonsAfter({ type: 'pickDefault', recipe: 'discuss-open-question', variant: { name: 'discuss-open-question', origin: 'own' } });
+    assert.deepStrictEqual(buttons.discussQuestion, {
+      lines: BUTTON_OWN_TEXT.split('\n').slice(2, 4),
+      values: { harnesses: ['agy', 'claude'], models: ['gemini-4-argon', 'opus'], efforts: ['medium', 'high'] },
+    });
+    assert.deepStrictEqual({ ...buttons, discussQuestion: undefined }, { ...initial, discussQuestion: undefined }, 'the other buttons stay as they were');
+
+    // A pick of a variant of no readable line: its lines with no value, so the button shows its name alone.
+    buttons = await buttonsAfter({ type: 'pickDefault', recipe: 'define-mission-goal', variant: { name: 'define-mission-goal', origin: 'own' } });
+    assert.deepStrictEqual(buttons.defineMission, { lines: ['echo <goal> <scope>'], values: { harnesses: [], models: [], efforts: [] } });
+
+    // A pick of a variant the button cannot run: the button is left out, showing its name alone.
+    buttons = await buttonsAfter({ type: 'pickDefault', recipe: 'discuss-new-task', variant: { name: 'discuss-new-task', origin: 'own' } });
+    assert.ok(!('discussTask' in buttons), 'a recipe its button cannot run is not posted');
+    assert.deepStrictEqual(buttons.discussQuestion.values.harnesses, ['agy', 'claude'], 'every earlier pick still stands');
+
+    // Disabling a harness does not reach the fixed-name buttons.
+    buttons = await buttonsAfter({ type: 'setHarnessEnabled', harness: 'antigravity', enabled: false });
+    assert.deepStrictEqual(buttons.discussQuestion.values.harnesses, ['agy', 'claude']);
+    buttons = await buttonsAfter({ type: 'setHarnessEnabled', harness: 'antigravity', enabled: true });
+
+    // The failure state carries them too, and an edit made while it stands posts it again with them.
+    workspace.folders = undefined;
+    buttons = await buttonsAfter({ type: 'refresh' }, 'liveFailure');
+    assert.deepStrictEqual(buttons.defineMission, { lines: ['echo <goal> <scope>'], values: { harnesses: [], models: [], efforts: [] } });
+    buttons = await buttonsAfter({ type: 'pickDefault', recipe: 'define-mission-goal', variant: { name: 'define-mission-goal', origin: 'shipped' } }, 'liveFailure');
+    assert.deepStrictEqual(buttons.defineMission, initial.defineMission, 'the failure state follows the default picked');
+    workspace.folders = [{ uri: { fsPath: root } }];
+    buttons = await buttonsAfter({ type: 'refresh' });
+    assert.deepStrictEqual(buttons.defineMission, initial.defineMission);
+    assert.ok(!('discussTask' in buttons), "the discuss-new-task pick still names the variant its button cannot run");
+
+    // A click runs the default the label shows.
+    const count = created.length;
+    typedValues.push('A goal');
+    send({ type: 'missionButton', button: 'discussGoal' });
+    for (let attempt = 0; attempt < 200 && created.length === count; attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    assert.strictEqual(created.length, count + 1);
+    assert.match(created[created.length - 1].args.join(' '), / chain -- claude "\/gurita:discuss-mission-goal/);
     assert.strictEqual(execFileSync('git', ['status', '--porcelain', '--ignored'], { cwd: root, encoding: 'utf8' }), '', "nothing is written into the project's tree");
   } finally {
     process.env.HOME = home;

@@ -669,6 +669,102 @@ test('no dropdown stands beside any of the buttons outside the recipe list, and 
   });
 });
 
+/** Each fixed-name button's label, the button's key, and the hover text it shows while its recipe cannot be read. */
+const FIXED_BUTTONS: [string, string, string][] = [
+  ['New mission', 'discussGoal', 'Type a goal and open an interactive discussion of it'],
+  ['Define mission', 'defineMission', 'Type a goal and its scope and define the mission'],
+  ['New task', 'discussTask', 'Type an issue and open an interactive discussion of it into tasks for this mission'],
+  ['Discuss', 'discussQuestion', 'Type an optional note and open an interactive discussion of this question'],
+  ['Answer', 'answerQuestion', 'Record an answer you type as the decision'],
+  ['Answer with recommendation', 'answerWithRecommendation', "Record this question's recommendation as the decision"],
+  ['Answer with this alternative', 'answerWithAlternative', 'Record keep as the decision'],
+];
+
+/** What each fixed-name button runs, as the extension posts it, every button on one line of `model` at `effort`. */
+function fixedButtons(model: string, effort: string): Record<string, { lines: string[]; values: { harnesses: string[]; models: string[]; efforts: string[] } }> {
+  return Object.fromEntries(
+    FIXED_BUTTONS.map(([, key]) => [
+      key,
+      { lines: [`claude -p "/gurita:${key} --mission <path>" --model "${model}" --effort ${effort};`], values: { harnesses: ['claude'], models: [model], efforts: [effort] } },
+    ]),
+  );
+}
+
+/** Each fixed-name button drawn with the Remaining tasks pane and then the Open questions pane shown, by its label: its spans and its hover text. */
+function fixedShown(page: Page): Record<string, [string[], string]> {
+  const shown: Record<string, [string[], string]> = {};
+  eachPane(page, () => {
+    for (const [label] of FIXED_BUTTONS) {
+      if (buttons(page).some((each) => shownName(each) === label)) {
+        const drawn = named(page, label);
+        shown[label] = [recipeParts(drawn), drawn.title];
+      }
+    }
+  });
+  return shown;
+}
+
+test("every fixed-name button shows its name with its default's distinct harnesses, models, and efforts, and its lines in its hover text, following the default posted", () => {
+  const page = loadPage();
+  page.send({ ...(live([]) as object), buttons: fixedButtons('fable', 'xhigh') });
+  const expected = (model: string, effort: string) =>
+    Object.fromEntries(
+      FIXED_BUTTONS.map(([label, key]) => [
+        label,
+        [[label, `claude · ${model} · ${effort}`], `claude -p "/gurita:${key} --mission <path>" --model "${model}" --effort ${effort};`],
+      ]),
+    );
+  assert.deepStrictEqual(fixedShown(page), expected('fable', 'xhigh'), 'all seven buttons, with either pane shown');
+
+  // A default picked in the settings view reaches every button with the pages posted again.
+  page.send({ ...(live([]) as object), buttons: fixedButtons('opus', 'high') });
+  assert.deepStrictEqual(fixedShown(page), expected('opus', 'high'));
+
+  // A variant of several lines shows each list once, in first-appearance order, and its lines as written.
+  const mixed = [
+    'agy -i "/gurita:discuss-open-question --mission <path> <Short Title>. <note>" --model "gemini-4-argon" --effort medium; # interactive',
+    'claude -p "/gurita:recommend-all-open-questions --mission <path>" --model "opus" --effort high;',
+  ];
+  page.send({
+    ...(live([]) as object),
+    buttons: {
+      ...fixedButtons('opus', 'high'),
+      discussQuestion: { lines: mixed, values: { harnesses: ['agy', 'claude'], models: ['gemini-4-argon', 'opus'], efforts: ['medium', 'high'] } },
+      defineMission: { lines: ['echo <goal> <scope>'], values: { harnesses: [], models: [], efforts: [] } },
+      answerQuestion: undefined,
+      discussTask: undefined,
+    },
+  });
+  const shown = fixedShown(page);
+  assert.deepStrictEqual(shown.Discuss, [['Discuss', 'agy, claude · gemini-4-argon, opus · medium, high'], mixed.join('\n')]);
+  assert.deepStrictEqual(shown['Define mission'], [['Define mission'], 'echo <goal> <scope>'], 'a variant of no readable line shows the name alone');
+  assert.deepStrictEqual(shown.Answer, [['Answer'], 'Record an answer you type as the decision'], 'a recipe that cannot be read shows the name alone');
+  assert.deepStrictEqual(shown['New task'], [['New task'], 'Type an issue and open an interactive discussion of it into tasks for this mission']);
+
+  // Nothing posted for the buttons: every one shows its name alone.
+  page.send(live([]));
+  assert.deepStrictEqual(
+    fixedShown(page),
+    Object.fromEntries(FIXED_BUTTONS.map(([label, , hover]) => [label, [[label], hover]])),
+  );
+
+  // The failure state's two mission-starting buttons follow what it is posted with.
+  page.send({ type: 'liveFailure', cause: 'boom', buttons: fixedButtons('sonnet', 'medium') });
+  assert.deepStrictEqual(recipeParts(named(page, 'New mission')), ['New mission', 'claude · sonnet · medium']);
+  assert.strictEqual(named(page, 'Define mission').title, 'claude -p "/gurita:defineMission --mission <path>" --model "sonnet" --effort medium;');
+
+  // A click still posts what it posted before, and a run disables the mission's fixed-name buttons alone.
+  page.send({ ...(live([]) as object), buttons: fixedButtons('fable', 'xhigh') });
+  named(page, 'Discuss').click();
+  named(page, 'New mission').click();
+  assert.deepStrictEqual(page.posted.slice(-2), [
+    { type: 'questionButton', button: 'discussQuestion', mission: ALPHA, question: 'Pane Layout' },
+    { type: 'missionButton', button: 'discussGoal' },
+  ]);
+  page.send({ ...(live([ALPHA]) as object), buttons: fixedButtons('fable', 'xhigh') });
+  assertRunning(page);
+});
+
 test("a mission's page draws the recipe failure posted with its mission", () => {
   const page = loadPage();
   page.send({
@@ -1078,7 +1174,7 @@ function settingsView(page: Page): FakeElement | undefined {
 function rowEnds(page: Page): string[] {
   const ends = page.root.all().find((each) => each.has('ends'));
   assert.ok(ends !== undefined);
-  return ends.all().filter((each) => each.tagName === 'button').map((each) => each.textContent);
+  return ends.all().filter((each) => each.tagName === 'button').map(shownName);
 }
 
 /** The titles of the mission tabs that read selected. */
