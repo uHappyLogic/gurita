@@ -86,6 +86,13 @@
           "group": "navigation@2"
         }
       ],
+      "editor/title": [
+        {
+          "command": "gurita.openSettings",
+          "when": "activeWebviewPanelId == gurita.mission",
+          "group": "navigation"
+        }
+      ],
       "view/item/context": [
         {
           "command": "gurita.pickStartingVariant",

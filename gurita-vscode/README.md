@@ -194,10 +194,13 @@ commands that refresh command is the only one the Command Palette offers.
 The project root is the top level of the git work tree holding the first workspace folder;
 every other folder is ignored. The extension reads the live missions that `missions.py live`
 prints from that root once for the whole session, and every open window draws its mission from
-that one read. A mission's window holds no **Refresh**, **New mission**, **Define mission**, or
-Settings control: those belong to the side-bar view (see The side-bar view above and The
-Settings window below). Its page holds the workflow diagram, the recipe buttons of the recipes that
-fit the step its diagram fills, each with a dropdown of its variants beside it (see The recipes a
+that one read. A mission's window holds no **Refresh**, **New mission**, or **Define mission**
+control: those belong to the side-bar view (see The side-bar view above). Its editor title bar
+carries **Settings**, a gear icon action that opens the Settings window, or brings it forward,
+exactly as the side-bar view's gear does (see The Settings window below); it stands there in
+every state of the window, on the mission's page, the failure state, and the notice alike, and
+the page itself draws no Settings control. Its page holds the workflow diagram, the recipe
+buttons of the recipes that fit the step its diagram fills, each with a dropdown of its variants beside it (see The recipes a
 page lists), the **New task** button with its dropdown in a row of its own, and directly beneath
 that row two panes behind one row of two headers, **Open questions**, holding the question view
 parsed from `open_questions.xml`, and **Remaining tasks**, holding the remaining task headings of
@@ -299,7 +302,9 @@ drawn from it is replaced by a notice naming the file.
 The settings open in a window of their own in the editor area, titled **Gurita Settings** and
 belonging to no mission. The **Settings** gear in the side-bar view's title bar, beside
 **Refresh**, opens it, or brings it forward when it is already open, so there is never more than
-one; its command is hidden from the Command Palette, and no mission window draws a Settings control. You
+one, and so does the same gear in every mission window's editor title bar, which runs the same
+command; that command is hidden from the Command Palette, and no mission's page draws a Settings
+control. You
 close it as you close any editor tab, and it has no close control of its own. The window holds
 buttons and dropdowns only: anything you type is asked for in VS Code's own input box. Every
 edit you make in it shows at once on every other surface: the mission pages, their dropdowns and

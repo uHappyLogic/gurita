@@ -311,6 +311,21 @@ test('the manifest contributes the Settings command with a gear icon, hidden fro
   assert.ok(commands.has(settingsWindow.SETTINGS_COMMAND), 'activation registers the Settings command');
 });
 
+test("the manifest offers Settings as the gear icon action in every mission window's editor title bar, keyed on the mission window's view type alone", () => {
+  const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8'));
+  assert.deepStrictEqual(
+    manifest.contributes.menus['editor/title'],
+    [{ command: settingsWindow.SETTINGS_COMMAND, when: `activeWebviewPanelId == ${MISSION_VIEW_TYPE}`, group: 'navigation' }],
+    "the mission window's title bar runs the same Settings command the side-bar's title-bar action runs",
+  );
+  const contributed = manifest.contributes.commands.find((each: { command: string }) => each.command === settingsWindow.SETTINGS_COMMAND);
+  assert.strictEqual(contributed.icon, '$(gear)', 'shown as the gear codicon');
+  assert.ok(
+    manifest.contributes.menus['view/title'].some((entry: { command: string }) => entry.command === settingsWindow.SETTINGS_COMMAND),
+    "the side-bar's title-bar action runs that one command",
+  );
+});
+
 test('the Settings command opens one Settings window in the editor area, reveals it while it is open, and opens it afresh once it is closed', async () => {
   const run = commands.get(settingsWindow.SETTINGS_COMMAND);
   assert.ok(run !== undefined);
