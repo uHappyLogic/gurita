@@ -89,5 +89,7 @@ The extension has no activity-bar container, side-bar view, tree data provider, 
 
 - **Mission row layout.** A mission's row in the side-bar tree is a leaf with no child rows, one row per mission, so a click on the row stays free to open the mission's window. The label carries the mission's title. The description carries the next workflow step's name followed by both counts in a compact form, for example "Derive tasks · 3 questions · 2 tasks". The icon carries the running marker, a spinning `ThemeIcon` while the mission's run is going and a steady mission icon otherwise. The tooltip repeats all five facts spelled out in full beside the mission's path, giving whatever a narrow side bar cuts from the description.
 
+- **Controls that belong to no mission.** Refresh and Settings are icon actions in the view's title bar. New mission and Define mission are two tree rows standing above the mission rows, each labelled with its control's name, its `description` showing the harness, model, and effort of the remembered variant. Clicking the row runs that variant, so a run still starts in one click with its variant shown before the click. An inline icon action on the row, also offered in its context menu, opens a QuickPick of the recipe's variants that changes the remembered selection without starting a run.
+
 ## Out of Scope
 
