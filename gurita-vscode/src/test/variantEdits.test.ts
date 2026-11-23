@@ -492,7 +492,7 @@ test("a line running a gurita: skill on a known harness is drawn as the skill's 
   }
 });
 
-test('every line of every shipped recipe gets the row its text gives, the slot line keeping its text', () => {
+test('every line of every shipped recipe gets the row its text gives', () => {
   const shipped = parseShippedRecipes(fs.readFileSync(SHIPPED_RECIPES, 'utf8'), SHIPPED_RECIPES);
   const listed = settingsRecipes(shipped, emptyVariantStore(), '/home/x/.gurita/variants.json', []);
   for (const recipe of listed) {
@@ -508,7 +508,5 @@ test('every line of every shipped recipe gets the row its text gives, the slot l
     { skill: 'provide-alternatives-to-all-open-questions', interactive: false, harness: 'claude' },
     { skill: 'recommend-all-open-questions', interactive: true, harness: 'claude' },
   ]);
-  const looped = listed.find((recipe) => recipe.name === 'Execute tasks one at a time');
-  assert.ok(looped !== undefined);
-  assert.deepStrictEqual(looped.variants[0].rows, [null], 'the slot line keeps its text');
+  assert.ok(!listed.some((recipe) => recipe.variants.some((variant) => variant.lines.includes('<single-task line>'))), 'no shipped variant holds the slot line');
 });

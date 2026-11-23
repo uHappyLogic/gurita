@@ -61,7 +61,7 @@ test("the shipped recipe file's lines give the lists their models and efforts, a
   assert.deepStrictEqual(
     lists.antigravity,
     { models: ['gemini-4-argon', 'claude-opus-5-5'], efforts: ['medium', 'high'] },
-    "Antigravity's lists come from the mixed-agent chain's agy line and the Antigravity single-task line",
+    "Antigravity's lists come from the agy line of Requirements iteration's mixed-agent variant and the Antigravity single-task line",
   );
   assert.deepStrictEqual(lists.codex, { models: [] });
 });

@@ -498,7 +498,7 @@ the heading left out when there is none. Each button shows the recipe's name and
 name of the variant it runs, the one selected in its dropdown, always and exactly as the variant
 is named, so a button says which variant a click runs: `Execute tasks` on its shipped
 `Normal difficulty` variant reads `Normal difficulty` beneath its name, and a recipe of one
-variant, such as `First run` or `Execute tasks one at a time`, reads `default`. The button lists
+variant, such as `First run` or `Prepare tasks`, reads `default`. The button lists
 no harness, model, or effort; those stay readable in its hover text, which shows the variant's
 lines as written, and in the settings view (see Variants above).
 
@@ -577,9 +577,11 @@ section, the `## Recipes` heading, are recipes, listed in the file's order with 
 their own on the page, and the notes on running the `agy` lines stand as prose at the top of the
 recipe section. Each chain is shipped once, not once per harness: a line is moved onto the other
 harness from its harness dropdown in the settings view (see Variants above), so no recipe is
-grouped into one copy per harness. `Execute tasks` is the one shipped recipe with `####`
-variants, named for the work rather than a harness; every other shipped recipe is one fenced
-block with no `####` sub-heading, a recipe of one variant named by its heading. A stored copy of
+grouped into one copy per harness. Three shipped recipes hold `####` variants:
+`Requirements iteration` (`default` and `Mixed-agent (Gemini reviews, Claude annotates)`),
+`Prepare and Execute tasks`, and `Execute tasks` (each `Normal difficulty` and
+`Critical tasks`); every other shipped recipe is one fenced block with no `####` sub-heading, a
+recipe of one variant named by its heading. A stored copy of
 a variant the file no longer holds, such as an `Antigravity` variant an earlier copy of the file
 shipped, stays listed as a stored variant of its recipe, after the shipped one.
 
@@ -587,25 +589,31 @@ Every chain in the file declares the one step it runs, once for the whole recipe
 other:
 
 - **first review round**: `First run`, one block of `claude` lines.
-- **additional review round**: `Requirements iteration`, one block of `claude` lines, and `Mixed-agent requirements review (Gemini reviews, Claude annotates)`, one block
-  mixing `agy` and `claude` lines.
+- **additional review round**: `Requirements iteration`, whose `default` variant is one block of
+  `claude` lines (the answer sweep, a review, the alternatives pass, and an interactive
+  recommendation pass) and whose second variant, `Mixed-agent (Gemini reviews, Claude annotates)`,
+  mixes `agy` and `claude` lines: an `agy` review followed by the `claude` alternatives pass,
+  recommendation pass, and answer sweep.
 - **derive tasks**: `Prepare tasks`, the answer sweep and `derive-tasks`, one block of `claude`
-  lines.
+  lines; and `Prepare and Execute tasks`, whose two variants, `Normal difficulty` and
+  `Critical tasks`, each hold those two lines followed by the `complete-all-tasks` line of the
+  `Execute tasks` variant of the same name.
 - **execute tasks**: `Execute tasks`, whose two variants each hold one `claude`
   `complete-all-tasks` line alone: `Normal difficulty` (`opus` at `high`) and `Critical tasks`
-  (`opus` at `xhigh`); and
-  the looped recipe, `Execute tasks one at a time`, whose only line is the slot line
-  `<single-task line>` (see the looped task run below). No execution chain holds an answer sweep
-  or a `derive-tasks` line: a mission's tasks are derived by `Prepare tasks` before an execution
-  chain completes them.
+  (`opus` at `xhigh`). No execution chain holds an answer sweep or a `derive-tasks` line: a
+  mission's tasks are derived by `Prepare tasks`, or by the first lines of
+  `Prepare and Execute tasks`, before an execution chain completes them.
 - **finish**: `Finish mission`, one `claude` line.
 
-A page filling **derive tasks** thus lists `Prepare tasks` beside the two additional review round
-chains, and one filling **first review round** lists them beside `First run` while a question is
-open, such as on a mission whose first review left questions lacking alternatives or a pick, and
-`First run` alone on a fresh mission with no open question. One filling **execute tasks** lists
-`Execute tasks` and `Execute tasks one at a time`. No
-shipped recipe declares **follow up tasks**. Besides the chains, the file carries the following,
+A page filling **derive tasks** thus lists `Requirements iteration`, `Prepare tasks`, and
+`Prepare and Execute tasks`; one filling **first review round** lists `Requirements iteration`
+beside `First run` while a question is open, such as on a mission whose first review left
+questions lacking alternatives or a pick, and `First run` alone on a fresh mission with no open
+question; one filling **additional review round** lists `Requirements iteration` alone; one
+filling **execute tasks** lists `Execute tasks`; and one filling **finish** lists
+`Finish mission`. No shipped recipe is looped, so the looped task run is reached through a recipe
+of your own whose last line is the slot line `<single-task line>` (see the looped task run
+below), and no shipped recipe declares **follow up tasks**. Besides the chains, the file carries the following,
 none of which declares a step and each of which is one block:
 
 - The seven button recipes, each one `claude` line named by the skill it invokes:
@@ -613,7 +621,7 @@ none of which declares a step and each of which is one block:
   `answer-open-question-with-recommendation`, `answer-open-question-with-alternative`, and
   `define-mission-goal`. The buttons run the recipe of these fixed names; `discuss-new-task`'s
   one line is
-  `claude "/gurita:discuss-new-task --mission <path> <issue description>" --dangerously-skip-permissions --model "fable" --effort xhigh; # interactive`,
+  `claude "/gurita:discuss-new-task --mission <path> <issue description>" --dangerously-skip-permissions --model "fable" --effort high; # interactive`,
   and `discuss-open-question`'s is
   `claude "/gurita:discuss-open-question --mission <path> <Short Title>. <note>" --dangerously-skip-permissions --model "fable" --effort xhigh; # interactive`.
 - The single-task lines, each one headless line holding `<Task Title>`:
@@ -681,6 +689,16 @@ with spaces turned into underscores: `GURITA_PATH`, `GURITA_TASK_TITLE`, `GURITA
 in your own recipe may read them as `"$GURITA_TASK_TITLE"` and the like.
 
 ## The looped task run and the rule file
+
+The shipped file holds no looped recipe: you write one in your own recipe file, for instance
+
+````
+### Execute tasks one at a time
+Stage: execute tasks
+```
+<single-task line>
+```
+````
 
 A click on a looped recipe (one whose last line is the slot line `<single-task line>`) runs
 nothing yet: it shows a preview on the mission's page listing each remaining task with the

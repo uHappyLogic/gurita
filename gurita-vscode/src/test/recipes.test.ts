@@ -378,10 +378,9 @@ test('every shipped chain declares exactly one step, and no shipped recipe decla
     [
       ['shipped', 'First run', 'first-review'],
       ['shipped', 'Requirements iteration', 'additional-review'],
-      ['shipped', 'Mixed-agent requirements review (Gemini reviews, Claude annotates)', 'additional-review'],
       ['shipped', 'Prepare tasks', 'derive'],
+      ['shipped', 'Prepare and Execute tasks', 'derive'],
       ['shipped', 'Execute tasks', 'execute'],
-      ['shipped', 'Execute tasks one at a time', 'execute'],
       ['shipped', 'Finish mission', 'finish'],
     ],
   );
@@ -398,16 +397,16 @@ test('every shipped chain declares exactly one step, and no shipped recipe decla
   assert.ok(!recipes.some((recipe) => /extra requirement surface stretch/i.test(recipe.name)));
 });
 
-test('no shipped execute variant holds a derive-tasks line, each holding its complete-all-tasks line alone or the slot line', () => {
+test('no shipped execute variant holds a derive-tasks line, each holding its complete-all-tasks line alone, and no shipped recipe is looped', () => {
   const recipes = parseShippedRecipes(fs.readFileSync(SHIPPED_RECIPES, 'utf8'), SHIPPED_RECIPES);
   const execute = recipes.filter((recipe) => recipe.stage === 'execute');
-  assert.deepStrictEqual(execute.map((recipe) => recipe.name), ['Execute tasks', 'Execute tasks one at a time']);
+  assert.deepStrictEqual(execute.map((recipe) => recipe.name), ['Execute tasks']);
   for (const recipe of execute) {
     for (const variant of recipe.variants) {
       const lines = variant.lines;
       assert.ok(!lines.some((line) => line.includes('gurita:derive-tasks')), `${recipe.name} / ${variant.name}`);
       assert.strictEqual(lines.length, 1, `${recipe.name} / ${variant.name}`);
-      assert.ok(lines[0] === SLOT_LINE || lines[0].includes('/gurita:complete-all-tasks --mission <path>"'), `${recipe.name} / ${variant.name}`);
+      assert.ok(lines[0].includes('/gurita:complete-all-tasks --mission <path>"'), `${recipe.name} / ${variant.name}`);
     }
   }
   assert.deepStrictEqual(
@@ -424,22 +423,46 @@ test('no shipped execute variant holds a derive-tasks line, each holding its com
   for (const retired of ['Execute tasks of normal difficulty', 'Execute tasks (critical tasks)']) {
     assert.ok(!recipes.some((recipe) => recipe.name.startsWith(retired)), retired);
   }
-  assert.deepStrictEqual(byName(recipes, 'Execute tasks one at a time').variants.map((variant) => [variant.name, variant.lines]), [
-    ['default', [SLOT_LINE]],
-  ]);
+  assert.ok(!recipes.some((recipe) => recipe.name === 'Execute tasks one at a time'), 'the looped recipe is no longer shipped');
+  assert.ok(
+    !recipes.some((recipe) => recipe.variants.some((variant) => variant.lines.includes(SLOT_LINE))),
+    'no shipped variant holds the slot line, the looped run reached through an own recipe',
+  );
 });
 
-test('First run, Requirements iteration, Prepare tasks, and Finish mission are each one block with no `####`, and no shipped chain but the mixed-agent one holds a variant named for or run on Antigravity', () => {
+test('Prepare and Execute tasks declares derive tasks, each variant the two Prepare tasks lines followed by that Execute tasks variant\'s line', () => {
+  const recipes = parseShippedRecipes(fs.readFileSync(SHIPPED_RECIPES, 'utf8'), SHIPPED_RECIPES);
+  const recipe = byName(recipes, 'Prepare and Execute tasks');
+  assert.strictEqual(recipe.stage, 'derive');
+  const prepare = byName(recipes, 'Prepare tasks').variants[0].lines;
+  assert.strictEqual(prepare.length, 2);
+  const execute = byName(recipes, 'Execute tasks').variants;
+  assert.deepStrictEqual(
+    recipe.variants.map((variant) => [variant.name, variant.lines]),
+    execute.map((variant) => [variant.name, [...prepare, ...variant.lines]]),
+  );
+  assert.deepStrictEqual(recipe.variants.map((variant) => variant.name), ['Normal difficulty', 'Critical tasks']);
+});
+
+test('First run, Prepare tasks, and Finish mission are each one block with no `####`, Requirements iteration holds default and the mixed-agent chain, and no shipped chain variant but the mixed-agent one holds a line run on Antigravity', () => {
   const recipes = parseShippedRecipes(fs.readFileSync(SHIPPED_RECIPES, 'utf8'), SHIPPED_RECIPES);
   const variants = (name: string) =>
     byName(recipes, name).variants.map((variant) => [variant.name, variant.lines.map((line) => line.split(' ')[0])]);
   assert.deepStrictEqual(variants('First run'), [['default', ['claude', 'claude', 'claude', 'claude']]]);
-  assert.deepStrictEqual(variants('Requirements iteration'), [['default', ['claude', 'claude', 'claude', 'claude']]]);
+  const MIXED = 'Mixed-agent (Gemini reviews, Claude annotates)';
+  assert.deepStrictEqual(variants('Requirements iteration'), [
+    ['default', ['claude', 'claude', 'claude', 'claude']],
+    [MIXED, ['agy', 'claude', 'claude', 'claude']],
+  ]);
+  assert.deepStrictEqual(byName(recipes, 'Requirements iteration').variants[1].lines, [
+    'agy -p "/gurita:review-mission-requirements --mission <path>" --dangerously-skip-permissions --model "gemini-4-argon" --effort medium;',
+    'claude -p "/gurita:provide-alternatives-to-all-open-questions --mission <path>" --dangerously-skip-permissions --model "opus" --effort high;',
+    'claude -p "/gurita:recommend-all-open-questions --mission <path>" --dangerously-skip-permissions --model "fable" --effort xhigh;',
+    'claude -p "/gurita:answer-all-open-questions-with-recommendation --mission <path>" --dangerously-skip-permissions --model "fable" --effort high;',
+  ]);
+  assert.ok(!recipes.some((recipe) => recipe.name.startsWith('Mixed-agent')), 'the mixed-agent chain is no recipe of its own');
   assert.deepStrictEqual(variants('Prepare tasks'), [['default', ['claude', 'claude']]]);
   assert.deepStrictEqual(variants('Finish mission'), [['default', ['claude']]]);
-  assert.deepStrictEqual(variants('Mixed-agent requirements review (Gemini reviews, Claude annotates)'), [
-    ['default', ['agy', 'claude', 'claude', 'claude']],
-  ]);
   const single = recipes.filter((recipe) => firstVariant(recipe).singleTask);
   assert.deepStrictEqual(
     single.map((recipe) => [recipe.name, recipe.variants.length]),
@@ -452,8 +475,11 @@ test('First run, Requirements iteration, Prepare tasks, and Finish mission are e
   for (const recipe of single) {
     assert.deepStrictEqual(recipe.variants.map((variant) => variant.name), ['default'], `the named single-task line ${recipe.name} opens on default`);
   }
-  for (const recipe of recipes.filter((each) => !single.includes(each) && each.name !== 'Mixed-agent requirements review (Gemini reviews, Claude annotates)')) {
+  for (const recipe of recipes.filter((each) => !single.includes(each))) {
     for (const variant of recipe.variants) {
+      if (recipe.name === 'Requirements iteration' && variant.name === MIXED) {
+        continue;
+      }
       assert.ok(!variant.lines.some((line) => line.startsWith('agy ')), `${recipe.name} / ${variant.name} ships no Antigravity line`);
       assert.ok(!/Claude Code|Antigravity/.test(variant.name), `${recipe.name} / ${variant.name} names no harness`);
     }
@@ -605,29 +631,23 @@ test('each step lists exactly the shipped chains that fit it, and no step chosen
   const recipes = parseShippedRecipes(fs.readFileSync(SHIPPED_RECIPES, 'utf8'), SHIPPED_RECIPES);
   const at = (step: WorkflowStep | undefined) =>
     pageRecipes(stageRecipes(recipes, step), ['path']).map((entry) => [entry.group, entry.name]);
-  const review = [
-    ['shipped', 'Requirements iteration'],
-    ['shipped', 'Mixed-agent requirements review (Gemini reviews, Claude annotates)'],
-  ];
+  const review = [['shipped', 'Requirements iteration']];
   assert.deepStrictEqual(at('first-review'), [['shipped', 'First run']], 'a fresh mission with no open question lists First run alone');
   assert.deepStrictEqual(
     pageRecipes(stageRecipes(recipes, 'first-review', true), ['path']).map((entry) => [entry.group, entry.name]),
     [['shipped', 'First run'], ...review],
-    'a first review round with a question open lists Requirements iteration and the mixed-agent recipe beside First run',
+    'a first review round with a question open lists Requirements iteration beside First run',
   );
-  assert.deepStrictEqual(at('additional-review'), review, 'the additional review round lists Requirements iteration and the mixed-agent recipe');
+  assert.deepStrictEqual(at('additional-review'), review, 'the additional review round lists Requirements iteration alone');
   assert.deepStrictEqual(at('derive'), [
     ['shipped', 'Requirements iteration'],
-    ['shipped', 'Mixed-agent requirements review (Gemini reviews, Claude annotates)'],
     ['shipped', 'Prepare tasks'],
+    ['shipped', 'Prepare and Execute tasks'],
   ]);
-  assert.deepStrictEqual(at('execute'), [
-    ['shipped', 'Execute tasks'],
-    ['shipped', 'Execute tasks one at a time'],
-  ]);
+  assert.deepStrictEqual(at('execute'), [['shipped', 'Execute tasks']]);
   assert.deepStrictEqual(at('finish'), [['shipped', 'Finish mission']]);
   assert.deepStrictEqual(at(undefined), pageRecipes(recipes, ['path']).map((entry) => [entry.group, entry.name]));
-  assert.strictEqual(at(undefined).length, 7);
+  assert.strictEqual(at(undefined).length, 6);
 });
 
 test('a page lists the recipes it can fill, in the merged order, each by its default variant with its lines and the variants its dropdown offers, and names each unknown placeholder and its file', () => {
@@ -799,7 +819,7 @@ test('the shipped recipe file carries every button recipe as one Claude Code blo
   }
   const recipe = runs(recipes, BUTTON_RECIPES.discussTask);
   assert.deepStrictEqual(recipe.lines, [
-    'claude "/gurita:discuss-new-task --mission <path> <issue description>" --dangerously-skip-permissions --model "fable" --effort xhigh; # interactive',
+    'claude "/gurita:discuss-new-task --mission <path> <issue description>" --dangerously-skip-permissions --model "fable" --effort high; # interactive',
   ]);
   assert.strictEqual(isHeadless(recipe.lines[0]), false);
   const found = buttonRecipe(recipes, BUTTON_RECIPES.discussTask, ['path', 'issue description']);

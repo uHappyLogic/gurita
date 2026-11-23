@@ -30,6 +30,8 @@ claude "/gurita:recommend-all-open-questions --mission <path>" --dangerously-ski
 
 ### Requirements iteration
 Stage: additional review round
+
+#### default
 ```
 claude -p "/gurita:answer-all-open-questions-with-recommendation --mission <path>" --dangerously-skip-permissions --model "fable" --effort high;
 claude -p "/gurita:review-mission-requirements --mission <path>" --dangerously-skip-permissions --model "fable" --effort high;
@@ -37,8 +39,7 @@ claude -p "/gurita:provide-alternatives-to-all-open-questions --mission <path>" 
 claude "/gurita:recommend-all-open-questions --mission <path>" --dangerously-skip-permissions --model "fable" --effort xhigh; # interactive
 ```
 
-### Mixed-agent requirements review (Gemini reviews, Claude annotates)
-Stage: additional review round
+#### Mixed-agent (Gemini reviews, Claude annotates)
 ```
 agy -p "/gurita:review-mission-requirements --mission <path>" --dangerously-skip-permissions --model "gemini-4-argon" --effort medium;
 claude -p "/gurita:provide-alternatives-to-all-open-questions --mission <path>" --dangerously-skip-permissions --model "opus" --effort high;
@@ -53,6 +54,23 @@ claude -p "/gurita:answer-all-open-questions-with-recommendation --mission <path
 claude -p "/gurita:derive-tasks --mission <path>" --dangerously-skip-permissions --model "fable" --effort xhigh;
 ```
 
+### Prepare and Execute tasks
+Stage: derive tasks
+
+#### Normal difficulty
+```
+claude -p "/gurita:answer-all-open-questions-with-recommendation --mission <path>" --dangerously-skip-permissions --model "fable" --effort high;
+claude -p "/gurita:derive-tasks --mission <path>" --dangerously-skip-permissions --model "fable" --effort xhigh;
+claude "/gurita:complete-all-tasks --mission <path>" --dangerously-skip-permissions --model "opus" --effort high; # interactive
+```
+
+#### Critical tasks
+```
+claude -p "/gurita:answer-all-open-questions-with-recommendation --mission <path>" --dangerously-skip-permissions --model "fable" --effort high;
+claude -p "/gurita:derive-tasks --mission <path>" --dangerously-skip-permissions --model "fable" --effort xhigh;
+claude "/gurita:complete-all-tasks --mission <path>" --dangerously-skip-permissions --model "opus" --effort xhigh; # interactive
+```
+
 ### Execute tasks
 Stage: execute tasks
 
@@ -64,12 +82,6 @@ claude "/gurita:complete-all-tasks --mission <path>" --dangerously-skip-permissi
 #### Critical tasks
 ```
 claude "/gurita:complete-all-tasks --mission <path>" --dangerously-skip-permissions --model "opus" --effort xhigh; # interactive
-```
-
-### Execute tasks one at a time
-Stage: execute tasks
-```
-<single-task line>
 ```
 
 ### Single task with Opus xHigh (Claude Code)
@@ -107,7 +119,7 @@ claude "/gurita:discuss-mission-goal <goal>" --dangerously-skip-permissions --mo
 
 ### discuss-new-task
 ```
-claude "/gurita:discuss-new-task --mission <path> <issue description>" --dangerously-skip-permissions --model "fable" --effort xhigh; # interactive
+claude "/gurita:discuss-new-task --mission <path> <issue description>" --dangerously-skip-permissions --model "fable" --effort high; # interactive
 ```
 
 ### answer-open-question
