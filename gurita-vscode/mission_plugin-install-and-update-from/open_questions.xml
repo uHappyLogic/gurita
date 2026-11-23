@@ -1,29 +1,4 @@
 <open-questions>
-  <open-question id="Install run form">
-    <question>Does an install or update of the Gurita plugin started from the Settings window run in a terminal the person can watch, as a recipe run does, or as a background process like the harness check, with the window reporting how it ended?</question>
-    <applied-principle>Check tier claims against the live environment</applied-principle>
-    <recommendation option="Watched terminal with reported end">No install or update command has been run against a harness yet, so the form that shows every line and lets a prompt be answered holds whatever the commands turn out to print or ask; it reuses the terminal a recipe run starts in, and the exit status VS Code gives for a closed terminal lets the window report the end.</recommendation>
-    <alternative id="Watched terminal with reported end">
-      An install or update runs in a terminal the extension opens and shows, as in a recipe run, its output and any prompt visible and answerable there, and the extension also watches that terminal&apos;s process end (its exit status, through the terminal or a VS Code task run in the terminal panel) and the window then reports how it ended, success or failure, beside the harness or in a notification.
-      <advantage>It gives the person both the full live output, with prompts answerable, and an outcome the window states without anyone reading the terminal, so an unexpected prompt or long download stays visible while the window still knows whether the install succeeded.</advantage>
-      <drawback>The run terminals today report only that they closed, never an exit status, so the extension gains a second terminal mechanism with exit-status tracking; the window can tell success from failure only by the exit code, so a command that exits 0 after printing a warning reads as a success, and the reported reason for a failure is whatever the person reads in the terminal.</drawback>
-    </alternative>
-    <alternative id="Watched terminal only">
-      An install or update runs in a terminal the extension opens and shows, as a recipe run does: the terminal&apos;s own process runs the harness&apos;s install or update commands in the runner&apos;s session shell at the project root, its output and any prompt visible and answerable there. The window learns only that the terminal was started and, at most, that it closed; it reports no outcome of its own, and the person reads how it ended in the terminal.
-      <advantage>It reuses the one way the extension already starts long, visible work (`src/runs.ts` launching a terminal), so every line the CLIs print and any prompt they raise reach the person directly, which matters while no install or update command has yet been run against a harness and what each prints or asks is unobserved.</advantage>
-      <drawback>The window has no outcome to show beside the harness, so a failed install looks the same in the Settings window as a successful one until the person reads the terminal or uses Check again; and it leaves a terminal per install for the person to read and close.</drawback>
-    </alternative>
-    <alternative id="Background with reported end">
-      An install or update runs as a child process with no terminal, as the harness check does: started through `execFile` into the runner&apos;s session shell (`$SHELL -i` for the sh, bash, zsh family) at the project root with a time limit, its input closed and the commands given their non-interactive flags (such as `-y`), its output captured and not shown. While it runs the window shows the harness as busy and disables its controls, and when it ends the window reports success or failure, the failure with the captured error text, in the harness&apos;s line or an error notification as other edits&apos; failures are told.
-      <advantage>It keeps the whole action inside the Settings window, mirrors the harness check&apos;s tested pattern (session shell, captured print, a stated result), and gives the window the exit status and the error text to report, with no terminal for the person to manage.</advantage>
-      <drawback>Nothing the commands print is visible while they run, so a slow download looks stalled and a command that waits on a prompt hangs until the time limit; whether the CLIs prompt or run long is unobserved, the condition the hands-on command verification question settles.</drawback>
-    </alternative>
-    <alternative id="Background with output channel">
-      An install or update runs as a background child process in the runner&apos;s session shell, as the harness check does, its input closed and the commands given their non-interactive flags, but its output is streamed line by line into a VS Code output channel of the extension&apos;s, which the person can open while it runs and which is brought forward when the run fails. The window shows the harness as busy while it runs and, when it ends, reports success or failure beside the harness or in a notification.
-      <advantage>The window owns the outcome as in a plain background run, while every line the commands print stays available on demand and surfaces by itself on a failure, so a stall or an unexpected message can be diagnosed without a terminal per install.</advantage>
-      <drawback>It adds an output channel, a mechanism the extension does not use today, and streaming instead of the check&apos;s captured print; like any background run it cannot answer a prompt, so a command that asks for input hangs until the time limit, the condition the hands-on command verification question settles.</drawback>
-    </alternative>
-  </open-question>
   <open-question id="Update control availability">
     <question>For a harness that has a Gurita copy installed, is the Update control in the Settings window offered always, or only when the installed copy&apos;s version is found to differ from the version it is compared with?</question>
     <recommendation option="Always offered">Update fetches the latest published release whatever the installed copy is compared with, so gating it on that comparison would hide it where a newer release exists or a version could not be read; an update over a current copy costs one harmless run and repairs a damaged copy.</recommendation>
@@ -431,7 +406,6 @@
   </open-question>
   <open-question id="Check after install">
     <question>The harness check&apos;s result is kept for the extension&apos;s session and only Check again runs it afresh. After an install or update ends, does the Settings window run the check again by itself, or keep showing the earlier result until Check again is used?</question>
-    <depends-on question="Install run form" option="Watched terminal with reported end"/>
     <recommendation option="Full re-check on any end">The line of the harness just acted on must not go on saying what was true before, and a failed run can change a harness too; running the unchanged check as Check again does shows the real state at once through the one code path that already exists.</recommendation>
     <alternative id="Full re-check on any end">
       An automatic re-check of all three harnesses: whenever an install or update ends, whether it succeeded or failed, the window runs the whole harness check afresh as Check again does, `harness_check.py` unchanged, and the new result replaces the kept one for every harness.
@@ -461,7 +435,6 @@
   </open-question>
   <open-question id="Restart notice">
     <question>Claude Code says an updated plugin needs a restart to apply, and Antigravity discovers a new plugin directory only when a session starts. After an install or update, does the Settings window tell the person that running harness sessions must be restarted?</question>
-    <depends-on question="Install run form" option="Watched terminal with reported end"/>
     <recommendation option="Uniform notice in end report">A running session keeps the old copy without saying so, and Antigravity&apos;s install prints nothing, so the window says it once where it reports the end; one fixed sentence for every harness needs no page state and no rule resting on what is not yet known of Codex, and a restart that was not needed costs nothing.</recommendation>
     <alternative id="Uniform notice in end report">
       After every install or update that succeeds, on any of the three harnesses, the window adds one sentence to whatever reports how the run ended (for example a VS Code information notification): running sessions of that harness must be restarted to use the new copy. The sentence is the same for every harness and is shown whether or not the version changed. Nothing in the page persists.

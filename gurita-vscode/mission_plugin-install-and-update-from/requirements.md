@@ -60,5 +60,9 @@ Nothing in the extension installs or updates the plugin on any harness, and noth
 
 - **Marketplace registration scope.** For a Claude Code install made from the Settings window, the `gurita` marketplace is registered at the same scope as the install. A project or local install first runs `claude plugin marketplace add --scope <project|local>` on the distribution repository `uHappyLogic/gurita-claude`, its source carrying the release's ref as the published release ref decision states, which declares the marketplace in `.claude/settings.json` for a project install or `.claude/settings.local.json` for a local one, and then runs `claude plugin install gurita@gurita --scope <project|local>`, whether or not the marketplace is already known at user scope. A user-scope install registers the marketplace at user scope.
 
+### Running an install or update
+
+- **Install run form.** An install or update started from the Settings window runs in a terminal the extension opens and shows, as a recipe run does, so its output and any prompt are visible and answerable there. The extension also watches that terminal's process end, taking its exit status through the terminal or through a VS Code task run in the terminal panel, and the window then reports how the run ended, success or failure, beside the harness or in a notification.
+
 ## Out of Scope
 
