@@ -83,6 +83,8 @@ The extension has no activity-bar container, side-bar view, tree data provider, 
 
 - **Window of a mission that is no longer live.** A mission's window stays open when its mission stops being live. It replaces the mission's page with one fixed notice that the mission is no longer live, drawing no workflow diagram, recipe, pane, or action button, and the person closes it. If a later live read lists the path again, as after a reverted finish or a branch switched back, the window draws that mission's page again. The rule has no tie to the run bookkeeping.
 
+- **Harness check lifetime.** The harness check first runs on the first opening of the Settings window after the extension activates. Its result is kept in the extension's own module state for the rest of that extension session, across every close and reopening of the Settings window, and only the check-again control runs it afresh. A restart or a window reload ends the session, so the next first opening runs the check again. No timestamp and no stored record is added for it.
+
 ### Activity-bar icon
 
 - **Three arms of the icon.** The icon's two side arms are short arms cut verbatim from `assets/banner.txt` as a mirrored pair curling inward, a short arm from the drawing's left half on the left and one from its right half on the right. The centre arm is none of the banner's eight: it is a new arm drawn by hand in the banner's characters and style at a larger character scale, with more rows and columns than the banner's ten-row long arm. The script composes the three arms at one common character scale, so the centre is larger by its own drawing and no arm is magnified. The centre arm's drawing is therefore a second hand-drawn source of the icon beside the banner's drawing.
