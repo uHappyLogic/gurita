@@ -21,14 +21,33 @@ falling back to no other ref.
 
 With the tag read it carries out ACTION for HARNESS at that tag; a harness and action whose
 steps the script does not hold print one `Error:` line and exit 1.
+
+On Antigravity no shell pipeline and no `agy` command take part. Both actions download the
+distribution repository's archive at the tag,
+`https://github.com/uHappyLogic/gurita-antigravity/archive/refs/tags/<tag>.tar.gz`, with
+`urllib`, and extract it with `tarfile`, stripped of its one top directory. The install extracts
+it directly into `~/.gemini/config/plugins/gurita`. The update extracts it into a fresh staging
+directory under `~/.gemini/config/`, outside `plugins/` and on the same filesystem, checks that
+the staged copy's root `plugin.json` is present and reads its version, and only then removes the
+old `gurita` directory and renames the staged one into its place, keeping no backup; a staged
+copy failing its check is discarded with the old directory left untouched. Either action
+refuses, with one `Error:` line and exit 1, an archive that cannot be downloaded or read, that
+holds no single top directory, or that holds a member other than a file or directory or one
+reaching outside the directory it is extracted into.
 """
 
 import argparse
+import io
 import json
+import os
+import shutil
 import sys
+import tarfile
+import tempfile
 import urllib.error
 import urllib.parse
 import urllib.request
+from pathlib import Path, PurePosixPath
 from typing import Callable, Dict, List, Optional, Tuple
 
 CLAUDE = "claude"
@@ -164,9 +183,150 @@ def latest_tag(repository: str, reads: Tuple[Tuple[str, Read], ...] = READS) -> 
 
 
 Step = Callable[[str], int]
+
+
+# Antigravity: the archive at the tag, extracted into the global plugin directory.
+
+ARCHIVE_URL = "https://github.com/{repository}/archive/refs/tags/{tag}.tar.gz"
+DOWNLOAD_TIMEOUT = 120
+STAGING_PREFIX = ".gurita-staging-"
+
+
+def gemini_config_dir(home: Optional[Path] = None) -> Path:
+    """`~/.gemini/config`, under `home` when one is given."""
+    return (Path.home() if home is None else home) / ".gemini" / "config"
+
+
+def antigravity_plugin_dir(home: Optional[Path] = None) -> Path:
+    """`~/.gemini/config/plugins/gurita`, the directory Antigravity loads the plugin from in
+    every project."""
+    return gemini_config_dir(home) / "plugins" / "gurita"
+
+
+def download_archive(url: str, opener: Callable[..., object] = open_url) -> bytes:
+    """The bytes `url` answers with, following redirects."""
+    request = urllib.request.Request(url)
+    try:
+        with opener(request, timeout=DOWNLOAD_TIMEOUT) as response:  # type: ignore[attr-defined]
+            return response.read()
+    except (urllib.error.URLError, OSError, ValueError) as error:
+        raise InstallError(f"the archive {url} could not be downloaded ({describe(error)})") from None
+
+
+def stripped_members(archive: tarfile.TarFile, url: str) -> List[tarfile.TarInfo]:
+    """The archive's members with its one top directory stripped from their names, the top
+    directory itself left out; an InstallError when the archive holds no single top directory,
+    a member other than a file or directory, or a name reaching outside the directory."""
+    members = archive.getmembers()
+    tops = {PurePosixPath(member.name).parts[0] for member in members if PurePosixPath(member.name).parts}
+    if len(tops) != 1:
+        raise InstallError(f"the archive {url} holds no single top directory")
+    stripped: List[tarfile.TarInfo] = []
+    for member in members:
+        path = PurePosixPath(member.name)
+        if member.name.startswith("/") or ".." in path.parts:
+            raise InstallError(f"the archive {url} holds {member.name!r}, which reaches outside its directory")
+        if not (member.isfile() or member.isdir()):
+            raise InstallError(f"the archive {url} holds {member.name!r}, which is neither a file nor a directory")
+        if len(path.parts) == 1:
+            if not member.isdir():
+                raise InstallError(f"the archive {url} holds no single top directory")
+            continue
+        member.name = str(PurePosixPath(*path.parts[1:]))
+        stripped.append(member)
+    return stripped
+
+
+def extract_archive(data: bytes, url: str, destination: Path) -> None:
+    """Extract the gzipped tar archive `data`, stripped of its top directory, into
+    `destination`, which is created when missing."""
+    try:
+        with tarfile.open(fileobj=io.BytesIO(data), mode="r:gz") as archive:
+            members = stripped_members(archive, url)
+            destination.mkdir(parents=True, exist_ok=True)
+            if hasattr(tarfile, "data_filter"):
+                archive.extractall(destination, members=members, filter="data")  # type: ignore[call-arg]
+            else:
+                archive.extractall(destination, members=members)
+    except (tarfile.TarError, EOFError, OSError, ValueError) as error:
+        raise InstallError(f"the archive {url} could not be extracted ({error})") from None
+
+
+def plugin_version(directory: Path) -> str:
+    """The version the root `plugin.json` of `directory` carries, or an InstallError when it is
+    absent or carries none."""
+    manifest = directory / "plugin.json"
+    try:
+        document = json.loads(manifest.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        raise InstallError("the downloaded release holds no root plugin.json") from None
+    except (OSError, UnicodeDecodeError, ValueError) as error:
+        raise InstallError(f"the downloaded release's plugin.json could not be read ({error})") from None
+    version = document.get("version") if isinstance(document, dict) else None
+    if not isinstance(version, str) or not version:
+        raise InstallError("the downloaded release's plugin.json carries no version")
+    return version
+
+
+def antigravity_archive(tag: str, opener: Callable[..., object]) -> Tuple[str, bytes]:
+    url = ARCHIVE_URL.format(repository=REPOSITORY[ANTIGRAVITY], tag=tag)
+    sys.stdout.write(f"Downloading {url}\n")
+    sys.stdout.flush()
+    return url, download_archive(url, opener)
+
+
+def install_antigravity(
+    tag: str, home: Optional[Path] = None, opener: Callable[..., object] = open_url
+) -> int:
+    """Download the release at `tag` and extract it directly into the plugin directory."""
+    url, data = antigravity_archive(tag, opener)
+    destination = antigravity_plugin_dir(home)
+    extract_archive(data, url, destination)
+    sys.stdout.write(f"Installed Gurita {tag} into {destination}\n")
+    return 0
+
+
+def update_antigravity(
+    tag: str, home: Optional[Path] = None, opener: Callable[..., object] = open_url
+) -> int:
+    """Download the release at `tag` into a staging directory, check it, and only then replace
+    the plugin directory with it, keeping no backup."""
+    url, data = antigravity_archive(tag, opener)
+    destination = antigravity_plugin_dir(home)
+    config = gemini_config_dir(home)
+    try:
+        config.mkdir(parents=True, exist_ok=True)
+        staging_root = Path(tempfile.mkdtemp(prefix=STAGING_PREFIX, dir=str(config)))
+    except OSError as error:
+        raise InstallError(f"no staging directory could be made under {config} ({error})") from None
+    try:
+        staged = staging_root / "gurita"
+        try:
+            extract_archive(data, url, staged)
+            version = plugin_version(staged)
+        except InstallError as error:
+            raise InstallError(f"{error}; {destination} was left as it stands") from None
+        try:
+            if destination.is_symlink() or destination.is_file():
+                destination.unlink()
+            elif destination.exists():
+                shutil.rmtree(str(destination))
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            os.rename(str(staged), str(destination))
+        except OSError as error:
+            raise InstallError(f"{destination} could not be replaced with the new release ({error})") from None
+    finally:
+        shutil.rmtree(str(staging_root), ignore_errors=True)
+    sys.stdout.write(f"Updated Gurita to {version} in {destination}\n")
+    return 0
+
+
 # The install and update steps, by harness and action, each run with the release's tag and
 # returning the exit status.
-STEPS: Dict[Tuple[str, str], Step] = {}
+STEPS: Dict[Tuple[str, str], Step] = {
+    (ANTIGRAVITY, INSTALL): install_antigravity,
+    (ANTIGRAVITY, UPDATE): update_antigravity,
+}
 
 
 def run(

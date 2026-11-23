@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Antigravity Install and Staged-Swap Update
-
-Give the install script its Antigravity install and update, with no shell pipeline and no `agy` command: the install downloads the distribution repository's `archive/refs/tags/<tag>.tar.gz` with `urllib` and extracts it with `tarfile`, stripped of its top directory, directly into `~/.gemini/config/plugins/gurita`, while the update extracts the new release into a fresh staging directory outside `~/.gemini/config/plugins/` on the same filesystem, checks that its root `plugin.json` is present and reads its version, and only then removes the old `gurita` directory and moves the staged one into its place, keeping no backup. Verified by pytest tests against a local archive and an overridden home: a fresh install, an update leaving exactly what the new release ships, and a staged copy failing its check with the old directory left untouched.
-
----
-
 ## Claude Code Install and Update Commands
 
 Give the install script its Claude Code install and update, run through the runner's session shell at the project root with the terminal's own input and output: an install at a given scope runs `claude plugin marketplace add --scope <scope>` on `uHappyLogic/gurita-claude` with a source carrying the release's tag and then `claude plugin install gurita@gurita --scope <scope>`, and an update over the given detected scopes re-runs that marketplace add at each of them with the new tag, then `claude plugin marketplace update gurita`, then `claude plugin update gurita@gurita -s <scope>` for each, in the order user, project, local. A command that fails ends the run with a non-zero status. Verified by pytest tests with a stand-in `claude` recording its calls, for an install at each scope and an update over one scope and over several.
