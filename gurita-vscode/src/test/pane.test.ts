@@ -1846,3 +1846,82 @@ test("a fixed-name button's dropdown selection is remembered in workspaceState, 
     process.env.HOME = home;
   }
 });
+
+/** The shipped file the first-review-round test reads: one chain declaring each review round and derive tasks, one undeclared recipe. */
+const STAGED_SHIPPED_TEXT = `# Snippets
+
+## Recipes
+
+### First run
+Stage: first review round
+\`\`\`
+claude -p "/gurita:review-mission-requirements --mission <path>" --model "fable" --effort xhigh;
+\`\`\`
+
+### Requirements iteration
+Stage: additional review round
+\`\`\`
+claude -p "/gurita:review-mission-requirements --mission <path>" --model "fable" --effort xhigh;
+\`\`\`
+
+### Mixed review
+Stage: additional review round
+\`\`\`
+agy -p "/gurita:review-mission-requirements --mission <path>" --model "gemini-4-argon" --effort medium;
+\`\`\`
+
+### Prepare tasks
+Stage: derive tasks
+\`\`\`
+claude -p "/gurita:derive-tasks --mission <path>" --model "fable" --effort xhigh;
+\`\`\`
+`;
+
+const FRESH = 'pkg/mission_fresh/';
+const REVIEWED = 'pkg/mission_reviewed/';
+
+test("a page filling first review round lists the additional review round's recipes beside First run while a question is open, and First run alone for a fresh mission with none", async () => {
+  const home = process.env.HOME;
+  process.env.HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-home-'));
+  try {
+    const root = project(FRESH, REVIEWED);
+    fs.writeFileSync(
+      path.join(root, REVIEWED, 'open_questions.xml'),
+      '<open-questions>\n  <open-question id="Pane Layout">\n    <question>Which layout?</question>\n  </open-question>\n</open-questions>\n',
+    );
+    git(root, 'add', '.');
+    git(root, 'commit', '-q', '-m', `Requirements-review: ${REVIEWED}`);
+    const files = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-recipes-'));
+    fs.writeFileSync(path.join(files, 'shipped_recipes.md'), STAGED_SHIPPED_TEXT);
+    packaged.set('bundled/missions.py', path.join(__dirname, '..', '..', '..', 'core', 'tools', 'missions.py'));
+    packaged.set('bundled/shipped_recipes.md', path.join(files, 'shipped_recipes.md'));
+    workspace.folders = [{ uri: { fsPath: root } }];
+    workspace.settings = { ownRecipesFile: path.join(files, 'recipes.md') };
+    const from = posted.length;
+    send({ type: 'ready' });
+    const live = (await postedOf('live', from)) as {
+      missions: { path: string; step?: string; additionalRounds?: number; recipes: { state: string; recipes: { name: string }[] } }[];
+    };
+    const page = (mission: string) => live.missions.find((each) => each.path === mission);
+    for (const mission of [FRESH, REVIEWED]) {
+      assert.strictEqual(page(mission)?.step, 'first-review', `${mission} fills first review round`);
+      assert.strictEqual(page(mission)?.additionalRounds, undefined, `${mission} carries no round count`);
+    }
+    assert.deepStrictEqual(page(FRESH)?.recipes.recipes.map((entry) => entry.name), ['First run'], 'a fresh mission with no open question lists First run alone');
+    assert.deepStrictEqual(
+      page(REVIEWED)?.recipes.recipes.map((entry) => entry.name),
+      ['First run', 'Requirements iteration', 'Mixed review'],
+      'an open question lists the additional review round beside First run',
+    );
+    const count = created.length;
+    send({ type: 'runRecipe', mission: REVIEWED, recipe: 'Requirements iteration', variant: 'default' });
+    send({ type: 'runRecipe', mission: FRESH, recipe: 'Requirements iteration', variant: 'default' });
+    assert.deepStrictEqual(
+      created.slice(count).map((terminal) => terminal.name),
+      [`Gurita: Requirements iteration (${REVIEWED})`],
+      'Requirements iteration runs from the page listing it, and from no other',
+    );
+  } finally {
+    process.env.HOME = home;
+  }
+});

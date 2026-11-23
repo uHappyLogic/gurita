@@ -12,6 +12,7 @@ import {
   mergeRecipes,
   overlayVariantStore,
   ownRecipesFile,
+  OPEN_QUESTION_PAIRED_STAGES,
   PAIRED_STAGES,
   pageRecipes,
   parseOwnRecipes,
@@ -516,9 +517,9 @@ function staged(): Recipe[] {
   return parseOwnRecipes(text, OWN);
 }
 
-/** The names of the recipes of `staged` a page whose diagram fills `step` lists. */
-function listedAt(step: WorkflowStep | undefined): string[] {
-  return stageRecipes(staged(), step).map((recipe) => recipe.name);
+/** The names of the recipes of `staged` a page whose diagram fills `step` lists, `questionsOpen` whether a question of its mission is open. */
+function listedAt(step: WorkflowStep | undefined, questionsOpen = false): string[] {
+  return stageRecipes(staged(), step, questionsOpen).map((recipe) => recipe.name);
 }
 
 test('a page whose diagram fills a step lists the recipes declaring it and every undeclared recipe', () => {
@@ -551,6 +552,16 @@ test("derive tasks lists the additional review round's recipes beside its own, a
   assert.deepStrictEqual(listedAt('finish'), ['Undeclared', 'follow up tasks', 'finish', 'Unknown stage']);
   assert.ok(!listedAt('additional-review').includes('derive tasks'), 'the pair lists the optional step beside the filled one only');
   assert.ok(!listedAt('follow-up').includes('finish'), 'the pair lists the optional step beside the filled one only');
+});
+
+test("first review round lists the additional review round's recipes beside its own while a question is open, and its own alone while none is", () => {
+  assert.deepStrictEqual([...OPEN_QUESTION_PAIRED_STAGES], [['first-review', 'additional-review']]);
+  assert.deepStrictEqual(listedAt('first-review'), ['Undeclared', 'first review round', 'Unknown stage']);
+  assert.deepStrictEqual(listedAt('first-review', true), ['Undeclared', 'first review round', 'additional review round', 'Unknown stage']);
+  assert.deepStrictEqual(listedAt('additional-review', true), listedAt('additional-review'), 'an open question pairs nothing with the additional review round');
+  assert.deepStrictEqual(listedAt('derive', true), listedAt('derive'), 'nor changes the pair of derive tasks');
+  assert.deepStrictEqual(listedAt('finish', true), listedAt('finish'));
+  assert.deepStrictEqual(listedAt(undefined, true), listedAt(undefined));
 });
 
 test('an undeclared recipe is listed whatever the step, and a page with no step chosen lists every recipe in order', () => {
@@ -598,7 +609,12 @@ test('each step lists exactly the shipped chains that fit it, and no step chosen
     ['shipped', 'Requirements iteration'],
     ['shipped', 'Mixed-agent requirements review (Gemini reviews, Claude annotates)'],
   ];
-  assert.deepStrictEqual(at('first-review'), [['shipped', 'First run']]);
+  assert.deepStrictEqual(at('first-review'), [['shipped', 'First run']], 'a fresh mission with no open question lists First run alone');
+  assert.deepStrictEqual(
+    pageRecipes(stageRecipes(recipes, 'first-review', true), ['path']).map((entry) => [entry.group, entry.name]),
+    [['shipped', 'First run'], ...review],
+    'a first review round with a question open lists Requirements iteration and the mixed-agent recipe beside First run',
+  );
   assert.deepStrictEqual(at('additional-review'), review, 'the additional review round lists Requirements iteration and the mixed-agent recipe');
   assert.deepStrictEqual(at('derive'), [
     ['shipped', 'Requirements iteration'],

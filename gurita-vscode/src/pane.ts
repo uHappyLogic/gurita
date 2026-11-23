@@ -12,7 +12,8 @@
 // otherwise, a failed git read included; and the recipe list its page shows, out of the recipes
 // read afresh from the shipped recipe file and the person's own recipe file: only those whose
 // declared stage is the step its diagram fills, beside them the additional review round's when
-// derive tasks is filled and follow up tasks' when finish is, and every undeclared recipe, or every
+// derive tasks is filled, or when first review round is while any question of the mission is open,
+// and follow up tasks' when finish is, and every undeclared recipe, or every
 // recipe when no step is chosen, laid out within that by the page's other rules, the shipped
 // recipes in the shipped file's order followed by its own group, and the leaving off of a recipe
 // holding a placeholder the page cannot fill; or with the one failure state the live read gives.
@@ -692,16 +693,21 @@ function readRecipeList(context: vscode.ExtensionContext): RecipeRead {
 
 /**
  * The recipe list the page of a mission whose diagram fills `step` shows, out of the merged list
- * `read`: the recipes `stageRecipes` keeps for that step, every recipe when `step` is undefined,
- * as `pageRecipes` lists them for a page holding its mission's path, each recipe's dropdown on the
+ * `read`: the recipes `stageRecipes` keeps for that step, `questionsOpen` whether any question of
+ * the mission is open, every recipe when `step` is undefined, as `pageRecipes` lists them for a page holding its mission's path, each recipe's dropdown on the
  * variant `remembered` names for it, every variant with a line on a disabled harness left out. A
  * failed read is posted to the page as it stands.
  */
-function missionRecipes(read: RecipeRead, step: WorkflowStep | undefined, remembered: ReadonlyMap<string, string>): RecipePart {
+function missionRecipes(
+  read: RecipeRead,
+  step: WorkflowStep | undefined,
+  questionsOpen: boolean,
+  remembered: ReadonlyMap<string, string>,
+): RecipePart {
   if (read.state === 'failed') {
     return read;
   }
-  return { state: 'read', recipes: pageRecipes(stageRecipes(read.recipes, step), PAGE_PLACEHOLDERS, remembered, read.disabled) };
+  return { state: 'read', recipes: pageRecipes(stageRecipes(read.recipes, step, questionsOpen), PAGE_PLACEHOLDERS, remembered, read.disabled) };
 }
 
 /** The dropdown selections the project's `workspaceState` remembers, by mission path and recipe name. */
@@ -873,14 +879,15 @@ function publish(context: vscode.ExtensionContext, shown: Current): PaneMessage 
   const buttons = new Map<string, ButtonPosts>();
   const missions = shown.live.map((mission) => {
     const workflow = shown.workflows.get(mission.path) as MissionWorkflow;
+    const documents = shown.documents.get(mission.path) as MissionDocuments;
     const remembered = missionSelections(selections, mission.path);
     const fixed = fixedButtons(shown.recipes, PAGE_BUTTONS, remembered);
     buttons.set(mission.path, fixed.posts);
     return {
       ...mission,
-      ...(shown.documents.get(mission.path) as MissionDocuments),
+      ...documents,
       ...workflow,
-      recipes: missionRecipes(shown.recipes, workflow.step, remembered),
+      recipes: missionRecipes(shown.recipes, workflow.step, documents.facts.questionsEmpty === false, remembered),
       buttons: fixed.entries,
     };
   });

@@ -40,8 +40,9 @@
 // declaration. A recipe with no such line, with more than one,
 // or with a name the reader does not know, `define` included, counts as undeclared. A mission page
 // lists only the recipes that fit the step its diagram fills: those declaring that step, beside them
-// the additional review round's when derive tasks is filled and follow up tasks' when finish is, and
-// every undeclared recipe whatever the step, while a page whose step could not be chosen lists every
+// the additional review round's when derive tasks is filled, or when first review round is while
+// any question is open, and follow up tasks' when finish is, and every undeclared recipe whatever
+// the step, while a page whose step could not be chosen lists every
 // recipe; the page's other rules, the shipped recipes before the own group and the placeholders it
 // cannot fill, hold within that list, and the buttons that run a recipe by its fixed name are untouched by
 // it. In the shipped file every chain declares its one step and spans no other, each variant of an
@@ -248,16 +249,30 @@ export const PAIRED_STAGES: ReadonlyMap<WorkflowStep, WorkflowStep> = new Map<Wo
 ]);
 
 /**
- * The recipes a mission page whose workflow diagram fills `step` lists, in the order given: every
- * recipe declaring `step`, every recipe declaring the step `PAIRED_STAGES` pairs with it, and every
- * undeclared recipe. A page whose step could not be chosen, `step` left undefined, lists every
- * recipe.
+ * The step whose recipes a mission page lists beside those of the step its workflow diagram fills
+ * while any question of the mission is open: the additional review round's beside first review
+ * round, so a mission whose first review left questions open can run a further round from its page.
  */
-export function stageRecipes<T extends { stage?: WorkflowStep }>(recipes: readonly T[], step: WorkflowStep | undefined): T[] {
+export const OPEN_QUESTION_PAIRED_STAGES: ReadonlyMap<WorkflowStep, WorkflowStep> = new Map<WorkflowStep, WorkflowStep>([
+  ['first-review', 'additional-review'],
+]);
+
+/**
+ * The recipes a mission page whose workflow diagram fills `step` lists, in the order given: every
+ * recipe declaring `step`, every recipe declaring the step `PAIRED_STAGES` pairs with it, while
+ * `questionsOpen` holds every recipe declaring the step `OPEN_QUESTION_PAIRED_STAGES` pairs with
+ * it, and every undeclared recipe. A page whose step could not be chosen, `step` left undefined,
+ * lists every recipe.
+ */
+export function stageRecipes<T extends { stage?: WorkflowStep }>(
+  recipes: readonly T[],
+  step: WorkflowStep | undefined,
+  questionsOpen = false,
+): T[] {
   if (step === undefined) {
     return [...recipes];
   }
-  const paired = PAIRED_STAGES.get(step);
+  const paired = PAIRED_STAGES.get(step) ?? (questionsOpen ? OPEN_QUESTION_PAIRED_STAGES.get(step) : undefined);
   return recipes.filter(
     (recipe) => recipe.stage === undefined || recipe.stage === step || (paired !== undefined && recipe.stage === paired),
   );

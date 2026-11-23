@@ -37,8 +37,8 @@
 // state) and every load of the page, a reopening or a hidden pane shown again, opens on the
 // default afresh. The recipe buttons: the recipe list the extension posts with the page's mission,
 // holding only the recipes that fit the step its diagram fills, those declaring that step, beside
-// them those declaring the additional review round when derive tasks is filled and follow up tasks
-// when finish is, and every recipe declaring no step, whichever block is filled, or every recipe
+// them those declaring the additional review round when derive tasks is filled, or when first
+// review round is while any question of the mission is open, and follow up tasks when finish is, and every recipe declaring no step, whichever block is filled, or every recipe
 // when no block is filled, so each mission's page draws its own list; first the shipped recipes in
 // it, one button each in the order posted, the shipped file's, under no heading of their own, and
 // below them the own recipes that carry no shipped recipe's name under "Your recipes", in the own

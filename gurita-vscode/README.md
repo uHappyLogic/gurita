@@ -475,9 +475,10 @@ Each mission's page lists only the recipes that fit the step its workflow diagra
 step to run next:
 
 - every recipe declaring that step;
-- beside them, when **derive tasks** is filled, every recipe declaring **additional review
-  round**, and when **finish** is filled, every recipe declaring **follow up tasks**, the
-  optional step you may take there instead of moving on;
+- beside them, when **derive tasks** is filled, and when **first review round** is filled while
+  any question of the mission is open, every recipe declaring **additional review round**, and
+  when **finish** is filled, every recipe declaring **follow up tasks**, the optional step you may
+  take there instead of moving on;
 - every undeclared recipe, whatever the step.
 
 A page whose diagram fills no block, because a document or the git read the choice needs did not
@@ -600,7 +601,10 @@ other:
 - **finish**: `Finish mission`, one `claude` line.
 
 A page filling **derive tasks** thus lists `Prepare tasks` beside the two additional review round
-chains, and one filling **execute tasks** `Execute tasks` and `Execute tasks one at a time`. No
+chains, and one filling **first review round** lists them beside `First run` while a question is
+open, such as on a mission whose first review left questions lacking alternatives or a pick, and
+`First run` alone on a fresh mission with no open question. One filling **execute tasks** lists
+`Execute tasks` and `Execute tasks one at a time`. No
 shipped recipe declares **follow up tasks**. Besides the chains, the file carries the following,
 none of which declares a step and each of which is one block:
 
