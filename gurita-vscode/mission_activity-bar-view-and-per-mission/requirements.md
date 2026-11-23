@@ -72,5 +72,9 @@ The extension has no activity-bar container, side-bar view, tree data provider, 
 
 ## Decisions
 
+### Windows
+
+- **Restore after a reload.** The mission windows and the Settings window that were open come back after a restart or a window reload, in the editor group and tab position they held. The extension registers a `WebviewPanelSerializer` for the mission window's view type and one for the Settings window's, and the manifest carries an `onWebviewPanel:` activation event for each. Each mission window keeps its mission's path in its webview state and is redrawn on restore from a fresh read of the live missions for that path, its `setState` values coming back with it; the Settings window is redrawn from fresh reads, as each opening reads them today. A restored window that is first shown while a window for the same mission, or the Settings window, is already open is closed, and a restored window whose saved state is missing or cannot be read is closed rather than drawn.
+
 ## Out of Scope
 
