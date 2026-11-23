@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Run Terminal Shown on Window Activation
-
-Each time a mission's window becomes the active editor while that mission's run is going, by a click on its row in the side-bar tree, a click on its editor tab, or keyboard navigation between editors, bring that run's terminal forward without taking the focus (`terminal.show(true)`), read from the panel's `onDidChangeViewState`. Neither the side-bar tree nor the mission's page draws a control for it, and a click for a mission whose run is going is still refused with the notification and that run's terminal shown; verified by a test against the `vscode` stub that records each `show` call's `preserveFocus` argument, with `gurita-vscode/README.md` saying when the terminal comes forward.
-
----
-
 ## Mission Window Tab Titles and Icon
 
 Title each mission window's editor tab with the mission's title alone, every colliding tab gaining its mission's scope after a separator while another live mission carries the same title, and re-title the tabs on every live re-read. Set every mission window's `iconPath` to one fixed built-in codicon through a `ThemeIcon`, with no image file and no light-theme variant made for it; verified by tests against the `vscode` stub of a lone title, two live missions sharing one, and a re-read that ends the collision.

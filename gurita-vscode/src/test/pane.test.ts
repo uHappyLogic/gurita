@@ -41,6 +41,8 @@ interface StubPanel {
   viewType: string;
   title: string;
   visible: boolean;
+  /** Whether it is the active editor. */
+  active: boolean;
   /** The number of `reveal` calls made on it. */
   reveals: number;
   /** The script its page shell loads. */
@@ -48,11 +50,34 @@ interface StubPanel {
   /** Every message the extension posted to this panel's page, in order. */
   posts: Record<string, unknown>[];
   receive?: (message: unknown) => void;
+  /** The listener of its view-state changes, with the panel object the editor hands it. */
+  viewState?: () => void;
   /** Closes the panel, as the editor does when the person closes it. */
   dispose?: () => void;
 }
 /** Every webview panel the stub's editor created, in order. */
 const panels: StubPanel[] = [];
+
+/**
+ * Makes `target` the active editor, as the editor does when a panel is created, revealed, or reached
+ * through its tab or keyboard navigation: every other open panel that was active stops being so and
+ * `target`, when it was not, becomes so, each change raising that panel's view-state event, the
+ * created panel's own excepted, since the editor raises none for a panel's first state.
+ */
+function activate(target: StubPanel, created = false): void {
+  for (const each of panels) {
+    if (each !== target && each.active && each.dispose !== undefined) {
+      each.active = false;
+      each.viewState?.();
+    }
+  }
+  if (!target.active) {
+    target.active = true;
+    if (!created) {
+      target.viewState?.();
+    }
+  }
+}
 
 /** The panel of `viewType` the extension created last. */
 function panelOf(viewType: string): StubPanel | undefined {
@@ -123,14 +148,19 @@ const stub = {
   },
   window: {
     createWebviewPanel(viewType: string, title: string): unknown {
-      const record: StubPanel = { viewType, title, visible: true, reveals: 0, html: '', posts: [] };
+      const record: StubPanel = { viewType, title, visible: true, active: false, reveals: 0, html: '', posts: [] };
       panels.push(record);
-      return {
+      activate(record, true);
+      const panel = {
         get visible() {
           return record.visible;
         },
+        get active() {
+          return record.active;
+        },
         reveal(): void {
           record.reveals++;
+          activate(record);
         },
         webview: {
           set html(value: string) {
@@ -151,12 +181,19 @@ const stub = {
             return Promise.resolve(true);
           },
         },
-        onDidChangeViewState: () => disposable,
+        onDidChangeViewState(listener: (event: { webviewPanel: unknown }) => void) {
+          record.viewState = () => listener({ webviewPanel: panel });
+          return disposable;
+        },
         onDidDispose(listener: () => void) {
-          record.dispose = listener;
+          record.dispose = () => {
+            record.active = false;
+            listener();
+          };
           return disposable;
         },
       };
+      return panel;
     },
     createTerminal(options: { name: string; shellArgs?: string[] }): StubTerminal & { show(preserveFocus?: boolean): void } {
       const terminal = {
@@ -185,6 +222,7 @@ const load = Module._load;
 Module._load = (request, parent, isMain) => (request === 'vscode' ? stub : load(request, parent, isMain));
 const pane = require('../pane') as typeof import('../pane');
 const settingsWindow = require('../settingsWindow') as typeof import('../settingsWindow');
+const runs = require('../runs') as typeof import('../runs');
 Module._load = load;
 
 /** The project's `workspaceState` as the stub's editor keeps it, by key. */
@@ -673,6 +711,81 @@ test("each open mission window is posted its own mission's page from the session
     pane.postRunning();
     assert.deepStrictEqual(zeta.posts.slice(from).map((message) => message.type), ['running']);
     assert.deepStrictEqual(reopened.posts.slice(twoFrom).map((message) => message.type), ['running']);
+  } finally {
+    process.env.HOME = home;
+  }
+});
+
+/** Two missions of the run-terminal test, the first of which has a run going. */
+const UPSILON = 'pkg/mission_upsilon/';
+const PHI = 'mission_phi/';
+
+test("a mission's window becoming the active editor while its run is going brings that run's terminal forward without taking the focus, by every route", async () => {
+  const home = process.env.HOME;
+  process.env.HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-home-'));
+  try {
+    const root = project(UPSILON, PHI);
+    const files = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-recipes-'));
+    fs.writeFileSync(path.join(files, 'shipped_recipes.md'), SHIPPED_TEXT);
+    packaged.set('bundled/missions.py', path.join(__dirname, '..', '..', '..', 'core', 'tools', 'missions.py'));
+    packaged.set('bundled/shipped_recipes.md', path.join(files, 'shipped_recipes.md'));
+    workspace.folders = [{ uri: { fsPath: root } }];
+    workspace.settings = { ownRecipesFile: path.join(files, 'recipes.md') };
+    workspaceState.clear();
+
+    await pageAfter({ type: 'refresh' }, PHI);
+    await pageAfter({ type: 'refresh' }, UPSILON);
+    const [upsilon, phi] = [openWindow(UPSILON), openWindow(PHI)];
+    assert.ok(phi.active && !upsilon.active, 'the window opened or revealed last is the active editor');
+
+    // A window becoming active while no run of its mission is going brings nothing forward.
+    const others = created.map((terminal) => terminal.shows.length);
+    activate(upsilon);
+    activate(phi);
+    assert.deepStrictEqual(created.map((terminal) => terminal.shows.length), others, 'no terminal is shown for a mission with no run going');
+
+    // The run starts from the mission's window, its terminal shown as every run's start shows it.
+    const count = created.length;
+    send({ type: 'runRecipe', mission: UPSILON, recipe: 'First run', variant: 'Claude Code' });
+    assert.deepStrictEqual(created.slice(count).map((terminal) => terminal.name), [`Gurita: First run (${UPSILON})`]);
+    const run = created[created.length - 1];
+    assert.deepStrictEqual(run.shows, [undefined], "the run's start shows its terminal");
+
+    // A click on its editor tab, or keyboard navigation between editors, makes the window active.
+    activate(phi);
+    assert.deepStrictEqual(run.shows, [undefined], "another mission's window becoming active shows nothing of this run");
+    activate(upsilon);
+    assert.deepStrictEqual(run.shows, [undefined, true], 'the window becoming active brings the terminal forward, keeping the focus');
+    activate(phi);
+    activate(upsilon);
+    assert.deepStrictEqual(run.shows, [undefined, true, true], 'and again each time it becomes active');
+
+    // A click on its row reveals the window, which becomes active.
+    activate(phi);
+    openWindow(UPSILON);
+    assert.deepStrictEqual(run.shows, [undefined, true, true, true], 'a row click revealing the window brings the terminal forward');
+    openWindow(UPSILON);
+    assert.deepStrictEqual(run.shows, [undefined, true, true, true], 'a reveal of the window already active changes nothing');
+
+    // A row click opening the window afresh makes it the active editor at once.
+    closeWindow(UPSILON);
+    const reopened = openWindow(UPSILON);
+    assert.notStrictEqual(reopened, upsilon);
+    assert.ok(reopened.active);
+    assert.deepStrictEqual(run.shows, [undefined, true, true, true, true], 'a window opened afresh brings the terminal forward');
+
+    // The page posts no message of its own for the terminal: a stray one does nothing.
+    sendFrom(UPSILON, { type: 'missionTab', mission: UPSILON });
+    sendFrom(UPSILON, { type: 'showTerminal', mission: UPSILON });
+    assert.deepStrictEqual(run.shows, [undefined, true, true, true, true]);
+
+    // A click for the mission whose run is going is refused with the notification and the terminal shown.
+    await windowPosted(UPSILON, 'page', 0);
+    notifications.length = 0;
+    send({ type: 'runRecipe', mission: UPSILON, recipe: 'First run', variant: 'Claude Code' });
+    assert.strictEqual(created.length, count + 1, 'the refused click starts nothing');
+    assert.deepStrictEqual(notifications, [runs.ALREADY_RUNNING]);
+    assert.deepStrictEqual(run.shows, [undefined, true, true, true, true, undefined], 'the refusal shows the terminal as before');
   } finally {
     process.env.HOME = home;
   }

@@ -7,7 +7,9 @@
 // starts, when its terminal closes, and with every redraw, and the page of a mission with a running
 // runner shows every action button disabled and its workflow diagram's filled block pulsing. As a
 // fallback, a click that still reaches the extension for that mission starts nothing and queues
-// nothing, shows a notification, and reveals that run's terminal. A run a mission-starting row
+// nothing, shows a notification, and reveals that run's terminal. Each time a mission's window
+// becomes the active editor while that mission's run is going, that run's terminal is brought
+// forward without taking the focus. A run a mission-starting row
 // starts belongs to no mission and is refused for none. A looped run is started the same way, its
 // arguments the runner's `loop` command line, the runner filling the loop's values itself. The
 // extension learns that a run ended when its terminal closes, which the runner delays until the
@@ -69,6 +71,16 @@ export function refuseWhileRunning(mission: string): boolean {
   void vscode.window.showInformationMessage(ALREADY_RUNNING);
   terminal.show();
   return true;
+}
+
+/**
+ * Brings the terminal of the running runner of the mission at `mission` forward without taking the
+ * focus, as its window becoming the active editor does, and does nothing when it has none. The
+ * focus stays with the window, since a terminal that took it would deactivate the window and bring
+ * the terminal forward again on the next click back into it.
+ */
+export function showRunTerminal(mission: string): void {
+  running.terminal(mission)?.show(true);
 }
 
 /**

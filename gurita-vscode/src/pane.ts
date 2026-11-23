@@ -91,7 +91,12 @@
 // extension posts the
 // paths of the missions with a running runner to every open window when a run starts and when its
 // terminal closes, and with every redraw, so a hidden window shown again draws them too; a click
-// that still reaches the extension for such a mission is refused as before. When a run's terminal
+// that still reaches the extension for such a mission is refused as before. Each time a mission's
+// window becomes the active editor while that mission's run is going, whether opened afresh by a
+// click on its row, revealed by one, or reached through its editor tab or keyboard navigation
+// between editors, read from the panel's view-state change, that run's terminal is brought
+// forward without taking the focus; nothing on the page or in the side-bar view draws a control
+// for it. When a run's terminal
 // closes the live missions are re-read and the fresh parse posted to every shown window. A click on a looped recipe's button shows that recipe's preview on the
 // page before anything runs: the extension gathers the named single-task lines from the recipes,
 // read afresh, runs the runner's `preview` with them, the mission, and the rule file at the
@@ -156,7 +161,7 @@ import { disabledCommands, readHarnessStates } from './harnessSettings';
 import { Harness } from './lineValues';
 import { FileEventKind, RefreshBatch, RefreshQueue, WATCHED_PATTERN, eventEffect } from './refresh';
 import { OPTIONAL_PLACEHOLDERS } from './placeholders';
-import { refuseWhileRunning, runnerFile, runningMissions, startChain, startLoop } from './runs';
+import { refuseWhileRunning, runnerFile, runningMissions, showRunTerminal, startChain, startLoop } from './runs';
 import { MissionWorkflow, WorkflowStep, missionWorkflow, reviewCount } from './workflow';
 import { StartingButton, StartingOffer, variantValues } from './startingRows';
 
@@ -509,7 +514,10 @@ export function postRunning(): void {
  * Opens the window of the mission at `mission`, or reveals it when one is already open, starting the
  * session's live read when nothing has started it yet: a webview panel of its own in the active
  * editor column, titled with the mission's title as the session's read lists it, else its path,
- * beside every other mission's window.
+ * beside every other mission's window. A window created afresh is the active editor at once, and
+ * any window becoming the active editor later raises a view-state change, so each brings the
+ * mission's run terminal forward, without taking the focus, while that run is going; a reveal of
+ * the window already active changes nothing.
  */
 export function openMissionWindow(context: vscode.ExtensionContext, mission: string): void {
   startSession(context);
@@ -559,6 +567,16 @@ export function openMissionWindow(context: vscode.ExtensionContext, mission: str
     undefined,
     context.subscriptions,
   );
+  created.onDidChangeViewState(
+    (event) => {
+      if (windows.get(mission) === win && event.webviewPanel.active) {
+        showRunTerminal(mission);
+      }
+    },
+    undefined,
+    context.subscriptions,
+  );
+  showRunTerminal(mission);
   created.onDidDispose(
     () => {
       if (windows.get(mission) === win) {

@@ -269,6 +269,12 @@ the window was hidden and shown included. Should a click still reach the extensi
 mission, it starts nothing: a notification says a chain is already running and the run's terminal
 is shown.
 
+Each time a mission's window becomes the active editor while that mission's run is going, the
+run's terminal comes forward without taking the focus, so the window stays active: whether you
+reach the window by a click on its row in the side-bar view, a click on its editor tab, or
+keyboard navigation between editors, and when a click on its row opens it afresh. Neither the
+side-bar view nor the mission's page draws a control for bringing the terminal forward.
+
 The live missions are re-read by themselves after each run, once you dismiss the run's terminal,
 and on changes to any mission's `requirements.md`, `open_questions.xml`, or `TASKS_TODO.md`; git
 state is not watched. The extension reads no mission and watches no file until the side-bar view
