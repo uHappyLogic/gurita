@@ -47,8 +47,52 @@
       {
         "command": "gurita.refreshMissionPane",
         "title": "Gurita: Refresh Mission Pane"
+      },
+      {
+        "command": "gurita.newMission",
+        "title": "New Mission",
+        "category": "Gurita"
+      },
+      {
+        "command": "gurita.defineMission",
+        "title": "Define Mission",
+        "category": "Gurita"
+      },
+      {
+        "command": "gurita.pickStartingVariant",
+        "title": "Choose Variant",
+        "category": "Gurita",
+        "icon": "$(versions)"
       }
     ],
+    "menus": {
+      "view/item/context": [
+        {
+          "command": "gurita.pickStartingVariant",
+          "when": "view == gurita.missions && viewItem == gurita.startingRow",
+          "group": "inline"
+        },
+        {
+          "command": "gurita.pickStartingVariant",
+          "when": "view == gurita.missions && viewItem == gurita.startingRow",
+          "group": "navigation"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "gurita.newMission",
+          "when": "false"
+        },
+        {
+          "command": "gurita.defineMission",
+          "when": "false"
+        },
+        {
+          "command": "gurita.pickStartingVariant",
+          "when": "false"
+        }
+      ]
+    },
     "configuration": {
       "title": "Gurita",
       "properties": {

@@ -248,6 +248,7 @@ import { OPTIONAL_PLACEHOLDERS } from './placeholders';
 import { CHECK_SCRIPT, CheckResult, HARNESSES, PLUGIN_VERSION_FILE, readPackagedVersion, runHarnessCheck } from './harnessCheck';
 import { refuseWhileRunning, runnerFile, runningMissions, showRun, startChain, startLoop } from './runs';
 import { MissionWorkflow, WorkflowStep, missionWorkflow, reviewCount } from './workflow';
+import { StartingButton, StartingOffer, variantValues } from './startingRows';
 
 const VIEW_TYPE = 'gurita.missionPane';
 const PANEL_TITLE = 'Gurita Missions';
@@ -258,8 +259,8 @@ const PAGE_PLACEHOLDERS = ['path'];
 /** A button on a question's card. */
 type QuestionButton = 'discussQuestion' | 'answerQuestion' | 'answerWithRecommendation';
 
-/** A mission-starting button at the tab row's end. */
-type MissionButton = 'discussGoal' | 'defineMission';
+/** A mission-starting button at the tab row's end, and a mission-starting row of the side-bar view. */
+type MissionButton = StartingButton;
 
 /** A message the page posts to the extension. */
 type PageMessage =
@@ -492,6 +493,12 @@ let checks = 0;
 /** What is called after every re-read the session's live read keeps, a full one or a burst's. */
 const readListeners: (() => void)[] = [];
 
+/** What is called after every change to the variants remembered for the two mission-starting controls. */
+const startingListeners: (() => void)[] = [];
+
+/** What the side-bar view's two mission-starting rows last drew, which a row's click runs. */
+let drawnOffers: Record<MissionButton, StartingOffer> | undefined;
+
 /** One live mission as the session's live read holds it: its documents and what its workflow draws. */
 export interface SessionMission {
   mission: LiveMission;
@@ -529,6 +536,30 @@ export function onSessionRead(listener: () => void): vscode.Disposable {
       }
     },
   };
+}
+
+/**
+ * Calls `listener` after every change to the variant remembered for either mission-starting control,
+ * made from the side-bar view's QuickPick or the pane's dropdown, until the returned disposable is
+ * disposed.
+ */
+export function onStartingSelection(listener: () => void): vscode.Disposable {
+  startingListeners.push(listener);
+  return {
+    dispose(): void {
+      const index = startingListeners.indexOf(listener);
+      if (index >= 0) {
+        startingListeners.splice(index, 1);
+      }
+    },
+  };
+}
+
+/** Tells every listener that a mission-starting control's remembered variant changed. */
+function startingChanged(): void {
+  for (const listener of [...startingListeners]) {
+    listener();
+  }
 }
 
 /** Tells every listener that the session's live read kept a re-read. */
@@ -1194,6 +1225,7 @@ async function selectButtonVariant(
     }
     const stored = readProjectSelections(context.workspaceState.get(PROJECT_SELECTIONS_KEY));
     await context.workspaceState.update(PROJECT_SELECTIONS_KEY, { ...stored, [post.recipe]: variant });
+    startingChanged();
   } else if ((PAGE_BUTTONS as readonly string[]).includes(button)) {
     if (posted === undefined || typeof mission !== 'string' || !posted.missions.has(mission)) {
       return;
@@ -2189,6 +2221,9 @@ async function startingRoot(): Promise<string | undefined> {
   if (posted !== undefined) {
     return posted.root;
   }
+  if (current !== undefined) {
+    return current.root;
+  }
   const folder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
   if (folder === undefined) {
     return undefined;
@@ -2217,6 +2252,110 @@ async function runMissionButton(context: vscode.ExtensionContext, button: Missio
     return;
   }
   startChain(context, await startingRoot(), undefined, recipe.name, recipe.lines, typed);
+}
+
+/**
+ * What the mission-starting control `button` runs, out of the merged list `read` and the variant
+ * the project remembers for its recipe, as `buttonRecipe` offers it to the pane's button.
+ */
+function startingOffer(read: RecipeRead, button: MissionButton, remembered: ProjectSelections): StartingOffer {
+  if (read.state === 'failed') {
+    return { state: 'refused', cause: `The recipes could not be read: ${read.cause}` };
+  }
+  const name = BUTTON_RECIPES[button];
+  const found = buttonRecipe(read.recipes, name, BUTTON_PLACEHOLDERS[button], remembered[name], read.disabled);
+  if (found.state === 'found') {
+    return {
+      state: 'offered',
+      recipe: found.recipe.name,
+      variants: found.variants.map((variant) => ({ name: variant.name, lines: [...variant.lines] })),
+      selected: found.selected,
+    };
+  }
+  if (found.state === 'disabled') {
+    return { state: 'disabled', recipe: found.recipe.name, cause: found.cause };
+  }
+  return { state: 'refused', cause: found.cause };
+}
+
+/** What the two mission-starting controls run, their recipes read afresh, each on the variant the project remembers. */
+function readStartingOffers(context: vscode.ExtensionContext): Record<MissionButton, StartingOffer> {
+  const read = readRecipeList(context);
+  const remembered = projectSelections(context, read);
+  return {
+    discussGoal: startingOffer(read, 'discussGoal', remembered),
+    defineMission: startingOffer(read, 'defineMission', remembered),
+  };
+}
+
+/**
+ * What the side-bar view's two mission-starting rows draw, their recipes read afresh, noted as what
+ * a row's click runs.
+ */
+export function startingOffers(context: vscode.ExtensionContext): Record<MissionButton, StartingOffer> {
+  drawnOffers = readStartingOffers(context);
+  return drawnOffers;
+}
+
+/**
+ * Runs the side-bar view's mission-starting row `button` on the variant it last drew: the goal,
+ * and for Define mission then the scope, typed into input boxes, the run belonging to no mission.
+ * A row drawn with no variant, or whose recipe cannot be read or run, tells why in an error
+ * notification, and a box dismissed with Escape starts nothing.
+ */
+export async function runStartingRow(context: vscode.ExtensionContext, button: MissionButton): Promise<void> {
+  const spec = MISSION_BUTTONS[button];
+  const offer = drawnOffers?.[button];
+  if (spec === undefined || offer === undefined) {
+    return;
+  }
+  if (offer.state !== 'offered') {
+    void vscode.window.showErrorMessage(offer.cause);
+    return;
+  }
+  const variant = offer.variants[offer.selected];
+  const typed = await askValues(spec.typed);
+  if (typed === undefined) {
+    return;
+  }
+  startChain(context, await startingRoot(), undefined, offer.recipe, variant.lines, typed);
+}
+
+/**
+ * Offers the variants the mission-starting control `button` can run in a QuickPick, each by its
+ * name with its harness, model, and effort beside it and the one selected marked, and remembers
+ * the variant picked once per project, as the pane's dropdown does, without starting a run; every
+ * listener and the pane are told. A control with no variant to offer tells why in an error
+ * notification, and a QuickPick dismissed remembers nothing.
+ */
+export async function pickStartingVariant(context: vscode.ExtensionContext, button: MissionButton): Promise<void> {
+  if (MISSION_BUTTONS[button] === undefined) {
+    return;
+  }
+  const offer = readStartingOffers(context)[button];
+  if (offer.state !== 'offered') {
+    void vscode.window.showErrorMessage(offer.cause);
+    return;
+  }
+  const items = offer.variants.map((variant, index) => ({
+    label: variant.name,
+    description: variantValues(variant.lines),
+    detail: index === offer.selected ? 'Selected' : undefined,
+    variant: variant.name,
+  }));
+  const picked = await vscode.window.showQuickPick(items, {
+    title: offer.recipe,
+    placeHolder: 'The variant to remember for this control; picking one starts no run',
+  });
+  if (picked === undefined) {
+    return;
+  }
+  const stored = readProjectSelections(context.workspaceState.get(PROJECT_SELECTIONS_KEY));
+  await context.workspaceState.update(PROJECT_SELECTIONS_KEY, { ...stored, [offer.recipe]: picked.variant });
+  startingChanged();
+  if (panel !== undefined) {
+    await postPages(context, panel);
+  }
 }
 
 function nonce(): string {

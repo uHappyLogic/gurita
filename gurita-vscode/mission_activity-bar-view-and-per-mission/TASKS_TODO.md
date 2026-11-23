@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## New Mission and Define Mission Tree Rows
-
-Add New mission and Define mission to the side-bar tree as two rows standing above the mission rows in every state of the view, each labelled with its control's name, its `description` showing the harness, model, and effort of the remembered variant, read from that variant's lines, and a click on the row running that variant, its goal, and for Define mission then its scope, asked for in VS Code's input box as today. An inline icon action on the row, also offered in its context menu, opens a QuickPick of the recipe's variants that changes the remembered selection, kept once per project as today, without starting a run, and the commands behind the rows and the action are hidden from the Command Palette through `menus.commandPalette` entries whose `when` is `false`. Verified by tests against the `vscode` stub of the two rows, a click's run, and a QuickPick pick, with `gurita-vscode/README.md` describing the rows.
-
----
-
 ## Refresh Missions Command and Title-Bar Action
 
 Replace `gurita.refreshMissionPane` with a refresh command under a new id whose title names missions rather than the pane, Gurita: Refresh Missions, and add Refresh as an icon action in the side-bar view's title bar that runs that same registered command. The command re-reads the side-bar tree and every open window, and it is the one command of the extension's own the Command Palette is to offer beside the focus command VS Code generates for the view; verified by a check of the manifest and a test against the `vscode` stub that running it re-reads the live missions and redraws the tree, with `gurita-vscode/README.md` naming the command.

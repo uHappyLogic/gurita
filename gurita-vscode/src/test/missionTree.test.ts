@@ -7,7 +7,8 @@ import * as path from 'node:path';
 // The side-bar view's tree, against a stub of the `vscode` module standing in for the editor: a
 // tree stand-in recording the view the extension creates and its data provider, the event
 // emitter, tree items, and theme icons, beside the file system watcher, the terminals, the
-// commands, and the notifications the extension's activation reaches.
+// commands, the input boxes, the QuickPick, `workspaceState`, and the notifications the
+// extension's activation reaches.
 const Module = require('node:module') as {
   _load: (request: string, parent: unknown, isMain: boolean) => unknown;
 };
@@ -20,16 +21,34 @@ interface StubWatcher {
 }
 const watchers: StubWatcher[] = [];
 
-/** A terminal the stub's editor created. */
+/** A terminal the stub's editor created, with the options it was created with. */
 interface StubTerminal {
   name: string;
+  options: { name: string; shellArgs?: string[]; cwd?: string; env?: Record<string, string> };
   show(preserveFocus?: boolean): void;
 }
 const terminals: StubTerminal[] = [];
 let closeTerminal: ((terminal: StubTerminal) => void) | undefined;
 
 /** The commands the extension registered, by id. */
-const commands = new Map<string, () => void>();
+const commands = new Map<string, (...args: unknown[]) => unknown>();
+
+/** The answers the next input boxes give, in order, and the prompts each box was opened with. */
+const inputAnswers: (string | undefined)[] = [];
+const inputPrompts: string[] = [];
+
+/** A QuickPick item as the extension offers it. */
+interface StubPickItem {
+  label: string;
+  description?: string;
+  detail?: string;
+}
+/** Every QuickPick the extension opened, with its items, and the label the next one picks, undefined dismissing it. */
+const quickPicks: { items: StubPickItem[]; options: { title?: string } }[] = [];
+let nextPick: string | undefined;
+
+/** The error notifications the extension showed. */
+const errors: string[] = [];
 
 /** The tree data provider the stub's editor was given, as the tree stand-in holds it. */
 interface StubProvider {
@@ -45,7 +64,8 @@ class StubTreeItem {
   description?: string;
   tooltip?: string;
   iconPath?: StubThemeIcon;
-  command?: unknown;
+  command?: { command: string; title: string; arguments?: unknown[] };
+  contextValue?: string;
   constructor(
     readonly label: string,
     readonly collapsibleState: number,
@@ -96,7 +116,7 @@ const stub = {
     ) {}
   },
   commands: {
-    registerCommand(id: string, run: () => void) {
+    registerCommand(id: string, run: (...args: unknown[]) => unknown) {
       commands.set(id, run);
       return disposable;
     },
@@ -122,8 +142,8 @@ const stub = {
       treeViews.push({ id, provider: options.treeDataProvider, view });
       return view;
     },
-    createTerminal(options: { name: string }): StubTerminal {
-      const terminal = { name: options.name, show(): void {} };
+    createTerminal(options: StubTerminal['options']): StubTerminal {
+      const terminal = { name: options.name, options, show(): void {} };
       terminals.push(terminal);
       return terminal;
     },
@@ -133,7 +153,18 @@ const stub = {
     },
     showInformationMessage: () => Promise.resolve(undefined),
     showWarningMessage: () => Promise.resolve(undefined),
-    showErrorMessage: () => Promise.resolve(undefined),
+    showErrorMessage: (message: string) => {
+      errors.push(message);
+      return Promise.resolve(undefined);
+    },
+    showInputBox: (options: { prompt: string }) => {
+      inputPrompts.push(options.prompt);
+      return Promise.resolve(inputAnswers.shift());
+    },
+    showQuickPick: <T extends StubPickItem>(items: T[], options: { title?: string }) => {
+      quickPicks.push({ items, options });
+      return Promise.resolve(items.find((item) => item.label === nextPick));
+    },
   },
 };
 
@@ -142,13 +173,25 @@ Module._load = (request, parent, isMain) => (request === 'vscode' ? stub : load(
 const extension = require('../extension') as typeof import('../extension');
 const runs = require('../runs') as typeof import('../runs');
 const missionTree = require('../missionTree') as typeof import('../missionTree');
+const startingRows = require('../startingRows') as typeof import('../startingRows');
+const selections = require('../selections') as typeof import('../selections');
 Module._load = load;
+
+/** The project's `workspaceState`, by key. */
+const stored = new Map<string, unknown>();
 
 const context = {
   subscriptions: [] as unknown[],
   extensionUri: { fsPath: '/extension' },
   asAbsolutePath: (file: string) => packaged.get(file) ?? `/extension/${file}`,
-  workspaceState: { keys: () => [], get: () => undefined, update: () => Promise.resolve() },
+  workspaceState: {
+    keys: () => [...stored.keys()],
+    get: (key: string) => stored.get(key),
+    update: (key: string, value: unknown) => {
+      stored.set(key, value);
+      return Promise.resolve();
+    },
+  },
 } as unknown as import('vscode').ExtensionContext;
 
 const ALPHA = 'lib/mission_alpha/';
@@ -220,6 +263,18 @@ async function until(condition: () => boolean, what: string): Promise<void> {
 
 process.env.HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-tree-home-'));
 packaged.set('bundled/missions.py', path.join(__dirname, '..', '..', '..', 'core', 'tools', 'missions.py'));
+packaged.set('bundled/shipped_recipes.md', path.join(__dirname, '..', '..', 'shipped_recipes.md'));
+
+/** The line of the own variant `quick` that `define-mission-goal` gains from the own recipe file. */
+const QUICK_LINE = 'agy -p "/gurita:define-mission-goal --at <scope> <goal>" --model "gemini-4-argon" --effort low;';
+fs.mkdirSync(path.join(process.env.HOME, '.gurita'));
+fs.writeFileSync(
+  path.join(process.env.HOME, '.gurita', 'recipes.md'),
+  '### define-mission-goal\n\n#### quick\n```\n' + QUICK_LINE + '\n```\n',
+);
+
+/** The labels of the two mission-starting rows, standing above every mission row. */
+const STARTING_LABELS = ['New mission', 'Define mission'];
 const root = project();
 workspace.folders = [{ uri: { fsPath: root } }];
 
@@ -247,15 +302,21 @@ test("the tree is created under the manifest's view id, and nothing is read befo
   await new Promise((resolve) => setTimeout(resolve, 200));
   assert.strictEqual(watchers.length, 0, 'no file is watched before the view is resolved');
   assert.strictEqual(redraws, 0, 'no read is kept before the view is resolved');
-  assert.deepStrictEqual(provider.getChildren(), [], 'the first resolution draws no row until the read settles');
+  assert.deepStrictEqual(
+    items().map((each) => each.label),
+    STARTING_LABELS,
+    'the first resolution draws the two mission-starting rows and no mission row until the read settles',
+  );
   await until(() => redraws > 0, 'the first read redraws the tree');
   assert.strictEqual(watchers.length, 1, 'the first read that succeeds watches the mission documents');
   assert.deepStrictEqual(
     items().map((each) => each.label),
-    ['Alpha mission', 'Beta mission', 'Gamma mission', 'Delta mission'],
-    'one row per live mission, in the order the live read prints them',
+    [...STARTING_LABELS, 'Alpha mission', 'Beta mission', 'Gamma mission', 'Delta mission'],
+    'one row per live mission, in the order the live read prints them, beneath the two mission-starting rows',
   );
-  assert.deepStrictEqual(provider.getChildren(provider.getChildren()[0]), [], 'a mission row has no child rows');
+  for (const row of provider.getChildren()) {
+    assert.deepStrictEqual(provider.getChildren(row), [], 'no row has child rows');
+  }
 });
 
 test('each row is a leaf labelled with the title, described by the step and both counts, with the path and five facts in its tooltip and no command', () => {
@@ -325,19 +386,108 @@ test('the view shows no mission live and a failed read through its message with 
   refresh();
   await until(() => view.message === missionTree.NO_MISSION_MESSAGE, 'the view shows that no mission is live');
   assert.strictEqual(view.message, 'No mission is live.');
-  assert.deepStrictEqual(provider.getChildren(), [], 'no mission row is drawn with no mission live');
+  assert.deepStrictEqual(items().map((each) => each.label), STARTING_LABELS, 'no mission row is drawn with no mission live');
   workspace.folders = undefined;
   refresh();
   await until(() => view.message !== missionTree.NO_MISSION_MESSAGE, 'the view shows the failed read');
   assert.strictEqual(view.message, 'The live missions could not be read. No folder is open in this window.');
-  assert.deepStrictEqual(provider.getChildren(), [], 'no mission row is drawn while the read fails');
+  assert.deepStrictEqual(items().map((each) => each.label), STARTING_LABELS, 'no mission row is drawn while the read fails');
   workspace.folders = [{ uri: { fsPath: root } }];
   refresh();
   await until(() => view.message === undefined, 'a read with missions clears the message');
   assert.deepStrictEqual(
     items().map((each) => each.label),
-    ['Alpha mission', 'Beta mission', 'Gamma mission', 'Delta mission'],
+    [...STARTING_LABELS, 'Alpha mission', 'Beta mission', 'Gamma mission', 'Delta mission'],
   );
+});
+
+test("the two mission-starting rows are described by the remembered variant's harness, model, and effort, and a click runs it", () => {
+  const discuss = item('New mission');
+  assert.strictEqual(discuss.collapsibleState, stub.TreeItemCollapsibleState.None);
+  assert.strictEqual(discuss.description, 'Claude Code · fable · xhigh');
+  assert.strictEqual(discuss.contextValue, missionTree.STARTING_ROW_CONTEXT);
+  assert.strictEqual(discuss.command?.command, 'gurita.newMission');
+  assert.ok(discuss.tooltip?.startsWith('New mission\nRecipe: discuss-mission-goal\nVariant: default\nclaude '), discuss.tooltip);
+  const define = item('Define mission');
+  assert.strictEqual(define.description, 'Claude Code · sonnet · medium', "the recipe's default stands with nothing remembered");
+  assert.strictEqual(define.command?.command, 'gurita.defineMission');
+  assert.strictEqual(define.contextValue, missionTree.STARTING_ROW_CONTEXT);
+  assert.strictEqual(item('Alpha mission').contextValue, undefined, 'a mission row offers no variant action');
+});
+
+test('a click on Define mission asks for the goal and then the scope and runs the variant its row shows, for no mission', async () => {
+  item('Define mission');
+  const before = terminals.length;
+  inputPrompts.length = 0;
+  inputAnswers.push('Ship the thing', 'pkg');
+  await commands.get('gurita.defineMission')?.();
+  assert.strictEqual(inputPrompts.length, 2, 'two input boxes are opened');
+  assert.match(inputPrompts[0], /goal/);
+  assert.match(inputPrompts[1], /scope/);
+  assert.strictEqual(terminals.length, before + 1, 'one run starts');
+  const run = terminals[terminals.length - 1];
+  assert.strictEqual(run.name, 'Gurita: define-mission-goal', 'the run belongs to no mission');
+  assert.strictEqual(run.options.cwd, root, 'the run starts at the project root');
+  assert.ok(run.options.shellArgs?.some((arg) => arg.startsWith('claude -p "/gurita:define-mission-goal') && arg.includes('"sonnet"')), String(run.options.shellArgs));
+  assert.strictEqual(run.options.env?.GURITA_GOAL, 'Ship the thing');
+  assert.strictEqual(run.options.env?.GURITA_SCOPE, 'pkg');
+  closeTerminal?.(run);
+
+  const again = terminals.length;
+  inputAnswers.push(undefined);
+  await commands.get('gurita.newMission')?.();
+  assert.strictEqual(terminals.length, again, 'a box dismissed with Escape starts nothing');
+});
+
+test("a QuickPick pick changes the remembered variant and the row's description without starting a run, and a dismissed one changes nothing", async () => {
+  const defineRow = provider.getChildren().find((row) => provider.getTreeItem(row).label === 'Define mission');
+  assert.ok(defineRow !== undefined);
+  const before = terminals.length;
+  const redrawn = redraws;
+  nextPick = undefined;
+  await commands.get(missionTree.PICK_VARIANT_COMMAND)?.(defineRow);
+  assert.strictEqual(quickPicks.length, 1, 'the action opens one QuickPick');
+  assert.deepStrictEqual(
+    quickPicks[0].items.map((each) => [each.label, each.description, each.detail]),
+    [
+      ['default', 'Claude Code · sonnet · medium', 'Selected'],
+      ['quick', 'Antigravity · gemini-4-argon · low', undefined],
+    ],
+    "the QuickPick offers the recipe's variants, the one selected marked",
+  );
+  assert.strictEqual(quickPicks[0].options.title, 'define-mission-goal');
+  assert.strictEqual(stored.get(selections.PROJECT_SELECTIONS_KEY), undefined, 'a dismissed QuickPick remembers nothing');
+  assert.strictEqual(item('Define mission').description, 'Claude Code · sonnet · medium');
+
+  nextPick = 'quick';
+  await commands.get(missionTree.PICK_VARIANT_COMMAND)?.(defineRow);
+  assert.deepStrictEqual(stored.get(selections.PROJECT_SELECTIONS_KEY), { 'define-mission-goal': 'quick' }, 'the pick is remembered once per project');
+  assert.ok(redraws > redrawn, 'the pick redraws the tree');
+  assert.strictEqual(item('Define mission').description, 'Antigravity · gemini-4-argon · low');
+  assert.ok(item('Define mission').tooltip?.endsWith(`\nVariant: quick\n${QUICK_LINE}`), item('Define mission').tooltip);
+  assert.strictEqual(item('New mission').description, 'Claude Code · fable · xhigh', 'the other row keeps its variant');
+  assert.strictEqual(terminals.length, before, 'a pick starts no run');
+  nextPick = undefined;
+  await commands.get(missionTree.PICK_VARIANT_COMMAND)?.(defineRow);
+  assert.deepStrictEqual(quickPicks[2].items.map((each) => each.detail), [undefined, 'Selected'], 'the next QuickPick marks the variant picked');
+
+  inputAnswers.push('Another goal', '.');
+  await commands.get('gurita.defineMission')?.();
+  assert.strictEqual(terminals.length, before + 1);
+  const run = terminals[terminals.length - 1];
+  assert.ok(run.options.shellArgs?.some((arg) => arg.startsWith('agy -p "/gurita:define-mission-goal')), 'a click then runs the variant picked');
+  closeTerminal?.(run);
+});
+
+test('a row describes a variant whose lines carry no harness by its name, and one with no variant to run by why', () => {
+  const offered = { state: 'offered' as const, recipe: 'r', variants: [{ name: 'plain', lines: ['echo hi'] }], selected: 0 };
+  assert.strictEqual(startingRows.startingRow('discussGoal', 'New mission', offered).description, 'plain');
+  assert.strictEqual(startingRows.variantValues(['claude -p "x" --model a --effort high;', 'codex exec -m b "y"']), 'Claude Code, Codex · a, b · high');
+  const disabled = startingRows.startingRow('defineMission', 'Define mission', { state: 'disabled', recipe: 'r', cause: 'Every variant is off.' });
+  assert.strictEqual(disabled.description, startingRows.DISABLED_DESCRIPTION);
+  assert.strictEqual(disabled.tooltip, 'Define mission\nEvery variant is off.');
+  const refused = startingRows.startingRow('defineMission', 'Define mission', { state: 'refused', cause: 'No recipe is named r.' });
+  assert.strictEqual(refused.description, startingRows.REFUSED_DESCRIPTION);
 });
 
 test("the manifest contributes the activity-bar container with the tracked icon, holding the one side-bar view", () => {
@@ -349,4 +499,25 @@ test("the manifest contributes the activity-bar container with the tracked icon,
   assert.deepStrictEqual(manifest.contributes.views, { gurita: [{ id: missionTree.MISSIONS_VIEW, name: 'Missions' }] });
   assert.ok(manifest.activationEvents.includes(`onView:${missionTree.MISSIONS_VIEW}`));
   assert.ok(fs.statSync(path.join(extensionRoot, 'media', 'activity-bar.svg')).isFile(), 'the container names a tracked icon file');
+});
+
+test('the manifest offers the variant action inline and in the context menu of the mission-starting rows, and hides the commands behind the rows from the Command Palette', () => {
+  const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8'));
+  const hidden = [missionTree.STARTING_COMMANDS.discussGoal, missionTree.STARTING_COMMANDS.defineMission, missionTree.PICK_VARIANT_COMMAND];
+  const contributed = manifest.contributes.commands.map((each: { command: string }) => each.command);
+  for (const command of hidden) {
+    assert.ok(contributed.includes(command), `${command} is contributed`);
+    assert.ok(
+      manifest.contributes.menus.commandPalette.some((entry: { command: string; when: string }) => entry.command === command && entry.when === 'false'),
+      `${command} is hidden from the Command Palette`,
+    );
+  }
+  const pick = manifest.contributes.commands.find((each: { command: string }) => each.command === missionTree.PICK_VARIANT_COMMAND);
+  assert.match(pick.icon, /^\$\([a-z-]+\)$/, 'the action has an icon');
+  const entries = manifest.contributes.menus['view/item/context'].filter(
+    (entry: { command: string }) => entry.command === missionTree.PICK_VARIANT_COMMAND,
+  );
+  const when = `view == ${missionTree.MISSIONS_VIEW} && viewItem == ${missionTree.STARTING_ROW_CONTEXT}`;
+  assert.ok(entries.some((entry: { when: string; group?: string }) => entry.when === when && entry.group === 'inline'), 'offered inline');
+  assert.ok(entries.some((entry: { when: string; group?: string }) => entry.when === when && entry.group !== 'inline'), 'offered in the context menu');
 });
