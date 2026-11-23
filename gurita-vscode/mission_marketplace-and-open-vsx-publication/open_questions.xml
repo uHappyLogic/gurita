@@ -1,43 +1,4 @@
 <open-questions>
-  <open-question id="Pre-publish confirmation">
-    <question>Does the extension&apos;s release skill pause for the maintainer&apos;s confirmation before it publishes, as `/release-plugin` pauses once before anything public, or run through unattended once its checks pass?</question>
-    <recommendation option="Single pause on the notes">Publishing from the maintainer&apos;s machine, as recorded, closes the workflow-approval option; one pause at the line between undoable local work and two registries that never take a version twice is the gate `/release-plugin` already has and its maintainer already knows, with the notes shown in full and revisable before they are public.</recommendation>
-    <alternative id="Single pause on the notes">
-      The skill pauses exactly once, on every run, after its pre-flight checks and all local work and before anything public (the first registry upload, and any push, tag, or GitHub release the release makes). The pause shows the version about to be published and the release notes in full, verbatim, as they will be published. It accepts three answers, as `/release-plugin`&apos;s step 7 does: an explicit publish proceeds, a stated revision of the notes is applied and the version and notes are shown again, and anything else stops with nothing public done. The gate is never skipped and no flag bypasses it.
-      <advantage>It mirrors the one pause `/release-plugin` already has and its maintainer already knows, placed at the one point where everything before is undoable and everything after is permanent (a version a registry has accepted cannot be published to it again), so the maintainer vetoes or fixes the public text before it is out.</advantage>
-      <drawback>The run cannot complete unattended or in a headless chain. What the pause shows, and whether a revision can be applied in place, depends on whether the release composes notes and records them in a commit of its own, axes the Release notes source, Extension changelog, and Release commit subject questions own.</drawback>
-    </alternative>
-    <alternative id="Single pause on the built package">
-      The skill pauses exactly once, on every run, after the VSIX has been built and before anything public. The pause shows the version, the release notes where the release has any, and the built package itself: its path, size, and file list, which is what both listings will show (the README, the icon, the manifest&apos;s listing metadata). It invites the maintainer to install that VSIX into VS Code by hand (`code --install-extension` on its path) and try it before answering. An explicit publish proceeds and anything else stops with nothing public done. The gate is never skipped and no flag bypasses it.
-      <advantage>It catches a defect in the package itself, such as a README that renders wrongly, a missing bundled file, or a wrong icon, on the exact artifact the registries will receive and before either can accept a version that can never be published again.</advantage>
-      <drawback>It is the longest pause, adding a hand install and a try to every release, including routine ones where the package changed little, and the file list it shows is long (37 files today) for a maintainer to read on each run.</drawback>
-    </alternative>
-    <alternative id="A pause before each registry">
-      The skill pauses twice on every run: once before it publishes to the first registry, showing the version and the notes, and once more after the first registry has accepted the version and before it publishes to the second, inviting the maintainer to look at the first listing as it now stands. An explicit publish at each pause proceeds; anything else stops, the second time with one registry carrying the version and the other not. Neither pause is skipped.
-      <advantage>A defect that shows only on a live listing (how the README, icon, or metadata render on the registry&apos;s page) stops the release before it reaches the second registry.</advantage>
-      <drawback>It doubles the prompts, and a stop at the second pause leaves a half-published release by the maintainer&apos;s own choice, a state whose re-run behaviour the Half-published release question owns, while the first registry&apos;s version stays published and unrepairable anyway.</drawback>
-    </alternative>
-    <alternative id="Pause only on first publication">
-      The skill pauses once, before anything public, showing the version and the notes, only when the extension is not yet listed on the registries, which it learns by querying them; once the extension is live on both, every later release runs through unattended once its pre-flight checks pass. No flag changes either behaviour.
-      <advantage>It puts the human check where the novelty is, the first appearance of the publisher, the listing name, and its metadata, which cannot be renamed or reused once wrong, while routine releases afterwards need no attendance.</advantage>
-      <drawback>Every later release publishes a version and notes that no one reviewed before they became permanent, and the skill gains a registry query and a branch on its result, a second behaviour to maintain for what is a single run (the mission&apos;s own first publication).</drawback>
-    </alternative>
-    <alternative id="Pause with an opt-out flag">
-      The skill pauses once by default, before anything public, showing the version and the notes, with explicit publish proceeding and anything else stopping. A flag given on the invocation (for example `--yes`) skips the pause, so the run goes through unattended once its pre-flight checks pass.
-      <advantage>The maintainer reviews by default, yet a scripted or headless release is possible without editing the skill.</advantage>
-      <drawback>It adds a second mode to a maintainer-only skill run by one person, and departs from `/release-plugin`, whose pause is never skipped; a flag habitually given turns the gate into no gate, with an irreversible publication behind it.</drawback>
-    </alternative>
-    <alternative id="No pause">
-      The skill never pauses: the maintainer&apos;s invocation is the consent, and once its pre-flight checks pass it publishes to both registries unattended. Whatever it shows of the version and the notes it prints as it goes, after the fact.
-      <advantage>It is the simplest skill and the fastest run, it completes in a headless chain with nothing to answer, and the version to release is already stated by the maintainer at invocation wherever the skill takes it as an argument.</advantage>
-      <drawback>Nothing the run composes or builds, notes, listing text, or package, is seen before it becomes permanent on two registries that never accept the same version twice, so a mistake costs a new version to correct. How much the invocation already says depends on whether the version is given as an argument, an axis the Version source at release question owns.</drawback>
-    </alternative>
-    <alternative id="Approval in the workflow">
-      The skill itself never pauses: it starts the publishing workflow once its checks pass, and the workflow&apos;s publish job runs under a GitHub Actions environment with the maintainer as its required reviewer, so publication waits until the maintainer approves the job on GitHub, where the run&apos;s version and inputs are shown; a rejected or unapproved job publishes nothing.
-      <advantage>The approval is recorded on GitHub beside the run that published, and it holds even when the workflow is started from somewhere other than the skill, so no path publishes unapproved.</advantage>
-      <drawback>It exists only if the release publishes from a GitHub Actions workflow rather than from the maintainer&apos;s machine, an axis the Publish site and tokens question owns, and it adds an environment and its protection rule to the repository&apos;s settings, which nothing in the tree records or checks.</drawback>
-    </alternative>
-  </open-question>
   <open-question id="Target Open VSX forks">
     <question>The published package&apos;s `engines.vscode` floor is set to the oldest VS Code base among the Open VSX forks the extension means to reach, but nothing recorded names those forks. Which editors that read Open VSX does the extension mean to reach, for example VSCodium, Cursor, Windsurf, or Antigravity?</question>
     <applied-principle>Check tier claims against the live environment</applied-principle>
@@ -235,7 +196,6 @@
   </open-question>
   <open-question id="Release notes source">
     <question>From what are the notes of an extension release composed: the finish summaries of the missions scoped to `gurita-vscode/` since the previous extension release, as `/release-plugin` composes the plugin&apos;s notes from finished missions, the commits in between, or text the maintainer writes?</question>
-    <depends-on question="Pre-publish confirmation" option="Single pause on the notes"/>
     <recommendation option="Composed draft, maintainer edits">The changelog decision gives every release an entry, which closes the no-notes option; a draft composed from the scoped finish summaries is the composition `/release-plugin` already runs, and the maintainer&apos;s revision is what lets the first release, made inside this still-live mission, name the listing work no finished mission records yet.</recommendation>
     <alternative id="Composed draft, maintainer edits">
       The skill composes a draft from the finish summaries of the missions under `gurita-vscode/` finished since the previous extension release, falling back to the commit range on an empty range, and the maintainer then revises or adds to it, for instance to name the work of a mission still live at release time, before the text is used; the maintainer&apos;s revised text is what is published.
