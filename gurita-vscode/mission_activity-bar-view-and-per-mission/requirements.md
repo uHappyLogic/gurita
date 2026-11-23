@@ -95,6 +95,8 @@ The extension has no activity-bar container, side-bar view, tree data provider, 
 
 - **Icon mark form.** The icon script draws each arm in the icon's SVG as a filled, tapering outline derived from the drawing, with its curl, in one fill colour, and draws no character as text. The detail is graded by arm size: the large centre arm keeps its suckers as round holes cut out of the fill, the two smaller side arms are plain silhouettes with no holes, and the brackets survive only as the shapes' edges.
 
+- **Centre arm drawing home.** The centre arm's drawing is a plain-text file of its own, printable ASCII with one grid row per line in the form `assets/banner.txt` uses, standing in `assets/` beside the banner's drawing (for example `assets/icon-centre-arm.txt`). The icon script reads both of the icon's hand-drawn sources from that one directory, `assets/banner.txt` for the two side arms and this file for the centre arm.
+
 ### Design drafts under `ideas/`
 
 - **Follow-up record removed with the draft.** `ideas/vscode_extension_follow_up.md` is removed by this mission alongside `ideas/vscode_extension.md`, so no document is left holding references to the draft and none of its citations is rewritten. Its record of deferred work (the drift-gate guards, the tests left out, the Codex print check, publication, shipped Codex recipes) then stands only in git history.
