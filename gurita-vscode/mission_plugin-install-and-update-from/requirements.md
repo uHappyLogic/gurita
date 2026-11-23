@@ -74,6 +74,8 @@ Nothing in the extension installs or updates the plugin on any harness, and noth
 
 - **Several-scope display.** When Claude Code holds Gurita copies at several scopes that apply to the open project, the window names every applying detected scope and shows one version, the winning copy's. The winning scope is set apart, for example by being named first as the scope in effect with the others listed after it as also installed, and no version is shown for a scope that does not win. The harness check prints the scope names and which of them won.
 
+- **Marketplace ref on update.** An update brings the `gurita` marketplace registration to the newer release's tag by re-running `claude plugin marketplace add --scope <scope>` with the new tag's source over the existing `gurita` declaration, removing nothing. Only the scopes the update targets are moved, those at which a Gurita copy applying to the open project was detected, each declaration there going to the new tag; a `gurita` declaration at any other scope stays as it stands. The same run then runs `claude plugin marketplace update gurita` and the scoped `claude plugin update gurita@gurita -s <scope>` for each detected scope.
+
 ### Running an install or update
 
 - **Install run form.** An install or update started from the Settings window runs in a terminal the extension opens and shows, as a recipe run does, so its output and any prompt are visible and answerable there. The extension also watches that terminal's process end, taking its exit status through the terminal or through a VS Code task run in the terminal panel, and the window then reports how the run ended, success or failure, beside the harness or in a notification.
