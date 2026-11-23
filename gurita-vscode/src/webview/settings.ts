@@ -17,7 +17,14 @@
 // own plugin settings; the window adds no control of its own to enable it. When Claude Code's or
 // Codex's Gurita copy or its marketplace named `gurita` comes from a source other than the
 // harness's distribution repository, the window states the source found and the CLI commands
-// that would switch the harness to that repository. Every harness whose check found its CLI and an
+// that would switch the harness to that repository. Every harness whose check found its CLI and
+// that has an install to offer gets an Install control: Antigravity or Codex holding no copy, and
+// Claude Code while any of user, project, and local holds no copy applying to the project, a
+// disabled copy's scope counting as held, user alone when no workspace folder is open; none is
+// drawn for a disabled Antigravity or Codex copy, a copy from another source, or a listing that
+// could not be read. A click posts the install to the extension at once, with no confirmation, on
+// Claude Code with the scopes on offer, among which VS Code's own quick pick asks for one, and the
+// control is drawn disabled while an install or update run is going. Every harness whose check found its CLI and an
 // installed Gurita copy gets an Update control, whether or not the copy's version is older than the
 // packaged one, and none whose copy is disabled or comes from another source: a click posts the
 // update to the extension at once, with no confirmation, on Claude Code over every scope a copy
@@ -196,6 +203,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
   type SettingsMessage =
     | { type: 'harnessCheck'; check: HarnessCheck }
     | { type: 'pluginRun'; run: PluginRun | null }
+    | { type: 'workspace'; folderOpen: boolean }
     | { type: 'harnessSettings'; settings: HarnessSettings }
     | { type: 'harnessLists'; lists: HarnessLists }
     | { type: 'variants'; variants: VariantsRead }
@@ -245,6 +253,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
   const LINE_HARNESSES = ['claude', 'antigravity'];
   /** The control that updates a harness's installed Gurita copy. */
   const UPDATE_LABEL = 'Update';
+  /** The control that installs the Gurita plugin on a harness. */
+  const INSTALL_LABEL = 'Install';
   /** Claude Code's scopes, in the order an update takes them. */
   const CLAUDE_SCOPES = ['user', 'project', 'local'];
   const ENABLED_LABEL = 'Enabled';
@@ -271,6 +281,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
   let harnessCheck: HarnessCheck | undefined;
   /** The install or update run the extension last posted as going; undefined while none is. */
   let pluginRun: PluginRun | undefined;
+  /** Whether a workspace folder is open, as the extension last posted it; none counted until it is posted. */
+  let folderOpen = false;
   /** Each harness's enabled state the extension last posted; undefined until one is posted. */
   let harnessSettings: HarnessSettings | undefined;
   /** Each harness's lists the extension last posted; undefined until they are posted. */
@@ -399,6 +411,49 @@ declare function acquireVsCodeApi(): VsCodeApi;
   }
 
   /**
+   * The scopes an install on a harness is offered at, when the window offers one: none for a CLI
+   * not found, a listing that could not be read, or a copy or `gurita` marketplace from another
+   * source. Antigravity and Codex are offered an install, at no scope, while they hold no copy, a
+   * copy installed but disabled counting as held. Claude Code is offered one at every scope of
+   * user, project, and local that holds no copy applying to the project, a disabled copy's scope
+   * counting as held, user alone when no workspace folder is open, and only while one is free.
+   * Undefined when no install is offered.
+   */
+  function installScopes(outcome: HarnessOutcome): string[] | undefined {
+    if (outcome.failed === 'cli' || outcome.detail !== undefined || outcome.source !== undefined) {
+      return undefined;
+    }
+    if (outcome.key !== 'claude') {
+      return outcome.failed === 'plugin' && outcome.disabled !== true ? [] : undefined;
+    }
+    const held = outcome.scopes ?? [];
+    const free = CLAUDE_SCOPES.filter((scope) => !held.includes(scope) && (folderOpen || scope === 'user'));
+    return free.length === 0 ? undefined : free;
+  }
+
+  /**
+   * A harness's Install control, which starts the install at once, with no confirmation, by posting
+   * it to the extension, on Claude Code with the scopes on offer, among which VS Code's own quick
+   * pick asks for one; drawn disabled while an install or update run is going.
+   */
+  function drawInstall(outcome: HarnessOutcome, scopes: string[], going: boolean): HTMLButtonElement {
+    const install = button(INSTALL_LABEL, 'action', () =>
+      vscode.postMessage({ type: 'installPlugin', harness: outcome.key, ...(outcome.key === 'claude' ? { scopes } : {}) }),
+    );
+    const at =
+      scopes.length === 0
+        ? ''
+        : scopes.length === 1
+          ? ` at ${scopes[0]} scope`
+          : ` at the scope you pick of ${scopes.slice(0, -1).join(', ')} and ${scopes[scopes.length - 1]}`;
+    install.title = `Install the Gurita plugin on ${outcome.name} from the latest published release${at}`;
+    install.disabled = going;
+    install.dataset.harness = outcome.key;
+    install.dataset.focus = `install-${outcome.key}`;
+    return install;
+  }
+
+  /**
    * A harness's enabled state and the one control that disables it while enabled and enables it
    * while disabled, posted to the extension, which stores the state and posts it again.
    */
@@ -418,10 +473,10 @@ declare function acquireVsCodeApi(): VsCodeApi;
 
   /**
    * The window's harness part: that the check runs or could not be run, then each harness
-   * with what its checks gave, when they gave anything, its Update control where one is offered,
+   * with what its checks gave, when they gave anything, its Install and Update controls where offered,
    * and whether it is enabled, with its enable or disable control, the install or update run going,
    * when one is, and the check-again control, disabled while a check runs or a run is going, as the
-   * Update controls are while a run is going.
+   * Install and Update controls are while a run is going.
    */
   function drawHarnesses(): HTMLElement {
     const part = element('div', undefined, 'harnesses');
@@ -459,6 +514,10 @@ declare function acquireVsCodeApi(): VsCodeApi;
           const shown = element('span', scopes, outcome.disabled === true ? 'harness-scopes disabled' : 'harness-scopes');
           shown.dataset.scopes = (outcome.scopes ?? []).join(' ');
           item.append(shown);
+        }
+        const installed = installScopes(outcome);
+        if (installed !== undefined) {
+          item.append(drawInstall(outcome, installed, run !== undefined));
         }
         const updated = updateScopes(outcome);
         if (updated !== undefined) {
@@ -903,6 +962,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
       harnessCheck = message.check;
     } else if (message.type === 'pluginRun') {
       pluginRun = message.run ?? undefined;
+    } else if (message.type === 'workspace') {
+      folderOpen = message.folderOpen === true;
     } else if (message.type === 'harnessSettings') {
       harnessSettings = message.settings;
     } else if (message.type === 'harnessLists') {

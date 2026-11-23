@@ -13,6 +13,10 @@
 // listener: 0 is a success, any other status, or none, a failure, a failed release lookup included,
 // since the script exits non-zero before any install or update command runs when it cannot read
 // the latest release. The Settings window reports the end and runs the harness check afresh.
+// A Claude Code install runs at the one scope the person picks in VS Code's own quick pick, which
+// lists the scopes on offer, each with where an install there is recorded: user settings, the
+// project's shared `.claude/settings.json`, or the project's local settings, user alone when no
+// workspace folder is open.
 
 import * as vscode from 'vscode';
 import { HARNESSES } from './harnessCheck';
@@ -31,6 +35,33 @@ export const PLUGIN_ACTIONS: readonly PluginAction[] = ['install', 'update'];
 
 /** Claude Code's scopes, in the order an update takes them. */
 export const CLAUDE_SCOPES: readonly string[] = ['user', 'project', 'local'];
+
+/** Where an install at each Claude Code scope is recorded, as the scope pick says it, by the scope. */
+export const CLAUDE_SCOPE_RECORDS: Readonly<Record<string, string>> = {
+  user: 'Recorded in your user settings',
+  project: "Recorded in the project's shared .claude/settings.json",
+  local: "Recorded in the project's local settings",
+};
+
+/** One entry of the Claude Code scope pick: the scope as its label, and where an install there is recorded. */
+export interface ScopePick {
+  label: string;
+  description: string;
+  scope: string;
+}
+
+/**
+ * The entries of the Claude Code scope pick, one per scope of `scopes` on offer, in the order
+ * user, project, local: with no workspace folder open (`folderOpen` false) user alone is offered,
+ * project and local not being named at all.
+ */
+export function claudeScopePicks(scopes: readonly string[], folderOpen: boolean): ScopePick[] {
+  return CLAUDE_SCOPES.filter((scope) => scopes.includes(scope) && (folderOpen || scope === 'user')).map((scope) => ({
+    label: scope,
+    description: CLAUDE_SCOPE_RECORDS[scope],
+    scope,
+  }));
+}
 
 /** One install or update run: the harness, the action, and, on Claude Code, the scopes it acts at. */
 export interface PluginRun {
@@ -94,13 +125,24 @@ export function pluginRunName(run: PluginRun): string {
 }
 
 /**
+ * Whether a run is going, which then shows the notification and reveals that run's terminal, as
+ * every start refused while it goes does.
+ */
+export function refusedWhileGoing(): boolean {
+  if (going === undefined) {
+    return false;
+  }
+  void vscode.window.showInformationMessage(RUN_GOING);
+  going.terminal.show();
+  return true;
+}
+
+/**
  * Starts `run` at the project root `root`, unless a run is going: then shows the notification,
  * reveals that run's terminal, and starts nothing. Returns whether the run started.
  */
 export function startPluginRun(context: vscode.ExtensionContext, root: string, run: PluginRun): boolean {
-  if (going !== undefined) {
-    void vscode.window.showInformationMessage(RUN_GOING);
-    going.terminal.show();
+  if (refusedWhileGoing()) {
     return false;
   }
   const held: PluginRun = { ...run, scopes: [...run.scopes] };

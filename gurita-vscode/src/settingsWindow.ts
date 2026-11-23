@@ -22,7 +22,11 @@
 // run kept in this extension's state for the session, so that at most one goes at a time: while it
 // stands a second request starts nothing, showing a notification and revealing that run's terminal,
 // and check again runs no check. The note is posted to the window on every ready message and each
-// time it changes, and the page draws check again disabled while it stands. When the run's terminal
+// time it changes, and the page draws check again disabled while it stands. An install request
+// from the page starts the run at once, with no confirmation; on Claude Code VS Code's own quick
+// pick first lists the scopes the request offers, each with where an install there is recorded,
+// user alone when no workspace folder is open, whether one is being posted to the page on every
+// ready message, and a dismissed pick installs nothing. When the run's terminal
 // closes, its exit status read from the terminal, the window reports how the run ended in a
 // notification, an information one for a success, adding the one sentence that running sessions of
 // that harness must be restarted to use the new copy, and an error one for a failure, a failed
@@ -118,8 +122,10 @@ import {
   PLUGIN_ACTIONS,
   PluginAction,
   PluginRun,
+  claudeScopePicks,
   pluginRunEnd,
   pluginRunGoing,
+  refusedWhileGoing,
   registerPluginRuns,
   startPluginRun,
 } from './pluginRuns';
@@ -144,6 +150,7 @@ type SettingsPageMessage =
   | { type: 'ready' }
   | { type: 'checkHarnesses' }
   | { type: 'runPlugin'; harness: string; action: string; scopes?: string[] }
+  | { type: 'installPlugin'; harness: string; scopes?: string[] }
   | { type: 'setHarnessEnabled'; harness: string; enabled: boolean }
   | { type: 'addHarnessValue'; harness: string; kind: string }
   | { type: 'removeHarnessValue'; harness: string; kind: string; value: string }
@@ -179,6 +186,7 @@ type LinesRead = ({ state: 'read' } & SettingsLines) | { state: 'failed'; cause:
 type SettingsMessage =
   | { type: 'harnessCheck'; check: HarnessCheck }
   | { type: 'pluginRun'; run: PluginRun | null }
+  | { type: 'workspace'; folderOpen: boolean }
   | { type: 'harnessSettings'; settings: HarnessSettings }
   | { type: 'harnessLists'; lists: HarnessListsRead }
   | { type: 'variants'; variants: VariantsRead }
@@ -262,6 +270,8 @@ function hookSettings(context: vscode.ExtensionContext, created: vscode.WebviewP
         if (run !== undefined) {
           void startPluginInstallRun(context, run);
         }
+      } else if (message?.type === 'installPlugin') {
+        void installPlugin(context, message.harness, message.scopes);
       } else if (message?.type === 'setHarnessEnabled') {
         void enableHarness(context, created, message.harness, message.enabled);
       } else if (message?.type === 'addHarnessValue') {
@@ -340,6 +350,7 @@ async function postLists(context: vscode.ExtensionContext, target: vscode.Webvie
 function settingsReady(context: vscode.ExtensionContext, target: vscode.WebviewPanel): void {
   void postLists(context, target);
   void post(target, { type: 'pluginRun', run: pluginRunGoing() ?? null });
+  void post(target, { type: 'workspace', folderOpen: folderOpen() });
   if (harnessCheck === undefined) {
     void checkHarnesses(context);
     return;
@@ -392,6 +403,47 @@ function pluginRunOf(harness: unknown, action: unknown, scopes: unknown): Plugin
     return undefined;
   }
   return { harness, action: action as PluginAction, scopes: named as string[] };
+}
+
+/** Whether a workspace folder is open, which decides whether Claude Code's project and local scopes are offered for an install. */
+function folderOpen(): boolean {
+  return (vscode.workspace.workspaceFolders?.length ?? 0) > 0;
+}
+
+/**
+ * Starts the install an Install click's request names, at once and with no confirmation: on
+ * Antigravity and Codex, which take no scope, the run starts straight away; on Claude Code VS
+ * Code's own quick pick first lists the scopes the request offers, each one of user, project, and
+ * local named once, with where an install there is recorded, user alone when no workspace folder
+ * is open, and the install runs at the scope picked. A dismissed pick installs nothing, and a
+ * request naming no harness or no scope on offer starts nothing. While a run is going the request
+ * is refused as every start is, no pick opened.
+ */
+async function installPlugin(context: vscode.ExtensionContext, harness: unknown, scopes: unknown): Promise<void> {
+  if (!isHarnessKey(harness)) {
+    return;
+  }
+  if (harness !== 'claude') {
+    if (scopes === undefined) {
+      await startPluginInstallRun(context, { harness, action: 'install', scopes: [] });
+    }
+    return;
+  }
+  if (!Array.isArray(scopes) || !scopes.every((scope) => typeof scope === 'string' && CLAUDE_SCOPES.includes(scope)) || new Set(scopes).size !== scopes.length) {
+    return;
+  }
+  const picks = claudeScopePicks(scopes as string[], folderOpen());
+  if (picks.length === 0 || refusedWhileGoing()) {
+    return;
+  }
+  const picked = await vscode.window.showQuickPick(picks, {
+    title: 'Install the Gurita plugin on Claude Code',
+    placeHolder: 'The scope to install at; picking one starts the install',
+  });
+  if (picked === undefined) {
+    return;
+  }
+  await startPluginInstallRun(context, { harness: 'claude', action: 'install', scopes: [picked.scope] });
 }
 
 /**

@@ -472,6 +472,150 @@ test('a click on Update posts the update at once, on Claude Code over every dete
   assert.ok(updateControls(page).every(([, disabled]) => !disabled), 'enabled again once no run goes');
 });
 
+/** Each Install control the window draws under Harnesses: the harness it stands beside, and whether it is drawn disabled. */
+function installControls(page: Page): [string, boolean][] {
+  const view = settingsView(page);
+  assert.ok(view !== undefined, 'the window is drawn');
+  return view
+    .all()
+    .filter((each) => each.tagName === 'li' && each.dataset.harness !== undefined)
+    .flatMap((row) =>
+      row
+        .all()
+        .filter((each) => each.tagName === 'button' && each.textContent === 'Install')
+        .map((each): [string, boolean] => {
+          assert.strictEqual(each.dataset.harness, row.dataset.harness, 'the control names the harness of its row');
+          return [row.dataset.harness as string, each.disabled];
+        }),
+    );
+}
+
+/** The Install control drawn beside the harness `key`. */
+function installControl(page: Page, key: string): FakeElement {
+  const found = buttons(page).filter((each) => each.textContent === 'Install' && each.dataset.harness === key);
+  assert.strictEqual(found.length, 1, `one Install control beside ${key}`);
+  return found[0];
+}
+
+/** Posts a harness check of the three outcomes given, each laid over its harness's key, name, CLI, and the packaged 2.0.0. */
+function sendOutcomes(page: Page, claude: Record<string, unknown>, antigravity: Record<string, unknown>, codex: Record<string, unknown>): void {
+  page.send({
+    type: 'harnessCheck',
+    check: {
+      state: 'checked',
+      harnesses: [
+        { key: 'claude', name: 'Claude Code', cli: 'claude', packaged: '2.0.0', ...claude },
+        { key: 'antigravity', name: 'Antigravity', cli: 'agy', packaged: '2.0.0', ...antigravity },
+        { key: 'codex', name: 'Codex', cli: 'codex', packaged: '2.0.0', ...codex },
+      ],
+    },
+  });
+}
+
+/** The scopes Claude Code's Install control posts, read by clicking it. */
+function postedInstallScopes(page: Page): unknown {
+  const count = page.posted.length;
+  installControl(page, 'claude').click();
+  const posted = page.posted.slice(count) as { scopes?: unknown }[];
+  assert.strictEqual(posted.length, 1);
+  return posted[0].scopes;
+}
+
+test('an Install control is drawn for Antigravity or Codex holding no copy and for Claude Code while a scope holds no applying copy, and none for a missing CLI, a disabled Antigravity or Codex copy, or a copy from another source', () => {
+  const page = loadSettings();
+  page.send({ type: 'workspace', folderOpen: true });
+  assert.deepStrictEqual(installControls(page), [], 'none while no check result is posted');
+  page.send({ type: 'harnessCheck', check: { state: 'running' } });
+  assert.deepStrictEqual(installControls(page), [], 'none while the check runs');
+
+  sendOutcomes(page, { failed: 'plugin' }, { failed: 'plugin' }, { failed: 'plugin' });
+  assert.deepStrictEqual(
+    installControls(page),
+    [
+      ['claude', false],
+      ['antigravity', false],
+      ['codex', false],
+    ],
+    'every harness holding no copy is offered an install',
+  );
+  assert.deepStrictEqual(postedInstallScopes(page), ['user', 'project', 'local'], 'Claude Code holding no copy offers all three scopes');
+  assert.strictEqual(
+    installControl(page, 'claude').title,
+    'Install the Gurita plugin on Claude Code from the latest published release at the scope you pick of user, project and local',
+  );
+  assert.strictEqual(installControl(page, 'antigravity').title, 'Install the Gurita plugin on Antigravity from the latest published release');
+  assert.ok(installControl(page, 'codex').has('action'), 'drawn with the shared push button look');
+
+  sendOutcomes(page, { installed: '2.0.0', scopes: ['project', 'user'] }, { installed: '2.0.0' }, { failed: 'version', installed: '1.9.0' });
+  assert.deepStrictEqual(installControls(page), [['claude', false]], 'an installed Antigravity or Codex copy is offered no install, Claude Code still one at its free scope');
+  assert.deepStrictEqual(postedInstallScopes(page), ['local'], 'a scope more specific than the copy in effect is offered');
+  assert.strictEqual(installControl(page, 'claude').title, 'Install the Gurita plugin on Claude Code from the latest published release at local scope');
+
+  sendOutcomes(page, { installed: '2.0.0', scopes: ['local'] }, { failed: 'cli' }, { failed: 'cli' });
+  assert.deepStrictEqual(postedInstallScopes(page), ['user', 'project'], 'scopes less specific than the copy in effect are offered');
+  assert.deepStrictEqual(installControls(page), [['claude', false]], 'none for a CLI not found');
+
+  sendOutcomes(page, { installed: '2.0.0', scopes: ['local', 'project', 'user'] }, { failed: 'plugin', disabled: true }, { failed: 'plugin', disabled: true });
+  assert.deepStrictEqual(installControls(page), [], 'none when every Claude Code scope holds a copy, nor for a disabled Antigravity or Codex copy');
+
+  sendOutcomes(page, { failed: 'plugin', scopes: ['project'], disabled: true }, { failed: 'plugin' }, { failed: 'plugin' });
+  assert.deepStrictEqual(postedInstallScopes(page), ['user', 'local'], "a disabled Claude Code copy's scope counts as held");
+
+  const other = (repository: string) => ({ found: 'the directory /work/gurita', repository, commands: ['remove', 'add'] });
+  sendOutcomes(page, { failed: 'plugin', source: other('uHappyLogic/gurita-claude') }, { failed: 'plugin' }, { failed: 'plugin', source: other('uHappyLogic/gurita-codex') });
+  assert.deepStrictEqual(installControls(page), [['antigravity', false]], 'none for a copy or marketplace from another source');
+
+  sendOutcomes(page, { failed: 'plugin', detail: 'the listing did not finish' }, { failed: 'plugin', detail: 'agy failed' }, { failed: 'plugin' });
+  assert.deepStrictEqual(installControls(page), [['codex', false]], 'none for a listing that could not be read');
+
+  page.send({ type: 'harnessCheck', check: { state: 'failed', cause: 'python3: not found' } });
+  assert.deepStrictEqual(installControls(page), [], 'none when the check could not run');
+  assert.ok(!buttons(page).some((each) => /uninstall|remove/i.test(each.textContent)), 'the window draws no uninstall control');
+});
+
+test('with no workspace folder open Claude Code is offered an install at user scope alone, and none while user holds a copy', () => {
+  const page = loadSettings();
+  page.send({ type: 'workspace', folderOpen: false });
+  sendOutcomes(page, { failed: 'plugin' }, { failed: 'cli' }, { failed: 'cli' });
+  assert.deepStrictEqual(postedInstallScopes(page), ['user'], 'user alone is offered');
+  assert.strictEqual(installControl(page, 'claude').title, 'Install the Gurita plugin on Claude Code from the latest published release at user scope');
+  assert.ok(!texts(page).some((text) => /project|local/.test(text) && text.includes('scope')), 'nothing on the page names project or local');
+  sendOutcomes(page, { installed: '2.0.0', scopes: ['user'] }, { failed: 'cli' }, { failed: 'cli' });
+  assert.deepStrictEqual(installControls(page), [], 'none while user holds a copy');
+  page.send({ type: 'workspace', folderOpen: true });
+  assert.deepStrictEqual(postedInstallScopes(page), ['project', 'local'], 'project and local are offered once a folder is open');
+});
+
+test('a click on Install posts the install at once, on Claude Code with the scopes on offer, and the control is drawn disabled while an install or update run is going', () => {
+  const page = loadSettings();
+  page.send({ type: 'workspace', folderOpen: true });
+  sendOutcomes(page, { installed: '2.0.0', scopes: ['user'] }, { failed: 'plugin' }, { failed: 'plugin' });
+  for (const [key, posted] of [
+    ['claude', { type: 'installPlugin', harness: 'claude', scopes: ['project', 'local'] }],
+    ['antigravity', { type: 'installPlugin', harness: 'antigravity' }],
+    ['codex', { type: 'installPlugin', harness: 'codex' }],
+  ] as const) {
+    const count = page.posted.length;
+    installControl(page, key).click();
+    assert.deepStrictEqual(page.posted.slice(count), [posted], `one click on ${key}'s Install posts the install, asking nothing on the page first`);
+  }
+
+  page.send({ type: 'pluginRun', run: { harness: 'codex', action: 'update', scopes: [] } });
+  assert.deepStrictEqual(
+    installControls(page),
+    [
+      ['claude', true],
+      ['antigravity', true],
+      ['codex', true],
+    ],
+    'every Install control is drawn disabled while a run is going',
+  );
+  page.send({ type: 'pluginRun', run: { harness: 'claude', action: 'install', scopes: ['project'] } });
+  assert.ok(installControls(page).every(([, disabled]) => disabled), 'an install going disables them too');
+  page.send({ type: 'pluginRun', run: null });
+  assert.ok(installControls(page).every(([, disabled]) => !disabled), 'enabled again once no run goes');
+});
+
 test("the window's check again control asks for the check afresh, and a check that could not run shows its cause", () => {
   const page = loadSettings();
   page.send({ type: 'harnessCheck', check: { state: 'failed', cause: 'python3: not found' } });
@@ -1318,7 +1462,7 @@ test('every push button the window draws carries one class of the one shared loo
     assert.strictEqual(PUSH_CLASSES.filter((kind) => each.has(kind)).length, 1, `${name} carries exactly one push button class`);
     seen.add(name);
   }
-  for (const name of ['Duplicate', 'Rename', 'Delete', 'Make default', 'Reset', 'Disable', 'Enable', 'Remove', 'Add model', 'Add effort', 'Check again', 'Update']) {
+  for (const name of ['Duplicate', 'Rename', 'Delete', 'Make default', 'Reset', 'Disable', 'Enable', 'Remove', 'Add model', 'Add effort', 'Check again', 'Install', 'Update']) {
     assert.ok(seen.has(name), `${name} is drawn as a push button`);
   }
   const rules = stylesheetRules();

@@ -90,6 +90,16 @@ const closeListeners: ((terminal: unknown) => void)[] = [];
 const notifications: { kind: 'information' | 'warning' | 'error'; message: string }[] = [];
 /** Every input box and quick pick the extension opened, in order. */
 const prompts: string[] = [];
+/** One entry of a quick pick the extension opened. */
+interface StubPickItem {
+  label: string;
+  description?: string;
+  detail?: string;
+}
+/** Every quick pick the extension opened, in order: its entries and its options. */
+const quickPicks: { items: StubPickItem[]; options: { title?: string; placeHolder?: string } }[] = [];
+/** The labels the next quick picks are answered with, in order, undefined dismissing one; a pick none is queued for is dismissed. */
+const pickAnswers: (string | undefined)[] = [];
 
 /** Closes `terminal` with the exit status `code`, as the editor does when its process ends. */
 function closeTerminal(terminal: StubTerminal, code: number | undefined): void {
@@ -208,9 +218,11 @@ const stub = {
       prompts.push('input box');
       return Promise.resolve(undefined);
     },
-    showQuickPick: () => {
+    showQuickPick: (items: StubPickItem[], options: { title?: string; placeHolder?: string }) => {
       prompts.push('quick pick');
-      return Promise.resolve(undefined);
+      quickPicks.push({ items, options });
+      const answer = pickAnswers.shift();
+      return Promise.resolve(answer === undefined ? undefined : items.find((each) => each.label === answer));
     },
   },
 };
@@ -683,6 +695,178 @@ test('a run request naming no harness, action, or scopes the install script take
     sendSettings(request);
   }
   await new Promise((resolve) => setTimeout(resolve, 200));
+  assert.strictEqual(terminals.length, created, 'no terminal is created');
+  assert.strictEqual(pluginRuns.pluginRunGoing(), undefined);
+});
+
+/** Delivers `request` and waits until the extension has opened a quick pick or started a terminal for it, or shown a notification. */
+async function settledRequest(request: unknown, what: string): Promise<void> {
+  const picks = quickPicks.length;
+  const created = terminals.length;
+  const told = notifications.length;
+  sendSettings(request);
+  await until(() => quickPicks.length > picks || terminals.length > created || notifications.length > told, what);
+}
+
+/** Ends the run going with a success and waits until the check that follows it is done. */
+async function endRun(): Promise<void> {
+  const going = terminals[terminals.length - 1];
+  const runs = checkRuns();
+  closeTerminal(going, 0);
+  await until(() => pluginRuns.pluginRunGoing() === undefined && checkRuns() === runs + 1, 'the run ends');
+  await checkSettled();
+}
+
+test("an Install click's request on Claude Code opens VS Code's quick pick of the scopes on offer, each saying where it is recorded, and installs at the scope picked with no confirmation", async () => {
+  await checkSettled();
+  const window = openWindow();
+  for (const [offered, listed, answer] of [
+    [['user', 'project', 'local'], ['user', 'project', 'local'], 'local'],
+    [['local', 'user'], ['user', 'local'], 'user'],
+    [['project'], ['project'], 'project'],
+  ] as const) {
+    const from = window.posted.length;
+    const created = terminals.length;
+    const told = notifications.length;
+    const picks = quickPicks.length;
+    const asked = prompts.length;
+    pickAnswers.push(answer);
+    sendSettings({ type: 'installPlugin', harness: 'claude', scopes: offered });
+    await until(() => terminals.length === created + 1 && runNotes(window, from).length > 0, 'the install starts');
+    assert.strictEqual(quickPicks.length, picks + 1, 'one quick pick is opened');
+    assert.deepStrictEqual(prompts.slice(asked), ['quick pick'], 'no input box is opened');
+    const pick = quickPicks[picks];
+    assert.deepStrictEqual(
+      pick.items.map((each) => [each.label, each.description]),
+      listed.map((scope) => [scope, pluginRuns.CLAUDE_SCOPE_RECORDS[scope]]),
+      'the scopes on offer are listed in the order user, project, local, each with where it is recorded',
+    );
+    assert.strictEqual(pick.options.title, 'Install the Gurita plugin on Claude Code');
+    const terminal = terminals[created];
+    assert.deepStrictEqual(terminal.options.shellArgs, ['/extension/install_plugin.py', 'claude', 'install', '--project', root, '--scope', answer, '--wait'], 'the install runs at the scope picked');
+    assert.strictEqual(terminal.options.name, `Gurita: install on Claude Code (${answer})`);
+    assert.strictEqual(terminal.shows, 1, 'its terminal is shown');
+    assert.deepStrictEqual(notifications.slice(told), [], 'no confirmation or other notification is shown first');
+    assert.deepStrictEqual(runNotes(window, from), [{ harness: 'claude', action: 'install', scopes: [answer] }]);
+    await endRun();
+  }
+  assert.deepStrictEqual(pluginRuns.CLAUDE_SCOPE_RECORDS, {
+    user: 'Recorded in your user settings',
+    project: "Recorded in the project's shared .claude/settings.json",
+    local: "Recorded in the project's local settings",
+  });
+});
+
+test('a dismissed scope pick installs nothing', async () => {
+  await checkSettled();
+  const created = terminals.length;
+  const told = notifications.length;
+  pickAnswers.push(undefined);
+  await settledRequest({ type: 'installPlugin', harness: 'claude', scopes: ['user', 'project'] }, 'the pick opens');
+  await new Promise((resolve) => setTimeout(resolve, 200));
+  assert.strictEqual(terminals.length, created, 'no terminal is created');
+  assert.deepStrictEqual(notifications.slice(told), [], 'nothing is told');
+  assert.strictEqual(pluginRuns.pluginRunGoing(), undefined);
+});
+
+test("an Install click's request on Antigravity or Codex starts the install at once, per-user, with no pick and no confirmation", async () => {
+  await checkSettled();
+  const window = openWindow();
+  for (const [harness, name] of [
+    ['antigravity', 'Antigravity'],
+    ['codex', 'Codex'],
+  ] as const) {
+    const from = window.posted.length;
+    const created = terminals.length;
+    const told = notifications.length;
+    const asked = prompts.length;
+    sendSettings({ type: 'installPlugin', harness });
+    await until(() => terminals.length === created + 1 && runNotes(window, from).length > 0, 'the install starts');
+    const terminal = terminals[created];
+    assert.deepStrictEqual(terminal.options.shellArgs, ['/extension/install_plugin.py', harness, 'install', '--project', root, '--wait'], 'no scope is given');
+    assert.strictEqual(terminal.options.name, `Gurita: install on ${name}`);
+    assert.deepStrictEqual(prompts.slice(asked), [], 'no input box or quick pick is opened first');
+    assert.deepStrictEqual(notifications.slice(told), [], 'no confirmation or other notification is shown first');
+    await endRun();
+  }
+});
+
+test('with no workspace folder open the window is told so, and the scope pick offers user alone', async () => {
+  await checkSettled();
+  const window = openWindow();
+  const readyFrom = window.posted.length;
+  sendSettings({ type: 'ready' });
+  await until(() => postedOf(window, 'workspace', readyFrom).length > 0, 'the ready message is answered');
+  assert.deepStrictEqual(postedOf(window, 'workspace', readyFrom), [{ type: 'workspace', folderOpen: true }], 'a ready message is told a folder is open');
+
+  const folders = workspace.folders;
+  workspace.folders = undefined;
+  try {
+    const closedFrom = window.posted.length;
+    sendSettings({ type: 'ready' });
+    await until(() => postedOf(window, 'workspace', closedFrom).length > 0, 'the ready message is answered');
+    assert.deepStrictEqual(postedOf(window, 'workspace', closedFrom), [{ type: 'workspace', folderOpen: false }], 'a ready message is told no folder is open');
+
+    const picks = quickPicks.length;
+    pickAnswers.push(undefined);
+    await settledRequest({ type: 'installPlugin', harness: 'claude', scopes: ['user', 'project', 'local'] }, 'the pick opens');
+    assert.deepStrictEqual(
+      quickPicks[picks].items.map((each) => each.label),
+      ['user'],
+      'user alone is offered, project and local not named',
+    );
+
+    const created = terminals.length;
+    sendSettings({ type: 'installPlugin', harness: 'claude', scopes: ['project', 'local'] });
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    assert.strictEqual(quickPicks.length, picks + 1, 'no pick is opened when only project and local are asked for');
+    assert.strictEqual(terminals.length, created, 'nothing is installed');
+  } finally {
+    workspace.folders = folders;
+  }
+});
+
+test('an install request while a run is going opens no pick and is refused, its terminal revealed', async () => {
+  await checkSettled();
+  const window = openWindow();
+  const from = window.posted.length;
+  const created = terminals.length;
+  sendSettings({ type: 'runPlugin', harness: 'codex', action: 'update' });
+  await until(() => terminals.length === created + 1 && runNotes(window, from).length > 0, 'the update starts');
+  const going = terminals[created];
+  const shows = going.shows;
+  const picks = quickPicks.length;
+  const told = notifications.length;
+  sendSettings({ type: 'installPlugin', harness: 'claude', scopes: ['user'] });
+  sendSettings({ type: 'installPlugin', harness: 'antigravity' });
+  await until(() => notifications.length === told + 2, 'each refusal is told');
+  assert.strictEqual(quickPicks.length, picks, 'no quick pick is opened');
+  assert.strictEqual(terminals.length, created + 1, 'no second terminal is created');
+  assert.deepStrictEqual(notifications.slice(told), [
+    { kind: 'information', message: pluginRuns.RUN_GOING },
+    { kind: 'information', message: pluginRuns.RUN_GOING },
+  ]);
+  assert.strictEqual(going.shows, shows + 2, "the going run's terminal is revealed");
+  await endRun();
+});
+
+test('an install request naming no harness, or no scope Claude Code offers, starts nothing and opens no pick', async () => {
+  await checkSettled();
+  const created = terminals.length;
+  const picks = quickPicks.length;
+  for (const request of [
+    { type: 'installPlugin', harness: 'vscode' },
+    { type: 'installPlugin', harness: 'codex', scopes: ['user'] },
+    { type: 'installPlugin', harness: 'claude' },
+    { type: 'installPlugin', harness: 'claude', scopes: [] },
+    { type: 'installPlugin', harness: 'claude', scopes: ['managed'] },
+    { type: 'installPlugin', harness: 'claude', scopes: ['user', 'user'] },
+    { type: 'installPlugin', harness: 'claude', scopes: 'user' },
+  ]) {
+    sendSettings(request);
+  }
+  await new Promise((resolve) => setTimeout(resolve, 200));
+  assert.strictEqual(quickPicks.length, picks, 'no quick pick is opened');
   assert.strictEqual(terminals.length, created, 'no terminal is created');
   assert.strictEqual(pluginRuns.pluginRunGoing(), undefined);
 });

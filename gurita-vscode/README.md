@@ -408,6 +408,24 @@ shows one line saying so, with the cause beneath it.
 
 ### Installing and updating the plugin
 
+Beside every harness whose check found its CLI and that has an install to offer, the window draws
+an **Install** control. Antigravity and Codex are offered one while they hold no Gurita copy,
+installed per-user, the only scope they support. Claude Code is offered one while any of its three
+scopes, `user`, `project`, and `local`, holds no copy applying to the project, whether that scope
+is more or less specific than the copy in effect; a scope already holding an applying copy is
+reached through **Update** instead, and a disabled copy's scope counts as held. With no workspace
+folder open, Claude Code is offered `user` alone, and project and local are not mentioned. No
+**Install** is drawn for a disabled Antigravity or Codex copy, which must be enabled in the
+harness itself, for a copy or `gurita` marketplace from another source, whose switching commands
+the window states instead, or for a harness whose listing could not be read. A click starts the
+install at once, with no confirmation. On Antigravity and Codex the run starts straight away. On
+Claude Code, VS Code's own quick pick first lists the scopes on offer, each with one line saying
+where an install there is recorded: `user` in your user settings, `project` in the project's
+shared `.claude/settings.json`, and `local` in the project's local settings. The install runs at
+the scope you pick, and dismissing the pick installs nothing; nothing is selected or stored on the
+page. While any install or update run is going, every **Install** control is drawn disabled. The
+window offers no uninstall control.
+
 Beside every harness whose check found its CLI and an installed Gurita copy, the window draws an
 **Update** control. It is offered whether or not the installed version differs from the packaged
 one, the check line beside it still saying which, and it is drawn the same, enabled, either way.
