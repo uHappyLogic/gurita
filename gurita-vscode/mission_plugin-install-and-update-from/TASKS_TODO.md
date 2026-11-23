@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Verify Codex Plugin Commands Hands-On
-
-Run every Codex command the mission will use against a throwaway `CODEX_HOME`, fetching from the real `uHappyLogic/gurita-codex`: `codex plugin marketplace add uHappyLogic/gurita-codex --ref <tag>` and its `uHappyLogic/gurita-codex@<tag>` form, `codex plugin add gurita@gurita`, then the update order `codex plugin marketplace remove gurita`, the add again, and `codex plugin add gurita@gurita` over the copy still standing, with `codex plugin list -m gurita --json` read after each step. Record each command's print, prompts, exit status, and duration as dated facts in this mission's `## Relevant starting state`. Done when the facts stand in `requirements.md` and the real installation's `codex plugin list -m gurita --json` prints what it printed before.
-
----
-
 ## Installed Version Compared as a Minimum
 
 Make the harness check's `version` check a minimum instead of an equality: an installed copy older than the packaged version fails it, and one equal to or newer than it passes, the versions ordered as bare MAJOR.MINOR.PATCH, with the Settings window's and the README's wording for the failed check saying older rather than differing. The check stays offline, comparing with the packaged version alone. Verified by the extension's unit tests covering an older, an equal, and a newer installed copy.
