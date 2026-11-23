@@ -19,6 +19,26 @@
   </open-question>
   <open-question id="Claude Code scope selection">
     <question>How does the person pick the scope of a Claude Code install (user, project, or local) in the Settings window, whose page holds buttons and dropdowns only?</question>
+    <alternative id="Dropdown beside Install">
+      The Claude Code row of the Harnesses part carries a scope dropdown (a `select` of user, project, and local) beside its Install control, the form the page already uses for its model, effort, and harness dropdowns; the selection lives in the page&apos;s state for the window&apos;s session only, is stored nowhere, starts at user (the CLI&apos;s own default for `claude plugin install -s`), and a click on Install installs at the scope the dropdown shows.
+      <advantage>The scope is visible before the click and uses a control the page already draws and tests, so the person sees exactly what Install will do with no extra dialog step and nothing new is persisted.</advantage>
+      <drawback>The row gains a control that only Claude Code has, and a person who clicks Install without looking installs at user scope by default; which scopes the dropdown lists while a copy already stands, or while no folder is open, depends on the sibling questions on installing beside an existing copy and on project scopes without a project.</drawback>
+    </alternative>
+    <alternative id="Persisted scope setting">
+      The Claude Code row carries a scope dropdown (user, project, local) whose value is a stored setting in the per-user `~/.gurita/variants.json`, where everything else the settings hold is kept, read back on every opening of the window and used by every Install until the person changes it; the first value is user.
+      <advantage>A person who always installs at one scope sets it once and every later install from any window or session follows it, consistent with the rule that the settings&apos; values are kept in `variants.json`.</advantage>
+      <drawback>A per-user stored value is applied to every project, so a project or local choice made for one repository silently carries into the next, where it writes that project&apos;s `.claude/settings.json` or local settings unasked; it adds a stored field and its read and write path to the settings file for a choice that is usually made once per install, and whether Update also follows it depends on the sibling question on update target scopes.</drawback>
+    </alternative>
+    <alternative id="One button per scope">
+      The Claude Code row carries no dropdown and instead three install controls, Install at user, Install at project, and Install at local, each installing at its own scope on a click, with nothing selected or stored.
+      <advantage>The scope is part of the control the person clicks, so there is no default to fall into and no hidden state, and each control can be enabled or disabled on its own as the scope&apos;s situation requires.</advantage>
+      <drawback>Three buttons crowd one row where the other harnesses show a single Install, and the row grows further if update controls follow the same per-scope pattern; which of the three are shown or enabled depends on the sibling questions on installing beside an existing copy and on project scopes without a project.</drawback>
+    </alternative>
+    <alternative id="Quick pick on Install">
+      The Claude Code row carries one Install control like the other harnesses; clicking it opens VS Code&apos;s own quick pick (`showQuickPick`, which the extension already uses to pick a starting variant) listing user, project, and local, each with a one-line description of where it is recorded (user settings, the project&apos;s shared `.claude/settings.json`, the project&apos;s local settings), and the install runs at the scope picked, a dismissed pick installing nothing; nothing is selected or stored on the page.
+      <advantage>The page keeps one Install control per harness and the choice is made at the moment of installing with room to explain each scope, so a project-scope write to a tracked file is never made without the person reading what it means.</advantage>
+      <drawback>Every Claude Code install costs a second step and moves the choice out of the page into a picker the page tests cannot draw, so the stubbed `showQuickPick` becomes the only test of it; whether the picker also serves as the confirmation before installing depends on the sibling question on confirmation before install.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Install beside existing copy">
     <question>When Claude Code already holds a Gurita copy at one scope, does the Settings window still offer installing at the other scopes, or is Install offered only while no copy applies to the open project?</question>
