@@ -109,21 +109,21 @@ test('a missing store file holds nothing, and a store not in its form is refused
 test('the store is laid over the merged list: copies stand in place, hidden variants go, further stored variants follow', () => {
   const recipes = readRecipes(SHIPPED, OWN, STORE);
   assert.deepStrictEqual(outline(recipes), [
-    ['shipped', 'Chain', [['Chain', 'shipped'], ['Chain on Sonnet', 'stored']]],
-    ['shipped', 'Loop', [['Loop', 'shipped'], ['Copy of a variant no file holds', 'stored']]],
-    ['shipped', 'Single task (Claude Code)', [['Single task (Claude Code)', 'shipped']]],
-    ['shipped', 'Interactive task line', [['Interactive task line', 'shipped']]],
-    ['shipped', 'answer-open-question', [['answer-open-question', 'shipped'], ['Answer on Sonnet', 'stored']]],
-    ['shipped', 'Fenced heading', [['Fenced heading', 'shipped']]],
+    ['shipped', 'Chain', [['default', 'shipped'], ['Chain on Sonnet', 'stored']]],
+    ['shipped', 'Loop', [['default', 'shipped'], ['Copy of a variant no file holds', 'stored']]],
+    ['shipped', 'Single task (Claude Code)', [['default', 'shipped']]],
+    ['shipped', 'Interactive task line', [['default', 'shipped']]],
+    ['shipped', 'answer-open-question', [['default', 'shipped'], ['Answer on Sonnet', 'stored']]],
+    ['shipped', 'Fenced heading', [['default', 'shipped']]],
     [
       'shipped',
       'Variants',
       [['On Claude Code', 'shipped'], ['On Antigravity at xhigh', 'stored'], ['On Claude Code', 'stored'], ['Own variant', 'own']],
     ],
-    ['shipped', 'Single task (Antigravity)', [['Single task (Antigravity)', 'shipped'], ['Single task (Antigravity)', 'own']]],
+    ['shipped', 'Single task (Antigravity)', [['default', 'shipped'], ['default', 'own']]],
     ['shipped', 'Block before variants', [['Only variant', 'shipped']]],
-    ['own', 'My first own recipe', [['My first own recipe', 'own']]],
-    ['own', 'My second own recipe', [['My second own recipe', 'own']]],
+    ['own', 'My first own recipe', [['default', 'own']]],
+    ['own', 'My second own recipe', [['default', 'own']]],
     ['own', 'My variant recipe', [['First', 'own'], ['Second', 'own']]],
     ['own', 'Single task (Sonnet)', [['Single task (Sonnet)', 'stored']]],
   ]);
@@ -163,9 +163,9 @@ test("a recipe's default is its picked variant, the copy standing in for a picke
   assert.deepStrictEqual(defaults('Chain'), ['Chain on Sonnet', 'stored'], "a recipe's first pick is the one read");
   assert.deepStrictEqual(defaults('Variants'), ['On Antigravity at xhigh', 'stored'], 'a pick of a copied variant is its copy');
   assert.deepStrictEqual(defaults('answer-open-question'), ['Answer on Sonnet', 'stored']);
-  assert.deepStrictEqual(defaults('Fenced heading'), ['Fenced heading', 'shipped'], 'a pick naming no listed variant falls back to the first');
+  assert.deepStrictEqual(defaults('Fenced heading'), ['default', 'shipped'], 'a pick naming no listed variant falls back to the first');
   assert.deepStrictEqual(defaults('Block before variants'), ['Only variant', 'shipped']);
-  assert.deepStrictEqual(defaults('Loop'), ['Loop', 'shipped'], 'with no pick the first variant in order');
+  assert.deepStrictEqual(defaults('Loop'), ['default', 'shipped'], 'with no pick the first variant in order');
   assert.deepStrictEqual(byName(recipes, 'Chain').picked, { name: 'Chain on Sonnet', origin: 'stored' });
   assert.strictEqual(byName(recipes, 'Loop').picked, undefined);
 });

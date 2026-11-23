@@ -42,16 +42,16 @@
   "hidden": [
     { "recipe": "Variants", "name": "Empty variant", "origin": "shipped" },
     { "recipe": "Variants", "name": "On Antigravity", "origin": "shipped" },
-    { "recipe": "Chain", "name": "Chain", "origin": "own" },
-    { "recipe": "Two fences", "name": "Two fences", "origin": "shipped" },
+    { "recipe": "Chain", "name": "default", "origin": "own" },
+    { "recipe": "Two fences", "name": "default", "origin": "shipped" },
     { "recipe": "No such recipe", "name": "No such variant", "origin": "own" }
   ],
   "defaults": [
     { "recipe": "Chain", "name": "Chain on Sonnet", "origin": "stored" },
-    { "recipe": "Chain", "name": "Chain", "origin": "shipped" },
+    { "recipe": "Chain", "name": "default", "origin": "shipped" },
     { "recipe": "Variants", "name": "On Antigravity", "origin": "shipped" },
     { "recipe": "answer-open-question", "name": "Answer on Sonnet", "origin": "stored" },
-    { "recipe": "Fenced heading", "name": "Fenced heading", "origin": "own" },
+    { "recipe": "Fenced heading", "name": "default", "origin": "own" },
     { "recipe": "Block before variants", "name": "Deleted variant", "origin": "shipped" }
   ],
   "harnesses": { "kept": ["as", "read"] }

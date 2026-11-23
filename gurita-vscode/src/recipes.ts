@@ -1,8 +1,10 @@
 // The recipe reader. A recipe is a `###` heading, its name, and one or more named variants, each a
 // literal block of lines: every `####` sub-heading beneath the `###` heading names a variant, its
 // lines those of the first fenced block beneath the sub-heading, and a recipe with no `####`
-// sub-heading is a recipe of one variant, named by the recipe's own name, its lines those of the
-// first fenced block beneath the `###` heading. Once a recipe holds a `####` sub-heading only the
+// sub-heading is a recipe of one variant, named `default` (`ONE_BLOCK_VARIANT`), its lines those
+// of the first fenced block beneath the `###` heading, the named single-task lines included, so
+// that every such recipe opens on a variant called `default` while a recipe of several `####`
+// variants keeps the names written. Once a recipe holds a `####` sub-heading only the
 // blocks beneath its sub-headings are read, and of a variant name repeated within one recipe the
 // first is kept. The same form is read in the shipped file and in a person's own file. The shipped
 // recipe file, `shipped_recipes.md`, yields only the recipes under its one recipe section, its
@@ -74,6 +76,9 @@ export const KNOWN_PLACEHOLDERS: readonly string[] = [
   'note',
 ];
 
+/** The name of the one variant a recipe of one block and no `####` sub-heading holds. */
+export const ONE_BLOCK_VARIANT = 'default';
+
 /** The looped recipe's slot line, standing alone as its last line. */
 export const SLOT_LINE = '<single-task line>';
 
@@ -95,7 +100,7 @@ export const STAGE_NAMES: ReadonlyMap<string, WorkflowStep> = new Map<string, Wo
 
 /** One variant of a recipe: a named, literal block of lines. */
 export interface Variant {
-  /** The `####` sub-heading's text, or the recipe's own name for a recipe of one block. */
+  /** The `####` sub-heading's text, or `default` (`ONE_BLOCK_VARIANT`) for a recipe of one block. */
   name: string;
   /** Whether it comes from the person's own recipe file. */
   own: boolean;
@@ -290,13 +295,13 @@ function variant(name: string, lines: readonly string[], own: boolean, file: str
 
 /**
  * The recipe a block reads as: one variant per `####` sub-heading, the first of a repeated name
- * kept, or, when it holds none, one variant named by the recipe and holding the block's own lines.
+ * kept, or, when it holds none, one variant named `default` and holding the block's own lines.
  * A heading with no fence beneath it gives a variant of no line.
  */
 function classify(block: Block, group: RecipeGroup, own: boolean, file: string): Recipe {
   const variants: Variant[] = [];
   if (block.variants.length === 0) {
-    variants.push(variant(block.name, block.lines ?? [], own, file));
+    variants.push(variant(ONE_BLOCK_VARIANT, block.lines ?? [], own, file));
   } else {
     for (const each of block.variants) {
       if (!variants.some((kept) => kept.name === each.name)) {

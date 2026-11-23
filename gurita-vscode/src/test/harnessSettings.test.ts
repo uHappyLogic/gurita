@@ -141,8 +141,8 @@ function listed(disabled: ('claude' | 'agy' | 'codex')[], remembered: [string, s
 test('with every harness enabled the page lists every variant, as it does with no disabled harness given', () => {
   assert.deepStrictEqual(listed([]), [
     ['Review', ['Claude Code', 'Antigravity', 'Mixed'], 'Claude Code'],
-    ['Antigravity only', ['Antigravity only'], 'Antigravity only'],
-    ['Shell only', ['Shell only'], 'Shell only'],
+    ['Antigravity only', ['default'], 'default'],
+    ['Shell only', ['default'], 'default'],
   ]);
   assert.deepStrictEqual(pageRecipes(recipes(), ['path']), pageRecipes(recipes(), ['path'], new Map(), []));
 });
@@ -150,14 +150,14 @@ test('with every harness enabled the page lists every variant, as it does with n
 test('a variant with at least one line on a disabled harness is left out, mixed variants included, and a recipe so left with none loses its button', () => {
   assert.deepStrictEqual(listed(['agy']), [
     ['Review', ['Claude Code'], 'Claude Code'],
-    ['Shell only', ['Shell only'], 'Shell only'],
+    ['Shell only', ['default'], 'default'],
   ]);
   assert.deepStrictEqual(listed(['claude']), [
     ['Review', ['Antigravity'], 'Antigravity'],
-    ['Antigravity only', ['Antigravity only'], 'Antigravity only'],
-    ['Shell only', ['Shell only'], 'Shell only'],
+    ['Antigravity only', ['default'], 'default'],
+    ['Shell only', ['default'], 'default'],
   ]);
-  assert.deepStrictEqual(listed(['claude', 'agy', 'codex']), [['Shell only', ['Shell only'], 'Shell only']], 'a line of no harness is never left out');
+  assert.deepStrictEqual(listed(['claude', 'agy', 'codex']), [['Shell only', ['default'], 'default']], 'a line of no harness is never left out');
 });
 
 test('a left-out remembered variant or default gives way to the default when still listed, else to the first listed variant', () => {

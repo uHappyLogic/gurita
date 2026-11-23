@@ -299,7 +299,7 @@ test("the pane posts each page's recipes in the shipped file's order, then its o
         variants: [
           { name: 'Claude Code', own: false },
           { name: 'Antigravity', own: false },
-          { name: 'First run', own: true },
+          { name: 'default', own: true },
         ],
         selected: 0,
       },
@@ -309,7 +309,7 @@ test("the pane posts each page's recipes in the shipped file's order, then its o
         group: 'shipped',
         lines: ['<single-task line>'],
         values: { harnesses: [], models: [], efforts: [] },
-        variants: [{ name: 'Execute tasks one at a time', own: false }],
+        variants: [{ name: 'default', own: false }],
         selected: 0,
       },
       {
@@ -318,7 +318,7 @@ test("the pane posts each page's recipes in the shipped file's order, then its o
         group: 'shipped',
         lines: ['agy -p "/gurita:review-mission-requirements --mission <path>" --model "gemini-4-argon" --effort medium;'],
         values: { harnesses: ['agy'], models: ['gemini-4-argon'], efforts: ['medium'] },
-        variants: [{ name: 'Mixed review', own: false }],
+        variants: [{ name: 'default', own: false }],
         selected: 0,
       },
       {
@@ -327,7 +327,7 @@ test("the pane posts each page's recipes in the shipped file's order, then its o
         group: 'own',
         lines: ['echo <path>'],
         values: { harnesses: [], models: [], efforts: [] },
-        variants: [{ name: 'Mine everywhere', own: true }],
+        variants: [{ name: 'default', own: true }],
         selected: 0,
       },
     ]);
@@ -405,16 +405,16 @@ test('a selected variant is remembered per recipe on one mission in workspaceSta
     assert.deepStrictEqual(entry.variants, [
       { name: 'Claude Code', own: false },
       { name: 'Antigravity', own: false },
-      { name: 'First run', own: true },
+      { name: 'default', own: true },
     ]);
 
-    entry = await entryAfter({ type: 'selectVariant', mission: DELTA, recipe: 'First run', variant: 'First run' }, DELTA, 'First run');
-    assert.deepStrictEqual(workspaceState.get('gurita.variantSelections'), { [DELTA]: { 'First run': 'First run' } });
-    assert.strictEqual(selectedName(entry), 'First run', 'a remembered selection wins over the default');
+    entry = await entryAfter({ type: 'selectVariant', mission: DELTA, recipe: 'First run', variant: 'default' }, DELTA, 'First run');
+    assert.deepStrictEqual(workspaceState.get('gurita.variantSelections'), { [DELTA]: { 'First run': 'default' } });
+    assert.strictEqual(selectedName(entry), 'default', 'a remembered selection wins over the default');
     assert.deepStrictEqual(entry.lines, ['claude -p "/gurita:review-mission-requirements --mission <path>" --model "sonnet";']);
 
     entry = await entryAfter({ type: 'refresh' }, DELTA, 'First run');
-    assert.strictEqual(selectedName(entry), 'First run', 'the selection is remembered through a re-read');
+    assert.strictEqual(selectedName(entry), 'default', 'the selection is remembered through a re-read');
     entry = await entryAfter({ type: 'refresh' }, EPSILON, 'First run');
     assert.strictEqual(selectedName(entry), 'Antigravity', "another mission's page keeps its own selection, here the default");
 
@@ -425,8 +425,8 @@ test('a selected variant is remembered per recipe on one mission in workspaceSta
     send({ type: 'selectVariant', mission: 'other/mission_zeta/', recipe: 'First run', variant: 'Claude Code' });
     await new Promise((resolve) => setTimeout(resolve, 50));
     assert.strictEqual(created.length, count, 'a variant the last posted list does not show selected starts nothing');
-    assert.deepStrictEqual(workspaceState.get('gurita.variantSelections'), { [DELTA]: { 'First run': 'First run' } }, 'nor is remembered');
-    send({ type: 'runRecipe', mission: DELTA, recipe: 'First run', variant: 'First run' });
+    assert.deepStrictEqual(workspaceState.get('gurita.variantSelections'), { [DELTA]: { 'First run': 'default' } }, 'nor is remembered');
+    send({ type: 'runRecipe', mission: DELTA, recipe: 'First run', variant: 'default' });
     assert.deepStrictEqual(created.slice(count).map((terminal) => terminal.name), [`Gurita: First run (${DELTA})`], 'the selected variant runs');
 
     // A default picked afresh leaves the remembered selection standing.
@@ -435,7 +435,7 @@ test('a selected variant is remembered per recipe on one mission in workspaceSta
       JSON.stringify({ defaults: [{ recipe: 'First run', name: 'Claude Code', origin: 'shipped' }] }),
     );
     entry = await entryAfter({ type: 'refresh' }, DELTA, 'First run');
-    assert.strictEqual(selectedName(entry), 'First run');
+    assert.strictEqual(selectedName(entry), 'default');
 
     // The remembered variant goes from the own file: it is dropped and the button falls back to the current default.
     fs.writeFileSync(path.join(files, 'recipes.md'), '### Mine everywhere\n```\necho <path>\n```\n');
@@ -634,8 +634,8 @@ test("disabling a harness is stored in the variant store's harness part and leav
     const initial = await page({ type: 'ready' });
     assert.deepStrictEqual(shown(initial), [
       ['First run', ['Claude Code', 'Antigravity'], 'Claude Code'],
-      ['Execute tasks one at a time', ['Execute tasks one at a time'], 'Execute tasks one at a time'],
-      ['Mixed review', ['Mixed review'], 'Mixed review'],
+      ['Execute tasks one at a time', ['default'], 'default'],
+      ['Mixed review', ['default'], 'default'],
     ]);
     await page({ type: 'selectVariant', mission: THETA, recipe: 'First run', variant: 'Antigravity' });
 
@@ -662,28 +662,28 @@ test("disabling a harness is stored in the variant store's harness part and leav
     );
     assert.deepStrictEqual(shown(narrowed), [
       ['First run', ['Claude Code'], 'Claude Code'],
-      ['Execute tasks one at a time', ['Execute tasks one at a time'], 'Execute tasks one at a time'],
+      ['Execute tasks one at a time', ['default'], 'default'],
     ], 'the Antigravity variant leaves the dropdown, the recipe left with none its button, the remembered one giving way to the first listed');
     assert.deepStrictEqual(JSON.parse(fs.readFileSync(store, 'utf8')).harnesses, { antigravity: { enabled: false } });
     assert.deepStrictEqual(workspaceState.get('gurita.variantSelections'), { [THETA]: { 'First run': 'Antigravity' } }, 'the remembered selection is kept');
 
     let count = created.length;
     send({ type: 'runRecipe', mission: THETA, recipe: 'First run', variant: 'Antigravity' });
-    send({ type: 'runRecipe', mission: THETA, recipe: 'Mixed review', variant: 'Mixed review' });
+    send({ type: 'runRecipe', mission: THETA, recipe: 'Mixed review', variant: 'default' });
     await page({ type: 'refresh' });
     assert.strictEqual(created.length, count, 'a click on a left-out variant or recipe is refused');
     assert.deepStrictEqual(shown(await page({ type: 'refresh' })), shown(narrowed), 'a re-read keeps the harness disabled');
 
     // The fixed-name button left with no variant starts nothing.
     const boxes = inputBoxes.length;
-    send({ type: 'missionButton', button: 'discussGoal', variant: 'discuss-mission-goal' });
+    send({ type: 'missionButton', button: 'discussGoal', variant: 'default' });
     await new Promise((resolve) => setTimeout(resolve, 50));
     assert.strictEqual(created.length, count, 'a click on a fixed-name button left with no variant starts nothing');
     assert.strictEqual(inputBoxes.length, boxes, 'nor asks for its values');
 
     // The looped run's preview and run keep every named single-task line.
     from = posted.length;
-    send({ type: 'previewLoop', mission: THETA, recipe: 'Execute tasks one at a time', variant: 'Execute tasks one at a time' });
+    send({ type: 'previewLoop', mission: THETA, recipe: 'Execute tasks one at a time', variant: 'default' });
     const preview = await postedOf('preview', from);
     assert.deepStrictEqual(preview.names, ['Single task (Claude Code)', 'Single task (Antigravity)']);
     assert.deepStrictEqual((preview.result as { state: string }).state, 'read');
@@ -708,7 +708,7 @@ test("disabling a harness is stored in the variant store's harness part and leav
     assert.strictEqual(again.buttons.discussGoal.state, 'offered', 'enabled again, the fixed-name button offers its variant');
     count = created.length;
     typedValues.push('A goal');
-    send({ type: 'missionButton', button: 'discussGoal', variant: 'discuss-mission-goal' });
+    send({ type: 'missionButton', button: 'discussGoal', variant: 'default' });
     for (let attempt = 0; attempt < 200 && created.length === count; attempt++) {
       await new Promise((resolve) => setTimeout(resolve, 10));
     }
@@ -895,11 +895,11 @@ test('the settings view lists every recipe with its variants and carries out eac
       assert.ok(firstRun !== undefined);
       return { recipes, dropdown: firstRun.variants.map((each) => each.name), selected: selectedName(firstRun) };
     };
-    /** Runs the discuss-mission-goal button, its dropdown on the variant of that name, with a typed goal and returns the runner's arguments. */
+    /** Runs the discuss-mission-goal button, its dropdown on its default variant, with a typed goal and returns the runner's arguments. */
     const discussGoal = async () => {
       const count = created.length;
       typedValues.push('A goal');
-      send({ type: 'missionButton', button: 'discussGoal', variant: 'discuss-mission-goal' });
+      send({ type: 'missionButton', button: 'discussGoal', variant: 'default' });
       for (let attempt = 0; attempt < 200 && created.length === count; attempt++) {
         await new Promise((resolve) => setTimeout(resolve, 10));
       }
@@ -912,11 +912,11 @@ test('the settings view lists every recipe with its variants and carries out eac
     send({ type: 'settingsOpened' });
     let recipes = await postedVariants(from);
     assert.deepStrictEqual(variantRows(recipes), [
-      ['First run', false, ['Claude Code (shipped) *', 'Antigravity (shipped)', 'First run (own)'], []],
-      ['Execute tasks one at a time', false, ['Execute tasks one at a time (shipped) *'], []],
-      ['Mixed review', false, ['Mixed review (shipped) *'], []],
-      ['discuss-mission-goal', true, ['discuss-mission-goal (shipped) *', 'discuss-mission-goal (own)'], []],
-      ['Mine everywhere', false, ['Mine everywhere (own) *'], []],
+      ['First run', false, ['Claude Code (shipped) *', 'Antigravity (shipped)', 'default (own)'], []],
+      ['Execute tasks one at a time', false, ['default (shipped) *'], []],
+      ['Mixed review', false, ['default (shipped) *'], []],
+      ['discuss-mission-goal', true, ['default (shipped) *', 'default (own)'], []],
+      ['Mine everywhere', false, ['default (own) *'], []],
     ], 'the chains, the fixed-name button recipe, and the own items, the single-task lines left out');
     assert.ok(!fs.existsSync(store), 'opening the view writes nothing');
 
@@ -928,11 +928,11 @@ test('the settings view lists every recipe with its variants and carries out eac
     assert.strictEqual(box.value, undefined, "a duplicate's box opens empty");
     assert.ok(box.validateInput !== undefined);
     assert.ok(box.validateInput('') !== undefined && box.validateInput('  ') !== undefined, 'an empty name is refused');
-    assert.ok(box.validateInput('Antigravity') !== undefined && box.validateInput(' First run') !== undefined, 'a name the recipe uses is refused');
+    assert.ok(box.validateInput('Antigravity') !== undefined && box.validateInput(' default') !== undefined, 'a name the recipe uses is refused');
     assert.strictEqual(box.validateInput('Fast'), undefined);
     assert.deepStrictEqual(stored().variants, [{ recipe: 'First run', name: 'Fast', lines: recipes[0].variants[0].lines }]);
-    assert.deepStrictEqual(variantRows(shown.recipes)[0], ['First run', false, ['Claude Code (shipped) *', 'Antigravity (shipped)', 'First run (own)', 'Fast (stored)'], []]);
-    assert.deepStrictEqual(shown.dropdown, ['Claude Code', 'Antigravity', 'First run', 'Fast'], "the duplicate reaches the mission page's dropdown");
+    assert.deepStrictEqual(variantRows(shown.recipes)[0], ['First run', false, ['Claude Code (shipped) *', 'Antigravity (shipped)', 'default (own)', 'Fast (stored)'], []]);
+    assert.deepStrictEqual(shown.dropdown, ['Claude Code', 'Antigravity', 'default', 'Fast'], "the duplicate reaches the mission page's dropdown");
 
     // Rename: the box opens on the current name; a shipped variant gets a stored copy in its place.
     typedValues.push('Gemini');
@@ -943,36 +943,36 @@ test('the settings view lists every recipe with its variants and carries out eac
     assert.ok(box.validateInput('') !== undefined, 'an empty name is refused');
     assert.ok(box.validateInput('Claude Code') !== undefined && box.validateInput('Fast') !== undefined, 'a name the recipe uses is refused');
     assert.strictEqual(box.validateInput('Antigravity'), undefined, 'the current name is no other variant');
-    assert.deepStrictEqual(variantRows(shown.recipes)[0][2], ['Claude Code (shipped) *', 'Gemini (stored of Antigravity)', 'First run (own)', 'Fast (stored)']);
-    assert.deepStrictEqual(shown.dropdown, ['Claude Code', 'Gemini', 'First run', 'Fast'], 'the renamed variant keeps its place');
+    assert.deepStrictEqual(variantRows(shown.recipes)[0][2], ['Claude Code (shipped) *', 'Gemini (stored of Antigravity)', 'default (own)', 'Fast (stored)']);
+    assert.deepStrictEqual(shown.dropdown, ['Claude Code', 'Gemini', 'default', 'Fast'], 'the renamed variant keeps its place');
 
     // Default: a pick on the stored copy; with nothing remembered the page's dropdown stands on it.
     shown = await edit({ type: 'pickDefault', recipe: 'First run', variant: { name: 'Gemini', origin: 'stored', copies: { name: 'Antigravity', origin: 'shipped' } } });
     assert.deepStrictEqual(stored().defaults, [{ recipe: 'First run', name: 'Antigravity', origin: 'shipped' }]);
-    assert.deepStrictEqual(variantRows(shown.recipes)[0][2], ['Claude Code (shipped)', 'Gemini (stored of Antigravity) *', 'First run (own)', 'Fast (stored)']);
+    assert.deepStrictEqual(variantRows(shown.recipes)[0][2], ['Claude Code (shipped)', 'Gemini (stored of Antigravity) *', 'default (own)', 'Fast (stored)']);
     assert.strictEqual(shown.selected, 'Gemini');
 
     // Reset: the stored copy goes and the shipped variant shows again, the pick still on it.
     shown = await edit({ type: 'resetVariant', recipe: 'First run', original: { name: 'Antigravity', origin: 'shipped' } });
-    assert.deepStrictEqual(variantRows(shown.recipes)[0][2], ['Claude Code (shipped)', 'Antigravity (shipped) *', 'First run (own)', 'Fast (stored)']);
-    assert.deepStrictEqual(shown.dropdown, ['Claude Code', 'Antigravity', 'First run', 'Fast']);
+    assert.deepStrictEqual(variantRows(shown.recipes)[0][2], ['Claude Code (shipped)', 'Antigravity (shipped) *', 'default (own)', 'Fast (stored)']);
+    assert.deepStrictEqual(shown.dropdown, ['Claude Code', 'Antigravity', 'default', 'Fast']);
 
     // Delete: a shipped variant gets a hiding record, listed with its reset; the page's dropdown loses it.
     shown = await edit({ type: 'deleteVariant', recipe: 'First run', variant: { name: 'Claude Code', origin: 'shipped' } });
-    assert.deepStrictEqual(variantRows(shown.recipes)[0], ['First run', false, ['Antigravity (shipped) *', 'First run (own)', 'Fast (stored)'], ['Claude Code (shipped)']]);
-    assert.deepStrictEqual(shown.dropdown, ['Antigravity', 'First run', 'Fast']);
+    assert.deepStrictEqual(variantRows(shown.recipes)[0], ['First run', false, ['Antigravity (shipped) *', 'default (own)', 'Fast (stored)'], ['Claude Code (shipped)']]);
+    assert.deepStrictEqual(shown.dropdown, ['Antigravity', 'default', 'Fast']);
     shown = await edit({ type: 'resetVariant', recipe: 'First run', original: { name: 'Claude Code', origin: 'shipped' } });
-    assert.deepStrictEqual(shown.dropdown, ['Claude Code', 'Antigravity', 'First run', 'Fast'], 'reset, the deleted variant shows again');
+    assert.deepStrictEqual(shown.dropdown, ['Claude Code', 'Antigravity', 'default', 'Fast'], 'reset, the deleted variant shows again');
     shown = await edit({ type: 'deleteVariant', recipe: 'First run', variant: { name: 'Fast', origin: 'stored' } });
-    assert.deepStrictEqual(shown.dropdown, ['Claude Code', 'Antigravity', 'First run'], 'a deleted duplicate leaves the store');
+    assert.deepStrictEqual(shown.dropdown, ['Claude Code', 'Antigravity', 'default'], 'a deleted duplicate leaves the store');
 
     // The fixed-name button runs the default picked in the settings view, its pages posted again with every edit.
     assert.match(await discussGoal(), / chain -- agy /, 'the shipped variant runs first');
-    recipes = (await edit({ type: 'pickDefault', recipe: 'discuss-mission-goal', variant: { name: 'discuss-mission-goal', origin: 'own' } })).recipes;
-    assert.deepStrictEqual(variantRows(recipes)[3][2], ['discuss-mission-goal (shipped)', 'discuss-mission-goal (own) *']);
+    recipes = (await edit({ type: 'pickDefault', recipe: 'discuss-mission-goal', variant: { name: 'default', origin: 'own' } })).recipes;
+    assert.deepStrictEqual(variantRows(recipes)[3][2], ['default (shipped)', 'default (own) *']);
     assert.match(await discussGoal(), / chain -- claude /, 'the picked own variant runs');
-    recipes = (await edit({ type: 'deleteVariant', recipe: 'discuss-mission-goal', variant: { name: 'discuss-mission-goal', origin: 'own' } })).recipes;
-    assert.deepStrictEqual(variantRows(recipes)[3], ['discuss-mission-goal', true, ['discuss-mission-goal (shipped) *'], ['discuss-mission-goal (own)']]);
+    recipes = (await edit({ type: 'deleteVariant', recipe: 'discuss-mission-goal', variant: { name: 'default', origin: 'own' } })).recipes;
+    assert.deepStrictEqual(variantRows(recipes)[3], ['discuss-mission-goal', true, ['default (shipped) *'], ['default (own)']]);
     assert.deepStrictEqual(stored().defaults, [{ recipe: 'First run', name: 'Antigravity', origin: 'shipped' }], 'deleting the picked default drops its pick');
     assert.match(await discussGoal(), / chain -- agy /, 'the button falls back to the first listed variant');
 
@@ -1050,7 +1050,7 @@ test("a pick in a line's dropdown replaces the value the line carries through th
         { harness: 'claude', model: 'fable', effort: 'xhigh' },
       ]],
       ['Antigravity', 'shipped', [{ harness: 'antigravity', model: 'gemini-4-argon', effort: 'medium' }]],
-      ['First run', 'own', [null]],
+      ['default', 'own', [null]],
     ], 'each line with both flags gets its editor, the own line carrying --model alone none');
     assert.deepStrictEqual(listed.map((each) => [each.name, each.rows]), [
       ['Claude Code', [
@@ -1059,7 +1059,7 @@ test("a pick in a line's dropdown replaces the value the line carries through th
         { skill: 'recommend-all-open-questions', interactive: false, harness: 'claude' },
       ]],
       ['Antigravity', [{ skill: 'review-mission-requirements', interactive: false, harness: 'antigravity' }]],
-      ['First run', [{ skill: 'review-mission-requirements', interactive: false, harness: 'claude' }]],
+      ['default', [{ skill: 'review-mission-requirements', interactive: false, harness: 'claude' }]],
     ], 'each line running a gurita: skill is posted with its row, the own line without an editor included');
 
     // A model pick on a shipped variant's line: a stored copy holding the changed line, in that variant's place.
@@ -1071,11 +1071,11 @@ test("a pick in a line's dropdown replaces the value the line carries through th
     assert.deepStrictEqual(shown.variants.map((each) => [each.name, each.origin, each.copies?.name]), [
       ['Claude Code', 'stored', 'Claude Code'],
       ['Antigravity', 'shipped', undefined],
-      ['First run', 'own', undefined],
+      ['default', 'own', undefined],
     ], 'the stored copy stands in the shipped variant\'s place');
     assert.deepStrictEqual(shown.variants[0].lines, [shippedLines[0], changed, shippedLines[2]]);
     assert.deepStrictEqual(shown.variants[0].editors[1], { harness: 'claude', model: 'fable', effort: 'high' });
-    assert.deepStrictEqual(shown.entry.variants.map((each) => each.name), ['Claude Code', 'Antigravity', 'First run'], "the mission page's dropdown keeps its order");
+    assert.deepStrictEqual(shown.entry.variants.map((each) => each.name), ['Claude Code', 'Antigravity', 'default'], "the mission page's dropdown keeps its order");
     assert.deepStrictEqual(shown.entry.lines, [shippedLines[0], changed, shippedLines[2]], "the page's button runs the changed line");
 
     // An effort pick, from the harness's whole effort list, on the stored copy changes it in the store.
@@ -1093,7 +1093,7 @@ test("a pick in a line's dropdown replaces the value the line carries through th
     // An Antigravity line takes its own harness's effort list.
     shown = await pick({ type: 'replaceLineValue', recipe: 'First run', variant: { name: 'Antigravity', origin: 'shipped' }, line: 0, kind: 'effort', value: 'high' });
     assert.match(shown.variants[1].lines[0], /--model "gemini-4-argon" --effort high;$/);
-    assert.deepStrictEqual(shown.variants.map((each) => [each.name, each.origin]), [['Claude Code', 'stored'], ['Antigravity', 'stored'], ['First run', 'own']]);
+    assert.deepStrictEqual(shown.variants.map((each) => [each.name, each.origin]), [['Claude Code', 'stored'], ['Antigravity', 'stored'], ['default', 'own']]);
 
     // A value the list does not offer, the value the line carries, a line without a control, or a message not in form writes and posts nothing.
     const before = fs.readFileSync(store, 'utf8');
@@ -1102,12 +1102,12 @@ test("a pick in a line's dropdown replaces the value the line carries through th
     send({ type: 'replaceLineValue', recipe: 'First run', variant: copy, line: 0, kind: 'effort', value: 'max' });
     send({ type: 'replaceLineValue', recipe: 'First run', variant: copy, line: 0, kind: 'model', value: 'gemini-4-argon' });
     send({ type: 'replaceLineValue', recipe: 'First run', variant: copy, line: 0, kind: 'model', value: 'fable' });
-    send({ type: 'replaceLineValue', recipe: 'First run', variant: { name: 'First run', origin: 'own' }, line: 0, kind: 'model', value: 'opus' });
-    send({ type: 'replaceLineValue', recipe: 'First run', variant: { name: 'First run', origin: 'own' }, line: 0, kind: 'effort', value: 'high' });
+    send({ type: 'replaceLineValue', recipe: 'First run', variant: { name: 'default', origin: 'own' }, line: 0, kind: 'model', value: 'opus' });
+    send({ type: 'replaceLineValue', recipe: 'First run', variant: { name: 'default', origin: 'own' }, line: 0, kind: 'effort', value: 'high' });
     send({ type: 'replaceLineValue', recipe: 'First run', variant: copy, line: 3, kind: 'model', value: 'opus' });
     send({ type: 'replaceLineValue', recipe: 'First run', variant: copy, line: '0', kind: 'model', value: 'opus' });
     send({ type: 'replaceLineValue', recipe: 'First run', variant: copy, line: 0, kind: 'models', value: 'opus' });
-    send({ type: 'replaceLineValue', recipe: 'Execute tasks one at a time', variant: { name: 'Execute tasks one at a time', origin: 'shipped' }, line: 0, kind: 'model', value: 'opus' });
+    send({ type: 'replaceLineValue', recipe: 'Execute tasks one at a time', variant: { name: 'default', origin: 'shipped' }, line: 0, kind: 'model', value: 'opus' });
     send({ type: 'replaceLineValue', recipe: 'First run', variant: { name: 'Claude Code', origin: 'shipped' }, line: 0, kind: 'model', value: 'opus' });
     await new Promise((resolve) => setTimeout(resolve, 50));
     assert.deepStrictEqual(posted.slice(quiet), []);
@@ -1166,7 +1166,7 @@ test("a pick in a line's harness dropdown rewrites the line onto the picked harn
     assert.deepStrictEqual(stored().variants, [
       { recipe: 'First run', name: 'Claude Code', lines: [onAgy, shippedLines[1], shippedLines[2]], copies: { name: 'Claude Code', origin: 'shipped' } },
     ], 'a shipped variant gets a stored copy holding the rewritten line');
-    assert.deepStrictEqual(shown.variants.map((each) => [each.name, each.origin]), [['Claude Code', 'stored'], ['Antigravity', 'shipped'], ['First run', 'own']]);
+    assert.deepStrictEqual(shown.variants.map((each) => [each.name, each.origin]), [['Claude Code', 'stored'], ['Antigravity', 'shipped'], ['default', 'own']]);
     assert.deepStrictEqual(shown.variants[0].editors[0], { harness: 'antigravity', model: 'gemini-4-argon', effort: 'medium' }, "the redrawn row's dropdowns stand on Antigravity");
     assert.deepStrictEqual(shown.variants[0].rows[0], { skill: 'review-mission-requirements', interactive: false, harness: 'antigravity' });
     assert.deepStrictEqual(shown.entry.lines, [onAgy, shippedLines[1], shippedLines[2]], "the page's button runs the rewritten line");
@@ -1186,7 +1186,7 @@ test("a pick in a line's harness dropdown rewrites the line onto the picked harn
     assert.strictEqual(shown.variants[0].lines[0], shippedLines[0], 'the way back gives the shipped line');
 
     // A named single-task line is rewritten as a variant's line is, keeping its name.
-    shown = await pick({ type: 'replaceLineHarness', recipe: 'Single task (Antigravity)', variant: { name: 'Single task (Antigravity)', origin: 'shipped' }, line: 0, harness: 'claude' });
+    shown = await pick({ type: 'replaceLineHarness', recipe: 'Single task (Antigravity)', variant: { name: 'default', origin: 'shipped' }, line: 0, harness: 'claude' });
     const line = shown.lines.find((each) => each.name === 'Single task (Antigravity)');
     assert.ok(line !== undefined);
     assert.strictEqual(line.line, 'claude -p "/gurita:complete-task --mission <path> <Task Title>" --model "fable" --effort high;');
@@ -1198,11 +1198,11 @@ test("a pick in a line's harness dropdown rewrites the line onto the picked harn
     send({ type: 'replaceLineHarness', recipe: 'First run', variant: copy, line: 0, harness: 'claude' });
     send({ type: 'replaceLineHarness', recipe: 'First run', variant: copy, line: 0, harness: 'codex' });
     send({ type: 'replaceLineHarness', recipe: 'First run', variant: copy, line: 0, harness: 'agy' });
-    send({ type: 'replaceLineHarness', recipe: 'First run', variant: { name: 'First run', origin: 'own' }, line: 0, harness: 'antigravity' });
-    send({ type: 'replaceLineHarness', recipe: 'discuss-mission-goal', variant: { name: 'discuss-mission-goal', origin: 'shipped' }, line: 0, harness: 'claude' });
+    send({ type: 'replaceLineHarness', recipe: 'First run', variant: { name: 'default', origin: 'own' }, line: 0, harness: 'antigravity' });
+    send({ type: 'replaceLineHarness', recipe: 'discuss-mission-goal', variant: { name: 'default', origin: 'shipped' }, line: 0, harness: 'claude' });
     send({ type: 'replaceLineHarness', recipe: 'First run', variant: copy, line: 3, harness: 'antigravity' });
     send({ type: 'replaceLineHarness', recipe: 'First run', variant: copy, line: '0', harness: 'antigravity' });
-    send({ type: 'replaceLineHarness', recipe: 'Execute tasks one at a time', variant: { name: 'Execute tasks one at a time', origin: 'shipped' }, line: 0, harness: 'antigravity' });
+    send({ type: 'replaceLineHarness', recipe: 'Execute tasks one at a time', variant: { name: 'default', origin: 'shipped' }, line: 0, harness: 'antigravity' });
     await new Promise((resolve) => setTimeout(resolve, 50));
     assert.deepStrictEqual(posted.slice(quiet), []);
     assert.strictEqual(fs.readFileSync(store, 'utf8'), before);
@@ -1280,7 +1280,7 @@ test("the settings view lists the named single-task lines and carries out each l
     /** The looped run's preview on LAMBDA's page: the names its override list offers. */
     const previewNames = async () => {
       const from = posted.length;
-      send({ type: 'previewLoop', mission: LAMBDA, recipe: 'Execute tasks one at a time', variant: 'Execute tasks one at a time' });
+      send({ type: 'previewLoop', mission: LAMBDA, recipe: 'Execute tasks one at a time', variant: 'default' });
       const preview = await postedOf('preview', from);
       assert.strictEqual((preview.result as { state: string }).state, 'read');
       return preview.names;
@@ -1309,7 +1309,7 @@ test("the settings view lists the named single-task lines and carries out each l
 
     // Duplicate: the name is asked for in one input box, which refuses an empty name and one a recipe or line carries.
     typedValues.push(' Single task (Sonnet) ');
-    listed = await edit({ type: 'duplicateLine', line: CC, variant: { name: CC, origin: 'shipped' } });
+    listed = await edit({ type: 'duplicateLine', line: CC, variant: { name: 'default', origin: 'shipped' } });
     let box = inputBoxes[0];
     assert.strictEqual(inputBoxes.length, 1);
     assert.strictEqual(box.value, undefined, "a duplicate's box opens empty");
@@ -1322,7 +1322,7 @@ test("the settings view lists the named single-task lines and carries out each l
 
     // Rename: the box opens on the current name; the shipped line gets a stored copy of the new name in its place.
     typedValues.push('Agy line');
-    listed = await edit({ type: 'renameLine', line: AGY, variant: { name: AGY, origin: 'shipped' } });
+    listed = await edit({ type: 'renameLine', line: AGY, variant: { name: 'default', origin: 'shipped' } });
     box = inputBoxes[1];
     assert.strictEqual(box.value, AGY, 'a rename opens with the current name filled in');
     assert.ok(box.validateInput !== undefined);
@@ -1335,28 +1335,28 @@ test("the settings view lists the named single-task lines and carries out each l
       ['Single task (Sonnet)', 'stored', ccLine],
     ]);
     const renamed = listed.lines[1];
-    assert.deepStrictEqual(renamed.reset, { recipe: AGY, original: { name: AGY, origin: 'shipped' } });
+    assert.deepStrictEqual(renamed.reset, { recipe: AGY, original: { name: 'default', origin: 'shipped' } });
     assert.deepStrictEqual(await previewNames(), [CC, 'Agy line', 'My own line', 'Single task (Sonnet)'], 'the renamed line keeps its place');
 
     // A model or effort pick on the renamed line changes the stored copy in place.
     listed = await edit({ type: 'replaceLineValue', recipe: 'Agy line', variant: renamed.variant, line: 0, kind: 'effort', value: 'medium' });
     assert.strictEqual(listed.lines[1].line, agyLine.replace('--effort high', '--effort medium'));
     assert.strictEqual(stored().variants.length, 2);
-    listed = await edit({ type: 'replaceLineValue', recipe: CC, variant: { name: CC, origin: 'shipped' }, line: 0, kind: 'model', value: 'fable' });
+    listed = await edit({ type: 'replaceLineValue', recipe: CC, variant: { name: 'default', origin: 'shipped' }, line: 0, kind: 'model', value: 'fable' });
     assert.deepStrictEqual(rows(listed)[0], [CC, 'stored', ccLine.replace('"opus"', '"fable"')], 'a shipped line gets a stored copy under its name');
 
     // Delete: a stored copy of a shipped line leaves the store and hides it, listed with its reset.
     listed = await edit({ type: 'deleteLine', line: CC, variant: listed.lines[0].variant });
     assert.deepStrictEqual(rows(listed).map((each) => each[0]), ['Agy line', 'My own line', 'Single task (Sonnet)']);
-    assert.deepStrictEqual(listed.hidden, [{ name: CC, original: { name: CC, origin: 'shipped' } }]);
+    assert.deepStrictEqual(listed.hidden, [{ name: CC, original: { name: 'default', origin: 'shipped' } }]);
     assert.deepStrictEqual(await previewNames(), ['Agy line', 'My own line', 'Single task (Sonnet)']);
-    listed = await edit({ type: 'deleteLine', line: 'My own line', variant: { name: 'My own line', origin: 'own' } });
-    assert.deepStrictEqual(stored().hidden, [{ recipe: CC, name: CC, origin: 'shipped' }, { recipe: 'My own line', name: 'My own line', origin: 'own' }]);
+    listed = await edit({ type: 'deleteLine', line: 'My own line', variant: { name: 'default', origin: 'own' } });
+    assert.deepStrictEqual(stored().hidden, [{ recipe: CC, name: 'default', origin: 'shipped' }, { recipe: 'My own line', name: 'default', origin: 'own' }]);
 
     // Reset: the deleted and renamed lines show again as their files hold them.
-    await edit({ type: 'resetLine', line: CC, original: { name: CC, origin: 'shipped' } });
-    await edit({ type: 'resetLine', line: 'My own line', original: { name: 'My own line', origin: 'own' } });
-    listed = await edit({ type: 'resetLine', line: AGY, original: { name: AGY, origin: 'shipped' } });
+    await edit({ type: 'resetLine', line: CC, original: { name: 'default', origin: 'shipped' } });
+    await edit({ type: 'resetLine', line: 'My own line', original: { name: 'default', origin: 'own' } });
+    listed = await edit({ type: 'resetLine', line: AGY, original: { name: 'default', origin: 'shipped' } });
     assert.deepStrictEqual(rows(listed).map((each) => [each[0], each[1]]), [
       [CC, 'shipped'],
       [AGY, 'shipped'],
@@ -1380,12 +1380,12 @@ test("the settings view lists the named single-task lines and carries out each l
     const before = fs.readFileSync(store, 'utf8');
     const boxes = inputBoxes.length;
     from = posted.length;
-    send({ type: 'renameLine', line: CC, variant: { name: CC, origin: 'shipped' } });
+    send({ type: 'renameLine', line: CC, variant: { name: 'default', origin: 'shipped' } });
     send({ type: 'duplicateLine', line: 'No such line', variant: { name: 'No such line', origin: 'shipped' } });
     send({ type: 'deleteLine', line: 'First run', variant: { name: 'Claude Code', origin: 'shipped' } });
     send({ type: 'deleteLine', line: CC });
-    send({ type: 'resetLine', line: CC, original: { name: CC, origin: 'shipped' } });
-    send({ type: 'resetLine', line: CC, original: { name: CC, origin: 'elsewhere' } });
+    send({ type: 'resetLine', line: CC, original: { name: 'default', origin: 'shipped' } });
+    send({ type: 'resetLine', line: CC, original: { name: 'default', origin: 'elsewhere' } });
     await new Promise((resolve) => setTimeout(resolve, 50));
     assert.strictEqual(inputBoxes.length, boxes + 1, 'only the rename of a listed line asks for a name');
     assert.deepStrictEqual(posted.slice(from), []);
@@ -1500,7 +1500,7 @@ test("every fixed-name button is posted with the variants it can run and the lin
       state: 'offered',
       lines: [BUTTON_LINES[key]],
       values: { harnesses, models, efforts },
-      variants: own ? [{ name: BUTTON_NAMES[key], own: false }, { name: BUTTON_NAMES[key], own: true }] : [{ name: BUTTON_NAMES[key], own: false }],
+      variants: own ? [{ name: 'default', own: false }, { name: 'default', own: true }] : [{ name: 'default', own: false }],
       selected: 0,
     });
     const initial: Record<string, PostedButton> = {
@@ -1521,7 +1521,7 @@ test("every fixed-name button is posted with the variants it can run and the lin
     send({ type: 'settingsOpened' });
 
     // A pick of a two-line own variant: the button stands on it, carrying both lines and their distinct values.
-    let buttons = await buttonsAfter({ type: 'pickDefault', recipe: 'discuss-open-question', variant: { name: 'discuss-open-question', origin: 'own' } });
+    let buttons = await buttonsAfter({ type: 'pickDefault', recipe: 'discuss-open-question', variant: { name: 'default', origin: 'own' } });
     assert.deepStrictEqual(buttons.discussQuestion, {
       ...(initial.discussQuestion as object),
       lines: BUTTON_OWN_TEXT.split('\n').slice(2, 4),
@@ -1531,11 +1531,11 @@ test("every fixed-name button is posted with the variants it can run and the lin
     assert.deepStrictEqual({ ...buttons, discussQuestion: undefined }, { ...initial, discussQuestion: undefined }, 'the other buttons stay as they were');
 
     // A pick of a variant of no readable line: its lines with no value, so the button shows its name alone.
-    buttons = await buttonsAfter({ type: 'pickDefault', recipe: 'define-mission-goal', variant: { name: 'define-mission-goal', origin: 'own' } });
+    buttons = await buttonsAfter({ type: 'pickDefault', recipe: 'define-mission-goal', variant: { name: 'default', origin: 'own' } });
     assert.deepStrictEqual(buttons.defineMission, { ...(initial.defineMission as object), lines: ['echo <goal> <scope>'], values: { harnesses: [], models: [], efforts: [] }, selected: 1 });
 
     // A pick of a variant the button cannot run: it stays out of the dropdown, which stands on the first variant offered.
-    buttons = await buttonsAfter({ type: 'pickDefault', recipe: 'discuss-new-task', variant: { name: 'discuss-new-task', origin: 'own' } });
+    buttons = await buttonsAfter({ type: 'pickDefault', recipe: 'discuss-new-task', variant: { name: 'default', origin: 'own' } });
     assert.deepStrictEqual(buttons.discussTask, initial.discussTask);
     assert.deepStrictEqual(buttons.discussQuestion.state === 'offered' && buttons.discussQuestion.selected, 1, 'every earlier pick still stands');
 
@@ -1550,7 +1550,7 @@ test("every fixed-name button is posted with the variants it can run and the lin
     buttons = await buttonsAfter({ type: 'refresh' }, 'liveFailure');
     assert.deepStrictEqual(Object.keys(buttons), ['discussGoal', 'defineMission']);
     assert.deepStrictEqual(buttons.defineMission, { ...(initial.defineMission as object), lines: ['echo <goal> <scope>'], values: { harnesses: [], models: [], efforts: [] }, selected: 1 });
-    buttons = await buttonsAfter({ type: 'pickDefault', recipe: 'define-mission-goal', variant: { name: 'define-mission-goal', origin: 'shipped' } }, 'liveFailure');
+    buttons = await buttonsAfter({ type: 'pickDefault', recipe: 'define-mission-goal', variant: { name: 'default', origin: 'shipped' } }, 'liveFailure');
     assert.deepStrictEqual(buttons.defineMission, initial.defineMission, 'the failure state follows the default picked');
     workspace.folders = [{ uri: { fsPath: root } }];
     buttons = await buttonsAfter({ type: 'refresh' });
@@ -1560,7 +1560,7 @@ test("every fixed-name button is posted with the variants it can run and the lin
     // A click runs the variant the label shows.
     const count = created.length;
     typedValues.push('A goal');
-    send({ type: 'missionButton', button: 'discussGoal', variant: 'discuss-mission-goal' });
+    send({ type: 'missionButton', button: 'discussGoal', variant: 'default' });
     for (let attempt = 0; attempt < 200 && created.length === count; attempt++) {
       await new Promise((resolve) => setTimeout(resolve, 10));
     }
@@ -1657,16 +1657,16 @@ test("a fixed-name button's dropdown selection is remembered in workspaceState, 
     };
 
     let live = await liveAfter({ type: 'ready' });
-    assert.deepStrictEqual(dropdown(live, NU, 'discussQuestion'), [['discuss-open-question', 'Gemini'], 'discuss-open-question'], 'with nothing remembered the dropdown stands on the default');
-    assert.deepStrictEqual(dropdown(live, NU, 'answerWithAlternative'), [['answer-open-question-with-alternative', 'Sonnet'], 'answer-open-question-with-alternative']);
-    assert.deepStrictEqual(dropdown(live, NU, 'discussGoal'), [['discuss-mission-goal', 'Opus'], 'discuss-mission-goal']);
-    assert.deepStrictEqual(dropdown(live, NU, 'discussTask'), [['discuss-new-task'], 'discuss-new-task'], 'a looped variant the button cannot run is not offered');
+    assert.deepStrictEqual(dropdown(live, NU, 'discussQuestion'), [['default', 'Gemini'], 'default'], 'with nothing remembered the dropdown stands on the default');
+    assert.deepStrictEqual(dropdown(live, NU, 'answerWithAlternative'), [['default', 'Sonnet'], 'default']);
+    assert.deepStrictEqual(dropdown(live, NU, 'discussGoal'), [['default', 'Opus'], 'default']);
+    assert.deepStrictEqual(dropdown(live, NU, 'discussTask'), [['default'], 'default'], 'a looped variant the button cannot run is not offered');
 
     // A selection on a mission's page is remembered per recipe on that mission.
     live = await liveAfter({ type: 'selectButtonVariant', button: 'discussQuestion', mission: NU, variant: 'Gemini' });
     assert.deepStrictEqual(workspaceState.get('gurita.variantSelections'), { [NU]: { 'discuss-open-question': 'Gemini' } });
-    assert.deepStrictEqual(dropdown(live, NU, 'discussQuestion'), [['discuss-open-question', 'Gemini'], 'Gemini'], 'a remembered selection wins over the default');
-    assert.deepStrictEqual(dropdown(live, XI, 'discussQuestion')[1], 'discuss-open-question', "another mission's page keeps its own selection");
+    assert.deepStrictEqual(dropdown(live, NU, 'discussQuestion'), [['default', 'Gemini'], 'Gemini'], 'a remembered selection wins over the default');
+    assert.deepStrictEqual(dropdown(live, XI, 'discussQuestion')[1], 'default', "another mission's page keeps its own selection");
     const entry = postedButtons(live, NU).discussQuestion;
     assert.ok(entry.state === 'offered');
     assert.deepStrictEqual(entry.lines, [SELECTION_OWN_TEXT.split('\n')[3]], 'the label and hover text follow the selection');
@@ -1702,36 +1702,36 @@ test("a fixed-name button's dropdown selection is remembered in workspaceState, 
     assert.deepStrictEqual(posted.slice(from), [], 'nor posts the pages again');
 
     // A click runs the variant selected, and only when the latest answer posted the button standing on it.
-    assert.strictEqual(await click({ type: 'questionButton', button: 'discussQuestion', mission: NU, question: 'Pane Layout', variant: 'discuss-open-question' }, ['']), undefined, 'a variant the button was not posted standing on starts nothing');
+    assert.strictEqual(await click({ type: 'questionButton', button: 'discussQuestion', mission: NU, question: 'Pane Layout', variant: 'default' }, ['']), undefined, 'a variant the button was not posted standing on starts nothing');
     assert.strictEqual(await click({ type: 'questionButton', button: 'discussQuestion', mission: NU, question: 'Pane Layout' }, ['']), undefined, 'nor does a click naming none');
     assert.strictEqual(await click({ type: 'taskButton', mission: NU, variant: 'Looped' }, ['An issue']), undefined, 'nor one naming a variant the button does not offer');
     assert.match((await click({ type: 'questionButton', button: 'discussQuestion', mission: NU, question: 'Pane Layout', variant: 'Gemini' }, [''])) ?? '', / chain -- agy -i "\/gurita:discuss-open-question/);
     assert.strictEqual(await click({ type: 'alternativeButton', mission: XI, question: 'Pane Layout', alternative: 'drop', variant: 'Sonnet' }), undefined, "another mission's page keeps its own selection");
-    assert.match((await click({ type: 'questionButton', button: 'discussQuestion', mission: XI, question: 'Pane Layout', variant: 'discuss-open-question' }, [''])) ?? '', / chain -- claude "\/gurita:discuss-open-question/, 'and runs it');
+    assert.match((await click({ type: 'questionButton', button: 'discussQuestion', mission: XI, question: 'Pane Layout', variant: 'default' }, [''])) ?? '', / chain -- claude "\/gurita:discuss-open-question/, 'and runs it');
     assert.match((await click({ type: 'alternativeButton', mission: OMICRON, question: 'Pane Layout', alternative: 'drop', variant: 'Sonnet' })) ?? '', /--model "sonnet"/, "the card's alternatives share one selection");
     assert.match((await click({ type: 'alternativeButton', mission: PI, question: 'Pane Layout', alternative: 'keep', variant: 'Sonnet' })) ?? '', /--model "sonnet"/);
-    assert.strictEqual(await click({ type: 'missionButton', button: 'discussGoal', variant: 'discuss-mission-goal' }, ['A goal']), undefined);
+    assert.strictEqual(await click({ type: 'missionButton', button: 'discussGoal', variant: 'default' }, ['A goal']), undefined);
     assert.match((await click({ type: 'missionButton', button: 'discussGoal', variant: 'Opus' }, ['A goal'])) ?? '', / chain -- claude "\/gurita:discuss-mission-goal \${GURITA_GOAL}" --model "opus"/);
 
     // A default picked in the settings view leaves every remembered selection standing.
     send({ type: 'settingsOpened' });
-    live = await liveAfter({ type: 'pickDefault', recipe: 'discuss-mission-goal', variant: { name: 'discuss-mission-goal', origin: 'shipped' } });
+    live = await liveAfter({ type: 'pickDefault', recipe: 'discuss-mission-goal', variant: { name: 'default', origin: 'shipped' } });
     assert.deepStrictEqual(dropdown(live, NU, 'discussGoal')[1], 'Opus');
 
     // Disabling the harness of a remembered variant gives way to the default and keeps the selection for when it is enabled again.
     live = await liveAfter({ type: 'setHarnessEnabled', harness: 'antigravity', enabled: false });
-    assert.deepStrictEqual(dropdown(live, RHO, 'discussQuestion'), [['discuss-open-question'], 'discuss-open-question']);
+    assert.deepStrictEqual(dropdown(live, RHO, 'discussQuestion'), [['default'], 'default']);
     assert.deepStrictEqual(remembered()[RHO], { 'discuss-open-question': 'Gemini' }, 'the remembered selection is kept');
     assert.strictEqual(await click({ type: 'questionButton', button: 'discussQuestion', mission: RHO, question: 'Pane Layout', variant: 'Gemini' }, ['']), undefined, 'a variant left out for a disabled harness starts nothing');
     live = await liveAfter({ type: 'setHarnessEnabled', harness: 'antigravity', enabled: true });
     assert.deepStrictEqual(dropdown(live, RHO, 'discussQuestion')[1], 'Gemini', 'enabled again, the remembered selection comes back');
-    assert.match((await click({ type: 'taskButton', mission: RHO, variant: 'discuss-new-task' }, ['An issue'])) ?? '', / chain -- claude "\/gurita:discuss-new-task/);
+    assert.match((await click({ type: 'taskButton', mission: RHO, variant: 'default' }, ['An issue'])) ?? '', / chain -- claude "\/gurita:discuss-new-task/);
 
     // The remembered variants go from the own file: they are dropped and the buttons fall back to the default.
     fs.writeFileSync(path.join(files, 'recipes.md'), '');
     live = await liveAfter({ type: 'refresh' });
-    assert.deepStrictEqual(dropdown(live, NU, 'discussQuestion'), [['discuss-open-question'], 'discuss-open-question']);
-    assert.deepStrictEqual(dropdown(live, NU, 'discussGoal'), [['discuss-mission-goal'], 'discuss-mission-goal']);
+    assert.deepStrictEqual(dropdown(live, NU, 'discussQuestion'), [['default'], 'default']);
+    assert.deepStrictEqual(dropdown(live, NU, 'discussGoal'), [['default'], 'default']);
     assert.deepStrictEqual(workspaceState.get('gurita.variantSelections'), {}, 'the remembered variants are dropped');
     assert.deepStrictEqual(workspaceState.get('gurita.projectVariantSelections'), {});
 
@@ -1743,7 +1743,7 @@ test("a fixed-name button's dropdown selection is remembered in workspaceState, 
       send({ type: 'refresh' });
       return postedOf('liveFailure', at);
     })();
-    assert.deepStrictEqual(dropdown(failure, NU, 'discussGoal'), [['discuss-mission-goal', 'Opus'], 'discuss-mission-goal']);
+    assert.deepStrictEqual(dropdown(failure, NU, 'discussGoal'), [['default', 'Opus'], 'default']);
     const at = posted.length;
     send({ type: 'selectButtonVariant', button: 'discussGoal', variant: 'Opus' });
     failure = await postedOf('liveFailure', at);

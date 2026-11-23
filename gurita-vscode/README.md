@@ -346,7 +346,9 @@ shown at once in the view and on the mission pages.
 Under **Single-task lines** the view lists the named single-task lines the looped run takes,
 read afresh every time the view opens: the shipped ones and those of your own recipe file alike,
 in the order the looped run's preview offers them, with the lines only your store holds last.
-Each line shows its name, its line in the name's hover text, where it comes from (`shipped`,
+Each line shows its name, followed by the name of the variant it is (`default` for a line of one
+block, as every shipped line is) where that differs from the line's name, its line in the name's
+hover text, where it comes from (`shipped`,
 `yours`, `stored` for a duplicate, or `stored copy of` the line it stands in for), and beneath it
 its one line with the line editor described above, so a line running a `gurita:` skill is drawn
 as that skill's name (`complete-task`) with its harness on the right, and a line carrying both
@@ -397,11 +399,17 @@ claude "/gurita:complete-all-tasks --mission <path>" --dangerously-skip-permissi
 ```
 ````
 
-A recipe with one fenced block and no `####` sub-heading is a recipe of one variant, named by the
-recipe's own name. Once a recipe holds a `####` sub-heading, only the blocks beneath its
-sub-headings are read, a block standing above the first sub-heading included in none; a
-sub-heading with no fence beneath it is a variant of no line, and of a variant name repeated
-within one recipe only the first is read. Headings inside a fence are lines, not headings. The
+A recipe with one fenced block and no `####` sub-heading is a recipe of one variant, named
+`default`, in the shipped file and your own file alike, the named single-task lines included, so
+every such recipe opens on a variant called `default` in its dropdown and in the settings view; a
+recipe of several `####` variants, such as `Execute tasks` above, keeps the names written.
+Nothing renames what you stored or selected before under such a variant's old name, the
+recipe's name: a stored copy made under it no longer stands in for the variant, which shows again
+beside it, a hiding record or a picked default naming it matches no variant, and a remembered
+selection naming it is dropped as one naming a variant gone from the recipe. Once a recipe holds
+a `####` sub-heading, only the blocks beneath its sub-headings are read, a block standing above
+the first sub-heading included in none; a sub-heading with no fence beneath it is a variant of no
+line, and of a variant name repeated within one recipe only the first is read. Headings inside a fence are lines, not headings. The
 pane lists recipes from two files, the shipped file and your own file, and reads both in this
 same form. A recipe's default is the variant picked for it in the settings view (see Variants
 above), and while none is picked its first variant: the looped run's named single-task lines run
@@ -596,8 +604,8 @@ block of lines or by `####` variants; `##` headings in it are ignored, and of a 
 repeated in it only the first is read. An own recipe carrying the name of a shipped recipe, a
 button recipe included, replaces neither that recipe nor any of its variants: its block, or each
 of its variants when it writes several, joins the shipped recipe as one more variant, listed after
-the shipped variants under its own variant name (a one-block own recipe's being the recipe's
-name) and marked as your own. An own variant carrying a shipped variant's name is kept as a second
+the shipped variants under its own variant name (a one-block own recipe's being `default`) and
+marked as your own. An own variant carrying a shipped variant's name is kept as a second
 entry beside it, so every shipped variant stays, and the shipped variant stays the one the recipe
 runs first. Every other own recipe is listed below the shipped recipes under **Your recipes**,
 in the order your file lists them.

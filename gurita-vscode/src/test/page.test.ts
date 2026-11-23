@@ -390,7 +390,7 @@ function runnable(
   group: string,
   lines: string[],
   values: [string[], string[], string[]],
-  variants: Choice[] = [{ name, own: group === 'own' }],
+  variants: Choice[] = [{ name: 'default', own: group === 'own' }],
   selected = 0,
 ): unknown {
   const [harnesses, models, efforts] = values;
@@ -418,7 +418,7 @@ test("each mission's page draws its shipped recipes under no heading, then its o
         lines: ['echo <odd>'],
         placeholders: ['odd'],
         file: '/home/someone/.gurita/recipes.md',
-        variants: [{ name: 'Odd follow up', own: true }],
+        variants: [{ name: 'default', own: true }],
         selected: 0,
       },
     ],
@@ -441,7 +441,7 @@ test("each mission's page draws its shipped recipes under no heading, then its o
   );
   assert.ok(!recipeGroups(page).includes('Claude Code') && !recipeGroups(page).includes('Antigravity'));
   named(page, 'Prepare tasks').click();
-  assert.deepStrictEqual(page.posted[page.posted.length - 1], { type: 'runRecipe', mission: ALPHA, recipe: 'Prepare tasks', variant: 'Prepare tasks' });
+  assert.deepStrictEqual(page.posted[page.posted.length - 1], { type: 'runRecipe', mission: ALPHA, recipe: 'Prepare tasks', variant: 'default' });
   named(page, 'Beta').click();
   assert.deepStrictEqual(recipeNames(page), [
     'Finish mission',
@@ -449,7 +449,7 @@ test("each mission's page draws its shipped recipes under no heading, then its o
   ]);
   assert.deepStrictEqual(recipeGroups(page), ['Your recipes']);
   named(page, 'Finish mission').click();
-  assert.deepStrictEqual(page.posted[page.posted.length - 1], { type: 'runRecipe', mission: BETA, recipe: 'Finish mission', variant: 'Finish mission' });
+  assert.deepStrictEqual(page.posted[page.posted.length - 1], { type: 'runRecipe', mission: BETA, recipe: 'Finish mission', variant: 'default' });
 });
 
 test("a page with no own recipe draws no Your recipes heading, and one with only own recipes no shipped list", () => {
@@ -499,7 +499,7 @@ test("each recipe button shows its name with its variant's distinct harnesses, m
               group: 'shipped',
               lines: loop,
               values: { harnesses: [], models: [], efforts: [] },
-              variants: [{ name: 'Execute tasks one at a time', own: false }],
+              variants: [{ name: 'default', own: false }],
               selected: 0,
             },
           ],
@@ -516,7 +516,7 @@ test("each recipe button shows its name with its variant's distinct harnesses, m
   assert.strictEqual(named(page, 'Mixed').title, mixed.join('\n'));
   assert.strictEqual(named(page, 'Execute tasks one at a time').title, loop.join('\n'));
   named(page, 'Execute tasks one at a time').click();
-  assert.deepStrictEqual(page.posted[page.posted.length - 1], { type: 'previewLoop', mission: ALPHA, recipe: 'Execute tasks one at a time', variant: 'Execute tasks one at a time' });
+  assert.deepStrictEqual(page.posted[page.posted.length - 1], { type: 'previewLoop', mission: ALPHA, recipe: 'Execute tasks one at a time', variant: 'default' });
 });
 
 /** The recipe entries drawn on the page shown, each the entry's button or non-runnable entry with the dropdown beside it. */
@@ -576,7 +576,7 @@ test('every recipe entry has a dropdown beside it offering its variants in order
               group: 'shipped',
               lines: ['<single-task line>'],
               values: { harnesses: [], models: [], efforts: [] },
-              variants: [{ name: 'Execute tasks one at a time', own: false }],
+              variants: [{ name: 'default', own: false }],
               selected: 0,
             },
             {
@@ -612,7 +612,7 @@ test('every recipe entry has a dropdown beside it offering its variants in order
     ['Antigravity', '1', true],
     ['Mine (yours)', '2', false],
   ]);
-  assert.deepStrictEqual(options(entries[1].dropdown as FakeElement), [['Execute tasks one at a time', '0', true]]);
+  assert.deepStrictEqual(options(entries[1].dropdown as FakeElement), [['default', '0', true]]);
   assert.deepStrictEqual(options(entries[2].dropdown as FakeElement), [
     ['Plain (yours)', '0', false],
     ['Odd one (yours)', '1', true],
@@ -701,7 +701,7 @@ function liveButtons(entries: Record<string, unknown>, running: string[] = [], b
   };
 }
 
-/** What each fixed-name button runs, as the extension posts it, every button on one line of `model` at `effort`, offering one variant named by its key. */
+/** What each fixed-name button runs, as the extension posts it, every button on one line of `model` at `effort`, offering its one variant, `default`. */
 function fixedButtons(model: string, effort: string): Record<string, unknown> {
   return Object.fromEntries(
     FIXED_BUTTONS.map(([, key]) => [
@@ -710,7 +710,7 @@ function fixedButtons(model: string, effort: string): Record<string, unknown> {
         state: 'offered',
         lines: [`claude -p "/gurita:${key} --mission <path>" --model "${model}" --effort ${effort};`],
         values: { harnesses: ['claude'], models: [model], efforts: [effort] },
-        variants: [{ name: key, own: false }],
+        variants: [{ name: 'default', own: false }],
         selected: 0,
       },
     ]),
@@ -785,8 +785,8 @@ test("every fixed-name button shows its name with its selected variant's distinc
   named(page, 'Discuss').click();
   named(page, 'New mission').click();
   assert.deepStrictEqual(page.posted.slice(-2), [
-    { type: 'questionButton', button: 'discussQuestion', mission: ALPHA, question: 'Pane Layout', variant: 'discussQuestion' },
-    { type: 'missionButton', button: 'discussGoal', variant: 'discussGoal' },
+    { type: 'questionButton', button: 'discussQuestion', mission: ALPHA, question: 'Pane Layout', variant: 'default' },
+    { type: 'missionButton', button: 'discussGoal', variant: 'default' },
   ]);
   page.send(liveButtons(fixedButtons('fable', 'xhigh'), [ALPHA]));
   assertRunning(page);
@@ -1766,7 +1766,7 @@ test("after a harness is disabled the page draws the list the extension posts: t
       .filter((each) => each.tagName === 'option')
       .map((each) => each.textContent);
   assert.deepStrictEqual(recipeNames(page), ['Requirements iteration', 'Gemini review']);
-  assert.deepStrictEqual(options(), ['Claude Code', 'Antigravity', 'Gemini review']);
+  assert.deepStrictEqual(options(), ['Claude Code', 'Antigravity', 'default']);
   named(page, 'Settings').click();
   page.send(harnessSettings({ claude: true, antigravity: false, codex: true }));
   const narrowed = runnable('Requirements iteration', 'shipped', (both as { lines: string[] }).lines, [['claude'], [], []], [{ name: 'Claude Code', own: false }]);
@@ -1883,7 +1883,7 @@ const VARIANTS = {
         fixed: false,
         variants: [
           { name: 'Gemini', origin: 'stored', copies: { name: 'Antigravity', origin: 'shipped' }, lines: [AGY_LINE], isDefault: true },
-          { name: 'First run', origin: 'own', lines: [CLAUDE_LINE], isDefault: false },
+          { name: 'default', origin: 'own', lines: [CLAUDE_LINE], isDefault: false },
           { name: 'Fast', origin: 'stored', lines: [CLAUDE_LINE, CLAUDE_LINE], isDefault: false },
         ],
         hidden: [{ name: 'Claude Code', origin: 'shipped' }],
@@ -1892,10 +1892,10 @@ const VARIANTS = {
         name: 'discuss-mission-goal',
         group: 'shipped',
         fixed: true,
-        variants: [{ name: 'discuss-mission-goal', origin: 'shipped', lines: ['claude "/gurita:discuss-mission-goal <goal>"; # interactive'], isDefault: true }],
+        variants: [{ name: 'default', origin: 'shipped', lines: ['claude "/gurita:discuss-mission-goal <goal>"; # interactive'], isDefault: true }],
         hidden: [],
       },
-      { name: 'Mine everywhere', group: 'own', fixed: false, variants: [{ name: 'Mine everywhere', origin: 'own', lines: ['echo <path>'], isDefault: true }], hidden: [] },
+      { name: 'Mine everywhere', group: 'own', fixed: false, variants: [{ name: 'default', origin: 'own', lines: ['echo <path>'], isDefault: true }], hidden: [] },
     ],
   },
 };
@@ -1932,13 +1932,13 @@ test('the settings view lists every recipe the extension posts with its variants
       'First run',
       [
         [['Gemini', 'stored copy of the shipped variant Antigravity', 'Default'], [...edits, 'Reset']],
-        [['First run', 'yours'], [...edits, 'Make default']],
+        [['default', 'yours'], [...edits, 'Make default']],
         [['Fast', 'stored'], [...edits, 'Make default']],
         [['Claude Code', 'shipped', 'Deleted'], ['Reset']],
       ],
     ],
-    ['discuss-mission-goal', [[['discuss-mission-goal', 'shipped', 'Default'], edits]]],
-    ['Mine everywhere', [[['Mine everywhere', 'yours', 'Default'], edits]]],
+    ['discuss-mission-goal', [[['default', 'shipped', 'Default'], edits]]],
+    ['Mine everywhere', [[['default', 'yours', 'Default'], edits]]],
   ]);
   assert.ok(
     texts(page).includes('Run by a button outside the recipe list, which runs this default until another variant is selected beside it.'),
@@ -1976,7 +1976,7 @@ test('each variant control posts its edit, naming the variant as listed, and the
     { type: 'renameVariant', recipe: 'First run', variant: copy },
     { type: 'deleteVariant', recipe: 'First run', variant: copy },
     { type: 'resetVariant', recipe: 'First run', original: { name: 'Antigravity', origin: 'shipped' } },
-    { type: 'pickDefault', recipe: 'First run', variant: { name: 'First run', origin: 'own' } },
+    { type: 'pickDefault', recipe: 'First run', variant: { name: 'default', origin: 'own' } },
     { type: 'renameVariant', recipe: 'First run', variant: { name: 'Fast', origin: 'stored' } },
     { type: 'resetVariant', recipe: 'First run', original: { name: 'Claude Code', origin: 'shipped' } },
   ]);
@@ -1985,7 +1985,7 @@ test('each variant control posts its edit, naming the variant as listed, and the
     type: 'variants',
     variants: { state: 'read', recipes: [{ ...VARIANTS.variants.recipes[0], variants: VARIANTS.variants.recipes[0].variants.slice(1), hidden: [] }] },
   });
-  assert.deepStrictEqual(variantEditRows(page).map(([name, rows]) => [name, rows.map((row) => row[0][0])]), [['First run', ['First run', 'Fast']]]);
+  assert.deepStrictEqual(variantEditRows(page).map(([name, rows]) => [name, rows.map((row) => row[0][0])]), [['First run', ['default', 'Fast']]]);
   page.send({ type: 'live', missions: [mission(ALPHA, 'Alpha')], running: [ALPHA] });
   assert.strictEqual(page.root.querySelector('[data-focus="variant-delete-0-0"]')?.disabled, false, 'a running chain leaves the controls enabled');
 });
@@ -2342,21 +2342,21 @@ const LINES = {
   lines: {
     state: 'read',
     lines: [
-      { name: 'Single task (Claude Code)', group: 'shipped', variant: { name: 'Single task (Claude Code)', origin: 'shipped' }, line: TASK_LINE, editor: { harness: 'claude', model: 'opus', effort: 'high' }, row: TASK_ROW, isDefault: true },
+      { name: 'Single task (Claude Code)', group: 'shipped', variant: { name: 'default', origin: 'shipped' }, line: TASK_LINE, editor: { harness: 'claude', model: 'opus', effort: 'high' }, row: TASK_ROW, isDefault: true },
       {
         name: 'Agy line',
         group: 'shipped',
-        variant: { name: 'Agy line', origin: 'stored', copies: { name: 'Single task (Antigravity)', origin: 'shipped', recipe: 'Single task (Antigravity)' } },
+        variant: { name: 'Agy line', origin: 'stored', copies: { name: 'default', origin: 'shipped', recipe: 'Single task (Antigravity)' } },
         line: AGY_TASK_LINE,
         editor: { harness: 'antigravity', model: 'claude-opus-5-5', effort: 'high' },
         row: { skill: 'complete-task', interactive: false, harness: 'antigravity' },
         isDefault: true,
-        reset: { recipe: 'Single task (Antigravity)', original: { name: 'Single task (Antigravity)', origin: 'shipped' } },
+        reset: { recipe: 'Single task (Antigravity)', original: { name: 'default', origin: 'shipped' } },
       },
-      { name: 'My own line', group: 'own', variant: { name: 'My own line', origin: 'own' }, line: CODEX_TASK_LINE, editor: null, row: { skill: 'complete-task', interactive: false, harness: 'codex' }, isDefault: true },
+      { name: 'My own line', group: 'own', variant: { name: 'default', origin: 'own' }, line: CODEX_TASK_LINE, editor: null, row: { skill: 'complete-task', interactive: false, harness: 'codex' }, isDefault: true },
       { name: 'Single task (Sonnet)', group: 'own', variant: { name: 'Single task (Sonnet)', origin: 'stored' }, line: TASK_LINE, editor: { harness: 'claude', model: 'opus', effort: 'high' }, row: TASK_ROW, isDefault: true },
     ],
-    hidden: [{ name: 'Single task (Old)', original: { name: 'Single task (Old)', origin: 'shipped' } }],
+    hidden: [{ name: 'Single task (Old)', original: { name: 'default', origin: 'shipped' } }],
   },
 };
 
@@ -2387,11 +2387,11 @@ test('the settings view lists every named single-task line the extension posts w
   const edits = ['Duplicate', 'Rename', 'Delete'];
   const both = ['line-harness', 'line-model', 'line-effort'];
   assert.deepStrictEqual(singleLineRows(page), [
-    [['Single task (Claude Code)', 'shipped', 'complete-task'], edits, both],
+    [['Single task (Claude Code) — default', 'shipped', 'complete-task'], edits, both],
     [['Agy line', 'stored copy of the shipped line Single task (Antigravity)', 'complete-task'], [...edits, 'Reset'], both],
-    [['My own line', 'yours', 'complete-task', 'Codex'], edits, []],
+    [['My own line — default', 'yours', 'complete-task', 'Codex'], edits, []],
     [['Single task (Sonnet)', 'stored', 'complete-task'], edits, both],
-    [['Single task (Old)', 'shipped', 'Deleted'], ['Reset'], []],
+    [['Single task (Old) — default', 'shipped', 'Deleted'], ['Reset'], []],
   ], 'a line without both flags is shown read-only, and no line carries a Make default control');
   const view = settingsView(page);
   assert.ok(view !== undefined);
@@ -2414,21 +2414,21 @@ test('each line control posts its edit, naming the line as listed, and the list 
   focused(page, 'line-effort-single-1-0').change('medium');
   focused(page, 'line-harness-single-1-0').change('claude');
   assert.strictEqual(page.root.querySelector('[data-focus="line-harness-single-2-0"]'), null, 'a Codex line has no harness dropdown');
-  const renamed = { name: 'Agy line', origin: 'stored', copies: { name: 'Single task (Antigravity)', origin: 'shipped', recipe: 'Single task (Antigravity)' } };
+  const renamed = { name: 'Agy line', origin: 'stored', copies: { name: 'default', origin: 'shipped', recipe: 'Single task (Antigravity)' } };
   assert.deepStrictEqual(page.posted.slice(count), [
-    { type: 'duplicateLine', line: 'Single task (Claude Code)', variant: { name: 'Single task (Claude Code)', origin: 'shipped' } },
+    { type: 'duplicateLine', line: 'Single task (Claude Code)', variant: { name: 'default', origin: 'shipped' } },
     { type: 'renameLine', line: 'Agy line', variant: renamed },
     { type: 'deleteLine', line: 'Agy line', variant: renamed },
-    { type: 'resetLine', line: 'Single task (Antigravity)', original: { name: 'Single task (Antigravity)', origin: 'shipped' } },
+    { type: 'resetLine', line: 'Single task (Antigravity)', original: { name: 'default', origin: 'shipped' } },
     { type: 'deleteLine', line: 'Single task (Sonnet)', variant: { name: 'Single task (Sonnet)', origin: 'stored' } },
-    { type: 'resetLine', line: 'Single task (Old)', original: { name: 'Single task (Old)', origin: 'shipped' } },
-    { type: 'replaceLineValue', recipe: 'Single task (Claude Code)', variant: { name: 'Single task (Claude Code)', origin: 'shipped' }, line: 0, kind: 'model', value: 'fable' },
+    { type: 'resetLine', line: 'Single task (Old)', original: { name: 'default', origin: 'shipped' } },
+    { type: 'replaceLineValue', recipe: 'Single task (Claude Code)', variant: { name: 'default', origin: 'shipped' }, line: 0, kind: 'model', value: 'fable' },
     { type: 'replaceLineValue', recipe: 'Agy line', variant: renamed, line: 0, kind: 'effort', value: 'medium' },
     { type: 'replaceLineHarness', recipe: 'Agy line', variant: renamed, line: 0, harness: 'claude' },
   ]);
   assert.strictEqual(singleLineRows(page).length, 5, 'nothing changes until the extension posts it');
   page.send({ ...LINES, lines: { ...LINES.lines, lines: LINES.lines.lines.slice(0, 1), hidden: [] } });
-  assert.deepStrictEqual(singleLineRows(page).map((row) => row[0][0]), ['Single task (Claude Code)']);
+  assert.deepStrictEqual(singleLineRows(page).map((row) => row[0][0]), ['Single task (Claude Code) — default']);
 });
 
 test('single-task lines that could not be read are named in the settings view, with no control drawn', () => {

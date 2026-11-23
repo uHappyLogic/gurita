@@ -165,7 +165,7 @@ test('changing a line writes a stored copy holding the changed line in the varia
     const before = fs.readFileSync(file, 'utf8');
     replaceLineValue(file, base(), 'Variants', variantTarget(listed[3]), 0, 'model', 'fable');
     assert.strictEqual(fs.readFileSync(file, 'utf8'), before, 'a value the line already carries writes nothing');
-    refused(() => replaceLineValue(file, base(), 'Single task (Antigravity)', { name: 'Single task (Antigravity)', origin: 'shipped' }, 0, 'effort', 'high'), /carries no effort/);
+    refused(() => replaceLineValue(file, base(), 'Single task (Antigravity)', { name: 'default', origin: 'shipped' }, 0, 'effort', 'high'), /carries no effort/);
     refused(() => replaceLineValue(file, base(), 'Variants', OWN_VARIANT, 0, 'model', 'o3'), /carries no model/);
     refused(() => replaceLineValue(file, base(), 'Variants', SHIPPED_AGY, 1, 'model', 'x'), /has no line 2/);
     refused(() => replaceLineValue(file, base(), 'Variants', SHIPPED_AGY, 0, 'model', ''), /An empty model/);
@@ -201,12 +201,12 @@ test('a harness pick writes a stored copy holding the line rewritten onto the pi
     replaceLineHarness(file, base(), 'Variants', variantTarget(listed[0]), 0, 'claude', { models: ['fable'], efforts: ['xhigh'] });
     assert.strictEqual(fs.readFileSync(file, 'utf8'), before, 'a line already on the picked harness writes nothing');
     refused(() => replaceLineHarness(file, base(), 'Variants', OWN_VARIANT, 0, 'claude', agy), /no claude or agy line carrying both/);
-    refused(() => replaceLineHarness(file, base(), 'Chain', { name: 'Chain', origin: 'shipped' }, 0, 'agy', agy), /no claude or agy line carrying both/);
+    refused(() => replaceLineHarness(file, base(), 'Chain', { name: 'default', origin: 'shipped' }, 0, 'agy', agy), /no claude or agy line carrying both/);
     refused(() => replaceLineHarness(file, base(), 'Variants', OWN_CC, 1, 'agy', agy), /has no line 2/);
     refused(() => replaceLineHarness(file, base(), 'Variants', OWN_CC, 0, 'agy', { models: [], efforts: ['high'] }), /offers no model/);
     refused(() => replaceLineHarness(file, base(), 'Variants', OWN_CC, 0, 'agy', { models: ['x'], efforts: [] }), /offers no effort/);
     assert.strictEqual(fs.readFileSync(file, 'utf8'), before, 'a refused pick writes nothing');
-    replaceLineHarness(file, base(), 'Single task (Claude Code)', { name: 'Single task (Claude Code)', origin: 'shipped' }, 0, 'agy', agy);
+    replaceLineHarness(file, base(), 'Single task (Claude Code)', { name: 'default', origin: 'shipped' }, 0, 'agy', agy);
     const line = byName(readBack(file), 'Single task (Claude Code)').variants[0];
     assert.deepStrictEqual(line.lines, ['agy -p "/gurita:complete-task --mission <path> <Task Title>" --model "claude-opus-5-5" --effort high;']);
     assert.ok(line.singleTask, 'a rewritten single-task line stays a named single-task line');
@@ -247,11 +247,11 @@ test('deleting a shipped or own variant writes a hiding record, a stored one lea
 test('a recipe every variant of which is deleted drops out, and a reset brings it back', () => {
   withStore((file) => {
     const name = 'Single task (Claude Code)';
-    deleteVariant(file, base(), name, { name, origin: 'shipped' });
+    deleteVariant(file, base(), name, { name: 'default', origin: 'shipped' });
     assert.ok(!readBack(file).some((recipe) => recipe.name === name));
-    refused(() => deleteVariant(file, base(), name, { name, origin: 'shipped' }), /No recipe is named/);
-    resetVariant(file, name, { name, origin: 'shipped' });
-    assert.deepStrictEqual(variants(file, name), [[name, 'shipped']]);
+    refused(() => deleteVariant(file, base(), name, { name: 'default', origin: 'shipped' }), /No recipe is named/);
+    resetVariant(file, name, { name: 'default', origin: 'shipped' });
+    assert.deepStrictEqual(variants(file, name), [['default', 'shipped']]);
   });
 });
 
@@ -280,11 +280,11 @@ test('renaming the picked default carries the pick to the new name', () => {
     assert.deepStrictEqual(defaultOf(file, 'Variants'), ['Antigravity', 'stored']);
     renameVariant(file, base(), 'Variants', { name: 'Antigravity', origin: 'stored', copies: { name: 'On Antigravity', origin: 'shipped' } }, 'Gemini');
     assert.deepStrictEqual(defaultOf(file, 'Variants'), ['Gemini', 'stored']);
-    duplicateVariant(file, base(), 'Chain', { name: 'Chain', origin: 'shipped' }, 'Chain copy');
+    duplicateVariant(file, base(), 'Chain', { name: 'default', origin: 'shipped' }, 'Chain copy');
     pickDefault(file, base(), 'Chain', { name: 'Chain copy', origin: 'stored' });
     renameVariant(file, base(), 'Chain', { name: 'Chain copy', origin: 'stored' }, 'Chain renamed');
     assert.deepStrictEqual(defaultOf(file, 'Chain'), ['Chain renamed', 'stored']);
-    renameVariant(file, base(), 'Chain', { name: 'Chain', origin: 'own' }, 'Own chain');
+    renameVariant(file, base(), 'Chain', { name: 'default', origin: 'own' }, 'Own chain');
     assert.deepStrictEqual(defaultOf(file, 'Chain'), ['Chain renamed', 'stored'], 'renaming another variant leaves the pick');
   });
 });
@@ -309,7 +309,7 @@ test('an edit keeps the rest of the store as written, its harness part included,
   const ownBefore = fs.readFileSync(OWN, 'utf8');
   withStore((file) => {
     const before = readVariantStore(file);
-    duplicateVariant(file, base(), 'Loop', { name: 'Loop', origin: 'shipped' }, 'Loop again');
+    duplicateVariant(file, base(), 'Loop', { name: 'default', origin: 'shipped' }, 'Loop again');
     const after = readVariantStore(file);
     assert.deepStrictEqual(after.harnesses, { kept: ['as', 'read'] });
     assert.deepStrictEqual(after.hidden, before.hidden);
@@ -328,7 +328,7 @@ test('an edit keeps the rest of the store as written, its harness part included,
 
 test('the settings list holds every recipe but the single-task lines, a recipe whose every variant is hidden kept for its resets', () => {
   const store = emptyVariantStore();
-  store.hidden.push({ recipe: 'Chain', name: 'Chain', origin: 'shipped' }, { recipe: 'Chain', name: 'Chain', origin: 'own' });
+  store.hidden.push({ recipe: 'Chain', name: 'default', origin: 'shipped' }, { recipe: 'Chain', name: 'default', origin: 'own' });
   store.variants.push({ recipe: 'Variants', name: 'Faster', lines: ['echo faster'], copies: { name: 'On Antigravity', origin: 'shipped' } });
   store.variants.push({ recipe: 'Stored only', name: 'Mine', lines: ['echo mine'] });
   store.defaults.push({ recipe: 'Variants', name: 'On Antigravity', origin: 'shipped' });
@@ -338,7 +338,7 @@ test('the settings list holds every recipe but the single-task lines, a recipe w
   assert.ok(names.includes('Interactive task line'), 'a task line that is no headless single-task line stays');
   assert.strictEqual(names[names.length - 1], 'Stored only', 'a recipe only the store holds comes last');
   const chain = listed.find((recipe) => recipe.name === 'Chain');
-  assert.deepStrictEqual(chain && [chain.variants, chain.hidden], [[], [{ name: 'Chain', origin: 'shipped' }, { name: 'Chain', origin: 'own' }]]);
+  assert.deepStrictEqual(chain && [chain.variants, chain.hidden], [[], [{ name: 'default', origin: 'shipped' }, { name: 'default', origin: 'own' }]]);
   const variants = listed.find((recipe) => recipe.name === 'Variants');
   assert.ok(variants !== undefined);
   assert.deepStrictEqual(

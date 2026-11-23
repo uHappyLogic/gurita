@@ -36,7 +36,7 @@ const AGY = 'Single task (Antigravity)';
 const CC_LINE = 'claude -p "/gurita:complete-task --mission <path> <Task Title>" --model "opus" --effort high;';
 const AGY_LINE = 'agy -p "/gurita:complete-task --mission <path> <Task Title>" --model "claude-opus-5-5";';
 const OWN_LINE = 'claude -p "/gurita:complete-task --mission <path> <Task Title>" --model "sonnet" --effort medium;';
-const SHIPPED_CC: VariantTarget = { name: CC, origin: 'shipped' };
+const SHIPPED_CC: VariantTarget = { name: 'default', origin: 'shipped' };
 
 /** The recipe list the two Markdown files yield, before any store is laid over it, the own file holding a line of its own. */
 function base(): Recipe[] {
@@ -63,10 +63,10 @@ test('the settings view lists every named single-task line, shipped and own alik
   assert.deepStrictEqual(
     listed.lines.map((each) => [each.name, each.variant.name, each.variant.origin, each.group, each.isDefault, each.editor]),
     [
-      [CC, CC, 'shipped', 'shipped', true, { harness: 'claude', model: 'opus', effort: 'high' }],
-      [AGY, AGY, 'shipped', 'shipped', true, null],
-      [AGY, AGY, 'own', 'shipped', false, null],
-      ['My own line', 'My own line', 'own', 'own', true, { harness: 'claude', model: 'sonnet', effort: 'medium' }],
+      [CC, 'default', 'shipped', 'shipped', true, { harness: 'claude', model: 'opus', effort: 'high' }],
+      [AGY, 'default', 'shipped', 'shipped', true, null],
+      [AGY, 'default', 'own', 'shipped', false, null],
+      ['My own line', 'default', 'own', 'own', true, { harness: 'claude', model: 'sonnet', effort: 'medium' }],
     ],
     'the own variant joining a shipped line is listed as an own item, not the one the run takes',
   );
@@ -91,7 +91,7 @@ test('a duplicated line shows in singleTaskLines over the merged list under its 
       ['My own line', OWN_LINE],
       ['Single task (Sonnet)', CC_LINE],
     ]);
-    duplicateLine(file, base(), 'My own line', { name: 'My own line', origin: 'own' }, 'Second own line');
+    duplicateLine(file, base(), 'My own line', { name: 'default', origin: 'own' }, 'Second own line');
     assert.deepStrictEqual(namedLines(file).map((each) => each[0]), [CC, AGY, 'My own line', 'Single task (Sonnet)', 'Second own line']);
   });
 });
@@ -102,7 +102,7 @@ test('a duplicate or a rename to an empty name or one a recipe or line already c
       assert.throws(() => duplicateLine(file, base(), CC, SHIPPED_CC, name), VariantEditError);
       assert.throws(() => renameLine(file, base(), CC, SHIPPED_CC, name), VariantEditError);
     }
-    assert.throws(() => duplicateLine(file, base(), 'Chain', { name: 'Chain', origin: 'shipped' }, 'New line'), VariantEditError, 'a chain is no line');
+    assert.throws(() => duplicateLine(file, base(), 'Chain', { name: 'default', origin: 'shipped' }, 'New line'), VariantEditError, 'a chain is no line');
     assert.ok(!fs.existsSync(file));
     renameLine(file, base(), CC, SHIPPED_CC, CC);
     assert.ok(!fs.existsSync(file), 'renaming a line to the name it has writes nothing');
@@ -113,7 +113,7 @@ test('a renamed shipped line shows in singleTaskLines under its new name in its 
   withStore((file) => {
     renameLine(file, base(), CC, SHIPPED_CC, 'Opus line');
     assert.deepStrictEqual(readVariantStore(file).variants, [
-      { recipe: 'Opus line', name: 'Opus line', lines: [CC_LINE], copies: { name: CC, origin: 'shipped', recipe: CC } },
+      { recipe: 'Opus line', name: 'Opus line', lines: [CC_LINE], copies: { name: 'default', origin: 'shipped', recipe: CC } },
     ]);
     assert.deepStrictEqual(namedLines(file), [
       ['Opus line', CC_LINE],
@@ -121,17 +121,17 @@ test('a renamed shipped line shows in singleTaskLines under its new name in its 
       ['My own line', OWN_LINE],
     ], 'the renamed line stands in for the shipped one, in its place');
     const listed = settingsLines(base(), readVariantStore(file), file);
-    assert.deepStrictEqual(listed.lines[0].reset, { recipe: CC, original: { name: CC, origin: 'shipped' } });
+    assert.deepStrictEqual(listed.lines[0].reset, { recipe: CC, original: { name: 'default', origin: 'shipped' } });
 
     // Renamed again, the stored copy is renamed in the store, still standing in for the shipped line.
     renameLine(file, base(), 'Opus line', listed.lines[0].variant, 'Opus high');
     assert.deepStrictEqual(namedLines(file)[0], ['Opus high', CC_LINE]);
     assert.strictEqual(readVariantStore(file).variants.length, 1);
 
-    resetLine(file, CC, { name: CC, origin: 'shipped' });
+    resetLine(file, CC, { name: 'default', origin: 'shipped' });
     assert.deepStrictEqual(namedLines(file)[0], [CC, CC_LINE], 'reset, the shipped line shows again under its name');
     assert.deepStrictEqual(readVariantStore(file).variants, []);
-    assert.throws(() => resetLine(file, CC, { name: CC, origin: 'shipped' }), VariantEditError, 'nothing stands for it any more');
+    assert.throws(() => resetLine(file, CC, { name: 'default', origin: 'shipped' }), VariantEditError, 'nothing stands for it any more');
   });
 });
 
@@ -141,14 +141,14 @@ test("a line's model or effort change writes a stored copy under the line's name
     const changed = CC_LINE.replace('"opus"', '"sonnet"');
     assert.deepStrictEqual(namedLines(file)[0], [CC, changed]);
     const copy = settingsLines(base(), readVariantStore(file), file).lines[0];
-    assert.deepStrictEqual([copy.variant.origin, copy.reset], ['stored', { recipe: CC, original: { name: CC, origin: 'shipped' } }]);
+    assert.deepStrictEqual([copy.variant.origin, copy.reset], ['stored', { recipe: CC, original: { name: 'default', origin: 'shipped' } }]);
     replaceLineValue(file, base(), CC, copy.variant, 0, 'effort', 'xhigh');
     renameLine(file, base(), CC, copy.variant, 'Sonnet xhigh');
     assert.deepStrictEqual(namedLines(file)[0], ['Sonnet xhigh', changed.replace('--effort high', '--effort xhigh')]);
     assert.deepStrictEqual(readVariantStore(file).variants.map((each) => [each.recipe, each.copies]), [
-      ['Sonnet xhigh', { name: CC, origin: 'shipped', recipe: CC }],
+      ['Sonnet xhigh', { name: 'default', origin: 'shipped', recipe: CC }],
     ]);
-    resetLine(file, CC, { name: CC, origin: 'shipped' });
+    resetLine(file, CC, { name: 'default', origin: 'shipped' });
     assert.deepStrictEqual(namedLines(file)[0], [CC, CC_LINE]);
   });
 });
@@ -156,14 +156,14 @@ test("a line's model or effort change writes a stored copy under the line's name
 test('a deleted line leaves singleTaskLines, a shipped or own one listed for its reset, a stored one leaving the store', () => {
   withStore((file) => {
     deleteLine(file, base(), CC, SHIPPED_CC);
-    assert.deepStrictEqual(readVariantStore(file).hidden, [{ recipe: CC, name: CC, origin: 'shipped' }]);
+    assert.deepStrictEqual(readVariantStore(file).hidden, [{ recipe: CC, name: 'default', origin: 'shipped' }]);
     assert.deepStrictEqual(namedLines(file).map((each) => each[0]), [AGY, 'My own line']);
-    assert.deepStrictEqual(settingsLines(base(), readVariantStore(file), file).hidden, [{ name: CC, original: { name: CC, origin: 'shipped' } }]);
+    assert.deepStrictEqual(settingsLines(base(), readVariantStore(file), file).hidden, [{ name: CC, original: { name: 'default', origin: 'shipped' } }]);
 
-    deleteLine(file, base(), 'My own line', { name: 'My own line', origin: 'own' });
+    deleteLine(file, base(), 'My own line', { name: 'default', origin: 'own' });
     assert.deepStrictEqual(namedLines(file).map((each) => each[0]), [AGY]);
-    resetLine(file, 'My own line', { name: 'My own line', origin: 'own' });
-    resetLine(file, CC, { name: CC, origin: 'shipped' });
+    resetLine(file, 'My own line', { name: 'default', origin: 'own' });
+    resetLine(file, CC, { name: 'default', origin: 'shipped' });
     assert.deepStrictEqual(namedLines(file).map((each) => each[0]), [CC, AGY, 'My own line'], 'reset, the deleted lines show again');
 
     // A renamed line deleted hides the line it stood in for; a deleted duplicate leaves the store.
@@ -171,25 +171,25 @@ test('a deleted line leaves singleTaskLines, a shipped or own one listed for its
     const renamed = settingsLines(base(), readVariantStore(file), file).lines[0];
     deleteLine(file, base(), 'Opus line', renamed.variant);
     assert.deepStrictEqual(readVariantStore(file).variants, []);
-    assert.deepStrictEqual(readVariantStore(file).hidden, [{ recipe: CC, name: CC, origin: 'shipped' }]);
+    assert.deepStrictEqual(readVariantStore(file).hidden, [{ recipe: CC, name: 'default', origin: 'shipped' }]);
     assert.deepStrictEqual(namedLines(file).map((each) => each[0]), [AGY, 'My own line']);
-    duplicateLine(file, base(), AGY, { name: AGY, origin: 'shipped' }, 'Agy copy');
+    duplicateLine(file, base(), AGY, { name: 'default', origin: 'shipped' }, 'Agy copy');
     deleteLine(file, base(), 'Agy copy', { name: 'Agy copy', origin: 'stored' });
     assert.deepStrictEqual(namedLines(file).map((each) => each[0]), [AGY, 'My own line']);
-    assert.deepStrictEqual(readVariantStore(file).hidden, [{ recipe: CC, name: CC, origin: 'shipped' }], 'a deleted duplicate hides nothing');
+    assert.deepStrictEqual(readVariantStore(file).hidden, [{ recipe: CC, name: 'default', origin: 'shipped' }], 'a deleted duplicate hides nothing');
   });
 });
 
 test("a renamed line's copy is kept in the store's form, and one under a name the files hold stands in for nothing", () => {
   const text = serializeVariantStore({
-    variants: [{ recipe: 'Opus line', name: 'Opus line', lines: [CC_LINE], copies: { name: CC, origin: 'shipped', recipe: CC } }],
+    variants: [{ recipe: 'Opus line', name: 'Opus line', lines: [CC_LINE], copies: { name: 'default', origin: 'shipped', recipe: CC } }],
     hidden: [],
     defaults: [],
   });
-  assert.deepStrictEqual(parseVariantStore(text, 'x.json').variants[0].copies, { name: CC, origin: 'shipped', recipe: CC });
+  assert.deepStrictEqual(parseVariantStore(text, 'x.json').variants[0].copies, { name: 'default', origin: 'shipped', recipe: CC });
   assert.throws(() => parseVariantStore('{"variants":[{"recipe":"a","name":"a","lines":[],"copies":{"name":"b","origin":"shipped","recipe":1}}]}', 'x.json'));
   const store = emptyVariantStore();
-  store.variants.push({ recipe: AGY, name: AGY, lines: [CC_LINE], copies: { name: CC, origin: 'shipped', recipe: CC } });
+  store.variants.push({ recipe: AGY, name: AGY, lines: [CC_LINE], copies: { name: 'default', origin: 'shipped', recipe: CC } });
   assert.deepStrictEqual(
     singleTaskLines(overlayVariantStore(base(), store, 'x.json')).map((each) => each.name),
     [CC, AGY, 'My own line'],
