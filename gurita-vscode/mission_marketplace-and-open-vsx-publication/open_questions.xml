@@ -709,6 +709,36 @@
   </open-question>
   <open-question id="Half-published release">
     <question>A version a registry has accepted cannot be published to it again. What does a re-run of the extension&apos;s release skill with the same version do after one of the two registries accepted that version and the other did not?</question>
+    <alternative id="Query and resume">
+      Before each publish, the re-run asks the registry whether it already holds the version (the Marketplace through `vsce show`, Open VSX through its public REST query on `uhappylogic/gurita-vscode/&lt;version&gt;`). It skips the registry that does and publishes only to the one that does not, from a package rebuilt from the state the version was released from, then goes on to whatever later release steps remain. This is the check-then-do resumption `/release-plugin` already uses for each of its publish steps.
+      <advantage>A re-run with the same version finishes the release exactly where it stopped, with one rule, query first and skip when done, shared with the plugin&apos;s release skill, and the skill can tell the maintainer which registry it skipped and which it published to.</advantage>
+      <drawback>It needs a query per registry written into the skill and depends on each registry&apos;s read side reporting a version soon after the version is accepted. The rebuilt package matches the one already accepted only if the rebuild starts from the same repository state, which leans on how the release records that state (the sibling questions on the release commit and the tag).</drawback>
+    </alternative>
+    <alternative id="Publish with skip-duplicate">
+      The re-run asks no registry anything. It runs both publishes again, each with the `--skip-duplicate` flag that the pinned `vsce` 4.1.1 offers (&quot;Fail silently if version already exists on the marketplace&quot;) and that `ovsx publish` also offers. The registry that already holds the version turns its publish into a silent success, and the other one receives the version from a package rebuilt from the state the version was released from.
+      <advantage>Of all the ways to resume, this one adds the least to the skill: the same two publish commands serve the first run and every re-run, with no query code and no branch.</advantage>
+      <drawback>The skill cannot tell a duplicate it skipped from a fresh publish, so its report cannot say which registry the re-run actually published to. It also relies on both CLIs keeping the flag&apos;s behaviour across upgrades, and a skipped duplicate is never checked against the package that was accepted.</drawback>
+    </alternative>
+    <alternative id="Resume from the retained VSIX">
+      As in the query-and-resume option, the re-run queries each registry and publishes only to the one missing the version. What it publishes is not a rebuild but the very VSIX file the first run built and published to the registry that accepted it. That file is kept where the re-run can find it under the version&apos;s name, for example under `dist/` on the publishing machine or as a release asset.
+      <advantage>Both registries are guaranteed to carry the same bytes for the version, whatever happened to the checkout, its bundled sources, or the toolchain between the two runs.</advantage>
+      <drawback>The release has to keep a built artifact the repository has so far never kept (`dist/` is git-ignored and the VSIX is never committed), and a re-run whose retained file is gone has nothing to publish. Whether a file survives between runs depends on the sibling question of where the release publishes from, since a workflow run&apos;s workspace does not outlive it.</drawback>
+    </alternative>
+    <alternative id="Detect and hand over">
+      The re-run queries both registries. When exactly one holds the version, it publishes nothing and stops, printing which registry is missing the version and the exact `vsce publish` or `ovsx publish` command the maintainer runs on the package to finish. This follows the way `/release-plugin` prints the commands for a missing repository or token and exits without running them.
+      <advantage>The skill never publishes in a state it did not start from cleanly, so the irreversible second publish is a deliberate act by the maintainer, and the skill needs no resume path past the publish steps.</advantage>
+      <drawback>A transient failure, such as a network error or a registry outage, costs the maintainer a hand step outside the skill, done with a CLI and a token they must have at hand. Any release steps that follow the publishes are left for the maintainer to finish by hand or by a further re-run.</drawback>
+    </alternative>
+    <alternative id="No special handling">
+      The skill has no logic for a half-published version. A re-run with the same version runs its steps as on a first run, the registry that already holds the version refuses the publish, and the skill stops on that registry&apos;s error. Completing the release on the other registry is left wholly to the maintainer, who publishes by hand.
+      <advantage>Nothing is added to the skill for a case that may never arise once its pre-flight checks pass, and the registry&apos;s own refusal keeps the accepted version from being overwritten.</advantage>
+      <drawback>The one failure the question names ends in a stop with no guidance. A re-run, the natural response, can never succeed for that version, so the maintainer has to work out the missing publish alone. How often this happens depends on the sibling question of which pre-flight checks run first (tokens both registries still accept among them).</drawback>
+    </alternative>
+    <alternative id="Abandon the version">
+      Once either registry holds a version, a re-run with that version refuses, naming the registry that holds it. The release is completed by running the skill with the next version, which goes to both registries, and the half-published version stays on the one registry that accepted it.
+      <advantage>No version is ever published in two separate runs, so the two registries never carry bytes for one version that were built at different times, and the skill needs only one &quot;version already taken&quot; check.</advantage>
+      <drawback>The registries&apos; version histories diverge for good, with a version that exists on only one of them. Every half-published attempt also burns a version number and repeats the whole release, version write, notes, and any commit or tag included. How much of that repeats depends on the sibling questions of where the version comes from and whether the release commits and tags.</drawback>
+    </alternative>
   </open-question>
   <open-question id="First publication step">
     <question>The goal has the first publication made through the new release skill, which only the maintainer runs. Is that run a task on the mission&apos;s list, or a step the maintainer takes after the task run and before finishing the mission, as the mission that first built the extension kept its install-and-try step off the list?</question>
