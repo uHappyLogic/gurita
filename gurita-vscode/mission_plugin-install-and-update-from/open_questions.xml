@@ -174,4 +174,19 @@
       <drawback>What `agy plugin uninstall` removes, whether it keeps the plugin&apos;s enabled or disabled state, and whether it touches a copy it did not install are unobserved, and between the two commands the plugin is gone, a failed install leaving no copy at all; it is viable only as far as the install path the sibling question on Antigravity&apos;s install mechanism settles can reinstall into that directory.</drawback>
     </alternative>
   </open-question>
+  <open-question id="Claude Code ref on update">
+    <question>A Claude Code `gurita` marketplace registered from the Settings window carries, as its ref, the tag of the release that was latest when it was installed, so `claude plugin marketplace update gurita` and `claude plugin update gurita@gurita` keep reading that tag. Once a newer release is published, how does an update from the window bring the marketplace registration, at each scope it stands at, to the newer release&apos;s tag?</question>
+  </open-question>
+  <open-question id="Codex update steps">
+    <question>Codex has no plugin update command, and `codex plugin marketplace upgrade` only refreshes the snapshot of the ref a marketplace was registered with, which for an install made from the Settings window is one release&apos;s tag. Which commands make up an update of the Codex Gurita copy to a newer release&apos;s tag?</question>
+  </open-question>
+  <open-question id="Release lookup failure">
+    <question>An install or update from the Settings window first reads the latest published release&apos;s tag from GitHub. When that read fails, for example with no network, an unreachable or rate-limited GitHub, or a distribution repository holding no release, what does the Install or Update that was clicked do?</question>
+  </open-question>
+  <open-question id="Controls during a run">
+    <question>While an install or update started from the Settings window is still running in its terminal, which of the window&apos;s Install, Update, and Check again controls stay usable: can a second install or update be started, on the same harness or on another one, and can the harness check be run, before the first run ends?</question>
+  </open-question>
+  <open-question id="Disabled Antigravity or Codex copy">
+    <question>The harness check counts an Antigravity or Codex Gurita copy that is installed but disabled as not installed. What does the Settings window offer for such a copy: Install, Update, or neither, saying instead that the copy must be enabled in the harness itself, as it does for a disabled Claude Code copy?</question>
+  </open-question>
 </open-questions>
