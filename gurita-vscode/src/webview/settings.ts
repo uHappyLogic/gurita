@@ -48,7 +48,9 @@
 // alone. Under both headings each variant, a deleted one included, is drawn as a card of its own,
 // indented under its recipe's or line's heading, a line down its left edge and space between it
 // and the next; the cards change only how the window looks. Every value is drawn as text, never as
-// markup, since it comes from the workspace and the person's own files.
+// markup, since it comes from the workspace and the person's own files. On every load, before
+// anything is posted, the page saves one fixed state with `setState` naming the Settings window, so
+// a window restored after a restart or a window reload is known to the extension as this one.
 
 interface VsCodeApi {
   postMessage(message: unknown): void;
@@ -169,6 +171,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
 
   /** The heading of the settings. */
   const SETTINGS_LABEL = 'Settings';
+  /** The state the page saves on every load, naming the Settings window for a restore after a reload. */
+  const SAVED_STATE = { window: 'settings' };
   const CHECK_AGAIN_LABEL = 'Check again';
   const HARNESSES_HEADING = 'Harnesses';
   const CHECKING_LINE = 'Checking the harnesses…';
@@ -757,5 +761,6 @@ declare function acquireVsCodeApi(): VsCodeApi;
   });
 
   draw();
+  vscode.setState(SAVED_STATE);
   vscode.postMessage({ type: 'ready' });
 })();

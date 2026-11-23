@@ -165,6 +165,7 @@ const stub = {
         onDidDispose: () => disposable,
       };
     },
+    registerWebviewPanelSerializer: () => disposable,
     createTreeView(id: string, options: { treeDataProvider: StubProvider }) {
       const view: { message?: string; dispose(): void } = { ...disposable, message: undefined };
       treeViews.push({ id, provider: options.treeDataProvider, view });

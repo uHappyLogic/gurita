@@ -29,7 +29,14 @@
 // that lists the path. Each window's editor tab is titled with its mission's title alone, every
 // colliding tab gaining its mission's scope after a separator while another live mission carries
 // the same title, re-titled on every successful live read, and carries one fixed built-in codicon
-// through a `ThemeIcon`, with no image file. Every click a window's page posts is checked against what the latest answer
+// through a `ThemeIcon`, with no image file. The mission windows open before a restart or a window
+// reload come back in the editor group and tab position they held, through a
+// `WebviewPanelSerializer` for their view type: each page keeps its mission's path in the webview
+// state it saves, and a restored window is taken over as one opened afresh, its restore starting the
+// session's live read as the side-bar view's first resolution does and its page drawn from that
+// read for its path, its saved state coming back with it; one first shown while a window for the
+// same mission is already open, or whose saved state is missing or cannot be read, is closed.
+// Every click a window's page posts is checked against what the latest answer
 // posted to that window, for that window's own mission, so a click naming another mission, or one
 // reaching a window in the failure state or the no-longer-live notice, starts nothing.
 // The recipes are read with the per-user variant store laid over them. Each entry offers the
@@ -109,8 +116,8 @@
 // task is still unresolved.
 //
 // The live read belongs to the extension's session, not to any window: the extension reads no
-// mission and watches no file until the side-bar view is first resolved or a Gurita command first
-// runs, and whichever comes first starts the session's live read, which, with the one file system watcher over the mission documents under
+// mission and watches no file until the side-bar view is first resolved, a Gurita command first
+// runs, or a window is restored after a reload, and whichever comes first starts the session's live read, which, with the one file system watcher over the mission documents under
 // the project root, created with the first live read that succeeds, lasts until the extension
 // deactivates, released neither when a window is hidden nor when every window is closed. The
 // watcher's events are debounced so that a burst of writes causes one re-read, made whatever is
@@ -575,16 +582,81 @@ export function openMissionWindow(context: vscode.ExtensionContext, mission: str
     open.panel.reveal();
     return;
   }
+  const title = windowTitle(mission);
+  const created = vscode.window.createWebviewPanel(MISSION_VIEW_TYPE, title, vscode.ViewColumn.Active, webviewOptions(context));
+  hookMissionWindow(context, mission, created, title);
+  showRunTerminal(mission);
+}
+
+/**
+ * The options every mission window's and the Settings window's webview takes: scripts enabled and
+ * only the output directory of the page scripts loadable.
+ */
+export function webviewOptions(context: vscode.ExtensionContext): vscode.WebviewOptions {
+  return { enableScripts: true, localResourceRoots: [vscode.Uri.joinPath(context.extensionUri, 'out', 'webview')] };
+}
+
+/** The editor-tab title of the window of the mission at `mission`, as `tabTitles` titles it from the session's read, else its path. */
+function windowTitle(mission: string): string {
+  return (current !== undefined ? tabTitles(current.live).get(mission) : undefined) ?? mission;
+}
+
+/**
+ * The path of the mission a mission window's saved webview state names, the state its page saved
+ * with `setState`, or undefined when the state is missing or cannot be read: not an object, or its
+ * mission not a path ending in a slash.
+ */
+function savedMission(state: unknown): string | undefined {
+  if (typeof state !== 'object' || state === null) {
+    return undefined;
+  }
+  const mission = (state as { mission?: unknown }).mission;
+  return typeof mission === 'string' && mission.length > 1 && mission.endsWith('/') ? mission : undefined;
+}
+
+/**
+ * Registers the serializer that restores the mission windows open before a restart or a window
+ * reload, each in the editor group and tab position it held, as the editor hands it over when it is
+ * first shown. A restored window whose saved state is missing or cannot be read, or that is first
+ * shown while a window for the same mission is already open, is closed; any other is taken over as
+ * a window opened afresh is, its page shell set again with its mission's path, so its page's saved
+ * state comes back with it, and its restore starts the session's live read as the side-bar view's
+ * first resolution does, the page drawn from that read for its path.
+ */
+export function registerMissionWindows(context: vscode.ExtensionContext): void {
+  context.subscriptions.push(
+    vscode.window.registerWebviewPanelSerializer(MISSION_VIEW_TYPE, {
+      deserializeWebviewPanel: async (panel: vscode.WebviewPanel, state: unknown) => restoreMissionWindow(context, panel, state),
+    }),
+  );
+}
+
+/** Restores the mission window `panel` from its saved webview state `state`, as `registerMissionWindows` describes. */
+function restoreMissionWindow(context: vscode.ExtensionContext, panel: vscode.WebviewPanel, state: unknown): void {
+  const mission = savedMission(state);
+  if (mission === undefined || windows.has(mission)) {
+    panel.dispose();
+    return;
+  }
+  startSession(context);
+  panel.webview.options = webviewOptions(context);
+  if (current !== undefined) {
+    panel.title = windowTitle(mission);
+  }
+  hookMissionWindow(context, mission, panel, panel.title);
+}
+
+/**
+ * Takes the panel `created` over as the window of the mission at `mission`: its tab's codicon, its
+ * page shell titled `title` and carrying the mission's path, and its listeners, the page's
+ * messages, its view-state changes, and its disposal.
+ */
+function hookMissionWindow(context: vscode.ExtensionContext, mission: string, created: vscode.WebviewPanel, title: string): void {
   const scripts = vscode.Uri.joinPath(context.extensionUri, 'out', 'webview');
-  const title = (current !== undefined ? tabTitles(current.live).get(mission) : undefined) ?? mission;
-  const created = vscode.window.createWebviewPanel(MISSION_VIEW_TYPE, title, vscode.ViewColumn.Active, {
-    enableScripts: true,
-    localResourceRoots: [scripts],
-  });
   created.iconPath = new vscode.ThemeIcon(MISSION_WINDOW_ICON);
   const win: MissionWindow = { mission, panel: created };
   windows.set(mission, win);
-  created.webview.html = pageShell(created.webview, vscode.Uri.joinPath(scripts, 'page.js'), title);
+  created.webview.html = pageShell(created.webview, vscode.Uri.joinPath(scripts, 'page.js'), title, mission);
   created.webview.onDidReceiveMessage(
     (message: PageMessage) => {
       if (windows.get(mission) !== win) {
@@ -626,7 +698,6 @@ export function openMissionWindow(context: vscode.ExtensionContext, mission: str
     undefined,
     context.subscriptions,
   );
-  showRunTerminal(mission);
   created.onDidDispose(
     () => {
       if (windows.get(mission) === win) {
@@ -1608,6 +1679,11 @@ export async function pickStartingVariant(context: vscode.ExtensionContext, butt
   startingChanged();
 }
 
+/** `value` escaped for a double-quoted HTML attribute. */
+function escapeAttribute(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 function nonce(): string {
   const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   let value = '';
@@ -1620,7 +1696,8 @@ function nonce(): string {
 /**
  * The page shell `webview.html` is set to once, titled `title`: the stylesheet the mission windows
  * and the Settings window share and one page script, `script`, a mission window's or the Settings
- * window's. The stylesheet centers the workflow diagram's row of blocks horizontally in the window,
+ * window's, a mission window's root element carrying its mission's path `mission` as a data
+ * attribute, which its page keeps in its saved state. The stylesheet centers the workflow diagram's row of blocks horizontally in the window,
  * as wide as the row itself and never wrapping or scrolling sideways, and under the `vertical` class
  * the page script sets when that row would overflow the window, it stacks the same blocks in a
  * centered column of equal width joined by the arrows turned downward, a block's name breaking onto
@@ -1639,8 +1716,9 @@ function nonce(): string {
  * indented under the recipe's or line's heading, a vertical line down the card's left edge, and a
  * gap between one card and the next.
  */
-export function pageShell(webview: vscode.Webview, script: vscode.Uri, title: string): string {
+export function pageShell(webview: vscode.Webview, script: vscode.Uri, title: string, mission?: string): string {
   const token = nonce();
+  const carried = mission === undefined ? '' : ` data-mission="${escapeAttribute(mission)}"`;
   const policy = [
     "default-src 'none'",
     `style-src 'nonce-${token}'`,
@@ -1742,7 +1820,7 @@ export function pageShell(webview: vscode.Webview, script: vscode.Uri, title: st
 </style>
 </head>
 <body>
-<div id="root"></div>
+<div id="root"${carried}></div>
 <script nonce="${token}" src="${webview.asWebviewUri(script).toString()}"></script>
 </body>
 </html>`;

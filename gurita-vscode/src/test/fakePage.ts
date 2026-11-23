@@ -119,13 +119,21 @@ export interface Page {
   key(key: string): void;
 }
 
+/** What a page is loaded with beyond its script: the data attributes the page shell sets on its root element, and the state `getState` gives back. */
+export interface PageLoad {
+  dataset?: Record<string, string>;
+  state?: unknown;
+}
+
 /**
  * Loads the compiled page script `script`, by its file name under `out/webview`, into a fresh page,
  * as the pane or the Settings window does each time it is shown, its elements laid out to the
- * widths `measure` gives.
+ * widths `measure` gives, its root element carrying the data attributes and `getState` giving the
+ * state `loaded` names.
  */
-export function loadScript(script: string, measure?: (element: FakeElement) => number): Page {
+export function loadScript(script: string, measure?: (element: FakeElement) => number, loaded: PageLoad = {}): Page {
   const root = new FakeElement('div', measure);
+  Object.assign(root.dataset, loaded.dataset ?? {});
   const posted: unknown[] = [];
   const saved: unknown[] = [];
   const windowListeners: ((event: { data: unknown }) => void)[] = [];
@@ -136,7 +144,7 @@ export function loadScript(script: string, measure?: (element: FakeElement) => n
     acquireVsCodeApi: () => ({
       // Cloned, as a posted message is, out of the script's own realm.
       postMessage: (message: unknown) => posted.push(JSON.parse(JSON.stringify(message))),
-      getState: () => undefined,
+      getState: () => (loaded.state === undefined ? undefined : JSON.parse(JSON.stringify(loaded.state))),
       setState: (state: unknown) => saved.push(JSON.parse(JSON.stringify(state))),
     }),
     document: {

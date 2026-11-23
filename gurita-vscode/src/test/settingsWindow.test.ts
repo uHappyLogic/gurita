@@ -111,6 +111,7 @@ const stub = {
     },
   },
   window: {
+    registerWebviewPanelSerializer: () => disposable,
     createTreeView(_id: string, options: { treeDataProvider: StubProvider }) {
       provider = options.treeDataProvider;
       return { ...disposable, message: undefined };

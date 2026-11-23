@@ -49,7 +49,8 @@ Every Node command runs under Node 22 through nvm, in a subshell, from the repos
   add and the resets of stored variants, among them, and its single-task line
   edits, with the looped run's names and the variant a line's **Make default** picks following them, and the side-bar view's
   mission rows and their redraws and its two mission-starting rows with their runs and variant
-  QuickPick, against a tree stand-in, are tested against a stub of the `vscode`
+  QuickPick, against a tree stand-in, and the mission windows and the Settings window restored
+  after a reload, are tested against a stub of the `vscode`
   module,
   and the page script against a small stand-in for the DOM. Nothing runs inside an editor.
 - `npm run package` runs `vsce package`, which first runs the `vscode:prepublish` script: the
@@ -185,8 +186,11 @@ editor tab shows the mission's title alone and the rocket codicon; while another
 carries the same title, each of those tabs adds its mission's scope after a dash, such as
 `Shared title — lib`, and the tabs are re-titled on every re-read. Besides the
 side-bar view there is no entry point: the Command Palette offers no command opening a window,
-there is no status bar item or keybinding, no window opens by itself, and the windows do not
-survive a restart or a window reload, so open them again from the side-bar view after one.
+there is no status bar item or keybinding, and no window opens by itself. The windows survive a
+restart or a window reload: every mission window that was open comes back in the editor group
+and tab position it held, its page redrawn from a fresh read of the live missions and its
+question view where you left it, and a window that comes back for a mission whose window is
+already open, or whose saved state cannot be read, is closed.
 **Gurita: Refresh Missions** (`gurita.refreshMissions`) and the side-bar view's **Refresh**
 title-bar action re-read everything and redraw every open window; of the extension's own
 commands that refresh command is the only one the Command Palette offers.
@@ -311,7 +315,9 @@ edit you make in it shows at once on every other surface: the mission pages, the
 the buttons that run a recipe by its fixed name, are posted again with their recipes re-read,
 and the side-bar view's **New mission** and **Define mission** rows are redrawn from the variant
 they now run. **Refresh** re-reads the window too, its lists read afresh, without running the
-harness check. Like the mission windows it does not yet survive a restart or a window reload.
+harness check. Like the mission windows it survives a restart or a window reload: when it was
+open it comes back in the editor group and tab position it held, redrawn from fresh reads, and a
+second one coming back while it is already open is closed.
 
 The window's parts stand one beneath the other under their headings: **Harnesses**, **Models and
 efforts**, **Variants**, and **Single-task lines**. Under **Variants** each recipe is headed by its

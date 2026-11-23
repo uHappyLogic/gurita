@@ -18,7 +18,9 @@
   ],
   "main": "./out/extension.js",
   "activationEvents": [
-    "onView:gurita.missions"
+    "onView:gurita.missions",
+    "onWebviewPanel:gurita.mission",
+    "onWebviewPanel:gurita.settings"
   ],
   "contributes": {
     "viewsContainers": {

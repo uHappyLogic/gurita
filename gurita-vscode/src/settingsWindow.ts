@@ -50,6 +50,13 @@
 // or the failure state again while it stands, and the side-bar view's two mission-starting rows are
 // redrawn, their recipes read afresh (`recipesChanged`). The refresh command re-reads the window
 // too, posting its lists afresh while it is shown, the harness check left as it stands.
+//
+// The Settings window open before a restart or a window reload comes back in the editor group and
+// tab position it held, through a `WebviewPanelSerializer` for its view type: its page saves one
+// fixed state naming the window, and a restored window is taken over as one opened afresh, drawn
+// from fresh reads as every opening is, the session's harness check running on its first opening
+// after the reload; one first shown while the Settings window is already open, or whose saved state
+// is missing or cannot be read, is closed.
 
 import * as os from 'node:os';
 import * as vscode from 'vscode';
@@ -92,10 +99,13 @@ import {
 } from './harnessSettings';
 import { SwitchableHarness } from './lineValues';
 import { CHECK_SCRIPT, CheckResult, HARNESSES, PLUGIN_VERSION_FILE, readPackagedVersion, runHarnessCheck } from './harnessCheck';
-import { pageShell, recipeFiles, recipesChanged, startLiveRead, startingRoot } from './pane';
+import { pageShell, recipeFiles, recipesChanged, startLiveRead, startingRoot, webviewOptions } from './pane';
 
 /** The Settings window's webview view type. */
 export const SETTINGS_VIEW_TYPE = 'gurita.settings';
+
+/** The window a Settings window's saved webview state names, as its page saves it on every load. */
+export const SAVED_WINDOW = 'settings';
 
 /** The Settings window's editor tab title. */
 export const SETTINGS_TITLE = 'Gurita Settings';
@@ -161,9 +171,37 @@ let harnessCheck: HarnessCheck | undefined;
 /** The number of harness checks started, so only the latest one started keeps its result. */
 let checks = 0;
 
-/** Registers the Settings command, which the side-bar view's Settings title-bar action runs. */
+/**
+ * Registers the Settings command, which the side-bar view's Settings title-bar action runs, and the
+ * serializer that restores the Settings window open before a restart or a window reload, in the
+ * editor group and tab position it held, as the editor hands it over when it is first shown. A
+ * restored window whose saved state is missing or cannot be read, or that is first shown while the
+ * Settings window is already open, is closed; any other is taken over as a window opened afresh is,
+ * its restore starting the session's live read, and drawn from fresh reads on its ready message.
+ */
 export function registerSettingsWindow(context: vscode.ExtensionContext): void {
-  context.subscriptions.push(vscode.commands.registerCommand(SETTINGS_COMMAND, () => openSettings(context)));
+  context.subscriptions.push(
+    vscode.commands.registerCommand(SETTINGS_COMMAND, () => openSettings(context)),
+    vscode.window.registerWebviewPanelSerializer(SETTINGS_VIEW_TYPE, {
+      deserializeWebviewPanel: async (panel: vscode.WebviewPanel, state: unknown) => restoreSettings(context, panel, state),
+    }),
+  );
+}
+
+/** Whether `state`, a restored window's saved webview state, is the one the Settings window's page saves. */
+function savedSettings(state: unknown): boolean {
+  return typeof state === 'object' && state !== null && (state as { window?: unknown }).window === SAVED_WINDOW;
+}
+
+/** Restores the Settings window `panel` from its saved webview state `state`, as `registerSettingsWindow` describes. */
+function restoreSettings(context: vscode.ExtensionContext, panel: vscode.WebviewPanel, state: unknown): void {
+  if (!savedSettings(state) || settingsPanel !== undefined) {
+    panel.dispose();
+    return;
+  }
+  startLiveRead(context);
+  panel.webview.options = webviewOptions(context);
+  hookSettings(context, panel);
 }
 
 /**
@@ -176,11 +214,12 @@ export function openSettings(context: vscode.ExtensionContext): void {
     settingsPanel.reveal();
     return;
   }
+  hookSettings(context, vscode.window.createWebviewPanel(SETTINGS_VIEW_TYPE, SETTINGS_TITLE, vscode.ViewColumn.Active, webviewOptions(context)));
+}
+
+/** Takes the panel `created` over as the Settings window: its page shell and its listeners, the page's messages and its disposal. */
+function hookSettings(context: vscode.ExtensionContext, created: vscode.WebviewPanel): void {
   const scripts = vscode.Uri.joinPath(context.extensionUri, 'out', 'webview');
-  const created = vscode.window.createWebviewPanel(SETTINGS_VIEW_TYPE, SETTINGS_TITLE, vscode.ViewColumn.Active, {
-    enableScripts: true,
-    localResourceRoots: [scripts],
-  });
   settingsPanel = created;
   created.webview.html = pageShell(created.webview, vscode.Uri.joinPath(scripts, 'settings.js'), SETTINGS_TITLE);
   created.webview.onDidReceiveMessage(

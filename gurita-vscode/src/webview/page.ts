@@ -91,6 +91,10 @@
 // settings live in the Settings window of their own, drawn by its own script (`settings.ts`), and a
 // disabled harness reaches the page only as the recipe lists and fixed-name buttons the extension
 // posts without its variants.
+// The page keeps its window's mission path, which the page shell carries on its root element, in
+// the state it saves with `setState`, beside the question view's positions, saving it once on
+// every load before anything is posted, so a window that is restored after a restart or a window
+// reload hands the extension its mission's path, and its positions come back with it.
 // Every value is drawn as text, never as markup, since it comes from the workspace.
 
 interface VsCodeApi {
@@ -228,6 +232,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
   }
 
   interface PageState {
+    /** The path of the window's mission, as the page shell carries it, so a restored window knows its mission. */
+    mission?: string;
     /** The position of the mission's question view, keyed by mission path. */
     positions?: Record<string, Position>;
   }
@@ -264,6 +270,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
   const root = document.getElementById('root') as HTMLElement;
   const saved = (vscode.getState() ?? {}) as PageState;
   const positions = new Map<string, Position>(Object.entries(saved.positions ?? {}));
+  /** The path of the window's mission, as the page shell carries it on the root element. */
+  const ownMission: string | undefined = root.dataset.mission;
   /** The window's mission as the extension last posted its page. */
   let shownMission: Mission | undefined;
   /** The paths of the missions with a running runner; the page is drawn as running while its mission's is among them. */
@@ -420,7 +428,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
   }
 
   function save(): void {
-    const state: PageState = { positions: Object.fromEntries(positions) };
+    const state: PageState = { mission: ownMission, positions: Object.fromEntries(positions) };
     vscode.setState(state);
   }
 
@@ -1086,5 +1094,6 @@ declare function acquireVsCodeApi(): VsCodeApi;
   /** Every change of the window's width lays the workflow diagram out again, as a row or as a stack. */
   window.addEventListener('resize', fitWorkflow);
 
+  save();
   vscode.postMessage({ type: 'ready' });
 })();
