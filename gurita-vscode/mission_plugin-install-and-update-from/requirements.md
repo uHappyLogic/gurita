@@ -64,5 +64,9 @@ Nothing in the extension installs or updates the plugin on any harness, and noth
 
 - **Install run form.** An install or update started from the Settings window runs in a terminal the extension opens and shows, as a recipe run does, so its output and any prompt are visible and answerable there. The extension also watches that terminal's process end, taking its exit status through the terminal or through a VS Code task run in the terminal panel, and the window then reports how the run ended, success or failure, beside the harness or in a notification.
 
+### Install and Update controls
+
+- **Update control availability.** Update is offered for every harness whose check found the CLI and an installed Gurita copy. The version comparison does not gate it: a copy whose version matches the compared version gets the same enabled Update control as one that differs, and the check line beside it still reports whether the versions differ.
+
 ## Out of Scope
 
