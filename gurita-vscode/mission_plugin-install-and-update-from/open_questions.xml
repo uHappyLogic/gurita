@@ -382,5 +382,30 @@
   </open-question>
   <open-question id="Restart notice">
     <question>Claude Code says an updated plugin needs a restart to apply, and Antigravity discovers a new plugin directory only when a session starts. After an install or update, does the Settings window tell the person that running harness sessions must be restarted?</question>
+    <alternative id="No restart notice">
+      The Settings window says nothing about restarting after an install or update ends. The restart need is documented once, in `gurita-vscode/README.md` under `## The Settings window`, beside the install and update controls. On Claude Code the person still sees what the harness&apos;s own CLI prints, wherever the install&apos;s output goes.
+      <advantage>Adds no page state, message, or test. The window stays a thin front end over each harness&apos;s own install path. `claude plugin update` already says a restart is required, and the root and distribution READMEs already tell Antigravity users to restart `agy`.</advantage>
+      <drawback>Antigravity&apos;s `curl` and `tar` pipeline prints nothing, and it is the case where a running session is certain to miss the new directory. Whether the person sees Claude Code&apos;s own restart line depends on how the install runs (the Install run form question): a background process shows nothing unless the window relays its output. A person who updates and goes back to an open session keeps running the old copy without being told.</drawback>
+    </alternative>
+    <alternative id="Uniform notice in end report">
+      After every install or update that succeeds, on any of the three harnesses, the window adds one sentence to whatever reports how the run ended (for example a VS Code information notification): running sessions of that harness must be restarted to use the new copy. The sentence is the same for every harness and is shown whether or not the version changed. Nothing in the page persists.
+      <advantage>One fixed sentence, shown after every success, covers all three harnesses. That includes Codex, whose restart behaviour has never been observed, so no harness is left silent because of a gap in what is known. It is the cheapest form that still reaches the Antigravity case.</advantage>
+      <drawback>The notice tells Codex users to restart without evidence that they need to, and it nags even when an update brought nothing new. A notification is dismissed once and gone, so a person who comes back to the window later sees no trace of it. How the end is reported depends on the Install run form question.</drawback>
+    </alternative>
+    <alternative id="Per-harness notice where known">
+      After an install or update succeeds, the end report carries the restart sentence only for the harnesses whose install path is known to need it: Claude Code, whose `plugin update` states a restart is required (and its install, which a running session also does not load), and Antigravity, which discovers a plugin directory only at session start. Codex gets no sentence until its behaviour is observed. Like the uniform notice, it is transient and shown after every success.
+      <advantage>Each notice rests on a fact in the starting state: the `claude` 2.1.330 help text and Antigravity&apos;s startup-only discovery. The window never tells a person to do something their harness may not need, so the notice keeps its weight.</advantage>
+      <drawback>Codex&apos;s need for a restart is unverified, not known to be absent. If its sessions also load the plugin cache only at startup, Codex users are told nothing. The per-harness split is then a gap that rests on a check still to be made (the Hands-on command verification question). The notice is still a dismissable one-off.</drawback>
+    </alternative>
+    <alternative id="Notice only on version change">
+      The restart sentence, the same for every harness and carried in the end report, is shown only when the installed copy&apos;s version read after the run differs from the version read before it. An update that left the same version in place reports its end with no restart sentence.
+      <advantage>The notice appears exactly when there is something new for a running session to miss. A routine update that brought nothing new stays quiet, and the person is not trained to ignore the sentence.</advantage>
+      <drawback>The window must hold the version from before the run and read it again afterwards. That works only if the check runs after the install (the Check after install question) and the listing reports the new version. A changed release under an unchanged version (for example a re-published tree) gets no notice. It also adds a comparison the page and its tests must cover.</drawback>
+    </alternative>
+    <alternative id="Persistent restart line in row">
+      After an install or update succeeds, the end report carries the restart sentence, and the harness&apos;s row under **Harnesses** also shows a line saying sessions started before the install must be restarted. The line stays until the extension&apos;s session ends, a reload, or the next **Check again**. It applies to every harness the run touched.
+      <advantage>The reminder survives a dismissed notification and is still there when the person returns to the Settings window, the place they went to change the plugin. It sits beside the very harness it concerns.</advantage>
+      <drawback>The window cannot see harness sessions it did not start, so it cannot tell when the person has restarted them, and the line may stand long after it stopped being true. It adds page state, a new message to the page, and drawing and session tests, all for a reminder the end report already gave once.</drawback>
+    </alternative>
   </open-question>
 </open-questions>
