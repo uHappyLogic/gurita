@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Interactive Lines Switched to Codex
-
-Extend the harness dropdown's Codex switch to interactive lines, after one hands-on check on the installed `codex` (0.159.3 today) that a `$gurita:` skill named in the initial prompt of a bare `codex` runs and that the session stays open on its result. The switch keeps the line interactive: the command word becomes a bare `codex` with no `exec`, the prompt is rewritten from `"/gurita:…"` to `'$gurita:…'`, `--dangerously-skip-permissions` becomes `--dangerously-bypass-approvals-and-sandbox`, the model and effort are written as `-m` and `-c model_reasoning_effort=…` under the headless switch's empty-list rules, any `-i` an `agy` line carried is dropped, and the trailing `# interactive` mark is kept, a switch back giving `claude "…"` or `agy -i "…"`. Verified by line-value tests of the switch and its round trip from both harnesses, with the extension's documentation giving the interactive Codex form beside the headless one as checked.
-
----
-
 ## Shipped Codex Single-Task Recipe
 
 Add exactly one Codex recipe to `gurita-vscode/shipped_recipes.md`, a single-task recipe standing beside the shipped single-task lines: one headless `codex exec '$gurita:complete-task …' --dangerously-bypass-approvals-and-sandbox` line that also carries `-m` with a named Codex model id taken from the catalog `codex debug models` prints, the recipe's name saying the model as the Claude Code single-task names do. No chain and no button recipe gains a Codex line or variant; verified by reader tests of the recipe as a named single-task line and a runner test of its line read as headless, with `gurita-vscode/README.md` naming the recipe.

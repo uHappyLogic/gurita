@@ -2,9 +2,10 @@
 // line's model, and its effort, it replaces a model or effort value a line already carries, and
 // it rewrites a line onto another harness (`rewriteHarness`) among those `harnessChoices` gives
 // it; a model or effort pick inserts no text into a line. A `claude` or `agy` line carrying both
-// `--model` and `--effort` is rewritten onto the other of the two and, when headless, onto Codex
-// too, and a headless `codex exec` line carrying `-m` onto either of them. A harness rewrite keeps
-// the line's prompt and every other word as written and its headless or interactive form: between
+// `--model` and `--effort` is rewritten onto the other of the two and onto Codex, and a headless
+// `codex exec` line or an interactive bare `codex '$gurita:…'` line carrying `-m` onto either of
+// them. A harness rewrite keeps the line's prompt and every other word as written and its headless
+// or interactive form: between
 // `claude` and `agy` a headless line, its first command carrying `-p` or `--print`, only changes
 // its command word (`claude -p "…"` to `agy -p "…"` and back), an interactive `claude` line gains
 // `-i` directly after `agy` (`claude "…"` to `agy -i "…"`), and an `agy` line loses its `-i`
@@ -12,7 +13,10 @@
 // `codex exec '$gurita:<skill> …'`, its `-p` dropped, `--dangerously-skip-permissions` becoming
 // `--dangerously-bypass-approvals-and-sandbox`, its model written as `-m` and its effort as
 // `-c model_reasoning_effort=<level>`, and a `codex exec` line switched back becomes
-// `claude -p "/gurita:<skill> …"` or `agy -p "…"` with `--model` and `--effort`. The rewritten
+// `claude -p "/gurita:<skill> …"` or `agy -p "…"` with `--model` and `--effort`. An interactive
+// line switched onto Codex becomes a bare `codex '$gurita:<skill> …'`, with no `exec`, the same
+// flags rewritten and any `-i` an `agy` line carried dropped, and switched back becomes
+// `claude "/gurita:<skill> …"` or `agy -i "…"`, the trailing `# interactive` mark kept. The rewritten
 // line takes the picked harness's first listed model, and it keeps its effort when that harness's
 // effort list offers it, taking the list's first effort otherwise; a line switched onto Codex while
 // Codex's effort list is empty carries no effort override. A line's harness is its first word when that word is
@@ -309,9 +313,6 @@ export interface HarnessOffer {
   efforts: readonly string[];
 }
 
-/** The two harnesses an interactive line's harness is picked between. */
-const INTERACTIVE_CHOICES: readonly Harness[] = ['claude', 'agy'];
-
 /** Whether a `claude` or `agy` command is headless, carrying `-p` or `--print`. */
 function printForm(command: Word[]): boolean {
   return command.slice(1).some((word) => word.text === '-p' || word.text === '--print');
@@ -323,13 +324,26 @@ function execWord(command: Word[]): Word | undefined {
 }
 
 /**
+ * Whether a `codex` command is the interactive bare form `codex '$gurita:<skill> …'`: no `exec`,
+ * its first argument a flag or its prompt, and that prompt invoking a skill as `$gurita:`.
+ */
+function bareCodex(command: Word[]): boolean {
+  const asked = promptWord(command);
+  return (
+    execWord(command) === undefined &&
+    asked !== undefined &&
+    /(?:^|\s)\$gurita:/.test(asked.text) &&
+    (command[1] === asked || command[1].text.startsWith('-'))
+  );
+}
+
+/**
  * The harnesses the harness of `line` can be picked between, its own among them, or undefined for
- * a line whose harness cannot be picked: a headless `claude` or `agy` line carrying both
- * `--model` and `--effort` and a headless `codex exec` line carrying `-m`, with or without its
- * effort override, are given all three harnesses, an interactive `claude` or `agy` line carrying
- * both flags Claude Code and Antigravity alone, and every other line (a Codex line not opening
- * `codex exec` or carrying no `-m`, a line without both flags, a shell step, a command the
- * extension does not know) none.
+ * a line whose harness cannot be picked: a `claude` or `agy` line carrying both `--model` and
+ * `--effort`, headless or interactive, and a `codex` line carrying `-m`, with or without its effort
+ * override, that is a headless `codex exec` line or an interactive bare `codex '$gurita:…'` one,
+ * are given all three harnesses, and every other line (any other Codex line, one carrying no `-m`,
+ * a line without both flags, a shell step, a command the extension does not know) none.
  */
 export function harnessChoices(line: string): readonly Harness[] | undefined {
   const read = readLine(line);
@@ -338,12 +352,9 @@ export function harnessChoices(line: string): readonly Harness[] | undefined {
   }
   const command = words(line);
   if (read.harness === 'codex') {
-    return execWord(command) === undefined ? undefined : HARNESSES;
+    return execWord(command) !== undefined || bareCodex(command) ? HARNESSES : undefined;
   }
-  if (read.effort === undefined) {
-    return undefined;
-  }
-  return printForm(command) ? HARNESSES : INTERACTIVE_CHOICES;
+  return read.effort === undefined ? undefined : HARNESSES;
 }
 
 /** The line with its first command's command word, and the form flag it needs, rewritten for `claude` or `agy`. */
@@ -471,8 +482,10 @@ function effortWords(harness: Harness, effort: string): string {
 }
 
 /**
- * The headless line `line`, on `from`, rewritten onto `to`, one of them `codex`: its command word
- * and form words (`-p` or `--print` on `claude` and `agy`, `exec` on `codex`), its prompt's skill
+ * The line `line`, on `from`, rewritten onto `to`, one of them `codex`, its headless or interactive
+ * form kept: its command word and form words (`-p` or `--print` on a headless `claude` or `agy`
+ * line, `exec` on a headless `codex` one; `-i` on an interactive `agy` line, none on an interactive
+ * `claude` or `codex` one), its prompt's skill
  * invocation and quoting, its bypass flag, every model flag, written as `to`'s flag with `model`,
  * and every effort, written as `to`'s effort with `effort`, or left out when `effort` is undefined,
  * rewritten in place; a Codex line carrying no effort override gains `effort` after its last model
@@ -483,12 +496,18 @@ function rewriteAcross(line: string, from: Harness, to: Harness, model: string, 
   const first = command[0];
   const edits: Edit[] = [];
   if (from === 'codex') {
-    const exec = execWord(command) as Word;
-    edits.push({ start: first.start, end: exec.end, text: `${to} -p` });
+    const exec = execWord(command);
+    if (exec !== undefined) {
+      edits.push({ start: first.start, end: exec.end, text: `${to} -p` });
+    } else {
+      edits.push({ start: first.start, end: first.end, text: to === 'agy' ? 'agy -i' : to });
+    }
   } else {
-    edits.push({ start: first.start, end: first.end, text: 'codex exec' });
+    const headless = printForm(command);
+    edits.push({ start: first.start, end: first.end, text: headless ? 'codex exec' : 'codex' });
     for (const word of command.slice(1)) {
-      if (word.text === '-p' || word.text === '--print') {
+      const raw = line.slice(word.start, word.end);
+      if (headless ? word.text === '-p' || word.text === '--print' : from === 'agy' && raw === '-i') {
         edits.push(removal(command, word));
       }
     }
@@ -528,11 +547,13 @@ function rewriteAcross(line: string, from: Harness, to: Harness, model: string, 
  * prompt, its other words, and its headless or interactive form kept, its model the first `offer`
  * lists, and its effort kept when `offer` lists it and otherwise the first listed. A switch between
  * `claude` and `agy` changes only the command word and the interactive `-i`. A headless line
- * switched onto Codex becomes `codex exec '$gurita:<skill> …'`, `-p` or `--print` dropped,
+ * switched onto Codex becomes `codex exec '$gurita:<skill> …'`, `-p` or `--print` dropped, and an
+ * interactive one a bare `codex '$gurita:<skill> …'`, any `-i` an `agy` line carried dropped,
  * `--dangerously-skip-permissions` becoming `--dangerously-bypass-approvals-and-sandbox`, its model
  * written as `-m` and its effort as `-c model_reasoning_effort=<level>`, with no effort override at
  * all when `offer` lists no effort; a `codex exec` line switched back becomes `claude -p` or
- * `agy -p` with its prompt double-quoted and invoked as `/gurita:`, `--model`, and `--effort`, a
+ * `agy -p`, and a bare `codex` line `claude` or `agy -i`, with its prompt double-quoted and invoked
+ * as `/gurita:`, `--model`, and `--effort`, a
  * line written without the override taking the first effort listed. A line already on `harness` is
  * given back unchanged, and undefined is given for a harness `harnessChoices` does not offer the
  * line. An offer listing no model is refused, and so is one listing no effort for `claude` or `agy`.

@@ -31,10 +31,10 @@
 // with the line editor each one gets (`lineEditor`): only a `claude` or `agy` line carrying both
 // `--model` and `--effort` gets model and effort controls, and a `codex` line carrying `-m` its
 // model control and, when it also carries the override `-c model_reasoning_effort=<level>`, its
-// effort control, every other line shown as its text, read-only; a headless one of these lines, a
-// Codex one opening `codex exec`, gets a harness control picking between Claude Code, Antigravity,
-// and Codex, an interactive `claude` or `agy` line one picking between the first two, and any other
-// Codex line keeps its harness. A harness pick (`replaceLineHarness`) rewrites the
+// effort control, every other line shown as its text, read-only; one of these lines, headless or
+// interactive, a Codex one opening `codex exec` or a bare `codex '$gurita:…'`, gets a harness
+// control picking between Claude Code, Antigravity, and Codex, and any other Codex line keeps its
+// harness. A harness pick (`replaceLineHarness`) rewrites the
 // line onto the picked harness as `rewriteHarness` in `lineValues.ts` does, with that harness's
 // lists as the settings view offers them, and stores the changed line as a model or effort pick
 // is stored. Each line is also posted
@@ -194,8 +194,8 @@ export interface LineEditor {
  * control beside it when the line also carries `-c model_reasoning_effort=<level>`, and none,
  * the line shown as its text, read-only, for every other line, a line of a known harness without
  * both flags included. Its harness control picks between the harnesses `harnessChoices` gives the
- * line: Claude Code, Antigravity, and Codex for a headless line, Claude Code and Antigravity for
- * an interactive `claude` or `agy` line, and none for a Codex line not opening `codex exec`.
+ * line: Claude Code, Antigravity, and Codex for a headless or interactive line, and none for a
+ * Codex line neither opening `codex exec` nor a bare `codex '$gurita:…'`.
  */
 export function lineEditor(line: string): LineEditor | undefined {
   const read = readLine(line);
@@ -542,8 +542,8 @@ export function replaceLineValue(
  * prompt and its headless or interactive form kept, its model the first listed, and its effort kept
  * where the list offers it and otherwise the first listed, a line switched onto Codex while the
  * list offers no effort carrying no effort override. The changed line is stored as a model or
- * effort pick is stored. A line whose harness control does not offer `harness` (an interactive line
- * picked onto Codex, a Codex line not opening `codex exec`, a line without both `--model` and
+ * effort pick is stored. A line whose harness control does not offer `harness` (a Codex line
+ * neither opening `codex exec` nor a bare `codex '$gurita:…'`, a line without both `--model` and
  * `--effort`, a shell step), a line the variant lacks, and an offer listing no model, or no effort
  * for Claude Code or Antigravity, are refused, nothing written; a line already on `harness` writes
  * nothing.

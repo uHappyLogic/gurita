@@ -1013,13 +1013,13 @@ test('variants that could not be read are named in the window, with no control d
 });
 
 const MODEL_ONLY_LINE = 'claude -p "/gurita:provide-alternatives-to-all-open-questions --mission <path>" --model "opus";';
-/** The harnesses a headless line's harness dropdown offers, and those an interactive line's offers, by key. */
+/** The harnesses a switchable line's harness dropdown offers, headless or interactive, by key. */
 const H3 = ['claude', 'antigravity', 'codex'];
-const H2 = ['claude', 'antigravity'];
 const CODEX_LINE = 'codex exec "/gurita:finish-mission --mission <path>" -m gpt-5.5;';
 const CODEX_EFFORT_LINE = "codex exec '$gurita:derive-tasks --mission <path>' -m gpt-5.5 -c model_reasoning_effort=xhigh;";
 const BARE_CODEX_LINE = 'codex "/gurita:finish-mission --mission <path>" -m gpt-5.5;';
 const INTERACTIVE_LINE = 'claude "/gurita:recommend-all-open-questions --mission <path>" --model "fable" --effort xhigh; # interactive';
+const INTERACTIVE_CODEX_LINE = "codex '$gurita:complete-all-tasks --mission <path>' -m gpt-5.5 -c model_reasoning_effort=high; # interactive";
 
 /** A variant list whose variants carry their line editors, as the extension posts them. */
 const EDITED_VARIANTS = {
@@ -1102,9 +1102,6 @@ function lineRows(page: Page): [string[], [string, string[], string | undefined]
 const CC_HARNESS: [string, string[], string] = ['line-harness', ['Claude Code', 'Antigravity', 'Codex'], 'Claude Code'];
 const AGY_HARNESS: [string, string[], string] = ['line-harness', ['Claude Code', 'Antigravity', 'Codex'], 'Antigravity'];
 const CODEX_HARNESS: [string, string[], string] = ['line-harness', ['Claude Code', 'Antigravity', 'Codex'], 'Codex'];
-/** The harness dropdown of an interactive line, offering Claude Code and Antigravity alone. */
-const CC_INTERACTIVE_HARNESS: [string, string[], string] = ['line-harness', ['Claude Code', 'Antigravity'], 'Claude Code'];
-const AGY_INTERACTIVE_HARNESS: [string, string[], string] = ['line-harness', ['Claude Code', 'Antigravity'], 'Antigravity'];
 
 test("the line editor draws each line as its row, a line with both --model and --effort getting the harness's model and whole effort lists, a Codex line its model and, with the effort override, its effort", () => {
   const page = loadSettings();
@@ -1204,11 +1201,16 @@ test("a pick in a line's harness dropdown posts the line and the harness, Codex 
             {
               name: 'Other forms',
               origin: 'own',
-              lines: [INTERACTIVE_LINE, BARE_CODEX_LINE],
-              editors: [{ harness: 'claude', model: 'fable', effort: 'xhigh', harnesses: H2 }, { harness: 'codex', model: 'gpt-5.5' }],
+              lines: [INTERACTIVE_LINE, BARE_CODEX_LINE, INTERACTIVE_CODEX_LINE],
+              editors: [
+                { harness: 'claude', model: 'fable', effort: 'xhigh', harnesses: H3 },
+                { harness: 'codex', model: 'gpt-5.5' },
+                { harness: 'codex', model: 'gpt-5.5', effort: 'high', harnesses: H3 },
+              ],
               rows: [
                 { skill: 'recommend-all-open-questions', interactive: true, harness: 'claude' },
                 { skill: 'finish-mission', interactive: false, harness: 'codex' },
+                { skill: 'complete-all-tasks', interactive: true, harness: 'codex' },
               ],
               isDefault: false,
             },
@@ -1223,10 +1225,15 @@ test("a pick in a line's harness dropdown posts the line and the harness, Codex 
   assert.deepStrictEqual(lineRows(page)[6][1][0], CODEX_HARNESS, 'and so does one carrying the effort override');
   assert.deepStrictEqual(
     lineRows(page)[8],
-    [['recommend-all-open-questions', 'interactive'], [CC_INTERACTIVE_HARNESS, ['line-model', ['fable', 'opus'], 'fable'], ['line-effort', ['xhigh', 'high'], 'xhigh']]],
-    'an interactive line is offered Claude Code and Antigravity alone',
+    [['recommend-all-open-questions', 'interactive'], [CC_HARNESS, ['line-model', ['fable', 'opus'], 'fable'], ['line-effort', ['xhigh', 'high'], 'xhigh']]],
+    'an interactive line is offered all three harnesses, Codex included',
   );
   assert.deepStrictEqual(lineRows(page)[9], [['finish-mission', 'Codex'], [['line-model', ['gpt-5.5'], 'gpt-5.5']]], 'a Codex line posted with no harnesses keeps its harness as text');
+  assert.deepStrictEqual(
+    lineRows(page)[10],
+    [['complete-all-tasks', 'interactive'], [CODEX_HARNESS, ['line-model', ['gpt-5.5'], 'gpt-5.5'], ['line-effort', ['high', 'medium'], 'high']]],
+    'an interactive bare codex line gets a harness dropdown standing on Codex',
+  );
   const count = page.posted.length;
   focused(page, 'line-harness-0-0-0').change('antigravity');
   focused(page, 'line-harness-0-1-0').change('antigravity');
@@ -1238,6 +1245,8 @@ test("a pick in a line's harness dropdown posts the line and the harness, Codex 
   focused(page, 'line-harness-0-2-1').change('antigravity');
   focused(page, 'line-harness-0-4-0').change('codex');
   focused(page, 'line-harness-0-4-0').change('antigravity');
+  focused(page, 'line-harness-0-4-2').change('codex');
+  focused(page, 'line-harness-0-4-2').change('claude');
   assert.deepStrictEqual(page.posted.slice(count), [
     { type: 'replaceLineHarness', recipe: 'First run', variant: { name: 'Claude Code', origin: 'shipped' }, line: 0, harness: 'antigravity' },
     { type: 'replaceLineHarness', recipe: 'First run', variant: { name: 'Antigravity', origin: 'shipped' }, line: 0, harness: 'claude' },
@@ -1245,7 +1254,9 @@ test("a pick in a line's harness dropdown posts the line and the harness, Codex 
     { type: 'replaceLineHarness', recipe: 'First run', variant: { name: 'Claude Code', origin: 'shipped' }, line: 0, harness: 'codex' },
     { type: 'replaceLineHarness', recipe: 'First run', variant: { name: 'Codex', origin: 'own' }, line: 0, harness: 'claude' },
     { type: 'replaceLineHarness', recipe: 'First run', variant: { name: 'Codex', origin: 'own' }, line: 1, harness: 'antigravity' },
+    { type: 'replaceLineHarness', recipe: 'First run', variant: { name: 'Other forms', origin: 'own' }, line: 0, harness: 'codex' },
     { type: 'replaceLineHarness', recipe: 'First run', variant: { name: 'Other forms', origin: 'own' }, line: 0, harness: 'antigravity' },
+    { type: 'replaceLineHarness', recipe: 'First run', variant: { name: 'Other forms', origin: 'own' }, line: 2, harness: 'claude' },
   ], 'a pick of the harness the line runs on, or of one not offered, posts nothing');
   assert.deepStrictEqual(lineRows(page)[0][1][0], CC_HARNESS, 'nothing changes until the extension posts it');
   const rewritten = 'agy -p "/gurita:review-mission-requirements --mission <path>" --model "gemini-4-argon" --effort xhigh;';
@@ -1315,8 +1326,8 @@ test("a line running a gurita: skill is drawn as the skill's bare name, an inter
               lines: [CLAUDE_LINE, INTERACTIVE_LINE, AGY_INTERACTIVE_LINE, 'echo <path>', 'gemini -p "/gurita:finish-mission" --model "pro";'],
               editors: [
                 { harness: 'claude', model: 'fable', effort: 'xhigh', harnesses: H3 },
-                { harness: 'claude', model: 'fable', effort: 'xhigh', harnesses: H2 },
-                { harness: 'antigravity', model: 'claude-opus-5-5', effort: 'high', harnesses: H2 },
+                { harness: 'claude', model: 'fable', effort: 'xhigh', harnesses: H3 },
+                { harness: 'antigravity', model: 'claude-opus-5-5', effort: 'high', harnesses: H3 },
                 null,
                 null,
               ],
@@ -1342,8 +1353,8 @@ test("a line running a gurita: skill is drawn as the skill's bare name, an inter
   ];
   assert.deepStrictEqual(lineRows(page), [
     [['review-mission-requirements'], both(CC_HARNESS, 'fable', ['fable', 'opus'], 'xhigh', ['xhigh', 'high'])],
-    [['recommend-all-open-questions', 'interactive'], both(CC_INTERACTIVE_HARNESS, 'fable', ['fable', 'opus'], 'xhigh', ['xhigh', 'high'])],
-    [['complete-all-tasks', 'interactive'], both(AGY_INTERACTIVE_HARNESS, 'claude-opus-5-5', ['claude-opus-5-5'], 'high', ['high'])],
+    [['recommend-all-open-questions', 'interactive'], both(CC_HARNESS, 'fable', ['fable', 'opus'], 'xhigh', ['xhigh', 'high'])],
+    [['complete-all-tasks', 'interactive'], both(AGY_HARNESS, 'claude-opus-5-5', ['claude-opus-5-5'], 'high', ['high'])],
     [['echo <path>'], []],
     [['gemini -p "/gurita:finish-mission" --model "pro";'], []],
   ], 'a shell step and a command the extension does not know keep their text and draw no control');

@@ -515,8 +515,13 @@ test('only a claude or agy line carrying both --model and --effort gets model an
   assert.deepStrictEqual(lineEditor('agy -p "x" --model=gemini-4-argon --effort medium;'), { harness: 'antigravity', model: 'gemini-4-argon', effort: 'medium', harnesses: all });
   assert.deepStrictEqual(
     lineEditor('claude "/gurita:complete-all-tasks --mission <path>" --model "opus" --effort high; # interactive'),
-    { harness: 'claude', model: 'opus', effort: 'high', harnesses: ['claude', 'antigravity'] },
-    'an interactive line is not offered Codex',
+    { harness: 'claude', model: 'opus', effort: 'high', harnesses: all },
+    'an interactive line is offered Codex too',
+  );
+  assert.deepStrictEqual(
+    lineEditor("codex '$gurita:complete-all-tasks --mission <path>' -m gpt-5.5 -c model_reasoning_effort=high; # interactive"),
+    { harness: 'codex', model: 'gpt-5.5', effort: 'high', harnesses: all },
+    'and so is an interactive bare codex line',
   );
   assert.deepStrictEqual(lineEditor('codex exec "/gurita:finish-mission --mission <path>" -m gpt-5.5;'), { harness: 'codex', model: 'gpt-5.5', harnesses: all });
   assert.deepStrictEqual(lineEditor("codex exec '$gurita:finish-mission --mission <path>' -m gpt-5.5 -c model_reasoning_effort=high;"), {
@@ -526,7 +531,7 @@ test('only a claude or agy line carrying both --model and --effort gets model an
     harnesses: all,
   });
   assert.deepStrictEqual(lineEditor('codex exec "x" -m gpt-5.5 --effort high;'), { harness: 'codex', model: 'gpt-5.5', harnesses: all }, "a Codex line's --effort gives no effort control");
-  assert.deepStrictEqual(lineEditor('codex "x" -m gpt-5.5;'), { harness: 'codex', model: 'gpt-5.5' }, 'a Codex line not opening codex exec gets no harness control');
+  assert.deepStrictEqual(lineEditor('codex "x" -m gpt-5.5;'), { harness: 'codex', model: 'gpt-5.5' }, 'a Codex line neither opening codex exec nor invoking its skill as $gurita: gets no harness control');
   for (const line of [
     'claude -p "x" --model "opus";',
     'agy -p "x" --effort high;',

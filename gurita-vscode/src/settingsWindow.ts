@@ -60,9 +60,9 @@
 // posted with its lines and the line editor each gets: a `claude` or `agy` line carrying both
 // `--model` and `--effort` gets model and effort dropdowns, a Codex line carrying `-m` its model
 // dropdown and, when it also carries the override, its effort dropdown, and every other line is
-// shown as its text, read-only; a headless one of these lines, a Codex one opening `codex exec`,
-// gets a harness dropdown offering Claude Code, Antigravity, and Codex, an interactive `claude` or
-// `agy` line one offering the first two, and any other Codex line keeps its harness as text. A model or effort pick replaces the value the line carries
+// shown as its text, read-only; one of these lines, headless or interactive, a Codex one opening
+// `codex exec` or a bare `codex '$gurita:…'`, gets a harness dropdown offering Claude Code,
+// Antigravity, and Codex, and any other Codex line keeps its harness as text. A model or effort pick replaces the value the line carries
 // through the store's edit (`replaceLineValue`), a harness pick rewrites the line onto the picked
 // harness (`replaceLineHarness`), a shipped, project, or own variant left untouched and a `custom N` holding
 // the changed line added beside it, a stored variant changed in place. The window also edits the
