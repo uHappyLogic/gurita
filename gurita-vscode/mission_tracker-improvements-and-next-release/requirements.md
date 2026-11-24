@@ -119,5 +119,7 @@ Five missions under `gurita-vscode/` are finished, all between 2026-11-20 and 20
 
 - **View notice form.** The plugin notice and the bootstrap offer are both tree rows, standing at the top of the tree above New mission and Define mission, each present only while its condition holds: a plugin notice row (warning icon, a label saying the plugin is missing or outdated, its click opening the Settings window) and a bootstrap offer row (its click running `init-mission-base-workflow`). The view's message keeps only `No mission is live.` and the read-failure line, and no notification is shown.
 
+- **Bootstrap context file.** The view reads both `CLAUDE.md` and `AGENTS.md` at the project root and offers the bootstrap only while neither holds a `## Mission Workflow` heading. Once either does, the offer is gone, whatever harnesses are enabled.
+
 ## Out of Scope
 
