@@ -111,5 +111,9 @@ Five missions under `gurita-vscode/` are finished, all between 2026-11-20 and 20
 
 - **Multi-line input mechanism.** One webview panel serves every multi-line value at all three sites: where `askValues` reaches the answer text, the goal, or the issue description, the host opens a small input panel as an editor tab holding one textarea, the value's prompt above it, and Run and Cancel. It resolves the value when Run is pressed, or undefined when Cancel is pressed or the tab is closed, exactly as a dismissed input box does today. The mission page and the side-bar tree are unchanged, so nothing is typed on a mission page, and the scope, the discussion note, and the Settings window's values stay in `vscode.window.showInputBox`.
 
+### Side-bar view
+
+- **View check failure scope.** The Missions view says the harness check failed whenever at least one harness that is Enabled in the Settings window and whose CLI is found fails its install or version check (not installed, listing unreadable, installed but disabled, or older than the packaged version). Disabled harnesses and harnesses whose CLI is not found never count, and a check that could not be run at all also makes the view say so.
+
 ## Out of Scope
 
