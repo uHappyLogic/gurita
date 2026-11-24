@@ -85,5 +85,9 @@ Five missions under `gurita-vscode/` are finished, all between 2026-11-20 and 20
 
 - **Codex line effort.** A Codex line carries its effort as the config override `-c model_reasoning_effort=<level>`, the `--config` spelling read as well, and `lineValues.ts` reads and replaces that value as it does `--effort`. The Settings window gains a Codex effort list under Models and efforts, built like the other two: taken from the values the shipped recipes, own recipes, and stored variants carry, with the person's `addedEfforts`/`removedEfforts` overlay on top. A Codex line gets both a model dropdown and an effort dropdown. A line switched to Codex keeps its effort when Codex's list offers it and takes the list's first effort otherwise, written as the override, and a Codex line switched back to Claude Code or Antigravity keeps or maps its effort the same way.
 
+### Release
+
+- **Release within the mission.** The task list holds no release task, and the mission is finished before 0.3.0 is published: `/finish-mission` removes the mission's directory in its `Mission-finish:` commit, and the maintainer then runs `/release-vscode-extension 0.3.0` by hand. The skill drafts its notes from this mission's finish summary, read as a mission finished since `gurita-vscode-0.2.0`, beside any other extension mission finished by then. The release is the step that follows the mission, not its last step, and the goal's closing clause is revised to say so.
+
 ## Out of Scope
 
