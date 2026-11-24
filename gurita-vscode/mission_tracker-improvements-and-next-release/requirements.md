@@ -131,5 +131,7 @@ Five missions under `gurita-vscode/` are finished, all between 2026-11-20 and 20
 
 - **Reference document location.** The reference prose moves into one new Markdown file in the extension's own directory, standing beside `README.md`, `BUILDING.md`, and `CHANGELOG.md` (for example `gurita-vscode/USAGE.md`), keeping the README's current section order (side-bar view, mission windows, Settings window, recipes, looped task run, runner). `.vscodeignore` keeps it out of the VSIX as it keeps `BUILDING.md`, and the shortened README links to it by its absolute GitHub URL, the form its `BUILDING.md` link already takes.
 
+- **Screenshot capture method.** `gurita-vscode/scripts/capture_demo.js` is extended so that the one run that records `media/demo.gif` also writes the three screenshots as PNG files under `gurita-vscode/media/`. It saves a full-resolution frame at chosen moments of the flow it already drives (the side-bar view once the mission row shows, the mission page once it has filled `derive tasks` with the questions' alternatives and picks drawn), and it gains one more step after the run, opening the Settings window and saving a frame of it before the session closes. The GIF and the stills are always produced together by one command, against the same fixture project seeded from `tests/fixtures/host_project/` and the same `scripts/demo_claude.py` stand-in, and BUILDING.md's recording entry covers both.
+
 ## Out of Scope
 
