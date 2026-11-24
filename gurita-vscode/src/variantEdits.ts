@@ -333,7 +333,7 @@ function load(storeFile: string, base: readonly Recipe[], recipeName: string): E
   const store = readVariantStore(storeFile);
   const recipe = overlayVariantStore(base, store, storeFile).find((each) => each.name === recipeName);
   if (recipe === undefined) {
-    throw new VariantEditError(`No recipe is named ${recipeName}.`);
+    throw new VariantEditError(`No action recipe is named ${recipeName}.`);
   }
   return { store, recipe };
 }
@@ -348,7 +348,7 @@ function find(recipe: Recipe, target: VariantTarget): Variant {
     (each) => each.name === target.name && variantOrigin(each) === target.origin && sameCopies(each.copies, target.copies),
   );
   if (found === undefined) {
-    throw new VariantEditError(`The recipe ${recipe.name} lists no ${describe(target)}.`);
+    throw new VariantEditError(`The action recipe ${recipe.name} lists no ${describe(target)}.`);
   }
   return found;
 }
@@ -357,7 +357,7 @@ function find(recipe: Recipe, target: VariantTarget): Variant {
 function record(store: VariantStore, recipe: string, variant: Variant): StoredVariant {
   const found = store.variants.find((each) => each.recipe === recipe && each.name === variant.name && sameCopies(each.copies, variant.copies));
   if (found === undefined) {
-    throw new VariantEditError(`The variant store holds no stored variant ${variant.name} of the recipe ${recipe}.`);
+    throw new VariantEditError(`The variant store holds no stored variant ${variant.name} of the action recipe ${recipe}.`);
   }
   return found;
 }
@@ -382,10 +382,10 @@ function setPick(store: VariantStore, recipe: string, pick: VariantRef | undefin
 /** Refuses a new variant name that is empty or that another listed variant of the recipe carries. */
 function checkName(recipe: Recipe, name: string, except?: Variant): void {
   if (name.trim() === '') {
-    throw new VariantEditError(`A variant of the recipe ${recipe.name} needs a name.`);
+    throw new VariantEditError(`A variant of the action recipe ${recipe.name} needs a name.`);
   }
   if (recipe.variants.some((each) => each !== except && each.name === name)) {
-    throw new VariantEditError(`The recipe ${recipe.name} already has a variant named ${name}.`);
+    throw new VariantEditError(`The action recipe ${recipe.name} already has a variant named ${name}.`);
   }
 }
 
@@ -504,14 +504,14 @@ export function replaceLineValue(
   const variant = find(recipe, target);
   const line = variant.lines[index];
   if (line === undefined) {
-    throw new VariantEditError(`The ${describe(target)} of the recipe ${recipe.name} has no line ${index + 1}.`);
+    throw new VariantEditError(`The ${describe(target)} of the action recipe ${recipe.name} has no line ${index + 1}.`);
   }
   if (value === '') {
     throw new VariantEditError(`An empty ${kind} cannot replace a line's ${kind}.`);
   }
   const changed = kind === 'model' ? replaceModel(line, value) : replaceEffort(line, value);
   if (changed === undefined) {
-    throw new VariantEditError(`Line ${index + 1} of the ${describe(target)} of the recipe ${recipe.name} carries no ${kind}.`);
+    throw new VariantEditError(`Line ${index + 1} of the ${describe(target)} of the action recipe ${recipe.name} carries no ${kind}.`);
   }
   if (changed === line) {
     return;
@@ -544,7 +544,7 @@ export function replaceLineHarness(
   const variant = find(recipe, target);
   const line = variant.lines[index];
   if (line === undefined) {
-    throw new VariantEditError(`The ${describe(target)} of the recipe ${recipe.name} has no line ${index + 1}.`);
+    throw new VariantEditError(`The ${describe(target)} of the action recipe ${recipe.name} has no line ${index + 1}.`);
   }
   let changed: string | undefined;
   try {
@@ -554,7 +554,7 @@ export function replaceLineHarness(
   }
   if (changed === undefined) {
     throw new VariantEditError(
-      `Line ${index + 1} of the ${describe(target)} of the recipe ${recipe.name} is no claude or agy line carrying both a model and an effort.`,
+      `Line ${index + 1} of the ${describe(target)} of the action recipe ${recipe.name} is no claude or agy line carrying both a model and an effort.`,
     );
   }
   if (changed === line) {
@@ -577,12 +577,12 @@ export function resetVariantLines(storeFile: string, base: readonly Recipe[], re
   const { store, recipe } = load(storeFile, base, recipeName);
   const variant = find(recipe, target);
   if (!variant.stored) {
-    throw new VariantEditError(`The ${describe(target)} of the recipe ${recipe.name} is no stored variant.`);
+    throw new VariantEditError(`The ${describe(target)} of the action recipe ${recipe.name} is no stored variant.`);
   }
   const stored = record(store, recipe.name, variant);
   const source = variantSource(stored);
   if (source === undefined) {
-    throw new VariantEditError(`The stored variant ${variant.name} of the recipe ${recipe.name} remembers no variant it was made from.`);
+    throw new VariantEditError(`The stored variant ${variant.name} of the action recipe ${recipe.name} remembers no variant it was made from.`);
   }
   const lines = sourceLines(base, store, recipe.name, source);
   if (lines === undefined) {
@@ -613,7 +613,7 @@ export function resetVariant(storeFile: string, recipeName: string, original: Re
   const variants = store.variants.filter((each) => !(each.recipe === recipeName && sameCopies(each.copies, original)));
   const hidden = store.hidden.filter((each) => !(each.recipe === recipeName && each.name === original.name && each.origin === original.origin));
   if (variants.length === store.variants.length && hidden.length === store.hidden.length) {
-    throw new VariantEditError(`No stored copy or hiding record stands for the ${original.origin} variant ${original.name} of the recipe ${recipeName}.`);
+    throw new VariantEditError(`No stored copy or hiding record stands for the ${original.origin} variant ${original.name} of the action recipe ${recipeName}.`);
   }
   store.variants = variants;
   store.hidden = hidden;
@@ -720,7 +720,7 @@ function checkLineName(base: readonly Recipe[], store: VariantStore, file: strin
     throw new VariantEditError('A single-task line needs a name.');
   }
   if (lineNames(base, store, file).includes(name)) {
-    throw new VariantEditError(`A recipe or line is already named ${name}.`);
+    throw new VariantEditError(`An action recipe or line is already named ${name}.`);
   }
 }
 
@@ -728,7 +728,7 @@ function checkLineName(base: readonly Recipe[], store: VariantStore, file: strin
 function findLine(recipe: Recipe, target: VariantTarget): Variant {
   const variant = find(recipe, target);
   if (!variant.singleTask || !defaultVariant(recipe).singleTask) {
-    throw new VariantEditError(`The ${describe(target)} of the recipe ${recipe.name} is no named single-task line.`);
+    throw new VariantEditError(`The ${describe(target)} of the action recipe ${recipe.name} is no named single-task line.`);
   }
   return variant;
 }
@@ -807,7 +807,7 @@ export function resetLine(storeFile: string, recipeName: string, original: ReadV
   const variants = store.variants.filter((each) => !standsFor(each));
   const hidden = store.hidden.filter((each) => !(each.recipe === recipeName && each.name === original.name && each.origin === original.origin));
   if (variants.length === store.variants.length && hidden.length === store.hidden.length) {
-    throw new VariantEditError(`No stored copy or hiding record stands for the ${original.origin} line ${original.name} of the recipe ${recipeName}.`);
+    throw new VariantEditError(`No stored copy or hiding record stands for the ${original.origin} line ${original.name} of the action recipe ${recipeName}.`);
   }
   store.variants = variants;
   store.hidden = hidden;

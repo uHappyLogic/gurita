@@ -294,7 +294,7 @@ function assertArrowOnly(dropdown: FakeElement): void {
   assert.match(source, /select\.recipe-variant option \{ color: var\(--vscode-dropdown-foreground\);/, 'the opened list shows its options');
 }
 
-test("each mission's page draws its shipped recipes under no heading, then its own under Your recipes", () => {
+test("each mission's page draws its shipped recipes under Actions with no heading of their own, then its own under Your actions", () => {
   const derive = {
     state: 'read',
     recipes: [
@@ -323,14 +323,14 @@ test("each mission's page draws its shipped recipes under no heading, then its o
   const page = loadPage();
   page.send(pageOf(mission(ALPHA, 'Alpha', { step: 'derive', recipes: derive })));
   assert.deepStrictEqual(recipeNames(page), ['Approve all standing recommendations and review again', 'Prepare tasks', 'Prepare tasks (Antigravity)', 'Mine everywhere']);
-  assert.deepStrictEqual(recipeGroups(page), ['Your recipes']);
+  assert.deepStrictEqual(recipeGroups(page), ['Your actions']);
   const section = page.root.all().find((each) => each.has('recipes')) as FakeElement;
   assert.deepStrictEqual(
     section.children.filter((child): child is FakeElement => child instanceof FakeElement).map((child) =>
       child.has('recipe-list') ? child.children.map((entry) => shownName((entry as FakeElement).children[0] as FakeElement)) : child.textContent,
     ),
-    ['Recipes', ['Approve all standing recommendations and review again', 'Prepare tasks', 'Prepare tasks (Antigravity)'], 'Your recipes', ['Mine everywhere']],
-    'the shipped recipes stand directly under Recipes, in the order posted, and the own group below them',
+    ['Actions', ['Approve all standing recommendations and review again', 'Prepare tasks', 'Prepare tasks (Antigravity)'], 'Your actions', ['Mine everywhere']],
+    'the shipped recipes stand directly under Actions, in the order posted, and the own group below them',
   );
   assert.ok(!recipeGroups(page).includes('Claude Code') && !recipeGroups(page).includes('Antigravity'));
   named(page, 'Prepare tasks').click();
@@ -341,19 +341,19 @@ test("each mission's page draws its shipped recipes under no heading, then its o
     'Finish mission',
     'Odd follow up: unknown placeholder <odd> in /home/someone/.gurita/recipes.md',
   ]);
-  assert.deepStrictEqual(recipeGroups(beta), ['Your recipes']);
+  assert.deepStrictEqual(recipeGroups(beta), ['Your actions']);
   named(beta, 'Finish mission').click();
   assert.deepStrictEqual(beta.posted[beta.posted.length - 1], { type: 'runRecipe', mission: BETA, recipe: 'Finish mission', variant: 'default' });
 });
 
-test("a page with no own recipe draws no Your recipes heading, and one with only own recipes no shipped list", () => {
+test("a page with no own recipe draws no Your actions heading, and one with only own recipes no shipped list", () => {
   const page = loadPage();
   page.send(pageOf(mission(ALPHA, 'Alpha', { step: 'derive', recipes: { state: 'read', recipes: [runnable('Prepare tasks', 'shipped', ['echo <path>'])] } })));
   assert.deepStrictEqual(recipeGroups(page), []);
   assert.deepStrictEqual(recipeNames(page), ['Prepare tasks']);
   const beta = loadPage();
   beta.send(pageOf(mission(BETA, 'Beta', { step: 'derive', recipes: { state: 'read', recipes: [runnable('Mine', 'own', ['echo <path>'])] } })));
-  assert.deepStrictEqual(recipeGroups(beta), ['Your recipes']);
+  assert.deepStrictEqual(recipeGroups(beta), ['Your actions']);
   assert.deepStrictEqual(recipeNames(beta), ['Mine']);
 });
 
@@ -897,7 +897,7 @@ test("a mission's page draws the recipe failure posted with its mission", () => 
   assert.ok(section !== undefined);
   assert.deepStrictEqual(
     section.all().filter((each) => each.tagName === 'p' || each.tagName === 'pre').map((each) => each.textContent),
-    ['The recipes could not be read.', 'EACCES: recipes.md'],
+    ['The actions could not be read.', 'EACCES: recipes.md'],
   );
   assert.deepStrictEqual(recipeNames(page), []);
 });

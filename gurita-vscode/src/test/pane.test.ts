@@ -1388,6 +1388,7 @@ test('the settings view lists every recipe with its variants and carries out eac
     assert.ok(box.validateInput !== undefined);
     assert.ok(box.validateInput('') !== undefined && box.validateInput('  ') !== undefined, 'an empty name is refused');
     assert.ok(box.validateInput('Antigravity') !== undefined && box.validateInput(' default') !== undefined, 'a name the recipe uses is refused');
+    assert.strictEqual(box.validateInput(' default'), 'The action recipe already has a variant named default.', 'the refusal names the action recipe');
     assert.strictEqual(box.validateInput('Fast'), undefined);
     assert.deepStrictEqual(stored().variants, [
       { recipe: 'First run', name: 'Fast', lines: recipes[0].variants[0].lines, from: { name: 'Claude Code', origin: 'shipped' } },
@@ -1844,6 +1845,7 @@ test("the settings view lists the named single-task lines and carries out each l
     assert.strictEqual(box.value, undefined, "a duplicate's box opens empty");
     assert.ok(box.validateInput !== undefined);
     assert.ok(box.validateInput(' ') !== undefined && box.validateInput(AGY) !== undefined && box.validateInput('First run') !== undefined);
+    assert.strictEqual(box.validateInput('First run'), 'An action recipe or line is already named First run.', 'the refusal names the action recipe');
     assert.strictEqual(box.validateInput('Single task (Sonnet)'), undefined);
     assert.deepStrictEqual(stored().variants, [
       { recipe: 'Single task (Sonnet)', name: 'Single task (Sonnet)', lines: [ccLine], from: { name: 'default', origin: 'shipped', recipe: 'Single task (Claude Code)' } },

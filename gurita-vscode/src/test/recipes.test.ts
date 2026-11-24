@@ -919,7 +919,7 @@ test('a button refuses a recipe it cannot run, naming the recipe and the cause',
   const recipes = mergeRecipes(shipped(), own());
   assert.deepStrictEqual(buttonRecipe(recipes, 'discuss-mission-goal', ['goal']), {
     state: 'refused',
-    cause: 'No recipe is named discuss-mission-goal.',
+    cause: 'No action is named discuss-mission-goal.',
   });
   const short = buttonRecipe(recipes, 'answer-open-question', ['path', 'Short Title']);
   assert.ok(short.state === 'refused');
@@ -929,5 +929,5 @@ test('a button refuses a recipe it cannot run, naming the recipe and the cause',
   assert.match(unknown.cause, /<mystery thing>/);
   const loop = buttonRecipe(recipes, 'Loop', ['path']);
   assert.ok(loop.state === 'refused');
-  assert.match(loop.cause, /is a looped recipe\./);
+  assert.match(loop.cause, /^The action Loop in .* is a looped action\.$/);
 });

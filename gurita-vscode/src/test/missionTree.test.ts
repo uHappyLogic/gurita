@@ -470,7 +470,7 @@ test("the two mission-starting rows are described by the remembered variant's ha
   assert.strictEqual(discuss.description, 'Claude Code · fable · xhigh');
   assert.strictEqual(discuss.contextValue, missionTree.STARTING_ROW_CONTEXT);
   assert.strictEqual(discuss.command?.command, 'gurita.newMission');
-  assert.ok(discuss.tooltip?.startsWith('New mission\nRecipe: discuss-mission-goal\nVariant: default\nclaude '), discuss.tooltip);
+  assert.ok(discuss.tooltip?.startsWith('New mission\nAction: discuss-mission-goal\nVariant: default\nclaude '), discuss.tooltip);
   const define = item('Define mission');
   assert.strictEqual(define.description, 'Claude Code · sonnet · medium', "the recipe's default stands with nothing remembered");
   assert.strictEqual(define.command?.command, 'gurita.defineMission');
@@ -549,7 +549,7 @@ test('a row describes a variant whose lines carry no harness by its name, and on
   const disabled = startingRows.startingRow('defineMission', 'Define mission', { state: 'disabled', recipe: 'r', cause: 'Every variant is off.' });
   assert.strictEqual(disabled.description, startingRows.DISABLED_DESCRIPTION);
   assert.strictEqual(disabled.tooltip, 'Define mission\nEvery variant is off.');
-  const refused = startingRows.startingRow('defineMission', 'Define mission', { state: 'refused', cause: 'No recipe is named r.' });
+  const refused = startingRows.startingRow('defineMission', 'Define mission', { state: 'refused', cause: 'No action is named r.' });
   assert.strictEqual(refused.description, startingRows.REFUSED_DESCRIPTION);
 });
 

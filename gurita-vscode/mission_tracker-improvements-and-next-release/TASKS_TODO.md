@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Actions Named Where a Recipe Is Fired
-
-Call a recipe an "action" wherever the user fires one and an "action recipe" in the Settings window: the mission page's `Recipes` and `Your recipes` headings, its failure line (`The actions could not be read.`), the error notifications (`No action is named <name>.`), the hover text of the side-bar view's two mission-starting rows (`Action: <name>`), and the Settings window's note, prompts, and refusals. The recipe files, their `## Recipes` heading (`RECIPE_SECTION`), the `gurita.ownRecipesFile` setting with its description, and the README's prose keep "recipe", the README stating once that each recipe in a recipe file is shown as an action where it is fired and as an action recipe in the Settings window. Verified by the page, pane, tree, and Settings tests asserting the renamed texts and by a check of the manifest's unchanged setting.
-
----
-
 ## Remove the Answer With Recommendation Button
 
 Take the Answer with recommendation button off the question card, which keeps Discuss, Answer, and the per-alternative buttons: its `### answer-open-question-with-recommendation` section leaves `gurita-vscode/shipped_recipes.md` and its name leaves `BUTTON_RECIPES`, so the Settings window no longer lists it among its fixed-name button recipes. Nothing is added for state stored under the name, which through the existing overlay rule becomes an ordinary editable own recipe in the Settings window that no mission page draws. Verified by the page and pane tests of the card's two head buttons and a recipe test of stored variants under the removed name, with `gurita-vscode/README.md` no longer describing the button.

@@ -597,7 +597,7 @@ export function ownRecipesFile(setting: string | undefined, home: string): strin
 }
 
 /** The heading of the page's group of own recipes that replace no shipped recipe. */
-export const OWN_GROUP_HEADING = 'Your recipes';
+export const OWN_GROUP_HEADING = 'Your actions';
 
 /** One variant a page recipe's dropdown offers: its name, which the dropdown and the button beside it show, and whether it is the person's own. */
 export interface PageVariantChoice {
@@ -781,12 +781,12 @@ export type ButtonRecipe =
  * placeholder it holds is one the button holds a value for.
  */
 function buttonRefusal(name: string, variant: Variant, fillable: readonly string[]): string | undefined {
-  const where = `The recipe ${name} in ${variant.file}`;
+  const where = `The action ${name} in ${variant.file}`;
   if (variant.lines.length === 0) {
     return `${where} holds no line.`;
   }
   if (variant.looped) {
-    return `${where} is a looped recipe.`;
+    return `${where} is a looped action.`;
   }
   const unfilled = [
     ...variant.unknownPlaceholders,
@@ -822,7 +822,7 @@ export function buttonRecipe(
 ): ButtonRecipe {
   const recipe = recipes.find((entry) => entry.name === name);
   if (recipe === undefined) {
-    return { state: 'refused', cause: `No recipe is named ${name}.` };
+    return { state: 'refused', cause: `No action is named ${name}.` };
   }
   const runnable = recipe.variants.filter((variant) => buttonRefusal(name, variant, fillable) === undefined);
   if (runnable.length === 0) {

@@ -705,6 +705,8 @@ test("a harness's control posts the state it asks for and the view shows only th
     ['antigravity', 'Disabled', 'Enable'],
     ['codex', 'Enabled', 'Disable'],
   ]);
+  assert.strictEqual(harnessToggle(page, 'codex').title, "Leave every variant with a line on Codex out of the mission pages' action lists");
+  assert.strictEqual(harnessToggle(page, 'antigravity').title, 'List the variants with a line on Antigravity on the mission pages again');
   const count = page.posted.length;
   harnessToggle(page, 'codex').click();
   assert.deepStrictEqual(page.posted.slice(count), [{ type: 'setHarnessEnabled', harness: 'codex', enabled: false }]);
@@ -890,7 +892,7 @@ test('the window lists every recipe the extension posts with its variants, each 
     ['Mine everywhere', [[['default', 'yours', 'Default'], edits]]],
   ]);
   assert.ok(
-    texts(page).includes('Run by a button outside the recipe list, which runs this default until another variant is selected beside it.'),
+    texts(page).includes('Run by a button outside the action list, which runs this default until another variant is selected beside it.'),
     'a fixed-name button recipe says its default is what its button runs while no other variant is selected',
   );
   const fast = page.root.all().find((each) => each.has('variant-name') && each.textContent === 'Fast');

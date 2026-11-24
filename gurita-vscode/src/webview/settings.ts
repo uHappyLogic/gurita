@@ -233,7 +233,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
   const RESET_LABEL = 'Reset';
   const DEFAULT_MARK = 'Default';
   const DELETED_MARK = 'Deleted';
-  const FIXED_NOTE = 'Run by a button outside the recipe list, which runs this default until another variant is selected beside it.';
+  const FIXED_NOTE = 'Run by a button outside the action list, which runs this default until another variant is selected beside it.';
   const LINES_HEADING = 'Single-task lines';
   const LINES_FAILURE_LINE = 'The single-task lines could not be read.';
   /** The mark beside a skill row whose line is not headless. */
@@ -463,7 +463,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
       vscode.postMessage({ type: 'setHarnessEnabled', harness: key, enabled: !enabled }),
     );
     toggle.title = enabled
-      ? `Leave every variant with a line on ${name} out of the mission pages' recipe lists`
+      ? `Leave every variant with a line on ${name} out of the mission pages' action lists`
       : `List the variants with a line on ${name} on the mission pages again`;
     toggle.setAttribute('aria-pressed', String(!enabled));
     toggle.dataset.focus = `harness-${key}`;

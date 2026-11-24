@@ -67,8 +67,8 @@ above the mission rows.
   `define-mission-goal`. A variant whose lines carry different values names each once, separated
   by commas, a value no line carries is left out (a Codex line has no effort), and a variant
   whose lines carry none of the three is described by its name.
-- Its hover text names the recipe and the variant, with the variant's lines as written beneath
-  them.
+- Its hover text names the recipe, as `Action: <name>`, and the variant, with the variant's
+  lines as written beneath them.
 - A click on the row runs that variant: it asks for the goal and, for **Define mission**, then
   the scope, each in VS Code's own input box as a mission page's buttons ask for theirs, and starts the run, which
   belongs to no mission, at the project root. Escape in a box starts nothing.
@@ -597,6 +597,10 @@ deleted leaves its task unresolved in the preview until you change the rule or r
 
 ## Recipes
 
+Each recipe in a recipe file is shown as an action where it is fired, on a mission page and on
+the side-bar view's rows, and as an action recipe in the Settings window; the recipe files, their
+`## Recipes` heading, and the `gurita.ownRecipesFile` setting keep the name recipe.
+
 A recipe is a `###` heading, its name, and one or more named variants, each a literal block of
 lines. Each `####` sub-heading beneath the `###` heading names a variant, its lines those of the
 first fenced block beneath the sub-heading:
@@ -674,7 +678,7 @@ step to run next:
 
 A page whose diagram fills no block, because a document or the git read the choice needs did not
 read, lists every recipe. The page's other rules hold within that list as described below: the
-shipped recipes come first and your own under **Your recipes** below them, a variant holding a
+shipped recipes come first and your own under **Your actions** below them, a variant holding a
 placeholder the page cannot fill is left off, and one holding a placeholder the extension does not
 know is shown as a non-runnable entry when selected. The list follows the step, so it changes
 whenever a run or a change to a mission document moves the diagram's filled block. The buttons
@@ -682,10 +686,10 @@ that run a recipe by its fixed name (on the question card and its alternatives, 
 are offered whatever the step, as are the side-bar view's **New mission** and **Define mission**
 rows.
 
-Under the page's **Recipes** heading the list is drawn in two parts. First come the shipped
+Under the page's **Actions** heading the list is drawn in two parts. First come the shipped
 recipes, one button each in the shipped file's order, with no heading of their own; an own recipe
 carrying a shipped recipe's name joins that recipe's button rather than adding one. Then, under
-**Your recipes**, come your own recipes that carry no shipped recipe's name, in your file's order,
+**Your actions**, come your own recipes that carry no shipped recipe's name, in your file's order,
 the heading left out when there is none. Each button shows the recipe's name and, beneath it, the
 name of the variant it runs, the one selected in its dropdown, always and exactly as the variant
 is named, so a button says which variant a click runs: `Execute tasks` on its shipped
@@ -785,7 +789,7 @@ no longer ships. Nothing carries what you stored or selected under the old name 
 one, as nothing renames what you stored under a one-block recipe's old variant name: variants you
 stored under `Requirements iteration`, stored copies of its `default` or mixed-agent variant
 included, form a recipe of your own called `Requirements iteration`, listed last under
-**Your recipes** and, declaring no step, on every page; a hiding record or a picked default under
+**Your actions** and, declaring no step, on every page; a hiding record or a picked default under
 the old name matches no variant, so the renamed recipe shows its shipped variant and opens on it;
 and a remembered selection is kept only while that recipe of your own still lists the variant it
 names. Move what you want to keep onto the new name by hand in the Settings window.
@@ -848,7 +852,7 @@ of its variants when it writes several, joins the shipped recipe as one more var
 the shipped variants under its own variant name (a one-block own recipe's being `default`) and
 marked as your own. An own variant carrying a shipped variant's name is kept as a second
 entry beside it, so every shipped variant stays, and the shipped variant stays the one the recipe
-runs first. Every other own recipe is listed below the shipped recipes under **Your recipes**,
+runs first. Every other own recipe is listed below the shipped recipes under **Your actions**,
 in the order your file lists them.
 An own recipe may declare its step by a `Stage:` line, as a shipped one does (see the stage line
 above), and is then listed only on the pages that step fits; an undeclared one is listed on every

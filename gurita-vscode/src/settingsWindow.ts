@@ -686,7 +686,7 @@ async function askVariantName(prompt: string, taken: readonly string[], value?: 
       text.trim() === ''
         ? 'Type a name, or press Escape to change nothing.'
         : taken.includes(text.trim())
-          ? `The recipe already has a variant named ${text.trim()}.`
+          ? `The action recipe already has a variant named ${text.trim()}.`
           : undefined,
   });
   if (typed === undefined || typed.trim() === '' || taken.includes(typed.trim())) {
@@ -970,7 +970,7 @@ async function askLineName(prompt: string, taken: readonly string[], value?: str
       text.trim() === ''
         ? 'Type a name, or press Escape to change nothing.'
         : taken.includes(text.trim())
-          ? `A recipe or line is already named ${text.trim()}.`
+          ? `An action recipe or line is already named ${text.trim()}.`
           : undefined,
   });
   if (typed === undefined || typed.trim() === '' || taken.includes(typed.trim())) {

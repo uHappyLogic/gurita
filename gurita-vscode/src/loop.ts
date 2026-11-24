@@ -18,7 +18,7 @@ export const RULE_FILE_NAME = 'task_line_rules.txt';
 
 /** The cause a preview carries when no recipe is a single-task line. */
 export const NO_SINGLE_TASK_LINE_CAUSE =
-  'No recipe is a single-task line: a looped run needs at least one recipe of exactly one headless line holding <Task Title>.';
+  'No action is a single-task line: a looped run needs at least one action of exactly one headless line holding <Task Title>.';
 
 /** One named single-task line: its recipe's `###` heading and its one line, raw. */
 export interface SingleTaskLine {

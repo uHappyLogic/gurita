@@ -108,11 +108,11 @@ test('a duplicate or a rename to an empty name or one the recipe already uses is
   withStore((file) => {
     refused(() => duplicateVariant(file, base(), 'Variants', SHIPPED_AGY, ''), /needs a name/);
     refused(() => duplicateVariant(file, base(), 'Variants', SHIPPED_AGY, '  '), /needs a name/);
-    refused(() => duplicateVariant(file, base(), 'Variants', SHIPPED_AGY, 'Own variant'), /already has a variant named Own variant/);
+    refused(() => duplicateVariant(file, base(), 'Variants', SHIPPED_AGY, 'Own variant'), /^The action recipe Variants already has a variant named Own variant\.$/);
     refused(() => renameVariant(file, base(), 'Variants', SHIPPED_AGY, 'On Claude Code'), /already has a variant named On Claude Code/);
     refused(() => renameVariant(file, base(), 'Variants', SHIPPED_AGY, ''), /needs a name/);
     refused(() => duplicateVariant(file, base(), 'Variants', { name: 'Own variant', origin: 'shipped' }, 'New'), /lists no shipped variant Own variant/);
-    refused(() => duplicateVariant(file, base(), 'No such recipe', SHIPPED_AGY, 'New'), /No recipe is named No such recipe/);
+    refused(() => duplicateVariant(file, base(), 'No such recipe', SHIPPED_AGY, 'New'), /^No action recipe is named No such recipe\.$/);
     assert.ok(!fs.existsSync(file), 'a refused edit writes nothing');
     renameVariant(file, base(), 'Variants', SHIPPED_AGY, 'On Antigravity');
     assert.ok(!fs.existsSync(file), 'a rename to the name a variant has writes nothing');
@@ -326,7 +326,7 @@ test('a recipe every variant of which is deleted drops out, and a reset brings i
     const name = 'Single task (Claude Code)';
     deleteVariant(file, base(), name, { name: 'default', origin: 'shipped' });
     assert.ok(!readBack(file).some((recipe) => recipe.name === name));
-    refused(() => deleteVariant(file, base(), name, { name: 'default', origin: 'shipped' }), /No recipe is named/);
+    refused(() => deleteVariant(file, base(), name, { name: 'default', origin: 'shipped' }), /No action recipe is named/);
     resetVariant(file, name, { name: 'default', origin: 'shipped' });
     assert.deepStrictEqual(variants(file, name), [['default', 'shipped']]);
   });

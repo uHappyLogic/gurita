@@ -34,9 +34,9 @@
 // holding only the recipes that fit the step its diagram fills, those declaring that step, beside
 // them those declaring the additional review round when derive tasks is filled, or when first
 // review round is while any question of the mission is open, and follow up tasks when finish is, and every recipe declaring no step, whichever block is filled, or every recipe
-// when no block is filled; first the shipped recipes in
+// when no block is filled, under the heading "Actions"; first the shipped recipes in
 // it, one button each in the order posted, the shipped file's, under no heading of their own, and
-// below them the own recipes that carry no shipped recipe's name under "Your recipes", in the own
+// below them the own recipes that carry no shipped recipe's name under "Your actions", in the own
 // file's order, each with a dropdown beside it drawn as its arrow alone, its opened list offering
 // the recipe's variants by their bare names, and standing on the variant selected, as the
 // extension posts it: the one remembered for the recipe on this mission, else the recipe's
@@ -240,7 +240,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
 
   const FAILURE_LINE = 'The live missions could not be read.';
   const NOT_LIVE_LINE = 'This mission is no longer live.';
-  const RECIPE_FAILURE_LINE = 'The recipes could not be read.';
+  const RECIPE_FAILURE_LINE = 'The actions could not be read.';
   const PREVIEW_FAILURE_LINE = 'The preview could not be run.';
   /** The buttons on a question's card, each with its label and the hover text it shows while its recipe cannot be read. */
   const QUESTION_BUTTONS: [FixedButton, string, string][] = [
@@ -264,7 +264,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
     ['tasks', 'Remaining tasks'],
   ];
   /** The heading of the page's group of own recipes, drawn below the shipped recipes, which have none. */
-  const OWN_GROUP_HEADING = 'Your recipes';
+  const OWN_GROUP_HEADING = 'Your actions';
 
   const vscode = acquireVsCodeApi();
   const root = document.getElementById('root') as HTMLElement;
@@ -747,7 +747,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
   /** The recipe buttons of the mission's page, drawn from the recipe list posted with the mission. */
   function drawRecipes(mission: Mission, busy: boolean): HTMLElement {
     const view = element('section', undefined, 'recipes');
-    view.append(element('h3', 'Recipes'));
+    view.append(element('h3', 'Actions'));
     const recipes = mission.recipes;
     if (recipes.state === 'failed') {
       const box = element('div', undefined, 'notice');

@@ -1007,7 +1007,7 @@ export async function recipesChanged(context: vscode.ExtensionContext): Promise<
 function fixedButton(read: RecipeRead, key: FixedButton, remembered: string | undefined): { entry?: FixedButtonEntry; post: ButtonPost } {
   const name = BUTTON_RECIPES[key];
   if (read.state === 'failed') {
-    return { post: { state: 'refused', cause: `The recipes could not be read: ${read.cause}` } };
+    return { post: { state: 'refused', cause: `The actions could not be read: ${read.cause}` } };
   }
   const found = buttonRecipe(read.recipes, name, BUTTON_PLACEHOLDERS[key], remembered, read.disabled);
   if (found.state === 'found') {
@@ -1308,7 +1308,7 @@ async function previewLoop(
     disabled = readDisabled();
   } catch (error) {
     previews.delete(mission);
-    const cause = `The recipes could not be read: ${error instanceof Error ? error.message : String(error)}`;
+    const cause = `The actions could not be read: ${error instanceof Error ? error.message : String(error)}`;
     await post(target, { type: 'preview', mission, recipe, lines: listed.lines, names: [], result: { state: 'failed', cause } });
     return;
   }
@@ -1317,7 +1317,7 @@ async function previewLoop(
   );
   if (looped === undefined) {
     previews.delete(mission);
-    const cause = `No looped variant named ${selectedChoice(listed).name} of the recipe ${recipe} could be read.`;
+    const cause = `No looped variant named ${selectedChoice(listed).name} of the action ${recipe} could be read.`;
     await post(target, { type: 'preview', mission, recipe, lines: listed.lines, names: [], result: { state: 'failed', cause } });
     return;
   }
@@ -1586,7 +1586,7 @@ export async function startingRoot(): Promise<string | undefined> {
  */
 function startingOffer(read: RecipeRead, button: MissionButton, remembered: ProjectSelections): StartingOffer {
   if (read.state === 'failed') {
-    return { state: 'refused', cause: `The recipes could not be read: ${read.cause}` };
+    return { state: 'refused', cause: `The actions could not be read: ${read.cause}` };
   }
   const name = BUTTON_RECIPES[button];
   const found = buttonRecipe(read.recipes, name, BUTTON_PLACEHOLDERS[button], remembered[name], read.disabled);

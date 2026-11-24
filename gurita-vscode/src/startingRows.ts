@@ -4,7 +4,7 @@
 // control's name, and its description shows the harness, model, and effort of the variant
 // remembered for its recipe once per project, read from that variant's lines one line at a time
 // (`readLine`), each value named once in the order the lines first carry it. Its tooltip names the
-// recipe and the variant, with the variant's lines as written beneath them. A row whose every
+// recipe, as `Action: <name>`, and the variant, with the variant's lines as written beneath them. A row whose every
 // variant is left out for a disabled harness, or whose recipe cannot be read or run, says so in its
 // description, with the cause in its tooltip. This module imports nothing from `vscode`.
 
@@ -100,7 +100,7 @@ export function startingRow(button: StartingButton, label: string, offer: Starti
       button,
       label,
       description: variantValues(variant.lines) ?? variant.name,
-      tooltip: [label, `Recipe: ${offer.recipe}`, `Variant: ${variant.name}`, ...variant.lines].join('\n'),
+      tooltip: [label, `Action: ${offer.recipe}`, `Variant: ${variant.name}`, ...variant.lines].join('\n'),
     };
   }
   return {
