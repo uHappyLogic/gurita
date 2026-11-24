@@ -2,13 +2,19 @@
 
 ## Verify Publisher, Namespace, and Registry Tokens
 
-Confirm the account steps the maintainer takes by hand before the task run (creating the Marketplace publisher `uhappylogic` on the web, creating an Eclipse account and signing the Open VSX publisher agreement, and issuing both tokens), and create the Open VSX namespace `uhappylogic` through `ovsx create-namespace` when it does not exist yet; the task changes no tracked file, `ovsx` being run through `npx` under the nvm Node 22 wrapper, so its commit records the bar and the task list's removal only. It is verified by exactly three checks: the publisher and the namespace exist, observed through a registry query; each token is accepted by its registry for `uhappylogic`, through `vsce verify-pat` and `ovsx verify-pat`; and each token stands where the release skill will read it, as the environment variables `VSCE_PAT` and `OVSX_PAT` exported from the maintainer's shell profile. When a check fails the task ends as failed, naming what the maintainer must still do, and a re-run once those steps are taken completes it.
+Confirm the account steps the maintainer takes by hand before the task run (creating an Eclipse account and signing the Open VSX publisher agreement, and issuing both tokens; the Marketplace publisher `BusyMinds` already exists and is not created), and create the Open VSX namespace `BusyMinds` through `ovsx create-namespace` when it does not exist yet; the task changes no tracked file, `ovsx` being run through `npx` under the nvm Node 22 wrapper, so its commit records the bar and the task list's removal only. It is verified by exactly three checks: the publisher and the namespace exist, observed through a registry query; each token is accepted by its registry for `BusyMinds`, through `vsce verify-pat` and `ovsx verify-pat`; and each token stands where the release skill will read it, as the environment variables `VSCE_PAT` and `OVSX_PAT` exported from the maintainer's shell profile. When a check fails the task ends as failed, naming what the maintainer must still do, and a re-run once those steps are taken completes it.
 
 ---
 
 ## File the Open VSX Namespace Claim
 
-File the ownership claim for the `uhappylogic` namespace on Open VSX, directly after the namespace's creation and in the way Open VSX's own documentation gives for claiming a namespace, the runner filing it through `gh` under the maintainer's account unless the claim's issue already exists; the mission claims ownership only as far as filing. The task changes no tracked file and is done once the claim's issue exists, verified by reading the issue back, and whether the claim is granted is neither waited for nor recorded.
+File the ownership claim for the `BusyMinds` namespace on Open VSX, directly after the namespace's creation and in the way Open VSX's own documentation gives for claiming a namespace, the runner filing it through `gh` under the maintainer's account unless the claim's issue already exists; the mission claims ownership only as far as filing. The task changes no tracked file and is done once the claim's issue exists, verified by reading the issue back, and whether the claim is granted is neither waited for nor recorded.
+
+---
+
+## Manifest Publisher Set to BusyMinds
+
+Change the manifest's `publisher` from `uhappylogic` to `BusyMinds`, the Marketplace publisher the maintainer already owns, and make every place under `gurita-vscode/` that names the extension's id, the README's install and uninstall lines among them, name `BusyMinds.gurita-vscode`, leaving the `uHappyLogic` GitHub account and the distribution repository names as they are. It is verified by `npm test` and `npm run package` passing, the packaged VSIX's manifest naming the publisher `BusyMinds`, and no `uhappylogic.gurita-vscode` remaining under `gurita-vscode/` outside the mission directory.
 
 ---
 
@@ -86,6 +92,6 @@ Make the first publication, which ends the mission's goal: the maintainer runs `
 
 ## Root Documents Mention the Published Extension
 
-After the first publication, give the root `README.md` a short subsection with links to both listings and to `gurita-vscode/README.md`, and give `CONTRIBUTING.md`'s `## Development` a pointer saying the extension under `gurita-vscode/` has a build and test loop of its own (Node 22 through nvm, independent of the host build and `VERSION`), documented in `gurita-vscode/BUILDING.md` rather than in its README, and is released through `/release-vscode-extension` rather than `/release-plugin`; `docs/` stays untouched. It is verified by reading both documents, the two listing links naming `uhappylogic.gurita-vscode` on the Visual Studio Marketplace and on Open VSX.
+After the first publication, give the root `README.md` a short subsection with links to both listings and to `gurita-vscode/README.md`, and give `CONTRIBUTING.md`'s `## Development` a pointer saying the extension under `gurita-vscode/` has a build and test loop of its own (Node 22 through nvm, independent of the host build and `VERSION`), documented in `gurita-vscode/BUILDING.md` rather than in its README, and is released through `/release-vscode-extension` rather than `/release-plugin`; `docs/` stays untouched. It is verified by reading both documents, the two listing links naming `BusyMinds.gurita-vscode` on the Visual Studio Marketplace and on Open VSX.
 
 ---
