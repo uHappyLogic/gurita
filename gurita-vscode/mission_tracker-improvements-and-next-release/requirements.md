@@ -121,5 +121,7 @@ Five missions under `gurita-vscode/` are finished, all between 2026-11-20 and 20
 
 - **Bootstrap context file.** The view reads both `CLAUDE.md` and `AGENTS.md` at the project root and offers the bootstrap only while neither holds a `## Mission Workflow` heading. Once either does, the offer is gone, whatever harnesses are enabled.
 
+- **Finished missions bound.** The finished-missions row expands to every finished mission the record holds: the extension calls the bundled tool's `missions .` with no `--last` and keeps every `finished` line, newest first as the tool sorts them. No count, setting, or further row limits the list.
+
 ## Out of Scope
 
