@@ -300,6 +300,36 @@
   </open-question>
   <open-question id="Bootstrap context file">
     <question>The Missions side-bar view of Gurita for VS Code is to offer the workflow bootstrap, `init-mission-base-workflow`, while the project&apos;s context file holds no `## Mission Workflow` section. The context file is `CLAUDE.md` under Claude Code and `AGENTS.md` under Antigravity and Codex. Which file does the view check for the section?</question>
+    <alternative id="CLAUDE.md only">
+      The view reads `CLAUDE.md` at the project root alone and offers the bootstrap while that file is absent or holds no `## Mission Workflow` heading; `AGENTS.md` is never read, whatever harnesses are enabled or whatever harness the bootstrap would run on.
+      <advantage>The simplest check, one fixed path, matching the harness nearly every shipped recipe line runs on (only a few `agy` lines and no `codex` line exist), so the common Claude Code project is served with no harness logic in the view.</advantage>
+      <drawback>A project worked only through Antigravity or Codex, whose bootstrap writes `AGENTS.md`, keeps seeing the offer after the bootstrap ran, and a project whose `CLAUDE.md` holds the section while `AGENTS.md` (not a symlink) does not is told it is bootstrapped although two of the three harnesses read no guidance.</drawback>
+    </alternative>
+    <alternative id="AGENTS.md only">
+      The view reads `AGENTS.md` at the project root alone and offers the bootstrap while that file is absent or holds no `## Mission Workflow` heading; `CLAUDE.md` is never read.
+      <advantage>One fixed path, and the file two of the three harnesses (Antigravity and Codex) read, the more harness-neutral name.</advantage>
+      <drawback>Claude Code, the harness the shipped recipes mostly run on, writes `CLAUDE.md`, so a Claude-only project that ran the bootstrap keeps seeing the offer, and running it again on Claude Code only prints the skill&apos;s already-bootstrapped line; it fits only projects that keep `AGENTS.md` as a symlink to `CLAUDE.md`, as this repository does.</drawback>
+    </alternative>
+    <alternative id="Either file suffices">
+      The view reads both `CLAUDE.md` and `AGENTS.md` at the project root and offers the bootstrap only while neither holds a `## Mission Workflow` heading; once either does, the offer is gone, whatever harnesses are enabled.
+      <advantage>The offer disappears after any one bootstrap run on any harness, so it never lingers or asks for a second run, and a project that already uses the workflow under any harness is never nagged.</advantage>
+      <drawback>A project bootstrapped under one harness and then worked under another that reads the other file (not a symlink) gets no offer although that harness&apos;s runners read no workflow guidance, the gap the offer exists to close.</drawback>
+    </alternative>
+    <alternative id="Both files required">
+      The view reads both `CLAUDE.md` and `AGENTS.md` at the project root and offers the bootstrap while either is absent or holds no `## Mission Workflow` heading, regardless of which harnesses are enabled; a symlink is read through, so a linked pair counts as one file.
+      <advantage>No harness can run in a project whose context file lacks the guidance without the view saying so, with a fixed rule that needs no harness state.</advantage>
+      <drawback>A project that uses only Claude Code (or only Antigravity and Codex) sees the offer forever unless it creates the other file it never uses, and one bootstrap run writes only its own harness&apos;s file, so clearing the offer takes runs on two harnesses or a hand-made file or symlink.</drawback>
+    </alternative>
+    <alternative id="Enabled harnesses&apos; files">
+      The view reads the context file of each harness enabled in the Settings window (`CLAUDE.md` while Claude Code is enabled, `AGENTS.md` while Antigravity or Codex is enabled) and offers the bootstrap while any of those files is absent or holds no `## Mission Workflow` heading; a disabled harness&apos;s file is not read, and a symlink is read through.
+      <advantage>The check follows the harnesses the person has said they use, so a project worked under one harness family stops seeing the offer after its bootstrap once the others are disabled, while a harness still in use never runs without the guidance unnoticed.</advantage>
+      <drawback>Every harness starts enabled and stays so until disabled, so by default this behaves as requiring both files, and the person must find the Settings window&apos;s enable switch to clear an offer for a harness they never use; the view must also re-read the harness state and re-check when it changes.</drawback>
+    </alternative>
+    <alternative id="Bootstrap run&apos;s harness file">
+      The view reads the one context file of the harness the bootstrap&apos;s run would use, `CLAUDE.md` when the selected bootstrap line runs `claude` and `AGENTS.md` when it runs `agy` or `codex`, and offers the bootstrap while that file is absent or holds no `## Mission Workflow` heading.
+      <advantage>The check reads exactly the file the offered run would write, so one run always clears the offer and the offer never stands for a file the run cannot fix.</advantage>
+      <drawback>It ties the check to a recipe or variant that runs the bootstrap, which no shipped recipe does today, so the offer&apos;s run mechanism must name one harness per selection, and the offer appears and disappears as the person switches variant; a project bootstrapped under another harness is offered a run it may not want.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Finished missions bound">
     <question>The Missions side-bar view of Gurita for VS Code is to hold one row, collapsed by default, that expands to the project&apos;s finished missions as the bundled missions tool lists them. Does the row list every finished mission in the record or only the most recent ones, and if only those, how many?</question>
