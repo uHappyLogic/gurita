@@ -18,18 +18,27 @@ skill's fixed console line, so the runner's check reads the line a real run woul
   commits them together.
 
 Every document write goes through the checkout's own `core/tools/open_questions.py`, found
-beside this file's directory, and every commit names its paths. Any other skill, or a command
-line naming none, prints one `Error:` line and exits 1.
+beside this file's directory, and every commit names its paths.
+
+It also answers the two listings the extension's harness check runs, so the side-bar view and the
+Settings window show Claude Code with its Gurita copy installed and up to date:
+`plugin list --json` prints one enabled user-scope `gurita@gurita` entry at the checkout's
+`VERSION`, the version the package records, and `plugin marketplace list --json` one `gurita`
+marketplace read from the distribution repository. Any other skill, or a command line naming none,
+prints one `Error:` line and exits 1.
 """
 
+import json
 import os
 import re
 import subprocess
 import sys
 import time
 
-TOOLS = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))), "core", "tools")
+CHECKOUT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+TOOLS = os.path.join(CHECKOUT, "core", "tools")
 OPEN_QUESTIONS = os.path.join(TOOLS, "open_questions.py")
+VERSION_FILE = os.path.join(CHECKOUT, "VERSION")
 
 PROMPT = re.compile(r"^/gurita:([a-z-]+)\s+--mission\s+(\S+)")
 
@@ -166,7 +175,22 @@ SKILLS = {
 }
 
 
+def plugin_listing():
+    with open(VERSION_FILE, encoding="utf-8") as handle:
+        version = handle.read().strip()
+    return [{"id": "gurita@gurita", "scope": "user", "enabled": True, "version": version}]
+
+
+MARKETPLACE_LISTING = [{"name": "gurita", "source": "github", "repo": "uHappyLogic/gurita-claude"}]
+
+
 def main(argv):
+    if argv == ["plugin", "list", "--json"]:
+        print(json.dumps(plugin_listing()))
+        return 0
+    if argv == ["plugin", "marketplace", "list", "--json"]:
+        print(json.dumps(MARKETPLACE_LISTING))
+        return 0
     prompts = [arg for arg in argv if arg.startswith("/gurita:")]
     found = PROMPT.match(prompts[0]) if prompts else None
     if found is None or found.group(1) not in SKILLS:

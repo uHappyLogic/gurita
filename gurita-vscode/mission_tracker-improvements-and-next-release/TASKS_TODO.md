@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Screenshots and Demo From One Capture
-
-Extend `gurita-vscode/scripts/capture_demo.js` so the one run that records `media/demo.gif` also writes three screenshots as PNG files under `gurita-vscode/media/`: full-resolution frames of the side-bar view once the mission row shows and of the mission page once it has filled `derive tasks` with the questions' alternatives and picks drawn, and, in one more step after the run, of the Settings window before the session closes, against the same fixture project seeded from `tests/fixtures/host_project/` and the same `scripts/demo_claude.py` stand-in. Bring the script's flow up to the finished UI, run it, and commit the re-captured GIF with the three stills, BUILDING.md's recording entry covering both. Verified by the one command ending with all four files written and each showing the finished UI.
-
----
-
 ## Listing README Shortened to a Showcase
 
 Move the reference prose of `gurita-vscode/README.md` into one new Markdown file beside it, `gurita-vscode/USAGE.md`, keeping the current section order (side-bar view, mission windows, Settings window, recipes, looped task run, runner), kept out of the VSIX by `.vscodeignore` as `BUILDING.md` is. The shortened README leads with the three screenshots of the side-bar view, a mission page, and the Settings window, saying what each is for, and links to the reference document by its absolute GitHub URL, the form its `BUILDING.md` link already takes. Verified by the packaged VSIX carrying the short README and no `USAGE.md`, the README's images and links resolving, and no reference prose lost in the move.
