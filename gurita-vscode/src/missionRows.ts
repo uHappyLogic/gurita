@@ -81,7 +81,7 @@ export function stepCause(documents: MissionDocuments): string {
 export function missionRow(mission: LiveMission, documents: MissionDocuments, workflow: MissionWorkflow, running: boolean): MissionRow {
   const step = workflow.step === undefined ? undefined : STEP_NAMES[workflow.step];
   const questions = documents.questions.state === 'read' ? documents.questions.questions.length : undefined;
-  const tasks = documents.tasks.state === 'read' ? documents.tasks.headings.length : undefined;
+  const tasks = documents.tasks.state === 'read' ? documents.tasks.remaining.length : undefined;
 
   const description = [
     step ?? UNREAD,

@@ -4,12 +4,17 @@ import { MissionDocuments, documentFacts } from '../documents';
 import { LiveMission } from '../live';
 import { GIT_READ_FAILED, UNREAD, missionRow } from '../missionRows';
 import { Question } from '../questions';
+import { RemainingTask } from '../tasks';
 import { MissionWorkflow } from '../workflow';
 
 const MISSION: LiveMission = { path: 'lib/mission_alpha/', state: 'started', title: 'Alpha mission' };
 
 function question(id: string): Question {
   return { id, question: `${id}?`, principles: [], dependsOn: [], alternatives: [] };
+}
+
+function task(title: string): RemainingTask {
+  return { title, brief: `${title}'s brief.` };
 }
 
 /** A mission's documents out of its question part and its task part, with the facts that follow. */
@@ -27,7 +32,7 @@ const TASKS_UNPARSABLE: MissionDocuments['tasks'] = {
 };
 
 test('a row reads its label from the title and its description from the step and both counts, in the compact form', () => {
-  const read = documents({ state: 'read', questions: [question('A'), question('B'), question('C')] }, { state: 'read', headings: ['One', 'Two'] });
+  const read = documents({ state: 'read', questions: [question('A'), question('B'), question('C')] }, { state: 'read', remaining: [task('One'), task('Two')] });
   const workflow: MissionWorkflow = { step: 'derive', defaultPane: 'questions' };
   const row = missionRow(MISSION, read, workflow, false);
   assert.strictEqual(row.path, MISSION.path);
@@ -41,17 +46,17 @@ test('a row reads its label from the title and its description from the step and
 });
 
 test('a count of one takes the singular, a count of none stays a zero, and a going run is spelled out in the tooltip', () => {
-  const read = documents({ state: 'read', questions: [question('A')] }, { state: 'read', headings: [] });
+  const read = documents({ state: 'read', questions: [question('A')] }, { state: 'read', remaining: [] });
   const row = missionRow(MISSION, read, { step: 'first-review', defaultPane: 'questions' }, true);
   assert.strictEqual(row.description, 'First review round · 1 question · 0 tasks');
   assert.strictEqual(row.running, true);
   assert.ok(row.tooltip.endsWith('\nRun: going'));
-  const one = missionRow(MISSION, documents({ state: 'read', questions: [] }, { state: 'read', headings: ['Only'] }), { step: 'execute', defaultPane: 'tasks' }, false);
+  const one = missionRow(MISSION, documents({ state: 'read', questions: [] }, { state: 'read', remaining: [task('Only')] }), { step: 'execute', defaultPane: 'tasks' }, false);
   assert.strictEqual(one.description, 'Execute tasks · 0 questions · 1 task');
 });
 
 test('a missing question document puts the placeholder in the step and question slots alone, its hover text naming the file', () => {
-  const read = documents(QUESTIONS_MISSING, { state: 'read', headings: ['One', 'Two'] });
+  const read = documents(QUESTIONS_MISSING, { state: 'read', remaining: [task('One'), task('Two')] });
   const row = missionRow(MISSION, read, { defaultPane: 'questions' }, false);
   assert.strictEqual(row.description, `${UNREAD} · ${UNREAD} questions · 2 tasks`);
   assert.strictEqual(
@@ -84,7 +89,7 @@ test('an unparsable task list beside an open question leaves the step drawn and 
 });
 
 test('a step left unchosen with every document read is a failed git read, named as such, the counts drawn as usual', () => {
-  const read = documents({ state: 'read', questions: [question('A')] }, { state: 'read', headings: [] });
+  const read = documents({ state: 'read', questions: [question('A')] }, { state: 'read', remaining: [] });
   const row = missionRow(MISSION, read, { defaultPane: 'questions' }, false);
   assert.strictEqual(row.description, `${UNREAD} · 1 question · 0 tasks`);
   assert.ok(row.tooltip.includes(`\nNext step: not read (${GIT_READ_FAILED})\n`), row.tooltip);

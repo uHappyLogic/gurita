@@ -699,7 +699,7 @@ test("each open mission window is posted its own mission's page from the session
     const reopened = openWindow(ZETA_TWO);
     assert.notStrictEqual(reopened, two, 'a closed window is opened afresh');
     assert.deepStrictEqual(
-      ((reopened.posts.find((message) => message.type === 'page')?.mission as { tasks: { headings: string[] } }).tasks.headings),
+      ((reopened.posts.find((message) => message.type === 'page')?.mission as { tasks: { remaining: { title: string }[] } }).tasks.remaining.map((each) => each.title)),
       [],
       "its ready message is answered from the session's read",
     );
@@ -2582,7 +2582,8 @@ test("the live read and its one watcher outlast every mission window, every debo
     packaged.set('bundled/shipped_recipes.md', path.join(files, 'shipped_recipes.md'));
     workspace.folders = [{ uri: { fsPath: root } }];
     workspace.settings = { ownRecipesFile: path.join(files, 'recipes.md') };
-    type Page = { path: string; tasks: { headings?: string[] }; questions: { questions?: { id: string }[] } };
+    type Page = { path: string; tasks: { remaining?: { title: string; brief: string }[] }; questions: { questions?: { id: string }[] } };
+    const titles = (page: Page): string[] | undefined => page.tasks.remaining?.map((each) => each.title);
     const omegaAfter = async (message: unknown): Promise<Page> => {
       const page = (await pageAfter(message, OMEGA)) as unknown as Page;
       assert.strictEqual(page.path, OMEGA);
@@ -2596,14 +2597,14 @@ test("the live read and its one watcher outlast every mission window, every debo
     const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
     const livePosted = (from: number) => posted.slice(from).filter((message) => ['page', 'liveFailure', 'notLive'].includes((message as { type?: string }).type ?? ''));
 
-    assert.deepStrictEqual((await omegaAfter({ type: 'refresh' })).tasks.headings, []);
+    assert.deepStrictEqual(titles(await omegaAfter({ type: 'refresh' })), []);
     const watcher = documentWatcher();
     const count = watchers.filter((each) => each.pattern === WATCHED_PATTERN).length;
     assert.strictEqual(watcher.disposed, false);
 
     // A change no event reports is not shown: a ready message is answered from the current read.
     fs.writeFileSync(path.join(root, OMEGA, 'TASKS_TODO.md'), '# TASKS TODO\n\n## First task\n\nA brief.\n\n---\n');
-    assert.deepStrictEqual((await omegaAfter({ type: 'ready', mission: OMEGA })).tasks.headings, [], 'a ready message reads nothing afresh');
+    assert.deepStrictEqual(titles(await omegaAfter({ type: 'ready', mission: OMEGA })), [], 'a ready message reads nothing afresh');
 
     // Every mission window is closed: the watcher stays, and its event is re-read with no window to post to.
     for (const mission of [...windowOf.keys()]) {
@@ -2620,7 +2621,7 @@ test("the live read and its one watcher outlast every mission window, every debo
     fire('change', 'TASKS_TODO.md');
     await wait(1500);
     assert.deepStrictEqual(livePosted(from), [], 'nothing is posted while no window is open');
-    assert.deepStrictEqual((await omegaAfter({ type: 'ready', mission: OMEGA })).tasks.headings, ['First task'], "the reopened window's ready message is answered with the re-read the event caused");
+    assert.deepStrictEqual(titles(await omegaAfter({ type: 'ready', mission: OMEGA })), ['First task'], "the reopened window's ready message is answered with the re-read the event caused");
     assert.strictEqual(watchers.filter((each) => each.pattern === WATCHED_PATTERN).length, count, 'reopening a window creates no second watcher');
 
     // The window is hidden: an event is re-read all the same, and shown by the ready message the page posts when shown.
@@ -2637,7 +2638,7 @@ test("the live read and its one watcher outlast every mission window, every debo
     shownPane.visible = true;
     const shown = await omegaAfter({ type: 'ready', mission: OMEGA });
     assert.deepStrictEqual(shown.questions.questions?.map((each) => each.id), ['Pane Layout'], 'an event during a hidden pane shows in its next ready answer');
-    assert.deepStrictEqual(shown.tasks.headings, ['First task']);
+    assert.deepStrictEqual(shown.tasks.remaining, [{ title: 'First task', brief: 'A brief.' }]);
     assert.strictEqual(watcher.disposed, false);
   } finally {
     process.env.HOME = home;

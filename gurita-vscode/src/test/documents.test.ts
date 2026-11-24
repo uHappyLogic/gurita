@@ -31,18 +31,22 @@ function ownText(...parts: string[]): string {
   return fs.readFileSync(path.join(OWN_FIXTURES, ...parts), 'utf8');
 }
 
-const TASKS = '# TASKS TODO\n\n## First Task\n\nA brief.\n\n---\n\n## Second Task\n\nA brief.\n\n---\n';
+const TASKS = '# TASKS TODO\n\n## First Task\n\nA brief.\n\n---\n\n## Second Task\n\nAnother `brief`.\n\n- With a list\n\n---\n';
+const REMAINING = [
+  { title: 'First Task', brief: 'A brief.' },
+  { title: 'Second Task', brief: 'Another `brief`.\n\n- With a list' },
+];
 
 test('the module imports nothing from vscode', () => {
   const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'documents.ts'), 'utf8');
   assert.doesNotMatch(source, /from\s+['"]vscode['"]|require\(\s*['"]vscode['"]\s*\)/);
 });
 
-test('both documents read: every block whole, the headings, and every document fact', () => {
+test('both documents read: every block whole, each task with its brief, and every document fact', () => {
   const read = readMissionDocuments(project(repositoryText('annotated', 'open_questions.xml'), TASKS), MISSION);
   assert.strictEqual(read.questions.state, 'read');
   assert.ok(read.questions.state === 'read' && read.questions.questions.length > 0);
-  assert.deepStrictEqual(read.tasks, { state: 'read', headings: ['First Task', 'Second Task'] });
+  assert.deepStrictEqual(read.tasks, { state: 'read', remaining: REMAINING });
   assert.strictEqual(read.facts.questionsEmpty, false);
   assert.strictEqual(read.facts.tasksRemain, true);
   assert.strictEqual(typeof read.facts.lacksAlternatives, 'boolean');
@@ -75,7 +79,7 @@ test('a missing question document yields its notice and leaves the task part and
     state: 'failed',
     notice: { file: 'lib/mission_alpha/open_questions.xml', reason: 'missing' },
   });
-  assert.deepStrictEqual(read.tasks, { state: 'read', headings: ['First Task', 'Second Task'] });
+  assert.deepStrictEqual(read.tasks, { state: 'read', remaining: REMAINING });
   assert.deepStrictEqual(read.facts, { tasksRemain: true });
 });
 
@@ -124,7 +128,7 @@ test('the introduction carries the title and goal of the requirements file, whic
   fs.writeFileSync(path.join(root, MISSION, 'requirements.md'), '# Alpha  mission\n\n## Goal\n\nShip `alpha`.\n\n- One\n\n## Decisions\n');
   const read = readMissionDocuments(root, MISSION);
   assert.deepStrictEqual(read.introduction, { state: 'read', title: 'Alpha mission', goal: 'Ship `alpha`.\n\n- One' });
-  assert.deepStrictEqual(read.tasks, { state: 'read', headings: ['First Task', 'Second Task'] });
+  assert.deepStrictEqual(read.tasks, { state: 'read', remaining: REMAINING });
   assert.deepStrictEqual(read.facts, { lacksAlternatives: false, lacksPick: false, questionsEmpty: true, tasksRemain: true });
 });
 
@@ -135,5 +139,5 @@ test('a missing requirements file yields its notice in the introduction and leav
     notice: { file: 'lib/mission_alpha/requirements.md', reason: 'missing' },
   });
   assert.deepStrictEqual(read.questions, { state: 'read', questions: [] });
-  assert.deepStrictEqual(read.tasks, { state: 'read', headings: ['First Task', 'Second Task'] });
+  assert.deepStrictEqual(read.tasks, { state: 'read', remaining: REMAINING });
 });

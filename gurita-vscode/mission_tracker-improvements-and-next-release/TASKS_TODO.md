@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Briefs Under the Remaining Task Headings
-
-Show each remaining task's brief beneath its heading in the page's task pane, read from the same `TASKS_TODO.md` as the headings and drawn by the text renderer. Verified by tests of the task read giving each heading with its brief and of the pane drawing them, with `gurita-vscode/README.md` describing the pane.
-
----
-
 ## Completed Tasks in the Tasks Pane
 
 List the mission's completed tasks, as the bundled missions tool's `tasks <path> --with-body` prints them, inside the page's second pane beneath the remaining task list, behind one show/hide toggle that is collapsed by default, each with its title and its verified bar drawn by the text renderer. The pane's header is renamed from "Remaining tasks" to "Tasks" and the remaining tasks head their own part of the pane, the page keeping its two pane headers and its default-pane rule and gaining no third pane. Verified by tests of the `tasks` read and of the pane's two parts and toggle, with `gurita-vscode/README.md` describing the pane.

@@ -32,8 +32,9 @@
 // pane is shown and at every step, and then two
 // panes behind one row of two headers directly beneath it, Open questions and Remaining tasks, of
 // equal width and together filling the window's whole width, with only the selected pane's content
-// beneath them: the question view in Open questions, and in Remaining tasks the remaining task
-// headings, all drawn from the parse the extension posts. A page opens on the pane the extension posts as the
+// beneath them: the question view in Open questions, and in Remaining tasks each remaining task's
+// heading with its brief beneath it, the brief drawn by the text renderer, all drawn from the parse
+// the extension posts. A page opens on the pane the extension posts as the
 // mission's default, Remaining tasks when git holds at least one review commit for it and no
 // question is open and Open questions otherwise, Open questions too when none is posted. A pane
 // header the person clicks stays selected through every redraw while the page stays shown; it
@@ -156,7 +157,12 @@ declare function acquireVsCodeApi(): VsCodeApi;
 
   type IntroductionPart = { state: 'read'; title?: string; goal: string } | { state: 'failed'; notice: Notice };
   type QuestionPart = { state: 'read'; questions: Question[] } | { state: 'failed'; notice: Notice };
-  type TaskPart = { state: 'read'; headings: string[] } | { state: 'failed'; notice: Notice };
+  interface RemainingTask {
+    title: string;
+    brief: string;
+  }
+
+  type TaskPart = { state: 'read'; remaining: RemainingTask[] } | { state: 'failed'; notice: Notice };
 
   type WorkflowStep = 'define' | 'first-review' | 'additional-review' | 'derive' | 'execute' | 'follow-up' | 'finish';
 
@@ -896,7 +902,10 @@ declare function acquireVsCodeApi(): VsCodeApi;
     return row;
   }
 
-  /** The Remaining tasks pane: the remaining task headings. */
+  /**
+   * The Remaining tasks pane: each remaining task in file order, its heading and beneath it its
+   * brief, drawn by the text renderer, a task with an empty brief its heading alone.
+   */
   function drawTasks(mission: Mission): HTMLElement {
     const view = element('section', undefined, 'pane tasks');
     view.setAttribute('role', 'tabpanel');
@@ -904,12 +913,20 @@ declare function acquireVsCodeApi(): VsCodeApi;
     const part = mission.tasks;
     if (part.state === 'failed') {
       view.append(drawNotice(part.notice));
-    } else if (part.headings.length === 0) {
+    } else if (part.remaining.length === 0) {
       view.append(element('p', 'No task remains.'));
     } else {
-      const list = element('ol');
-      for (const heading of part.headings) {
-        list.append(element('li', heading));
+      const list = element('ol', undefined, 'task-list');
+      for (const task of part.remaining) {
+        const item = element('li', undefined, 'task');
+        item.append(element('h4', task.title, 'task-title'));
+        const blocks = renderText(task.brief);
+        if (blocks.length > 0) {
+          const brief = element('div', undefined, 'task-brief');
+          brief.append(...blocks);
+          item.append(brief);
+        }
+        list.append(item);
       }
       view.append(list);
     }

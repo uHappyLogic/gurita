@@ -37,7 +37,7 @@ function mission(missionPath: string, title: string, workflow: Record<string, un
         alternatives: [{ id: 'keep', text: 'Keep it.', advantages: [], drawbacks: [] }],
       })),
     },
-    tasks: { state: 'read', headings: ['First Task'] },
+    tasks: { state: 'read', remaining: [{ title: 'First Task', brief: 'Build the `first` part.' }] },
   };
 }
 
@@ -1459,6 +1459,49 @@ test('a mission page draws one row of two pane headers with only the selected pa
   assert.ok(!texts(page).includes('1 / 2'));
   assert.ok(!texts(page).includes('Discuss'));
   assert.strictEqual(page.root.all().filter((each) => each.tagName === 'h3' && ['Open questions', 'Remaining tasks'].includes(each.textContent)).length, 0);
+});
+
+test('the Remaining tasks pane draws each heading with its brief beneath it, the brief drawn by the text renderer', () => {
+  const page = loadPage();
+  const tasks = {
+    state: 'read',
+    remaining: [
+      { title: 'First Task', brief: 'Build the `first` part.\nOn one paragraph.\n\n- One point\n- Another' },
+      { title: 'Bare Task', brief: '' },
+      { title: 'Third Task', brief: 'Plain *emphasis* and [a link](x) stay text.' },
+    ],
+  };
+  page.send(pageOf({ ...(mission(ALPHA, 'Alpha') as Record<string, unknown>), tasks }));
+  named(page, 'Remaining tasks').click();
+  assert.strictEqual(shownPane(page), 'tasks');
+  const pane = page.root.all().find((each) => each.has('pane') && each.has('tasks')) as FakeElement;
+  const list = pane.children[0] as FakeElement;
+  assert.strictEqual(list.tagName, 'ol');
+  const items = list.children as FakeElement[];
+  assert.deepStrictEqual(
+    items.map((item) => (item.children as FakeElement[]).map((each) => [each.tagName, each.className])),
+    [
+      [['h4', 'task-title'], ['div', 'task-brief']],
+      [['h4', 'task-title']],
+      [['h4', 'task-title'], ['div', 'task-brief']],
+    ],
+    'each task is its heading, with its brief beneath it when it has one',
+  );
+  assert.deepStrictEqual(items.map((item) => item.children[0].textContent), ['First Task', 'Bare Task', 'Third Task']);
+  const [paragraph, bullets] = (items[0].children[1] as FakeElement).children as FakeElement[];
+  assert.strictEqual(paragraph.tagName, 'p');
+  assert.deepStrictEqual(
+    paragraph.children.map((child) => (child instanceof FakeElement ? [child.tagName, child.textContent] : ['text', child.textContent])),
+    [
+      ['text', 'Build the '],
+      ['code', 'first'],
+      ['text', ' part. On one paragraph.'],
+    ],
+  );
+  assert.strictEqual(bullets.tagName, 'ul');
+  assert.deepStrictEqual(bullets.children.map(renderedText), ['One point', 'Another']);
+  const third = (items[2].children[1] as FakeElement).children as FakeElement[];
+  assert.deepStrictEqual(third.map((each) => [each.tagName, renderedText(each)]), [['p', 'Plain *emphasis* and [a link](x) stay text.']]);
 });
 
 /** The buttons of the page's row of mission-wide actions, in order. */

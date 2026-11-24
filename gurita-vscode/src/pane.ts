@@ -1806,9 +1806,10 @@ function nonce(): string {
  * indented under the recipe's or line's heading, a vertical line down the card's left edge, and a
  * gap between one card and the next. A mission page's introduction sets its title as a heading
  * with its goal control beside it on one line and the goal's paragraphs and lists beneath them,
- * and the workflow diagram's heading stands above its blocks. On a question card and in the goal
- * a stretch of text the text renderer draws as code is set in the editor's font on the theme's
- * code-block background.
+ * and the workflow diagram's heading stands above its blocks. The Remaining tasks pane sets each
+ * task's heading in the body's size with its brief's paragraphs and lists beneath it. On a question
+ * card, in the goal, and in a task's brief a stretch of text the text renderer draws as code is set
+ * in the editor's font on the theme's code-block background.
  */
 export function pageShell(webview: vscode.Webview, scripts: vscode.Uri[], title: string, mission?: string): string {
   const token = nonce();
@@ -1902,7 +1903,7 @@ export function pageShell(webview: vscode.Webview, scripts: vscode.Uri[], title:
   .card-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.3em; }
   .card .slot { margin: 0; padding: 0.5em 0 0; border-top: 1px solid var(--vscode-panel-border); margin-top: 0.5em; }
   .card .slot h5 { margin-bottom: 0.2em; }
-  .card code, .introduction code { font-family: var(--vscode-editor-font-family); font-size: 0.95em; background: var(--vscode-textCodeBlock-background); padding: 0 0.2em; border-radius: 3px; }
+  .card code, .introduction code, .tasks code { font-family: var(--vscode-editor-font-family); font-size: 0.95em; background: var(--vscode-textCodeBlock-background); padding: 0 0.2em; border-radius: 3px; }
   .card .question-text { box-sizing: border-box; height: 9em; overflow-y: auto; border-top: none; margin-top: 0; }
   .alternative { margin: 0.4em 0 0; padding: 0; }
   .alternative-head { display: flex; align-items: center; gap: 0.6em; }
@@ -1914,6 +1915,10 @@ export function pageShell(webview: vscode.Webview, scripts: vscode.Uri[], title:
   .pane-tabs button:hover { background: var(--vscode-list-hoverBackground); }
   .pane-tabs button[aria-selected="true"] { border-bottom-color: var(--vscode-focusBorder); font-weight: 600; }
   .pane { padding-top: 0.6em; }
+  .task-list { margin: 0; padding-left: 1.6em; }
+  .task-list .task { margin: 0 0 0.8em; }
+  .task-list .task-title { margin: 0; font-size: 1em; }
+  .task-list .task-brief p, .task-list .task-brief ul { margin: 0.3em 0; }
   .recipes h4 { margin: 0.8em 0 0.3em; }
   .recipe-list { display: flex; flex-direction: column; align-items: stretch; gap: 0.4em; }
   .recipe-row { display: flex; align-items: center; gap: 0.8em; }

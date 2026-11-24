@@ -155,8 +155,10 @@ workflow diagram under a heading of its own, **Workflow**, marking where it star
 buttons of the recipes that fit the step its diagram fills, each on a row of its own with a dropdown of its variants beside it
 and the recipe's one line of description to its right (see The recipes a page lists), the row of mission-wide actions, **New task** and **Ask in mission context**, each
 with its dropdown, and directly beneath that row two panes behind one row of two headers, **Open questions**, holding the question view
-parsed from `open_questions.xml`, and **Remaining tasks**, holding the remaining task headings of
-`TASKS_TODO.md`. The introduction shows the mission's title alone, the first `# ` heading of its
+parsed from `open_questions.xml`, and **Remaining tasks**, holding the remaining tasks of
+`TASKS_TODO.md` in the list's order, each task's `##` heading with its brief, the section's text
+down to its `---` separator, beneath it, drawn by the text renderer the goal uses, described below (a task
+whose brief is empty shows its heading alone). The introduction shows the mission's title alone, the first `# ` heading of its
 `requirements.md`, with one **Show goal** button beside it that shows the whole goal beneath the
 title, the `## Goal` section of `requirements.md` as it stands there, and turns into **Hide goal**,
 which hides it again. The button is there whatever the goal's length, and a goal however long is
