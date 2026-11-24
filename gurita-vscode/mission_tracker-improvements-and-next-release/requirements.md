@@ -85,6 +85,8 @@ Five missions under `gurita-vscode/` are finished, all between 2026-11-20 and 20
 
 - **Ask action placement.** "Ask in mission context" is a fixed-name button outside the recipe list, standing in the same row as New task, which becomes the page's row of mission-wide actions above the two pane headers. It runs a shipped button recipe named by its skill, `ask-in-mission-context`, entered in `BUTTON_RECIPES`, kept out of the recipe list by name, and listed in the Settings window as a button recipe under the "Run by a button outside the recipe list" note. Like New task, it has an arrow-only variant dropdown of its own and a host handler that fills whatever values its line holds.
 
+- **Commit link target.** A completed task's link opens its commit inside VS Code only, as one read-only text document in an editor tab. The extension registers a content provider of its own scheme whose content is `git show <hash>` run through `execFile` from the project root, as the extension already runs `git log` and the missions tool, and opens it with the diff language, so the tab holds the subject, the verified bar as the body, and the whole patch, the brief among its removed lines. No remote host is involved and no other extension is called.
+
 ### Runs
 
 - **Auto-close default.** The new setting that closes a run's terminal by itself ships on. A chain that ran all its lines closes its terminal without waiting for a keypress and unblocks the mission's page, while a chain that stopped keeps waiting for a keypress. A user who wants every terminal to stay open turns the setting off.
