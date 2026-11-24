@@ -69,9 +69,10 @@ above the mission rows.
   whose lines carry none of the three is described by its name.
 - Its hover text names the recipe, as `Action: <name>`, and the variant, with the variant's
   lines as written beneath them.
-- A click on the row runs that variant: it asks for the goal and, for **Define mission**, then
-  the scope, each in VS Code's own input box as a mission page's buttons ask for theirs, and starts the run, which
-  belongs to no mission, at the project root. Escape in a box starts nothing.
+- A click on the row runs that variant: it asks for the goal in the input panel and, for
+  **Define mission**, then the scope in VS Code's own input box, as a mission page's buttons ask
+  for theirs, and starts the run, which belongs to no mission, at the project root. **Cancel** or
+  closing the panel's tab, like Escape in the box, starts nothing.
 - An inline icon action on the row, **Choose Variant**, also offered in the row's context menu,
   opens a QuickPick of the recipe's variants, each by its name with its harness, model, and effort
   beside it and the one selected marked. Picking one changes the remembered selection, kept once
@@ -221,7 +222,7 @@ remaining task. A review pass that changed nothing leaves no commit, so the diag
 count it. No block is filled when a document or the git read the choice needs does not read; a
 document's notice stays in its own pane. The diagram is display only: its blocks are not buttons
 and gate nothing. **New task** runs the `discuss-new-task` recipe for the page's mission: you
-type the issue, and an interactive conversation clarifies it into tasks and adds them to the
+type the issue in the input panel, and an interactive conversation clarifies it into tasks and adds them to the
 mission's task list through `submit-task` inside that same conversation, so there is no separate
 submit button. **Ask in mission context** runs the `ask-in-mission-context` recipe for the page's
 mission: you type your question before the run starts, an empty question being refused, and an
@@ -257,9 +258,20 @@ window its edit controls (**Enable** and **Disable**, **Add model**, **Add effor
 again**. A disabled button is drawn faded. The two pane headers, the links of a card's
 dependencies, and the completed tasks' **Open commit** links keep their own unfilled look.
 
-Every value a button needs (an answer, an issue description, a question, a discussion note, and for the
-side-bar view's rows a goal and a scope typed as a path from the project root) is typed into
-VS Code's own input box, one line per value. Only the discussion note may be left empty. A click
+Every value a button needs is typed before its run starts, nothing being typed on a mission page.
+The long ones, an answer, an issue description, and for the side-bar view's rows a goal, are
+typed into the input panel: a small window of its own opened as an editor tab, titled
+**Gurita: Answer**, **Gurita: Issue**, or **Gurita: Goal**, holding the value's prompt above one
+textarea, where the text may run over several lines, with **Run** and **Cancel** beneath it.
+**Run** starts the run with the text exactly as typed, line breaks included, and closes the
+panel; a **Run** with nothing but blanks typed is refused with a line beneath the textarea and
+the panel stays open. **Cancel**, or closing the panel's tab, starts nothing, as Escape in an
+input box does. Text typed in a panel whose tab you leave and come back to is still there, but
+a panel open when VS Code restarts or the window reloads is not restored, and its run is not
+started. The other values, a question, a discussion note, and for **Define mission** a scope
+typed as a path from the project root, are typed into VS Code's own input box, one line per
+value, as are the Settings window's names and list entries. Only the discussion note may be left
+empty. A click
 on a recipe button starts its run at once in a terminal; every recipe button shows its lines,
 placeholders included, before you click. While a run started for a mission is going, until you
 dismiss its terminal, that mission's page shows it: every action button on the page (the recipe

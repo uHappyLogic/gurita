@@ -36,6 +36,24 @@ interface InputBoxOptions {
 }
 /** The options of every input box the stub's editor showed, in order. */
 const inputBoxes: InputBoxOptions[] = [];
+/**
+ * The entry of `typedValues` that answers an input panel by pressing its Cancel: every other entry
+ * answers a panel by pressing Run with it typed, and an empty queue closes the panel's tab.
+ */
+const CANCEL_PANEL = '\u0000cancel';
+/** An input panel the stub's editor answered: its editor tab's title and the prompt its page was posted. */
+interface AnsweredPanel {
+  title: string;
+  prompt?: unknown;
+}
+/** Every input panel the stub's editor answered, in order. */
+const inputPanels: AnsweredPanel[] = [];
+/**
+ * Whether the stub's editor answers each input panel by itself from `typedValues`, as soon as the
+ * extension has hooked it: its page posting its ready message and then Run, Cancel, or the tab's
+ * closing. A test driving a panel by hand turns it off.
+ */
+let answerPanels = true;
 /** Every message the extension posted to any page, the mission windows' and the Settings window's, in order. */
 const posted: unknown[] = [];
 
@@ -247,7 +265,16 @@ const stub = {
           };
           return disposable;
         },
+        dispose(): void {
+          const dispose = record.dispose;
+          record.dispose = undefined;
+          record.receive = undefined;
+          dispose?.();
+        },
       };
+      if (viewType === INPUT_VIEW_TYPE && answerPanels) {
+        setTimeout(() => answerPanel(record), 0);
+      }
       return panel;
     },
     createTerminal(options: { name: string; shellArgs?: string[]; env?: Record<string, string> }): StubTerminal & { show(preserveFocus?: boolean): void } {
@@ -277,6 +304,28 @@ const stub = {
     showErrorMessage: notify,
   },
 };
+
+/** The view type of the input panel, as `inputPanel.ts` names it. */
+const INPUT_VIEW_TYPE = 'gurita.input';
+
+/**
+ * Answers the input panel `record` as its page and the person do: its ready message, then, by the
+ * next entry of `typedValues`, Run with that text typed, Cancel, or, the queue empty, its tab closed.
+ */
+function answerPanel(record: StubPanel): void {
+  const answered: AnsweredPanel = { title: record.title };
+  inputPanels.push(answered);
+  record.receive?.({ type: 'ready' });
+  answered.prompt = record.posts.find((message) => message.type === 'input')?.prompt;
+  const typed = typedValues.shift();
+  if (typed === undefined) {
+    record.dispose?.();
+  } else if (typed === CANCEL_PANEL) {
+    record.receive?.({ type: 'cancel' });
+  } else {
+    record.receive?.({ type: 'run', value: typed });
+  }
+}
 
 const load = Module._load;
 Module._load = (request, parent, isMain) => (request === 'vscode' ? stub : load(request, parent, isMain));
@@ -2900,6 +2949,154 @@ test("a click on a completed task's commit link opens that commit, as the extens
     assert.match(content, /^-## A task$/m, 'the brief among its removed lines');
     assert.match(content, /^    - The criterion$/m, 'the verified bar as its body');
   } finally {
+    process.env.HOME = home;
+  }
+});
+
+/** Missions no earlier test holds a run for, each starting at most one run in the input panel test. */
+const ANSWERED = 'pkg/mission_answered/';
+const ISSUED = 'mission_issued/';
+const NOTED = 'pkg/mission_noted/';
+const BY_HAND = 'mission_by_hand/';
+
+test('the answer text, the goal, and the issue description are asked for in one input panel, an editor tab resolving on Run and starting nothing when cancelled or closed, while the scope and the note stay in input boxes', async () => {
+  const home = process.env.HOME;
+  process.env.HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-home-'));
+  try {
+    const missions = [ANSWERED, ISSUED, NOTED, BY_HAND];
+    const root = project(...missions);
+    for (const mission of missions) {
+      fs.writeFileSync(path.join(root, mission, 'open_questions.xml'), SELECTION_QUESTIONS);
+    }
+    git(root, 'add', '.');
+    git(root, 'commit', '-q', '-m', 'Questions');
+    const files = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-recipes-'));
+    fs.writeFileSync(path.join(files, 'shipped_recipes.md'), BUTTON_SHIPPED_TEXT);
+    packaged.set('bundled/missions.py', path.join(__dirname, '..', '..', '..', 'core', 'tools', 'missions.py'));
+    packaged.set('bundled/shipped_recipes.md', path.join(files, 'shipped_recipes.md'));
+    packaged.set('runner.py', path.join(__dirname, '..', '..', 'runner.py'));
+    workspace.folders = [{ uri: { fsPath: root } }];
+    workspace.settings = { ownRecipesFile: path.join(files, 'recipes.md') };
+    workspaceState.clear();
+    for (const mission of missions) {
+      openWindow(mission);
+    }
+    await pageAfter({ type: 'refresh' }, ANSWERED);
+    pane.startingOffers(context);
+
+    /** The input panels the extension created beyond its first `from`. */
+    const inputPanelsFrom = (from: number) => panels.slice(from).filter((each) => each.viewType === INPUT_VIEW_TYPE);
+    /**
+     * Starts `click` with `values` queued for its panels and boxes, and returns the terminal it
+     * starts, or none, and the panels and boxes it opened, the panels as the stub's editor answered them.
+     */
+    const ask = async (click: () => void, values: string[]) => {
+      const count = created.length;
+      const panelCount = panels.length;
+      const answeredCount = inputPanels.length;
+      const boxCount = inputBoxes.length;
+      typedValues.length = 0;
+      typedValues.push(...values);
+      click();
+      for (let attempt = 0; attempt < 40 && created.length === count; attempt++) {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      typedValues.length = 0;
+      return {
+        terminal: created.length === count ? undefined : created[created.length - 1],
+        panels: inputPanelsFrom(panelCount),
+        answered: inputPanels.slice(answeredCount),
+        boxes: inputBoxes.slice(boxCount).map((box) => box.prompt),
+      };
+    };
+    const answer = () => send({ type: 'questionButton', button: 'answerQuestion', mission: ANSWERED, question: 'Pane Layout', variant: 'default' });
+
+    // The answer text: a panel cancelled, then one closed, starts nothing; one Run resolves the text, line breaks included.
+    let run = await ask(answer, [CANCEL_PANEL]);
+    assert.deepStrictEqual(run.answered, [{ title: 'Gurita: Answer', prompt: 'The answer, recorded as the decision' }], 'one panel asks for the answer text, its page posted the prompt');
+    assert.deepStrictEqual(run.boxes, [], 'and no input box');
+    assert.strictEqual(run.terminal, undefined, 'a panel cancelled starts nothing');
+    assert.strictEqual(run.panels[0].dispose, undefined, 'and is closed');
+    assert.match(run.panels[0].html, /<script [^>]*input\.js/, "the panel loads the input page's script");
+    assert.doesNotMatch(run.panels[0].html, /page\.js|settings\.js/, 'and no other');
+    run = await ask(answer, []);
+    assert.strictEqual(run.panels.length, 1);
+    assert.strictEqual(run.terminal, undefined, 'a panel whose tab is closed starts nothing');
+    run = await ask(answer, ['Keep the layout.\n\nIt reads well.']);
+    assert.ok(run.terminal !== undefined, 'Run starts the run');
+    assert.strictEqual(run.panels[0].dispose, undefined, 'and closes the panel');
+    assert.strictEqual(run.terminal.env?.GURITA_ANSWER_TEXT, 'Keep the layout.\n\nIt reads well.', 'the text reaches the line as typed, as its session variable');
+    assert.ok(run.terminal.args.join(' ').includes('answer-open-question --mission ${GURITA_PATH} ${GURITA_SHORT_TITLE}. ${GURITA_ANSWER_TEXT}"'));
+
+    // The issue description: cancelled, closed, and resolved.
+    const issue = () => send({ type: 'taskButton', mission: ISSUED, variant: 'default' });
+    run = await ask(issue, [CANCEL_PANEL]);
+    assert.deepStrictEqual(run.answered, [{ title: 'Gurita: Issue', prompt: 'The issue, to be clarified into tasks for this mission' }]);
+    assert.strictEqual(run.terminal, undefined);
+    run = await ask(issue, []);
+    assert.strictEqual(run.terminal, undefined);
+    run = await ask(issue, ['The pane jumps.\nIt should not.']);
+    assert.deepStrictEqual(run.boxes, []);
+    assert.strictEqual(run.terminal?.env?.GURITA_ISSUE_DESCRIPTION, 'The pane jumps.\nIt should not.');
+
+    // The goal, on New mission alone and on Define mission ahead of the scope, which stays in an input box.
+    const newMission = () => void pane.runStartingRow(context, 'discussGoal');
+    run = await ask(newMission, [CANCEL_PANEL]);
+    assert.deepStrictEqual(run.answered, [{ title: 'Gurita: Goal', prompt: "The mission's goal" }]);
+    assert.strictEqual(run.terminal, undefined);
+    run = await ask(newMission, []);
+    assert.strictEqual(run.terminal, undefined);
+    run = await ask(newMission, ['Ship it.\nSoon.']);
+    assert.strictEqual(run.terminal?.env?.GURITA_GOAL, 'Ship it.\nSoon.');
+    const defineMission = () => void pane.runStartingRow(context, 'defineMission');
+    run = await ask(defineMission, ['Ship more.', 'pkg']);
+    assert.deepStrictEqual(run.answered.map((each) => each.title), ['Gurita: Goal']);
+    assert.deepStrictEqual(run.boxes, ['The scope, the directory holding the core of the work, as a path from the project root'], 'the scope stays in an input box');
+    assert.strictEqual(run.terminal?.env?.GURITA_GOAL, 'Ship more.');
+    assert.strictEqual(run.terminal?.env?.GURITA_SCOPE, 'pkg');
+    run = await ask(defineMission, [CANCEL_PANEL, 'pkg']);
+    assert.deepStrictEqual(run.boxes, [], 'a goal panel cancelled asks for no scope');
+    assert.strictEqual(run.terminal, undefined);
+
+    // The discussion note stays in an input box, and opens no panel.
+    run = await ask(() => send({ type: 'questionButton', button: 'discussQuestion', mission: NOTED, question: 'Pane Layout', variant: 'default' }), ['A note']);
+    assert.deepStrictEqual(run.panels, []);
+    assert.deepStrictEqual(run.boxes, ['An optional note for the discussion, carried after the Short Title; leave it empty for none']);
+    assert.ok(run.terminal !== undefined);
+
+    // Driven by hand: a Run with nothing but blanks, or with no text, resolves nothing and keeps the panel open, its ready message answered each time with the prompt.
+    answerPanels = false;
+    const count = created.length;
+    const panelCount = panels.length;
+    send({ type: 'questionButton', button: 'answerQuestion', mission: BY_HAND, question: 'Pane Layout', variant: 'default' });
+    for (let attempt = 0; attempt < 200 && inputPanelsFrom(panelCount).length === 0; attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    const [byHand] = inputPanelsFrom(panelCount);
+    assert.ok(byHand?.receive !== undefined, 'the panel listens to its page');
+    byHand.receive({ type: 'ready' });
+    byHand.receive({ type: 'ready' });
+    assert.deepStrictEqual(
+      byHand.posts,
+      [{ type: 'input', prompt: 'The answer, recorded as the decision' }, { type: 'input', prompt: 'The answer, recorded as the decision' }],
+      'every ready message, a page loaded again included, is answered with the prompt',
+    );
+    byHand.receive({ type: 'run', value: ' \n ' });
+    byHand.receive({ type: 'run' });
+    byHand.receive({ type: 'run', value: ['text'] });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    assert.strictEqual(created.length, count, 'a blank, missing, or non-text value starts nothing');
+    assert.ok(byHand.dispose !== undefined, 'and leaves the panel open');
+    byHand.receive({ type: 'run', value: 'Drop it.' });
+    for (let attempt = 0; attempt < 200 && created.length === count; attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    assert.strictEqual(created.length, count + 1);
+    assert.strictEqual(created[created.length - 1].env?.GURITA_ANSWER_TEXT, 'Drop it.');
+    assert.strictEqual(byHand.dispose, undefined, 'Run closes the panel');
+    assert.strictEqual(execFileSync('git', ['status', '--porcelain', '--ignored'], { cwd: root, encoding: 'utf8' }), '', "nothing is written into the project's tree");
+  } finally {
+    answerPanels = true;
     process.env.HOME = home;
   }
 });

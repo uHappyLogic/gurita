@@ -4,8 +4,9 @@ import * as path from 'node:path';
 import * as vm from 'node:vm';
 
 // A small stand-in for the DOM a webview page script runs against: just the elements, attributes,
-// and events the pane's and the Settings window's scripts use, so a drawn page can be walked, and
-// the loader running a compiled page script into a fresh page. This module holds no test of its own.
+// and events the pane's, the Settings window's, and the input panel's scripts use, so a drawn page
+// can be walked, and the loader running a compiled page script into a fresh page. This module holds
+// no test of its own.
 
 export class FakeText {
   constructor(public textContent: string) {}
@@ -87,9 +88,22 @@ export class FakeElement {
     }
   }
 
+  /** Types `value` into a textarea, firing its input event as the browser does. */
+  input(value: string): void {
+    this.value = value;
+    for (const listener of this.listeners.get('input') ?? []) {
+      listener({});
+    }
+  }
+
   scrollIntoView(): void {}
 
-  focus(): void {}
+  /** Whether the page script gave the element the focus. */
+  focused = false;
+
+  focus(): void {
+    this.focused = true;
+  }
 
   querySelector(selector: string): FakeElement | null {
     const focus = /^\[data-focus="(.*)"\]$/.exec(selector);
@@ -125,7 +139,7 @@ export interface PageLoad {
   state?: unknown;
 }
 
-/** The scripts the page shell loads ahead of the page script `script`: the text renderer ahead of a mission window's, nothing ahead of the Settings window's. */
+/** The scripts the page shell loads ahead of the page script `script`: the text renderer ahead of a mission window's, nothing ahead of the Settings window's or the input panel's. */
 function loadedBefore(script: string): string[] {
   return script === 'page.js' ? ['text.js'] : [];
 }

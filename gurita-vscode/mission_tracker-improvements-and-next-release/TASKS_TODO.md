@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Multi-Line Input Panel for Long Values
-
-Where `askValues` reaches the answer text, the goal, or the issue description, open a small input panel as an editor tab holding one textarea, the value's prompt above it, and Run and Cancel, one webview panel serving all three sites, which resolves the value when Run is pressed and undefined when Cancel is pressed or the tab is closed, exactly as a dismissed input box does today. The scope, the discussion note, and the Settings window's values stay in `vscode.window.showInputBox`, and the mission page and the side-bar tree are unchanged, so nothing is typed on a mission page. Verified by pane tests against the `vscode` stub of each value resolved, cancelled, and closed and a test of the panel's script against the stand-in DOM, with `gurita-vscode/README.md` describing the panel.
-
----
-
 ## Auto-Close Setting for Finished Runs
 
 Contribute one setting beside `gurita.ownRecipesFile`, shipped on, under which a run's terminal closes by itself: a chain that ran all its lines, and a looped task run that ends on `Loop finished: no task remains`, prints its report and exits without waiting for a keypress, so its terminal closes and the mission's page unblocks. A chain that stopped and a loop that stopped (an unresolved assignment, a task that did not end on `Task completed.`, or an unreadable task list) still wait for a keypress, and with the setting off every run waits as today. Verified by `runner_tests` of both kinds of run under both values and by run tests of the setting reaching the runner, with `gurita-vscode/README.md` documenting the setting.

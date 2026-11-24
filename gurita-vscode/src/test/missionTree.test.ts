@@ -8,7 +8,7 @@ import { WATCHED_PATTERN } from '../refresh';
 // The side-bar view's tree, against a stub of the `vscode` module standing in for the editor: a
 // tree stand-in recording the view the extension creates and its data provider, the event
 // emitter, tree items, and theme icons, beside the file system watcher, the terminals, the
-// mission windows a row's click opens, the commands, the input boxes, the QuickPick,
+// mission windows a row's click opens, the commands, the input boxes and input panels, the QuickPick,
 // `workspaceState`, and the notifications the extension's activation reaches.
 const Module = require('node:module') as {
   _load: (request: string, parent: unknown, isMain: boolean) => unknown;
@@ -157,7 +157,9 @@ const stub = {
     createWebviewPanel(viewType: string, title: string): unknown {
       const record: StubPanel = { viewType, title, reveals: 0 };
       webviewPanels.push(record);
-      return {
+      let receive: ((message: unknown) => void) | undefined;
+      let disposed: (() => void) | undefined;
+      const panel = {
         visible: true,
         reveal(): void {
           record.reveals++;
@@ -166,12 +168,42 @@ const stub = {
           html: '',
           cspSource: 'stub-csp',
           asWebviewUri: (uri: unknown) => ({ toString: () => `webview:${JSON.stringify(uri)}` }),
-          onDidReceiveMessage: () => disposable,
-          postMessage: () => Promise.resolve(true),
+          onDidReceiveMessage: (listener: (message: unknown) => void) => {
+            receive = listener;
+            return disposable;
+          },
+          postMessage: (message: { type?: string; prompt?: string }) => {
+            if (message?.type === 'input' && typeof message.prompt === 'string') {
+              inputPrompts.push(message.prompt);
+            }
+            return Promise.resolve(true);
+          },
         },
         onDidChangeViewState: () => disposable,
-        onDidDispose: () => disposable,
+        onDidDispose: (listener: () => void) => {
+          disposed = listener;
+          return disposable;
+        },
+        dispose(): void {
+          const listener = disposed;
+          disposed = undefined;
+          listener?.();
+        },
       };
+      // An input panel is answered as its page and the person do: its ready message, then Run with
+      // the next of `inputAnswers` typed, or, that answer undefined, its tab closed.
+      if (viewType === 'gurita.input') {
+        setTimeout(() => {
+          receive?.({ type: 'ready' });
+          const typed = inputAnswers.shift();
+          if (typed === undefined) {
+            panel.dispose();
+          } else {
+            receive?.({ type: 'run', value: typed });
+          }
+        }, 0);
+      }
+      return panel;
     },
     registerWebviewPanelSerializer: () => disposable,
     createTreeView(id: string, options: { treeDataProvider: StubProvider }) {
@@ -492,9 +524,14 @@ test('a click on Define mission asks for the goal and then the scope and runs th
   inputPrompts.length = 0;
   inputAnswers.push('Ship the thing', 'pkg');
   await commands.get('gurita.defineMission')?.();
-  assert.strictEqual(inputPrompts.length, 2, 'two input boxes are opened');
+  assert.strictEqual(inputPrompts.length, 2, 'the goal is asked for and then the scope');
   assert.match(inputPrompts[0], /goal/);
   assert.match(inputPrompts[1], /scope/);
+  assert.deepStrictEqual(
+    webviewPanels.slice(-1).map((each) => [each.viewType, each.title]),
+    [['gurita.input', 'Gurita: Goal']],
+    'the goal is asked for in the input panel, the scope in an input box',
+  );
   assert.strictEqual(terminals.length, before + 1, 'one run starts');
   const run = terminals[terminals.length - 1];
   assert.strictEqual(run.name, 'Gurita: define-mission-goal', 'the run belongs to no mission');
@@ -507,7 +544,7 @@ test('a click on Define mission asks for the goal and then the scope and runs th
   const again = terminals.length;
   inputAnswers.push(undefined);
   await commands.get('gurita.newMission')?.();
-  assert.strictEqual(terminals.length, again, 'a box dismissed with Escape starts nothing');
+  assert.strictEqual(terminals.length, again, 'a goal panel closed starts nothing');
 });
 
 test("a QuickPick pick changes the remembered variant and the row's description without starting a run, and a dismissed one changes nothing", async () => {

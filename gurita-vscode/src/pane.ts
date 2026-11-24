@@ -88,9 +88,10 @@
 // alternative on that card the answer-with-alternative button,
 // and on a mission's page, in its row of mission-wide actions above the pane headers, the new-task
 // and ask-in-mission-context buttons. The
-// Short Title and the Alternative Id come from the card clicked, every typed value from
-// VS Code's own input box, one line per value, and each value reaches its line only as its
-// `GURITA_*` session variable. The discuss button always asks for an optional discussion note,
+// Short Title and the Alternative Id come from the card clicked, the answer text, the goal, and
+// the issue description each from the input panel (`inputPanel.ts`), an editor tab holding one
+// textarea with Run and Cancel, every other typed value from VS Code's own input box, one line per
+// value, and each value reaches its line only as its `GURITA_*` session variable. The discuss button always asks for an optional discussion note,
 // the one value a box accepts empty: a note typed is carried after the Short Title as
 // `<Short Title>. <note>`, an empty one leaves the line as if it held no note, and Escape starts
 // nothing. While a chain started for a mission is running, from its start until its terminal
@@ -191,6 +192,7 @@ import { disabledCommands, readHarnessStates } from './harnessSettings';
 import { Harness } from './lineValues';
 import { FileEventKind, RefreshBatch, RefreshQueue, WATCHED_PATTERN, eventEffect, gitEventEffect, gitWatches } from './refresh';
 import { OPTIONAL_PLACEHOLDERS } from './placeholders';
+import { askInPanel } from './inputPanel';
 import { refuseWhileRunning, runnerFile, runningMissions, showRunTerminal, startChain, startLoop } from './runs';
 import { MissionWorkflow, WorkflowStep, missionWorkflow, reviewCount } from './workflow';
 import { MissionStops, readMissionStops } from './stops';
@@ -623,7 +625,7 @@ export function openMissionWindow(context: vscode.ExtensionContext, mission: str
 }
 
 /**
- * The options every mission window's and the Settings window's webview takes: scripts enabled and
+ * The options every mission window's, the Settings window's, and the input panel's webview takes: scripts enabled and
  * only the output directory of the page scripts loadable.
  */
 export function webviewOptions(context: vscode.ExtensionContext): vscode.WebviewOptions {
@@ -1528,6 +1530,17 @@ const PROMPTS: Record<string, { prompt: string; placeHolder?: string }> = {
 };
 
 /**
+ * The typed values asked for in the input panel rather than an input box, the long ones a line may
+ * need, each with its panel's editor-tab title; the scope, the discussion note, and the question
+ * stay in VS Code's own input box.
+ */
+const PANEL_VALUES: Record<string, string> = {
+  'answer text': 'Gurita: Answer',
+  goal: 'Gurita: Goal',
+  'issue description': 'Gurita: Issue',
+};
+
+/**
  * The recipe's name and the lines the fixed-name button `button` runs when clicked with its
  * dropdown standing on the variant named `variant`, as `posts`, what the latest answer posted for
  * the window's page, holds it: only when the button was posted standing on that variant. A
@@ -1556,13 +1569,24 @@ function postedRun(post: ButtonPost | undefined, variant: unknown): { name: stri
 }
 
 /**
- * Asks for each of `names` in VS Code's own input box, one box per value in the order given, and
- * returns the values by placeholder name, or undefined when the person dismisses a box. A box
- * for an optional placeholder accepts an empty value; every other box asks for one.
+ * Asks for each of `names` in the order given, and returns the values by placeholder name, or
+ * undefined when the person dismisses a box or cancels or closes a panel. A long value, one of
+ * `PANEL_VALUES`, is asked for in the input panel (`inputPanel.ts`), an editor tab holding one
+ * textarea, which refuses blanks; every other in VS Code's own input box, one line, which for an
+ * optional placeholder accepts an empty value and for every other asks for one.
  */
-async function askValues(names: readonly string[]): Promise<Record<string, string> | undefined> {
+async function askValues(context: vscode.ExtensionContext, names: readonly string[]): Promise<Record<string, string> | undefined> {
   const values: Record<string, string> = {};
   for (const name of names) {
+    const panel = PANEL_VALUES[name];
+    if (panel !== undefined) {
+      const typed = await askInPanel(context, panel, PROMPTS[name].prompt);
+      if (typed === undefined) {
+        return undefined;
+      }
+      values[name] = typed;
+      continue;
+    }
     const optional = OPTIONAL_PLACEHOLDERS.includes(name);
     const typed = await vscode.window.showInputBox({
       ...PROMPTS[name],
@@ -1587,11 +1611,11 @@ function shown(posted: Posted, question: string, alternative?: string): boolean 
 /**
  * Runs a question card's button for the question `question` on the page of the mission window
  * `win`, as the latest answer posted them to it: the Short Title from the card, the answer text,
- * for the answer button, and the optional discussion note, for the discuss button, typed into an
- * input box, the lines those of the variant named `variant` the latest answer posted the button
+ * for the answer button, typed into the input panel, and the optional discussion note, for the
+ * discuss button, typed into an input box, the lines those of the variant named `variant` the latest answer posted the button
  * standing on. A question the latest answer did not show, a mission the window does not show, a
- * variant it did not post the button standing on, a mission with a running chain, or a box
- * dismissed with Escape starts nothing.
+ * variant it did not post the button standing on, a mission with a running chain, a box
+ * dismissed with Escape, or a panel cancelled or closed starts nothing.
  */
 async function runQuestionButton(
   context: vscode.ExtensionContext,
@@ -1614,7 +1638,7 @@ async function runQuestionButton(
     return;
   }
   const root = posted.root;
-  const typed = await askValues(spec.typed);
+  const typed = await askValues(context, spec.typed);
   if (typed === undefined) {
     return;
   }
@@ -1656,11 +1680,12 @@ function runAlternativeButton(
 /**
  * Runs the button `button` of the row of mission-wide actions on the page of the mission window
  * `win`, New task or Ask in mission context, as the latest answer posted it to the window: the
- * value it has typed, the issue description or the question, asked for in an input box that
- * refuses an empty entry, the mission's path from the page, the lines those of the variant named
- * `variant` the latest answer posted the button standing on. A mission the window does not show, a
- * variant the latest answer did not post the button standing on, a mission with a running chain,
- * or a box dismissed with Escape starts nothing.
+ * value it has typed, the issue description, asked for in the input panel, or the question, asked
+ * for in an input box, either refusing an empty entry, the mission's path from the page, the lines
+ * those of the variant named `variant` the latest answer posted the button standing on. A mission
+ * the window does not show, a variant the latest answer did not post the button standing on, a
+ * mission with a running chain, a panel cancelled or closed, or a box dismissed with Escape starts
+ * nothing.
  */
 async function runMissionAction(
   context: vscode.ExtensionContext,
@@ -1681,7 +1706,7 @@ async function runMissionAction(
     return;
   }
   const root = posted.root;
-  const typed = await askValues(MISSION_ACTIONS[button].typed);
+  const typed = await askValues(context, MISSION_ACTIONS[button].typed);
   if (typed === undefined) {
     return;
   }
@@ -1750,9 +1775,10 @@ export function startingOffers(context: vscode.ExtensionContext): Record<Mission
 
 /**
  * Runs the side-bar view's mission-starting row `button` on the variant it last drew: the goal,
- * and for Define mission then the scope, typed into input boxes, the run belonging to no mission.
- * A row drawn with no variant, or whose recipe cannot be read or run, tells why in an error
- * notification, and a box dismissed with Escape starts nothing.
+ * typed into the input panel, and for Define mission then the scope, typed into an input box, the
+ * run belonging to no mission. A row drawn with no variant, or whose recipe cannot be read or run,
+ * tells why in an error notification, and a panel cancelled or closed or a box dismissed with
+ * Escape starts nothing.
  */
 export async function runStartingRow(context: vscode.ExtensionContext, button: MissionButton): Promise<void> {
   const spec = MISSION_BUTTONS[button];
@@ -1765,7 +1791,7 @@ export async function runStartingRow(context: vscode.ExtensionContext, button: M
     return;
   }
   const variant = offer.variants[offer.selected];
-  const typed = await askValues(spec.typed);
+  const typed = await askValues(context, spec.typed);
   if (typed === undefined) {
     return;
   }
@@ -1821,10 +1847,10 @@ function nonce(): string {
 }
 
 /**
- * The page shell `webview.html` is set to once, titled `title`: the stylesheet the mission windows
- * and the Settings window share and the page's scripts, `scripts`, loaded in order: a mission
- * window's the text renderer (`text.js`) and then its page script, the Settings window's its page
- * script alone; a mission window's root element carrying its mission's path `mission` as a data
+ * The page shell `webview.html` is set to once, titled `title`: the stylesheet the mission windows,
+ * the Settings window, and the input panel share and the page's scripts, `scripts`, loaded in
+ * order: a mission window's the text renderer (`text.js`) and then its page script, the Settings
+ * window's and the input panel's their page script alone; a mission window's root element carrying its mission's path `mission` as a data
  * attribute, which its page keeps in its saved state. The stylesheet centers the workflow diagram's row of blocks horizontally in the window,
  * as wide as the row itself and never wrapping or scrolling sideways, and under the `vertical` class
  * the page script sets when that row would overflow the window, it stacks the same blocks in a
@@ -1852,7 +1878,9 @@ function nonce(): string {
  * headings, the completed tasks' control beside the second on one line, with a gap between the
  * parts, and each task's heading in the body's size with a completed task's commit link and its
  * brief's or verified bar's paragraphs and lists beneath it. On a question card, in the goal, and in a task's brief or bar a stretch of text the text renderer draws as code is set
- * in the editor's font on the theme's code-block background.
+ * in the editor's font on the theme's code-block background. The input panel sets its prompt above
+ * a textarea as wide as the page, in the editor's font and the theme's input colours, its refusal
+ * line beneath it in the error colour, keeping its space while empty, and Run and Cancel beneath.
  */
 export function pageShell(webview: vscode.Webview, scripts: vscode.Uri[], title: string, mission?: string): string {
   const token = nonce();
@@ -1982,6 +2010,11 @@ export function pageShell(webview: vscode.Webview, scripts: vscode.Uri[], title:
   .preview-tasks th, .preview-tasks td { text-align: left; padding: 0.25em 0.8em 0.25em 0; vertical-align: top; }
   .preview-tasks tr.unresolved td:nth-child(2) { color: var(--vscode-errorForeground); }
   .preview-tasks select { background: var(--vscode-dropdown-background); color: var(--vscode-dropdown-foreground); border: 1px solid var(--vscode-dropdown-border); font: inherit; }
+  .input-panel { display: flex; flex-direction: column; gap: 0.5em; margin: 1em 0; }
+  .input-panel .input-prompt { margin: 0; }
+  .input-panel textarea.input-value { box-sizing: border-box; width: 100%; min-height: 12em; resize: vertical; padding: 0.4em; font-family: var(--vscode-editor-font-family); font-size: var(--vscode-editor-font-size); color: var(--vscode-input-foreground); background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border, var(--vscode-panel-border)); }
+  .input-panel textarea.input-value:focus { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
+  .input-panel .input-refusal { margin: 0; min-height: 1.2em; color: var(--vscode-errorForeground); }
   button.link { background: none; border: none; padding: 0; color: var(--vscode-textLink-foreground); cursor: pointer; font: inherit; text-decoration: underline; }
 </style>
 </head>
