@@ -87,6 +87,8 @@ Five missions under `gurita-vscode/` are finished, all between 2026-11-20 and 20
 
 - **Commit link target.** A completed task's link opens its commit inside VS Code only, as one read-only text document in an editor tab. The extension registers a content provider of its own scheme whose content is `git show <hash>` run through `execFile` from the project root, as the extension already runs `git log` and the missions tool, and opens it with the diff language, so the tab holds the subject, the verified bar as the body, and the whole patch, the brief among its removed lines. No remote host is involved and no other extension is called.
 
+- **Ask question input.** The question of "Ask in mission context" is typed before the run starts, through the extension's input-box path (`askValues`), as a required value that refuses an empty entry, as the issue description of `discuss-new-task` is today. The action's line is an interactive one (a bare `claude "/gurita:ask-in-mission-context --mission <path> <question>" … # interactive`), so the session opens on the answer and stays open for follow-up questions.
+
 ### Runs
 
 - **Auto-close default.** The new setting that closes a run's terminal by itself ships on. A chain that ran all its lines closes its terminal without waiting for a keypress and unblocks the mission's page, while a chain that stopped keeps waiting for a keypress. A user who wants every terminal to stay open turns the setting off.
