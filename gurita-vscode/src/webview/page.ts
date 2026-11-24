@@ -45,7 +45,7 @@
 // name beneath it, exactly as the variant is named, carries that variant's lines as written in its
 // hover text, and starts that variant's chain for the page's mission when clicked, and a selected
 // variant holding a placeholder the extension does not know is shown as a non-runnable entry
-// naming it and its file. The five buttons on a mission's page outside the recipe list, which run a
+// naming it and its file. The four buttons on a mission's page outside the recipe list, which run a
 // recipe by its fixed name, take the recipe list's pick mechanics, as the extension posts them with
 // the mission: a dropdown beside each, drawn as its arrow alone, offers the variants the
 // button can run by their bare names and stands on the one selected, the one remembered for the
@@ -69,8 +69,8 @@
 // The question view shows one fully opened card per question, one card at a time, under a
 // position counter such as "3 / 12", moved between by the previous and next buttons and by the
 // left and right arrow keys, and a dependency link on a card jumps to the named question's card.
-// Each card stacks flat, non-indented slots: its Short Title with the discuss, answer, and
-// answer-with-recommendation buttons, the question text in an area of fixed height, so the pick
+// Each card stacks flat, non-indented slots: its Short Title with the discuss and answer
+// buttons, the question text in an area of fixed height, so the pick
 // starts at the same height on every card, then the pick and its rationale, then the
 // alternatives, each with its answer-with-alternative button, the dependencies, and the
 // principles. Each button posts the Short Title and the Alternative Id of the card clicked; the
@@ -178,8 +178,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
 
   type RecipePart = { state: 'read'; recipes: PageRecipe[] } | { state: 'failed'; cause: string };
 
-  /** One of the five buttons on a mission's page outside the recipe list, each running the recipe of its fixed name. */
-  type FixedButton = 'discussQuestion' | 'answerQuestion' | 'answerWithRecommendation' | 'answerWithAlternative' | 'discussTask';
+  /** One of the four buttons on a mission's page outside the recipe list, each running the recipe of its fixed name. */
+  type FixedButton = 'discussQuestion' | 'answerQuestion' | 'answerWithAlternative' | 'discussTask';
 
   /**
    * What a fixed-name button runs, as the extension posts it: the variants its dropdown offers and
@@ -246,7 +246,6 @@ declare function acquireVsCodeApi(): VsCodeApi;
   const QUESTION_BUTTONS: [FixedButton, string, string][] = [
     ['discussQuestion', 'Discuss', 'Type an optional note and open an interactive discussion of this question'],
     ['answerQuestion', 'Answer', 'Record an answer you type as the decision'],
-    ['answerWithRecommendation', 'Answer with recommendation', "Record this question's recommendation as the decision"],
   ];
   /** The workflow diagram's seven blocks in flow order, each with its step, its name, and whether it is optional. */
   const WORKFLOW_BLOCKS: [WorkflowStep, string, boolean][] = [

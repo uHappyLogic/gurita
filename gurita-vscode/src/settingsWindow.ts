@@ -43,7 +43,7 @@
 // list's add control asks for the entry in VS Code's own input box, whose validation refuses an
 // empty entry and one the list already offers, and a click of an entry's remove control takes it
 // out of the offer; either is written to the overlay and the lists posted again. The window also
-// edits variants: every recipe but the named single-task lines, the chains, the seven fixed-name
+// edits variants: every recipe but the named single-task lines, the chains, the six fixed-name
 // button recipes, and the recipes and variants of the own recipe file alike, each with its
 // variants as the variant store lays them over the two Markdown files, its default marked, and the
 // variants a hiding record hides. A click of a variant's duplicate, rename, delete, or default

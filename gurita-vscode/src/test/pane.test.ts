@@ -1963,11 +1963,10 @@ test("the settings view lists the named single-task lines and carries out each l
 /** A mission no earlier test holds a run for. */
 const MU = 'pkg/mission_mu/';
 
-/** The lines of the seven fixed-name button recipes in the fixed-button test's shipped file, by button. */
+/** The lines of the six fixed-name button recipes in the fixed-button test's shipped file, by button. */
 const BUTTON_LINES: Record<string, string> = {
   discussQuestion: 'claude "/gurita:discuss-open-question --mission <path> <Short Title>. <note>" --model "fable" --effort xhigh; # interactive',
   answerQuestion: 'claude -p "/gurita:answer-open-question --mission <path> <Short Title>. <answer text>" --model "fable" --effort high;',
-  answerWithRecommendation: 'claude -p "/gurita:answer-open-question-with-recommendation --mission <path> <Short Title>" --model "opus" --effort high;',
   answerWithAlternative: 'claude -p "/gurita:answer-open-question-with-alternative --mission <path> <Short Title>. <Alternative Id>" --model "fable" --effort medium;',
   discussGoal: 'claude "/gurita:discuss-mission-goal <goal>" --model "fable" --effort xhigh; # interactive',
   defineMission: 'claude -p "/gurita:define-mission-goal --at <scope> <goal>" --model "sonnet" --effort medium;',
@@ -1978,19 +1977,21 @@ const BUTTON_LINES: Record<string, string> = {
 const BUTTON_NAMES: Record<string, string> = {
   discussQuestion: 'discuss-open-question',
   answerQuestion: 'answer-open-question',
-  answerWithRecommendation: 'answer-open-question-with-recommendation',
   answerWithAlternative: 'answer-open-question-with-alternative',
   discussGoal: 'discuss-mission-goal',
   defineMission: 'define-mission-goal',
   discussTask: 'discuss-new-task',
 };
 
-/** The shipped file of the fixed-button test: the recipe-list test's recipes and the seven button recipes. */
+/** The shipped file of the fixed-button test: the recipe-list test's recipes and the six button recipes. */
 const BUTTON_SHIPPED_TEXT = `${SHIPPED_TEXT}${Object.keys(BUTTON_LINES)
   .map((key) => `\n### ${BUTTON_NAMES[key]}\n\`\`\`\n${BUTTON_LINES[key]}\n\`\`\`\n`)
   .join('')}`;
 
-/** The own file of the fixed-button test: one more variant for three of the button recipes. */
+/**
+ * The own file of the fixed-button test: one more variant for three of the button recipes, and a
+ * recipe under the removed button name `answer-open-question-with-recommendation`, which no button runs.
+ */
 const BUTTON_OWN_TEXT = `### discuss-open-question
 \`\`\`
 agy -i "/gurita:discuss-open-question --mission <path> <Short Title>. <note>" --model "gemini-4-argon" --effort medium; # interactive
@@ -2005,6 +2006,11 @@ echo <goal> <scope>
 ### discuss-new-task
 \`\`\`
 claude -p "/gurita:complete-task --mission <path> <Task Title>" --model "opus" --effort high;
+\`\`\`
+
+### answer-open-question-with-recommendation
+\`\`\`
+claude -p "/gurita:answer-open-question-with-recommendation --mission <path> <Short Title>" --model "opus" --effort high;
 \`\`\`
 `;
 
@@ -2054,15 +2060,17 @@ test("every fixed-name button on a mission's page is posted with the variants it
     const initial: Record<string, PostedButton> = {
       discussQuestion: shipped('discussQuestion', true),
       answerQuestion: shipped('answerQuestion'),
-      answerWithRecommendation: shipped('answerWithRecommendation'),
       discussTask: shipped('discussTask'),
     };
 
+    const first = await buttonsAfter({ type: 'refresh' });
     assert.deepStrictEqual(
-      await buttonsAfter({ type: 'refresh' }),
+      first,
       initial,
       'with no pick each button stands on its first listed variant, the shipped one, an own variant the button cannot run left out of its dropdown, the answer-with-alternative buttons posted per alternative instead',
     );
+    const card = Object.keys(first).filter((key) => key !== 'discussTask');
+    assert.deepStrictEqual(card, ['discussQuestion', 'answerQuestion'], "the card's two head buttons, and no answer-with-recommendation button even with a recipe of its old name standing");
     showSettings();
 
     // A pick of a two-line own variant: the button stands on it, carrying both lines.
@@ -2296,6 +2304,11 @@ test("a fixed-name button's dropdown selection is remembered in workspaceState p
     assert.strictEqual(await click({ type: 'questionButton', button: 'discussQuestion', mission: NU, question: 'Pane Layout', variant: 'default' }, ['']), undefined, 'a variant the button was not posted standing on starts nothing');
     assert.strictEqual(await click({ type: 'questionButton', button: 'discussQuestion', mission: NU, question: 'Pane Layout' }, ['']), undefined, 'nor does a click naming none');
     assert.strictEqual(await click({ type: 'taskButton', mission: NU, variant: 'Looped' }, ['An issue']), undefined, 'nor one naming a variant the button does not offer');
+    assert.strictEqual(
+      await click({ type: 'questionButton', button: 'answerWithRecommendation', mission: NU, question: 'Pane Layout', variant: 'default' }),
+      undefined,
+      'a click posted for the removed answer-with-recommendation button starts nothing',
+    );
     assert.match((await click({ type: 'questionButton', button: 'discussQuestion', mission: NU, question: 'Pane Layout', variant: 'Gemini' }, [''])) ?? '', / chain -- agy -i "\/gurita:discuss-open-question/);
     assert.strictEqual(await click({ type: 'alternativeButton', mission: XI, question: 'Pane Layout', alternative: 'drop', variant: 'Sonnet' }), undefined, "another mission's page keeps its own selection");
     assert.match((await click({ type: 'questionButton', button: 'discussQuestion', mission: XI, question: 'Pane Layout', variant: 'default' }, [''])) ?? '', / chain -- claude "\/gurita:discuss-open-question/, 'and runs it');

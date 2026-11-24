@@ -119,11 +119,6 @@ claude "/gurita:discuss-new-task --mission <path> <issue description>" --dangero
 claude -p "/gurita:answer-open-question --mission <path> <Short Title>. <answer text>" --dangerously-skip-permissions --model "fable" --effort high;
 ```
 
-### answer-open-question-with-recommendation
-```
-claude -p "/gurita:answer-open-question-with-recommendation --mission <path> <Short Title>" --dangerously-skip-permissions --model "fable" --effort high;
-```
-
 ### answer-open-question-with-alternative
 ```
 claude -p "/gurita:answer-open-question-with-alternative --mission <path> <Short Title>. <Alternative Id>" --dangerously-skip-permissions --model "fable" --effort high;

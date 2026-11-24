@@ -43,7 +43,7 @@
 // one effort list, Codex's model list alone: each entry with its remove control, and each list
 // with its add control, each posted to the extension, which asks for an added entry in VS Code's
 // own input box, writes the change, and posts the lists again. Under Variants the window draws
-// every recipe the extension posts, the chains, the seven fixed-name button recipes, and the
+// every recipe the extension posts, the chains, the six fixed-name button recipes, and the
 // recipes and variants of the own recipe file, the named single-task lines left out: each variant
 // with where it comes from, whether it is the recipe's default, and its Duplicate, Rename, Delete,
 // and Make default controls, a stored variant the extension posts with the variant it was made

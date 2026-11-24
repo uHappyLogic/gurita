@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Remove the Answer With Recommendation Button
-
-Take the Answer with recommendation button off the question card, which keeps Discuss, Answer, and the per-alternative buttons: its `### answer-open-question-with-recommendation` section leaves `gurita-vscode/shipped_recipes.md` and its name leaves `BUTTON_RECIPES`, so the Settings window no longer lists it among its fixed-name button recipes. Nothing is added for state stored under the name, which through the existing overlay rule becomes an ordinary editable own recipe in the Settings window that no mission page draws. Verified by the page and pane tests of the card's two head buttons and a recipe test of stored variants under the removed name, with `gurita-vscode/README.md` no longer describing the button.
-
----
-
 ## Text Renderer and Code on Question Cards
 
 Add the hand-written text renderer this mission's new page texts share, built through DOM calls with no `innerHTML` and no dependency: blank-line-separated paragraphs become paragraphs, consecutive `- ` lines become a bulleted list, and text between backticks becomes code inside either, while emphasis, links, headings, numbered lists, and every other construct stay plain text. Draw the question card's texts through it, the question, the pick's rationale, and each alternative's text, advantages, and drawbacks, so the backticks around a file name or a command no longer show literally and those single-paragraph texts gain their code and nothing else. Verified by tests of the renderer's three shapes against the stand-in DOM and of a card drawn from backticked text, with `gurita-vscode/README.md` saying how the card draws code.

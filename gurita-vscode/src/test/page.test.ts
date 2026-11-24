@@ -98,7 +98,7 @@ type PaneName = 'questions' | 'tasks';
 
 /** The page's action buttons with each pane shown: its recipe buttons, its question card's buttons, and New task. */
 const ACTIONS: Record<PaneName, string[]> = {
-  questions: ['review', 'complete', 'New task', 'Discuss', 'Answer', 'Answer with recommendation', 'Answer with this alternative'],
+  questions: ['review', 'complete', 'New task', 'Discuss', 'Answer', 'Answer with this alternative'],
   tasks: ['review', 'complete', 'New task'],
 };
 
@@ -546,7 +546,7 @@ test('no dropdown stands beside a fixed-name button posted with nothing, and the
     for (const select of selects) {
       assert.strictEqual(select.disabled, false);
     }
-    for (const text of ['Discuss', 'Answer', 'Answer with recommendation', 'Answer with this alternative', 'New task']) {
+    for (const text of ['Discuss', 'Answer', 'Answer with this alternative', 'New task']) {
       if (buttons(page).some((each) => shownName(each) === text)) {
         assert.ok(!section.all().includes(named(page, text)), `${text} stands outside the recipe list`);
       }
@@ -559,7 +559,6 @@ const FIXED_BUTTONS: [string, string, string][] = [
   ['New task', 'discussTask', 'Type an issue and open an interactive discussion of it into tasks for this mission'],
   ['Discuss', 'discussQuestion', 'Type an optional note and open an interactive discussion of this question'],
   ['Answer', 'answerQuestion', 'Record an answer you type as the decision'],
-  ['Answer with recommendation', 'answerWithRecommendation', "Record this question's recommendation as the decision"],
   ['Answer with this alternative', 'answerWithAlternative', 'Record keep as the decision'],
 ];
 
@@ -625,7 +624,7 @@ test("every fixed-name button shows its name with its selected variant's name be
         [[label, 'default'], `claude -p "/gurita:${key} --mission <path>" --model "${model}" --effort ${effort};`],
       ]),
     );
-  assert.deepStrictEqual(fixedShown(page), expected('fable', 'xhigh'), 'all five buttons, with either pane shown');
+  assert.deepStrictEqual(fixedShown(page), expected('fable', 'xhigh'), 'all four buttons, with either pane shown');
 
   // A default picked in the settings view reaches every button with the pages posted again.
   page.send(liveButtons(fixedButtons('opus', 'high')));
@@ -643,14 +642,12 @@ test("every fixed-name button shows its name with its selected variant's name be
       discussQuestion: { state: 'offered', lines: mixed, ...one('Mixed') },
       discussTask: { state: 'offered', lines: ['echo <issue description>'], ...one('Echo') },
       answerQuestion: undefined,
-      answerWithRecommendation: undefined,
     }),
   );
   const shown = fixedShown(page);
   assert.deepStrictEqual(shown.Discuss, [['Discuss', 'Mixed'], mixed.join('\n')]);
   assert.deepStrictEqual(shown['New task'], [['New task', 'Echo'], 'echo <issue description>'], 'a variant of no readable line shows its name too');
   assert.deepStrictEqual(shown.Answer, [['Answer'], 'Record an answer you type as the decision'], 'a recipe that cannot be read shows the name alone');
-  assert.deepStrictEqual(shown['Answer with recommendation'], [['Answer with recommendation'], "Record this question's recommendation as the decision"]);
 
   // Nothing posted for the buttons: every one shows its name alone.
   page.send(alphaPage([]));
@@ -667,6 +664,30 @@ test("every fixed-name button shows its name with its selected variant's name be
   ]);
   page.send(liveButtons(fixedButtons('fable', 'xhigh'), [ALPHA]));
   assertRunning(page);
+});
+
+test("a question card's head carries exactly two buttons, Discuss and Answer, each with its dropdown, and no Answer with recommendation", () => {
+  const page = loadPage();
+  for (const message of [alphaPage([]), liveButtons(fixedButtons('fable', 'xhigh'))]) {
+    page.send(message);
+    named(page, 'Open questions').click();
+    const heads = page.root.all().filter((each) => each.has('card-head'));
+    assert.strictEqual(heads.length, 1, 'one card is drawn, with one head');
+    const inHead = heads[0].all().filter((each) => each.tagName === 'button').map(shownName);
+    assert.deepStrictEqual(inHead, ['Discuss', 'Answer'], "the card's head buttons, in order");
+    assert.ok(!buttons(page).some((each) => shownName(each) === 'Answer with recommendation'), 'no Answer with recommendation button anywhere');
+    assert.ok(!texts(page).some((text) => text.includes('Answer with recommendation')), 'and no text naming it');
+  }
+  const selects = page.root.all().find((each) => each.has('card-head'))?.all().filter((each) => each.tagName === 'select') ?? [];
+  assert.deepStrictEqual(
+    selects.map((each) => each.getAttribute('aria-label')),
+    ['The variant of Discuss', 'The variant of Answer'],
+    'one dropdown beside each head button',
+  );
+  named(page, 'Answer').click();
+  assert.deepStrictEqual(page.posted.slice(-1), [
+    { type: 'questionButton', button: 'answerQuestion', mission: ALPHA, question: 'Pane Layout', variant: 'default' },
+  ]);
 });
 
 /** A live mission whose question view's first card carries two alternatives, keep and drop. */
@@ -719,7 +740,7 @@ test('a dropdown beside each fixed-name button offers its variants and stands on
   const besides: Record<string, [string, string, boolean][]> = {};
   eachPane(page, (pane) => {
     for (const [label] of FIXED_BUTTONS) {
-      if (pane === 'tasks' && ['Discuss', 'Answer', 'Answer with recommendation', 'Answer with this alternative'].includes(label)) {
+      if (pane === 'tasks' && ['Discuss', 'Answer', 'Answer with this alternative'].includes(label)) {
         continue;
       }
       const dropdown = dropdownBeside(page, label);
@@ -1321,7 +1342,7 @@ test('a harness check or settings message posted to a mission window changes not
   assert.deepStrictEqual(pageShape(posted), pageShape(plain));
   const clicks = (page: Page): unknown[] => {
     const count = page.posted.length;
-    for (const text of ['review', 'complete', 'Discuss', 'Answer', 'Answer with recommendation', 'Answer with this alternative', 'New task']) {
+    for (const text of ['review', 'complete', 'Discuss', 'Answer', 'Answer with this alternative', 'New task']) {
       named(page, text).click();
     }
     return page.posted.slice(count);
@@ -1433,7 +1454,6 @@ test('every push button a mission window draws carries one class of the one shar
     'Start run',
     'Discuss',
     'Answer',
-    'Answer with recommendation',
     'Answer with this alternative',
     'New task',
     'Previous',

@@ -193,8 +193,8 @@ position counter such as `3 / 12`: **Previous** and **Next**, or the left and ri
 move between the cards, and a dependency on a card links to the named question's card. Each card
 stacks the question text in an area of fixed height, so the pick starts at the same height on
 every card, then the pick and its rationale, the alternatives, the dependencies, and the
-principles, and carries **Discuss**, **Answer**, and **Answer with recommendation** buttons and an
-**Answer with this alternative** button on each alternative. **Discuss** always asks for an
+principles, and carries **Discuss** and **Answer** buttons and an **Answer with this
+alternative** button on each alternative. **Discuss** always asks for an
 optional note first: a note you type is carried to the discussion directly after the Short
 Title, as `--mission <path> <Short Title>. <note>`; an empty note starts the discussion of the
 question alone, and Escape starts nothing. After a run removes a question the view keeps its
@@ -204,8 +204,7 @@ Every push button a mission window draws has one look: the theme's primary butto
 one the recipe buttons carry, with a clearly visible 1px outline in the theme's contrast border
 colour, or its foreground colour where the theme sets none, so each button stands out against the
 page and its own fill alike. That covers the recipe buttons, **Start run**, the question card's
-**Discuss**, **Answer**, and **Answer with recommendation**, every **Answer with this
-alternative**, **New task**, **Previous**, **Next**, and **Close preview**, and in the Settings
+**Discuss** and **Answer**, every **Answer with this alternative**, **New task**, **Previous**, **Next**, and **Close preview**, and in the Settings
 window its edit controls (**Enable** and **Disable**, **Add model**, **Add effort**, and
 **Remove**, **Duplicate**, **Rename**, **Delete**, **Make default**, and **Reset**) and **Check
 again**. A disabled button is drawn faded. The two pane headers and the links of a card's
@@ -722,11 +721,10 @@ recipe by its fixed name are never listed on the page; those buttons carry their
 
 ### The buttons that run a recipe by its fixed name
 
-Five buttons on a mission's page run a recipe by its fixed name, whatever the step: **Discuss**,
-**Answer**, and **Answer with recommendation** on the question card, **Answer with this
-alternative** on each of its alternatives, and **New task**. The two rows that start a mission,
-**New mission** and **Define mission**, run theirs from the side-bar view (see The rows that
-start a mission above). The five pick a variant as the recipe buttons do. Beside each stands a dropdown of its
+Four buttons on a mission's page run a recipe by its fixed name, whatever the step: **Discuss**
+and **Answer** on the question card, **Answer with this alternative** on each of its
+alternatives, and **New task**. The two rows that start a mission, **New mission** and **Define
+mission**, run theirs from the side-bar view (see The rows that start a mission above). The four pick a variant as the recipe buttons do. Beside each stands a dropdown of its
 recipe's variants, drawn as its arrow alone and listing, opened, the variants in the recipe's
 order, each by its bare name with no mark for your own. Every **Answer with this alternative**
 button has such a dropdown of its own beside it, one per alternative on the card, so each
@@ -744,7 +742,7 @@ variant; picking another variant starts nothing, so these dropdowns stay enabled
 run is going.
 
 The variant you select is remembered in VS Code's storage for the open workspace (the extension's
-`workspaceState`). For **Discuss**, **Answer**, **Answer with recommendation**, and **New task**
+`workspaceState`). For **Discuss**, **Answer**, and **New task**
 it is remembered per recipe on each mission, keyed by the mission's path, in the same map as the
 recipe buttons' selections, so every card of a mission shares its selection. For each **Answer
 with this alternative** button it is remembered per mission, question, and alternative, keyed by
@@ -794,6 +792,15 @@ the old name matches no variant, so the renamed recipe shows its shipped variant
 and a remembered selection is kept only while that recipe of your own still lists the variant it
 names. Move what you want to keep onto the new name by hand in the Settings window.
 
+The file also shipped a button recipe `answer-open-question-with-recommendation`, run by an
+**Answer with recommendation** button the question card no longer carries; accepting a
+question's recommendation is left to `Approve all standing recommendations and review again`,
+which accepts every standing one together. Nothing removes what you stored under that name:
+variants stored under it, or a recipe of that name in your own recipe file, form a recipe of your
+own called `answer-open-question-with-recommendation`, which the Settings window lists as an
+ordinary recipe you can edit or delete, and which no mission page draws, since each of its
+variants holds `<Short Title>`, a value the page's action list cannot fill.
+
 Every chain in the file declares the one step it runs, once for the whole recipe, and spans no
 other:
 
@@ -825,10 +832,9 @@ of your own whose last line is the slot line `<single-task line>` (see the loope
 below), and no shipped recipe declares **follow up tasks**. Besides the chains, the file carries the following,
 none of which declares a step and each of which is one block:
 
-- The seven button recipes, each one `claude` line named by the skill it invokes:
+- The six button recipes, each one `claude` line named by the skill it invokes:
   `discuss-open-question`, `discuss-mission-goal`, `discuss-new-task`, `answer-open-question`,
-  `answer-open-question-with-recommendation`, `answer-open-question-with-alternative`, and
-  `define-mission-goal`. The buttons run the recipe of these fixed names; `discuss-new-task`'s
+  `answer-open-question-with-alternative`, and `define-mission-goal`. The buttons run the recipe of these fixed names; `discuss-new-task`'s
   one line is
   `claude "/gurita:discuss-new-task --mission <path> <issue description>" --dangerously-skip-permissions --model "fable" --effort high; # interactive`,
   and `discuss-open-question`'s is

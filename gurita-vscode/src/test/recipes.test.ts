@@ -26,6 +26,7 @@ import {
   Variant,
 } from '../recipes';
 import { parseVariantStore } from '../variantStore';
+import { settingsRecipes } from '../variantEdits';
 import { WORKFLOW_STEPS, WorkflowStep } from '../workflow';
 
 const FIXTURES = path.join(__dirname, '..', '..', 'src', 'test', 'fixtures', 'recipes');
@@ -563,6 +564,59 @@ test('stored variants under the old name Requirements iteration form an own reci
   }
 });
 
+test('state stored under the removed answer-open-question-with-recommendation forms an ordinary own recipe the Settings window lists and no mission page draws', () => {
+  const REMOVED = 'answer-open-question-with-recommendation';
+  const shippedRecipes = parseShippedRecipes(fs.readFileSync(SHIPPED_RECIPES, 'utf8'), SHIPPED_RECIPES);
+  assert.ok(!shippedRecipes.some((recipe) => recipe.name === REMOVED), 'the shipped file holds no recipe of the removed name');
+  assert.ok(!(Object.values(BUTTON_RECIPES) as string[]).includes(REMOVED), 'no fixed-name button runs it');
+  const ownLine = 'claude -p "/gurita:answer-open-question-with-recommendation --mission <path> <Short Title>" --model "opus" --effort high;';
+  const ownFile = parseOwnRecipes(`### ${REMOVED}\n\`\`\`\n${ownLine}\n\`\`\`\n`, OWN);
+  const base = mergeRecipes(shippedRecipes, ownFile);
+  const file = '/home/someone/.gurita/variants.json';
+  const copied = ['claude -p "/gurita:answer-open-question-with-recommendation --mission <path> <Short Title>" --dangerously-skip-permissions --model "fable" --effort high;'];
+  const mine = ['agy -p "/gurita:answer-open-question-with-recommendation --mission <path> <Short Title>" --model "gemini-4-argon" --effort medium;'];
+  const store = parseVariantStore(
+    JSON.stringify({
+      variants: [
+        { recipe: REMOVED, name: 'Fable copy', lines: copied, copies: { name: 'default', origin: 'shipped' } },
+        { recipe: REMOVED, name: 'Mine', lines: mine },
+      ],
+      defaults: [{ recipe: REMOVED, name: 'Mine', origin: 'stored' }],
+    }),
+    file,
+  );
+  const overlaid = overlayVariantStore(base, store, file);
+  const orphan = byName(overlaid, REMOVED);
+  assert.strictEqual(orphan.group, 'own');
+  assert.strictEqual(orphan.stage, undefined);
+  assert.deepStrictEqual(
+    orphan.variants.map((variant) => [variant.name, variant.own, variant.stored === true, variant.lines]),
+    [
+      ['default', true, false, [ownLine]],
+      ['Fable copy', true, true, copied],
+      ['Mine', true, true, mine],
+    ],
+    'the own file block and every variant stored under the name stand in one own recipe',
+  );
+  for (const step of [undefined, ...WORKFLOW_STEPS]) {
+    const listed = pageRecipes(step === undefined ? overlaid : stageRecipes(overlaid, step), ['path']).map((entry) => entry.name);
+    assert.ok(!listed.includes(REMOVED), `no mission page draws it${step === undefined ? '' : ` on a page filling ${step}`}`);
+  }
+  const settings = settingsRecipes(base, store, file, Object.values(BUTTON_RECIPES));
+  const entry = settings.find((each) => each.name === REMOVED);
+  assert.ok(entry !== undefined, 'the Settings window lists it');
+  assert.strictEqual(entry.fixed, false, 'as an ordinary recipe, with no fixed-name note');
+  assert.strictEqual(entry.group, 'own');
+  assert.deepStrictEqual(
+    entry.variants.map((variant) => variant.name),
+    ['default', 'Fable copy', 'Mine'],
+  );
+  assert.ok(
+    settings.filter((each) => each.fixed).every((each) => each.name !== REMOVED),
+    'it stands among no fixed-name button recipes',
+  );
+});
+
 test("every single-task line this repository's rule file names is a shipped single-task heading", () => {
   const recipes = parseShippedRecipes(fs.readFileSync(SHIPPED_RECIPES, 'utf8'), SHIPPED_RECIPES);
   const rules = fs.readFileSync(path.join(__dirname, '..', '..', '..', 'task_line_rules.txt'), 'utf8');
@@ -826,11 +880,10 @@ test('the own recipe file defaults to ~/.gurita/recipes.md and honours the setti
   assert.strictEqual(ownRecipesFile('$HOME/recipes.md', '/home/someone'), '$HOME/recipes.md');
 });
 
-test('the button recipes carry the seven fixed names, each the bare name of its skill', () => {
+test('the button recipes carry the six fixed names, each the bare name of its skill', () => {
   assert.deepStrictEqual(Object.values(BUTTON_RECIPES), [
     'discuss-open-question',
     'answer-open-question',
-    'answer-open-question-with-recommendation',
     'answer-open-question-with-alternative',
     'discuss-mission-goal',
     'define-mission-goal',

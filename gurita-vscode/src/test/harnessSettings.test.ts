@@ -109,9 +109,9 @@ agy -p "/gurita:finish-mission --mission <path>" --model "gemini-4-argon" --effo
 echo <path>
 \`\`\`
 
-### ${BUTTON_RECIPES.answerWithRecommendation}
+### ${BUTTON_RECIPES.answerQuestion}
 \`\`\`
-agy -p "/gurita:answer-open-question-with-recommendation --mission <path> <Short Title>" --model "gemini-4-argon";
+agy -p "/gurita:answer-open-question --mission <path> <Short Title>. <answer text>" --model "gemini-4-argon";
 \`\`\`
 
 ### Single task (Claude Code)
@@ -169,13 +169,13 @@ test('a left-out remembered variant or default gives way to the default when sti
 });
 
 test("disabling leaves a fixed-name button's variants on that harness out of its dropdown, a button so left with none standing with no variant, and the named single-task lines as they are", () => {
-  const button = buttonRecipe(recipes(), BUTTON_RECIPES.answerWithRecommendation, ['path', 'Short Title']);
+  const button = buttonRecipe(recipes(), BUTTON_RECIPES.answerQuestion, ['path', 'Short Title', 'answer text']);
   assert.ok(button.state === 'found');
   assert.match(button.variant.lines[0], /^agy /, 'with every harness enabled the button offers its Antigravity line');
-  assert.deepStrictEqual(buttonRecipe(recipes(), BUTTON_RECIPES.answerWithRecommendation, ['path', 'Short Title'], undefined, ['claude']).state, 'found');
-  const left = buttonRecipe(recipes(), BUTTON_RECIPES.answerWithRecommendation, ['path', 'Short Title'], undefined, ['agy']);
+  assert.deepStrictEqual(buttonRecipe(recipes(), BUTTON_RECIPES.answerQuestion, ['path', 'Short Title', 'answer text'], undefined, ['claude']).state, 'found');
+  const left = buttonRecipe(recipes(), BUTTON_RECIPES.answerQuestion, ['path', 'Short Title', 'answer text'], undefined, ['agy']);
   assert.ok(left.state === 'disabled', 'its one variant on a disabled harness leaves the button with none');
-  assert.strictEqual(left.recipe.name, BUTTON_RECIPES.answerWithRecommendation);
+  assert.strictEqual(left.recipe.name, BUTTON_RECIPES.answerQuestion);
   assert.match(left.cause, /disabled harness/);
   assert.deepStrictEqual(
     singleTaskLines(recipes()).map((line) => line.name),

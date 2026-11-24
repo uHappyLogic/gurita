@@ -73,8 +73,8 @@
 // its click telling why in an error notification. A click runs the variant selected only when the
 // latest answer posted the button so, standing on that variant, and runs the lines it posted; they
 // run
-// through the same run path: on a question's card the discuss, answer, and answer-with-
-// recommendation buttons, on an alternative on that card the answer-with-alternative button,
+// through the same run path: on a question's card the discuss and answer buttons, on an
+// alternative on that card the answer-with-alternative button,
 // and on a mission's page, in its row above the pane headers, the new-task button. The
 // Short Title and the Alternative Id come from the card clicked, every typed value from
 // VS Code's own input box, one line per value, and each value reaches its line only as its
@@ -191,7 +191,7 @@ export const OPEN_MISSION_COMMAND = 'gurita.openMission';
 const PAGE_PLACEHOLDERS = ['path'];
 
 /** A button on a question's card. */
-type QuestionButton = 'discussQuestion' | 'answerQuestion' | 'answerWithRecommendation';
+type QuestionButton = 'discussQuestion' | 'answerQuestion';
 
 /** A mission-starting row of the side-bar view. */
 type MissionButton = StartingButton;
@@ -218,7 +218,7 @@ type RecipeRead = { state: 'read'; recipes: Recipe[]; disabled: Harness[] } | { 
 /** The recipe list one mission's page shows, or the cause the recipes could not be read. */
 type RecipePart = { state: 'read'; recipes: PageRecipe[] } | { state: 'failed'; cause: string };
 
-/** One of the seven buttons outside the recipe list, each running the recipe of its fixed name. */
+/** One of the six buttons outside the recipe list, each running the recipe of its fixed name. */
 type FixedButton = keyof typeof BUTTON_RECIPES;
 
 /**
@@ -229,7 +229,7 @@ type FixedButton = keyof typeof BUTTON_RECIPES;
 type PageButton = Exclude<FixedButton, MissionButton | 'answerWithAlternative'>;
 
 /** The fixed-name buttons on a mission's page posted once with its mission, by the button. */
-const PAGE_BUTTONS: readonly PageButton[] = ['discussQuestion', 'answerQuestion', 'answerWithRecommendation', 'discussTask'];
+const PAGE_BUTTONS: readonly PageButton[] = ['discussQuestion', 'answerQuestion', 'discussTask'];
 
 /**
  * What a fixed-name button runs, as its dropdown, label, and hover text show it: the variants it
@@ -1375,7 +1375,6 @@ function runLoop(
 const QUESTION_BUTTONS: Record<QuestionButton, { typed: string[] }> = {
   discussQuestion: { typed: ['note'] },
   answerQuestion: { typed: ['answer text'] },
-  answerWithRecommendation: { typed: [] },
 };
 
 /** The placeholder values each mission-starting row has typed, in the order it asks for them. */
@@ -1388,7 +1387,6 @@ const MISSION_BUTTONS: Record<MissionButton, { typed: string[] }> = {
 const BUTTON_PLACEHOLDERS: Record<FixedButton, readonly string[]> = {
   discussQuestion: ['path', 'Short Title', ...QUESTION_BUTTONS.discussQuestion.typed],
   answerQuestion: ['path', 'Short Title', ...QUESTION_BUTTONS.answerQuestion.typed],
-  answerWithRecommendation: ['path', 'Short Title', ...QUESTION_BUTTONS.answerWithRecommendation.typed],
   answerWithAlternative: ['path', 'Short Title', 'Alternative Id'],
   discussGoal: MISSION_BUTTONS.discussGoal.typed,
   defineMission: MISSION_BUTTONS.defineMission.typed,

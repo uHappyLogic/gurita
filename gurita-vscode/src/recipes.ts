@@ -751,14 +751,13 @@ export function selectedChoice(entry: PageRecipe): PageVariantChoice {
 
 /**
  * The fixed names of the recipes the buttons outside the chains run, each the bare name of the
- * skill its one line invokes: three on a question's card, one on each alternative on that card,
+ * skill its one line invokes: two on a question's card, one on each alternative on that card,
  * the two mission-starting buttons at the tab row's end, and the new-task button inside a
  * mission's Remaining tasks pane.
  */
 export const BUTTON_RECIPES = {
   discussQuestion: 'discuss-open-question',
   answerQuestion: 'answer-open-question',
-  answerWithRecommendation: 'answer-open-question-with-recommendation',
   answerWithAlternative: 'answer-open-question-with-alternative',
   discussGoal: 'discuss-mission-goal',
   defineMission: 'define-mission-goal',
