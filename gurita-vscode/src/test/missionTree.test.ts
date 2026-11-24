@@ -37,11 +37,12 @@ interface StubTerminal {
 const terminals: StubTerminal[] = [];
 let closeTerminal: ((terminal: StubTerminal) => void) | undefined;
 
-/** A webview panel the stub's editor created: its view type, its title, and its reveals. */
+/** A webview panel the stub's editor created: its view type, its title, its reveals, and the listener its page's messages reach. */
 interface StubPanel {
   viewType: string;
   title: string;
   reveals: number;
+  receive?: (message: unknown) => void;
 }
 /** Every webview panel the stub's editor created, in order. */
 const webviewPanels: StubPanel[] = [];
@@ -65,6 +66,9 @@ let nextPick: string | undefined;
 
 /** The error notifications the extension showed. */
 const errors: string[] = [];
+
+/** The information and warning notifications the extension showed. */
+const notices: string[] = [];
 
 /** The tree data provider the stub's editor was given, as the tree stand-in holds it. */
 interface StubProvider {
@@ -170,6 +174,7 @@ const stub = {
           asWebviewUri: (uri: unknown) => ({ toString: () => `webview:${JSON.stringify(uri)}` }),
           onDidReceiveMessage: (listener: (message: unknown) => void) => {
             receive = listener;
+            record.receive = listener;
             return disposable;
           },
           postMessage: (message: { type?: string; prompt?: string }) => {
@@ -220,8 +225,14 @@ const stub = {
       closeTerminal = listener;
       return disposable;
     },
-    showInformationMessage: () => Promise.resolve(undefined),
-    showWarningMessage: () => Promise.resolve(undefined),
+    showInformationMessage: (message: string) => {
+      notices.push(message);
+      return Promise.resolve(undefined);
+    },
+    showWarningMessage: (message: string) => {
+      notices.push(message);
+      return Promise.resolve(undefined);
+    },
     showErrorMessage: (message: string) => {
       errors.push(message);
       return Promise.resolve(undefined);
@@ -245,6 +256,8 @@ const missionTree = require('../missionTree') as typeof import('../missionTree')
 const pane = require('../pane') as typeof import('../pane');
 const startingRows = require('../startingRows') as typeof import('../startingRows');
 const selections = require('../selections') as typeof import('../selections');
+const settingsWindow = require('../settingsWindow') as typeof import('../settingsWindow');
+const pluginNotice = require('../pluginNotice') as typeof import('../pluginNotice');
 Module._load = load;
 
 /** The project's `workspaceState`, by key. */
@@ -335,6 +348,45 @@ process.env.HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-tree-home-'));
 packaged.set('bundled/missions.py', path.join(__dirname, '..', '..', '..', 'core', 'tools', 'missions.py'));
 packaged.set('bundled/shipped_recipes.md', path.join(__dirname, '..', '..', 'shipped_recipes.md'));
 
+/**
+ * A stand-in for the packaged check script, logging each run and printing the result the test last
+ * wrote to `CHECK_RESULT`, or, while `CHECK_FAILS` exists, failing with its text on stderr.
+ */
+const checkDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-tree-check-'));
+const CHECK_LOG = path.join(checkDir, 'runs.log');
+const CHECK_RESULT = path.join(checkDir, 'result.json');
+const CHECK_FAILS = path.join(checkDir, 'fails.txt');
+fs.writeFileSync(
+  path.join(checkDir, 'harness_check.py'),
+  [
+    'import os, sys',
+    `open(${JSON.stringify(CHECK_LOG)}, "a").write("run\\n")`,
+    `if os.path.exists(${JSON.stringify(CHECK_FAILS)}):`,
+    `    sys.stderr.write(open(${JSON.stringify(CHECK_FAILS)}).read())`,
+    '    sys.exit(1)',
+    `sys.stdout.write(open(${JSON.stringify(CHECK_RESULT)}).read())`,
+    '',
+  ].join('\n'),
+);
+fs.writeFileSync(path.join(checkDir, 'plugin_version.txt'), '2.0.0\n');
+packaged.set('harness_check.py', path.join(checkDir, 'harness_check.py'));
+packaged.set('bundled/plugin_version.txt', path.join(checkDir, 'plugin_version.txt'));
+
+/** One harness's print as the check script gives it. */
+type PrintedHarness = { found: boolean; installed: boolean; version: string | null; disabled?: boolean; error?: string };
+const PASSING: PrintedHarness = { found: true, installed: true, version: '2.0.0' };
+
+/** Writes the result the stand-in check prints next: every harness passing but those `changed` names. */
+function checkPrints(changed: Partial<Record<'claude' | 'antigravity' | 'codex', PrintedHarness>> = {}): void {
+  fs.writeFileSync(CHECK_RESULT, JSON.stringify({ claude: PASSING, antigravity: PASSING, codex: PASSING, ...changed }));
+}
+checkPrints();
+
+/** The number of times the check script ran. */
+function checkRuns(): number {
+  return fs.existsSync(CHECK_LOG) ? fs.readFileSync(CHECK_LOG, 'utf8').split('\n').filter((line) => line !== '').length : 0;
+}
+
 /** The line of the own variant `quick` that `define-mission-goal` gains from the own recipe file. */
 const QUICK_LINE = 'agy -p "/gurita:define-mission-goal --at <scope> <goal>" --model "gemini-4-argon" --effort low;';
 fs.mkdirSync(path.join(process.env.HOME, '.gurita'));
@@ -372,6 +424,7 @@ test("the tree is created under the manifest's view id, and nothing is read befo
   await new Promise((resolve) => setTimeout(resolve, 200));
   assert.strictEqual(watchers.length, 0, 'no file is watched before the view is resolved');
   assert.strictEqual(redraws, 0, 'no read is kept before the view is resolved');
+  assert.strictEqual(checkRuns(), 0, 'the harness check does not run before the view is resolved');
   assert.deepStrictEqual(
     items().map((each) => each.label),
     STARTING_LABELS,
@@ -379,6 +432,7 @@ test("the tree is created under the manifest's view id, and nothing is read befo
   );
   await until(() => redraws > 0, 'the first read redraws the tree');
   assert.strictEqual(documentWatchers().length, 1, 'the first read that succeeds watches the mission documents');
+  await until(() => checkRuns() === 1, "the view's first resolution runs the harness check in the background");
   assert.deepStrictEqual(
     items().map((each) => each.label),
     [...STARTING_LABELS, 'Alpha mission', 'Beta mission', 'Gamma mission', 'Delta mission'],
@@ -691,4 +745,133 @@ test('the manifest contributes the refresh command, offered in the Command Palet
     [{ command: missionTree.REFRESH_COMMAND, when: `view == ${missionTree.MISSIONS_VIEW}`, group: 'navigation@1' }],
     "the view's title bar runs the same command as an icon action, first in its group",
   );
+});
+
+/** The Settings window open now, opened by its command when none is. */
+function settingsPanel(): StubPanel {
+  commands.get(settingsWindow.SETTINGS_COMMAND)?.();
+  const found = webviewPanels.filter((each) => each.viewType === settingsWindow.SETTINGS_VIEW_TYPE);
+  assert.ok(found.length > 0, 'the Settings command opens the Settings window');
+  return found[found.length - 1];
+}
+
+/** Runs the harness check afresh as the Settings window's Check again does, and waits until it has finished. */
+async function checkAgain(): Promise<void> {
+  const before = settingsWindow.sessionHarnessCheck();
+  const runsBefore = checkRuns();
+  settingsPanel().receive?.({ type: 'checkHarnesses' });
+  await until(() => checkRuns() > runsBefore && settingsWindow.sessionHarnessCheck() !== before, 'the check run afresh finishes');
+}
+
+/** The plugin notice row's tree item when the tree holds it, its first row, else undefined. */
+function noticeRow(): StubTreeItem | undefined {
+  const first = items()[0];
+  return first?.label === pluginNotice.PLUGIN_NOTICE_LABEL ? first : undefined;
+}
+
+const MISSION_LABELS = ['Alpha mission', 'Beta mission', 'Gamma mission', 'Delta mission'];
+
+test("the harness check runs once, in the background from the view's first resolution, a passing check standing no notice row, and neither Refresh nor a re-read runs it again", async () => {
+  assert.strictEqual(checkRuns(), 1, 'every re-read and Refresh so far left the one background run');
+  assert.strictEqual(settingsWindow.sessionHarnessCheck()?.state, 'checked');
+  assert.deepStrictEqual(items().map((each) => each.label), [...STARTING_LABELS, ...MISSION_LABELS], 'a passing check stands no notice row');
+  const refresh = commands.get(missionTree.REFRESH_COMMAND);
+  assert.ok(refresh !== undefined);
+  const before = redraws;
+  refresh();
+  await until(() => redraws > before, 'the refresh redraws the tree');
+  await new Promise((resolve) => setTimeout(resolve, 200));
+  assert.strictEqual(checkRuns(), 1, 'Refresh does not run the check');
+});
+
+test('each enabled harness whose CLI is found and whose plugin is not installed, unreadable, disabled, or older stands the notice row at the top, a warning whose click opens the Settings window', async () => {
+  const errorsBefore = errors.length;
+  const noticesBefore = notices.length;
+  const cases: [Partial<Record<'claude' | 'antigravity' | 'codex', PrintedHarness>>, string][] = [
+    [{ claude: { found: true, installed: false, version: null } }, 'Claude Code: the Gurita plugin is not installed'],
+    [{ antigravity: { found: true, installed: false, version: null, error: 'the listing printed no JSON' } }, 'Antigravity: the plugin listing could not be read (the listing printed no JSON)'],
+    [{ codex: { found: true, installed: false, version: null, disabled: true } }, 'Codex: the Gurita plugin is installed but disabled'],
+    [{ claude: { found: true, installed: true, version: '1.9.9' } }, 'Claude Code: installed version 1.9.9 is older than the packaged 2.0.0'],
+  ];
+  for (const [printed, line] of cases) {
+    checkPrints(printed);
+    await checkAgain();
+    await until(() => noticeRow()?.tooltip?.includes(line) === true, `the notice row names ${line}`);
+    const row = noticeRow();
+    assert.ok(row !== undefined);
+    assert.strictEqual(row.tooltip, [pluginNotice.PLUGIN_NOTICE_LABEL, line, pluginNotice.PLUGIN_NOTICE_CLICK].join('\n'));
+    assert.strictEqual(row.collapsibleState, stub.TreeItemCollapsibleState.None);
+    assert.strictEqual(row.iconPath?.id, missionTree.PLUGIN_NOTICE_ICON);
+    assert.strictEqual(row.iconPath?.id, 'warning');
+    assert.deepStrictEqual(row.command, { command: settingsWindow.SETTINGS_COMMAND, title: 'Open Settings' });
+    assert.deepStrictEqual(
+      items().map((each) => each.label),
+      [pluginNotice.PLUGIN_NOTICE_LABEL, ...STARTING_LABELS, ...MISSION_LABELS],
+      'the notice row stands above New mission and Define mission',
+    );
+    assert.strictEqual(view.message, undefined, "the view's message is left to the live read");
+  }
+  const window = settingsPanel();
+  const reveals = window.reveals;
+  const click = noticeRow()?.command;
+  assert.ok(click !== undefined);
+  commands.get(click.command)?.(...(click.arguments ?? []));
+  assert.strictEqual(window.reveals, reveals + 1, "the row's click opens the Settings window, revealing it when it is open");
+  assert.strictEqual(errors.length, errorsBefore, 'no error notification is shown');
+  assert.strictEqual(notices.length, noticesBefore, 'no other notification is shown');
+});
+
+test('a harness whose CLI is not found, or one disabled in the Settings window, never counts toward the notice row', async () => {
+  checkPrints({ claude: { found: false, installed: false, version: null } });
+  await checkAgain();
+  await until(() => noticeRow() === undefined, 'a harness whose CLI is not found stands no row');
+  checkPrints({ codex: { found: true, installed: true, version: '1.0.0' } });
+  await checkAgain();
+  await until(() => noticeRow() !== undefined, 'the older Codex copy stands the row');
+  const window = settingsPanel();
+  let before = redraws;
+  window.receive?.({ type: 'setHarnessEnabled', harness: 'codex', enabled: false });
+  await until(() => redraws > before && noticeRow() === undefined, "disabling Codex in the Settings window takes the row away");
+  checkPrints({ codex: { found: true, installed: false, version: null } });
+  await checkAgain();
+  assert.strictEqual(noticeRow(), undefined, 'a disabled harness never counts, whatever its check gives');
+  before = redraws;
+  window.receive?.({ type: 'setHarnessEnabled', harness: 'codex', enabled: true });
+  await until(() => redraws > before && noticeRow()?.tooltip?.includes('Codex: the Gurita plugin is not installed') === true, 'enabling Codex again stands the row');
+  checkPrints();
+  await checkAgain();
+  await until(() => noticeRow() === undefined, 'a passing check takes the row away');
+});
+
+test("a check that could not be run at all stands the notice row with its cause, the view's message keeping only the live read's lines", async () => {
+  const noticesBefore = notices.length;
+  const errorsBefore = errors.length;
+  fs.writeFileSync(CHECK_FAILS, 'Error: the check broke');
+  await checkAgain();
+  await until(() => noticeRow() !== undefined, 'a check that could not be run stands the row');
+  assert.strictEqual(
+    noticeRow()?.tooltip,
+    [pluginNotice.PLUGIN_NOTICE_LABEL, `${pluginNotice.CHECK_NOT_RUN} Error: the check broke`, pluginNotice.PLUGIN_NOTICE_CLICK].join('\n'),
+  );
+  const empty = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-tree-empty-')));
+  git(empty, 'init', '-q');
+  const refresh = commands.get(missionTree.REFRESH_COMMAND);
+  assert.ok(refresh !== undefined);
+  workspace.folders = [{ uri: { fsPath: empty } }];
+  refresh();
+  await until(() => view.message === missionTree.NO_MISSION_MESSAGE, 'the view shows that no mission is live');
+  assert.deepStrictEqual(items().map((each) => each.label), [pluginNotice.PLUGIN_NOTICE_LABEL, ...STARTING_LABELS]);
+  workspace.folders = undefined;
+  refresh();
+  await until(() => view.message !== missionTree.NO_MISSION_MESSAGE, 'the view shows the failed read');
+  assert.strictEqual(view.message, 'The live missions could not be read. No folder is open in this window.');
+  assert.deepStrictEqual(items().map((each) => each.label), [pluginNotice.PLUGIN_NOTICE_LABEL, ...STARTING_LABELS]);
+  workspace.folders = [{ uri: { fsPath: root } }];
+  refresh();
+  await until(() => view.message === undefined, 'a read with missions clears the message');
+  fs.rmSync(CHECK_FAILS);
+  await checkAgain();
+  await until(() => noticeRow() === undefined, 'a passing check takes the row away');
+  assert.strictEqual(notices.length, noticesBefore, 'no notification is shown');
+  assert.strictEqual(errors.length, errorsBefore, 'no error notification is shown');
 });

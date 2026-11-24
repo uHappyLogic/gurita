@@ -8,13 +8,17 @@
 // named single-task lines, each read afresh, and with the harness check.
 //
 // The harness check belongs to the extension's session, not to the window: it first runs, the
-// packaged `harness_check.py` through `execFile` from the project root, on the first opening of
-// the window after the extension activates, and its result is kept in this module's state for the
+// packaged `harness_check.py` through `execFile` from the project root, on the side-bar view's
+// first drawing or the first opening of the window after the extension activates, whichever comes
+// first, and its result is kept in this module's state for the
 // rest of that session, across every close and reopening of the window, every later opening
 // posting the result kept without running the check again. Only the window's check-again control
 // and the end of an install or update run run it afresh: no refresh, re-read, or reopening does, a restart or a window reload ends the
-// session, and no timestamp or stored record is kept. Its result reaches the window alone, the
-// mission pages drawn and their clicks run whatever it reports.
+// session, and no timestamp or stored record is kept. The view starts it in the background
+// (`startHarnessCheck`) through the code path the window's opening runs, so it most often runs
+// before the window is first opened, that opening then posting the result kept. Its result reaches the window and the side-bar view's plugin notice row (`pluginNotice.ts`) alone,
+// the latest finished result standing for the notice while a later check runs, and the mission
+// pages are drawn and their clicks run whatever it reports.
 //
 // The window also starts the install and update runs (`pluginRuns.ts`): a page's request to install
 // or update the plugin on a harness starts the packaged `install_plugin.py` as a terminal's own
@@ -65,7 +69,8 @@
 // Every edit made in the window shows at once on every other surface: the window's lists are
 // posted again, and every shown mission window is posted its page again with the recipes re-read,
 // or the failure state again while it stands, and the side-bar view's two mission-starting rows are
-// redrawn, their recipes read afresh (`recipesChanged`). The refresh command re-reads the window
+// redrawn, their recipes read afresh (`recipesChanged`), and an enabling or disabling redraws the
+// side-bar view's plugin notice row as well. The refresh command re-reads the window
 // too, posting its lists afresh while it is shown, the harness check left as it stands.
 //
 // The Settings window open before a restart or a window reload comes back in the editor group and
@@ -197,12 +202,58 @@ let settingsPanel: vscode.WebviewPanel | undefined;
 
 /**
  * The harness check kept for the rest of the extension's session, across every close and
- * reopening of the window: undefined until the window is first opened.
+ * reopening of the window: undefined until the window is first opened or the side-bar view
+ * first draws, whichever comes first.
  */
 let harnessCheck: HarnessCheck | undefined;
 
 /** The number of harness checks started, so only the latest one started keeps its result. */
 let checks = 0;
+
+/**
+ * What the latest finished harness check of the session gave, kept while a later one runs, so the
+ * side-bar view's plugin notice stands on the last result known: undefined until one finishes.
+ */
+let finishedCheck: CheckResult | undefined;
+
+/** The listeners told each time a harness check finishes or a harness is enabled or disabled. */
+const checkListeners: (() => void)[] = [];
+
+/** What the latest finished harness check of the session gave, or undefined while none has finished. */
+export function sessionHarnessCheck(): CheckResult | undefined {
+  return finishedCheck;
+}
+
+/** Calls `listener` each time a harness check finishes or a harness is enabled or disabled in the window. */
+export function onHarnessCheck(listener: () => void): vscode.Disposable {
+  checkListeners.push(listener);
+  return {
+    dispose(): void {
+      const index = checkListeners.indexOf(listener);
+      if (index >= 0) {
+        checkListeners.splice(index, 1);
+      }
+    },
+  };
+}
+
+/** Tells every listener that the harness check or a harness's enabled state may have changed. */
+function checkChanged(): void {
+  for (const listener of [...checkListeners]) {
+    listener();
+  }
+}
+
+/**
+ * Starts the session's harness check in the background unless one has already been started in the
+ * session, as the side-bar view's first drawing does: through the code path the window's first
+ * opening runs, its result kept for the rest of the session.
+ */
+export function startHarnessCheck(context: vscode.ExtensionContext): void {
+  if (harnessCheck === undefined) {
+    void checkHarnesses(context);
+  }
+}
 
 /**
  * Registers the Settings command, which the side-bar view's Settings title-bar action runs, and the
@@ -380,6 +431,8 @@ async function checkHarnesses(context: vscode.ExtensionContext, afterRun = false
     return;
   }
   harnessCheck = result;
+  finishedCheck = result;
+  checkChanged();
   await postCheck();
 }
 
@@ -492,8 +545,9 @@ async function postCheck(): Promise<void> {
 
 /**
  * Enables or disables the harness `harness` in the harness part of the variant store file, read
- * afresh and written whole, then posts each harness's state and the pages again, their recipes
- * re-read, so a variant on a disabled harness leaves its dropdown at once. A key naming no harness
+ * afresh and written whole, then tells the side-bar view's plugin notice, which counts enabled
+ * harnesses alone, and posts each harness's state and the pages again, their recipes re-read, so
+ * a variant on a disabled harness leaves its dropdown at once. A key naming no harness
  * or a state that is not true or false writes nothing; a store that cannot be read or written is
  * told in an error notification, nothing written.
  */
@@ -508,6 +562,7 @@ async function enableHarness(context: vscode.ExtensionContext, target: vscode.We
       `The harness could not be ${enabled ? 'enabled' : 'disabled'}: ${error instanceof Error ? error.message : String(error)}`,
     );
   }
+  checkChanged();
   await post(target, { type: 'harnessSettings', settings: readHarnessSettings() });
   await recipesChanged(context);
 }

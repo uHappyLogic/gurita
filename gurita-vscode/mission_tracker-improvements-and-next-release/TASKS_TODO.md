@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Plugin Notice Row in the Missions View
-
-Run the harness check in the background as soon as the Missions view first draws in a session, through the same `checkHarnesses` path the Settings window uses, its result kept for the rest of the session as today, so only the Settings window's Check again and the end of an install or update run run it afresh and the view's Refresh does not. While at least one harness that is Enabled in the Settings window and whose CLI is found fails its install or version check (not installed, listing unreadable, installed but disabled, or older than the packaged version), or the check could not be run at all, the tree holds a plugin notice row at its top, above New mission and Define mission, with a warning icon, a label saying the plugin is missing or outdated, and a click opening the Settings window; disabled harnesses and harnesses whose CLI is not found never count, the view's message keeps only `No mission is live.` and the read-failure line, and no notification is shown. Verified by tree tests against the `vscode` stub of the row in each counted and uncounted case and of the check's one background run, with `gurita-vscode/README.md` describing the row.
-
----
-
 ## Bootstrap Offer Row in the Missions View
 
 Offer the workflow bootstrap as a tree row at the top of the Missions view, above New mission and Define mission, present only while neither `CLAUDE.md` nor `AGENTS.md` at the project root holds a `## Mission Workflow` heading, whatever harnesses are enabled. A click runs `init-mission-base-workflow`, which takes no argument, from a shipped button recipe named by its skill, as the two mission-starting rows run theirs, and the offer is gone once either file holds the heading. Verified by tree tests of the row in each file state and of the click's run, with `gurita-vscode/README.md` describing the row.

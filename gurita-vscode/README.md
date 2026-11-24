@@ -44,7 +44,9 @@ own, independent of the Gurita plugin's. To remove it, run
 The extension contributes an activity-bar entry, **Gurita**, its icon three octopus arms,
 holding one side-bar view, **Missions**: a native tree of rows
 with no child rows, the two rows that start a mission, **New mission** and **Define mission**,
-standing above one row per live mission, in the order `missions.py live` prints them.
+standing above one row per live mission, in the order `missions.py live` prints them. While the
+Gurita plugin is missing or outdated on a harness you use, a plugin notice row stands above them
+all (see The plugin notice row below).
 
 The view's title bar carries **Refresh** as an icon action. It runs the command
 **Gurita: Refresh Missions** (`gurita.refreshMissions`), which the Command Palette also offers:
@@ -53,6 +55,33 @@ and every open window from that fresh read, the Settings window included, in eve
 view. Beside it stands **Settings**, a gear icon action that opens the Settings window (see The
 Settings window below), or brings it forward when it is already open; its command
 (`gurita.openSettings`) is hidden from the Command Palette.
+
+### The plugin notice row
+
+Showing the view for the first time in a session also starts the harness check (see The harness
+check below) in the background, unless opening the Settings window has already started it. Its
+result is kept for the rest of the session: **Refresh** and every re-read leave it as it stands,
+and only **Check again** in the Settings window and the end of an install or update run run it
+afresh.
+
+While at least one harness counts, the tree holds a plugin notice row at its very top, above
+**New mission** and **Define mission**. A harness counts when it is enabled under **Harnesses**
+in the Settings window, its CLI is found, and its plugin check or version check fails: the Gurita
+plugin is not installed, the harness's plugin listing could not be read, the copy is installed but
+disabled, or the installed copy is older than the packaged version. A harness you disabled in the
+Settings window, and one whose CLI is not found, never counts. A check that could not be run at
+all also makes the row stand.
+
+- The row's label is `Gurita plugin missing or outdated`, and its icon is a warning.
+- Its hover text names each harness that counts and why, for example `Claude Code: the Gurita
+  plugin is not installed`, or, when the check could not be run, the check's cause.
+- A click on the row opens the Settings window, or brings it forward when it is already open,
+  where the plugin is installed or updated.
+
+The row goes as soon as no harness counts any more: once a check run afresh passes, or once the
+harnesses that counted are disabled in the Settings window. While a check run afresh is going the
+row stands on the last result. The notice is the row alone: the view's message keeps only the
+two lines described under The mission rows below, and no notification is shown.
 
 ### The rows that start a mission
 
@@ -429,13 +458,16 @@ install the copy again at each scope one was detected at, and Codex's end with
 its checks are unchanged by the source. Antigravity's listing names no source, so its copy is
 reported as before.
 
-The check runs the first time you open the Settings window after the extension starts. Its
+The check runs in the background as soon as the side-bar view first shows after the extension
+starts, or the first time you open the Settings window, when that comes first. Its
 result is kept in the extension, with no timestamp and nothing stored, for the rest of that
-session: closing the window and opening it again, or showing it again after it was hidden, shows
-the result kept without the check running again. **Check again** in the window runs it afresh,
-and so does the end of an install or update run.
+session: opening the window, closing it and opening it again, or showing it again after it was
+hidden, shows the result kept without the check running again. **Check again** in the window runs
+it afresh, and so does the end of an install or update run.
 Neither **Refresh** nor any re-read runs it; a restart or a window reload ends the session, so the
-next first opening runs the check again. A failed check is shown only here. The mission pages still draw every variant,
+check runs again on the view's next first showing. A failed check is shown here and, for the
+harnesses that count, by the side-bar view's plugin notice row (see The plugin notice row above),
+and nowhere else. The mission pages still draw every variant,
 the buttons that run a recipe of a fixed name, and the looped run exactly as they would if every
 check passed, and a click runs the lines as written. When the check cannot run at all, the window
 shows one line saying so, with the cause beneath it.

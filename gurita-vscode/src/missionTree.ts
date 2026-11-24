@@ -1,5 +1,6 @@
 // The side-bar view: the one view of the extension's activity-bar container, a native tree of leaf
-// rows with no child rows: first the two rows that start a mission, New mission and Define mission,
+// rows with no child rows: first, while it stands, the plugin notice row described below, then the
+// two rows that start a mission, New mission and Define mission,
 // standing above the mission rows in every state of the view, each drawn as `startingRows.ts` lays
 // it out from the variant the project remembers for its recipe, a click on it running that variant
 // and its inline icon action, also in its context menu, offering the recipe's variants in a
@@ -23,8 +24,22 @@
 // the live missions and redraws the tree and every open window from the fresh read, the Settings
 // window included, and beside it Settings, an icon action running the Settings command, hidden from
 // the Command Palette, which opens the Settings window (`settingsWindow.ts`) or reveals it.
+//
+// The view's first resolution in a session also starts the harness check in the background, through
+// the code path the Settings window runs (`startHarnessCheck`), unless it has already started; its
+// result is kept for the session, so no re-read and no Refresh runs it again. While the latest
+// finished check counts a harness as `pluginNotice.ts` lays out, or could not be run at all, the
+// tree holds the plugin notice row at its very top, above the two mission-starting rows: a leaf with
+// a warning icon, labelled that the plugin is missing or outdated, its hover text naming each
+// counted harness or the check's cause, and its click running the Settings command. Each finished
+// check and each enabling or disabling of a harness in the Settings window redraws the tree when the
+// notice changes. The notice is a row alone: the view's message and the notifications are left to
+// what the live read gives.
 
+import * as os from 'node:os';
 import * as vscode from 'vscode';
+import { HARNESSES } from './harnessCheck';
+import { HarnessStates, readHarnessStates } from './harnessSettings';
 import { MissionRow, missionRow } from './missionRows';
 import {
   OPEN_MISSION_COMMAND,
@@ -39,8 +54,10 @@ import {
   startingOffers,
 } from './pane';
 import { runningMissions } from './runs';
-import { refreshSettings } from './settingsWindow';
+import { PLUGIN_NOTICE_LABEL, pluginNotice } from './pluginNotice';
+import { SETTINGS_COMMAND, onHarnessCheck, refreshSettings, sessionHarnessCheck, startHarnessCheck } from './settingsWindow';
 import { STARTING_ROWS, StartingButton, StartingRow, startingRow } from './startingRows';
+import { variantStoreFile } from './variantStore';
 
 /** The hidden command a click on a mission row runs, opening or revealing that mission's window. */
 export { OPEN_MISSION_COMMAND };
@@ -79,8 +96,44 @@ export const STARTING_ICONS: Readonly<Record<StartingButton, string>> = {
   defineMission: 'new-folder',
 };
 
-/** A row of the side-bar view: a mission-starting row or a live mission's row. */
-export type TreeRow = { kind: 'starting'; row: StartingRow } | { kind: 'mission'; row: MissionRow };
+/** The icon of the plugin notice row. */
+export const PLUGIN_NOTICE_ICON = 'warning';
+
+/** The id of the plugin notice row's tree item. */
+export const PLUGIN_NOTICE_ID = 'gurita.pluginNotice';
+
+/** A row of the side-bar view: the plugin notice row with its hover text, a mission-starting row, or a live mission's row. */
+export type TreeRow = { kind: 'notice'; tooltip: string } | { kind: 'starting'; row: StartingRow } | { kind: 'mission'; row: MissionRow };
+
+/**
+ * Each harness's enabled state, read afresh from the variant store file; every harness enabled,
+ * as each starts, when the file cannot be read, the Settings window telling that failure.
+ */
+function enabledStates(): HarnessStates {
+  try {
+    return readHarnessStates(variantStoreFile(os.homedir()));
+  } catch {
+    return Object.fromEntries(HARNESSES.map((harness) => [harness.key, true])) as HarnessStates;
+  }
+}
+
+/**
+ * The plugin notice row's hover text for the session's latest finished harness check and each
+ * harness's enabled state read afresh, or undefined while the row does not stand.
+ */
+export function noticeTooltip(): string | undefined {
+  return pluginNotice(sessionHarnessCheck(), enabledStates());
+}
+
+/** The tree item drawing the plugin notice row: a leaf with a warning icon whose click opens the Settings window. */
+export function noticeItem(tooltip: string): vscode.TreeItem {
+  const item = new vscode.TreeItem(PLUGIN_NOTICE_LABEL, vscode.TreeItemCollapsibleState.None);
+  item.id = PLUGIN_NOTICE_ID;
+  item.tooltip = tooltip;
+  item.iconPath = new vscode.ThemeIcon(PLUGIN_NOTICE_ICON);
+  item.command = { command: SETTINGS_COMMAND, title: 'Open Settings' };
+  return item;
+}
 
 /** The view's message while the session's live read lists no mission. */
 export const NO_MISSION_MESSAGE = 'No mission is live.';
@@ -159,15 +212,21 @@ export function rowItem(row: MissionRow): vscode.TreeItem {
  */
 export function registerMissionTree(context: vscode.ExtensionContext): MissionTree {
   const changed = new vscode.EventEmitter<void>();
+  /** The plugin notice row's hover text as the tree was last resolved with, undefined with no row. */
+  let drawnNotice: string | undefined;
   const provider: vscode.TreeDataProvider<TreeRow> = {
     onDidChangeTreeData: changed.event,
-    getTreeItem: (element: TreeRow) => (element.kind === 'starting' ? startingItem(element.row) : rowItem(element.row)),
+    getTreeItem: (element: TreeRow) =>
+      element.kind === 'notice' ? noticeItem(element.tooltip) : element.kind === 'starting' ? startingItem(element.row) : rowItem(element.row),
     getChildren(element?: TreeRow): TreeRow[] {
       if (element !== undefined) {
         return [];
       }
       startLiveRead(context);
+      startHarnessCheck(context);
+      drawnNotice = noticeTooltip();
       return [
+        ...(drawnNotice === undefined ? [] : [{ kind: 'notice', tooltip: drawnNotice } as TreeRow]),
         ...startingRows(context).map((row): TreeRow => ({ kind: 'starting', row })),
         ...missionRows().map((row): TreeRow => ({ kind: 'mission', row })),
       ];
@@ -183,6 +242,11 @@ export function registerMissionTree(context: vscode.ExtensionContext): MissionTr
     view,
     onSessionRead(redraw),
     onStartingSelection(redraw),
+    onHarnessCheck(() => {
+      if (noticeTooltip() !== drawnNotice) {
+        redraw();
+      }
+    }),
     vscode.commands.registerCommand(REFRESH_COMMAND, () => {
       refreshMissions(context);
       void refreshSettings(context);
