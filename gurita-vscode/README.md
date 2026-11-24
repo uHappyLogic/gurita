@@ -152,8 +152,8 @@ exactly as the side-bar view's gear does (see The Settings window below); it sta
 every state of the window, on the mission's page, the failure state, and the notice alike, and
 the page itself draws no Settings control. Its page opens on an introduction, then holds the
 workflow diagram under a heading of its own, **Workflow**, marking where it starts, the recipe
-buttons of the recipes that fit the step its diagram fills, each with a dropdown of its variants beside it (see The recipes a
-page lists), the row of mission-wide actions, **New task** and **Ask in mission context**, each
+buttons of the recipes that fit the step its diagram fills, each on a row of its own with a dropdown of its variants beside it
+and the recipe's one line of description to its right (see The recipes a page lists), the row of mission-wide actions, **New task** and **Ask in mission context**, each
 with its dropdown, and directly beneath that row two panes behind one row of two headers, **Open questions**, holding the question view
 parsed from `open_questions.xml`, and **Remaining tasks**, holding the remaining task headings of
 `TASKS_TODO.md`. The introduction shows the mission's title alone, the first `# ` heading of its
@@ -690,6 +690,32 @@ reads the shipped file and your own file, and an own recipe that joins a shipped
 shipped recipe's declaration, its own `Stage:` line not read. The declared step chooses the
 mission pages that list the recipe.
 
+### The description line
+
+A recipe may carry one line of description, by one `Description:` line read by the stage line's
+rule: standing between its `###` heading and its first fence or first `####` sub-heading, outside
+the fence, once for the whole recipe, before or after its `Stage:` line:
+
+````
+### Prepare tasks
+Stage: derive tasks
+Description: Record every standing recommendation as its answer, then derive the mission's task list.
+```
+claude -p "/gurita:answer-all-open-questions-with-recommendation --mission <path>" --dangerously-skip-permissions --model "fable" --effort high;
+claude -p "/gurita:derive-tasks --mission <path>" --dangerously-skip-permissions --model "fable" --effort xhigh;
+```
+````
+
+The line opens with `Description:` at its first column, and the text after it is read with its
+outer spaces trimmed and shown as written, backticks and all. A mission page draws it to the right
+of the recipe's button (see The recipes a page lists below). A recipe with no `Description:` line
+before its first fence or sub-heading, with more than one, or with one holding no text has no
+description, and its button stands on its row alone; a `Description:` line inside the fence is an
+ordinary line of the recipe, and one after the first fence or beneath a `####` sub-heading is not
+read. The same rule reads the shipped file and your own file, and an own recipe that joins a
+shipped one keeps the shipped recipe's description, its own `Description:` line not read. Every
+chain the shipped file holds carries one; its button recipes and single-task lines carry none.
+
 ### The recipes a page lists
 
 Each mission's page lists only the recipes that fit the step its workflow diagram fills, the
@@ -712,7 +738,11 @@ that run a recipe by its fixed name (on the question card and its alternatives, 
 **Ask in mission context**) are offered whatever the step, as are the side-bar view's **New mission** and **Define mission**
 rows.
 
-Under the page's **Actions** heading the list is drawn in two parts. First come the shipped
+Under the page's **Actions** heading the list is drawn in two parts, one recipe to a row: each
+row holds the recipe's button with its dropdown beside it and, to their right, the recipe's one
+line of description from its `Description:` line (see The description line above), a recipe
+with none standing on its row alone, while the button's hover text still shows the selected
+variant's lines. First come the shipped
 recipes, one button each in the shipped file's order, with no heading of their own; an own recipe
 carrying a shipped recipe's name joins that recipe's button rather than adding one. Then, under
 **Your actions**, come your own recipes that carry no shipped recipe's name, in your file's order,
@@ -895,11 +925,13 @@ runs first. Every other own recipe is listed below the shipped recipes under **Y
 in the order your file lists them.
 An own recipe may declare its step by a `Stage:` line, as a shipped one does (see the stage line
 above), and is then listed only on the pages that step fits; an undeclared one is listed on every
-page. For example:
+page. It may carry a `Description:` line likewise (see the description line above), shown to the
+right of its button. For example:
 
 ````
 ### Review twice
 Stage: additional review round
+Description: Run the review pass twice in a row.
 ```
 claude -p "/gurita:review-mission-requirements --mission <path>" --dangerously-skip-permissions --model "fable" --effort xhigh;
 claude -p "/gurita:review-mission-requirements --mission <path>" --dangerously-skip-permissions --model "fable" --effort xhigh;

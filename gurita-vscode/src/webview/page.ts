@@ -46,7 +46,9 @@
 // when no block is filled, under the heading "Actions"; first the shipped recipes in
 // it, one button each in the order posted, the shipped file's, under no heading of their own, and
 // below them the own recipes that carry no shipped recipe's name under "Your actions", in the own
-// file's order, each with a dropdown beside it drawn as its arrow alone, its opened list offering
+// file's order, each button on a row of its own with the recipe's one line of description, as the
+// extension posts it from the recipe's `Description:` line, to its right, a recipe posted with none
+// drawing no text there, and each with a dropdown beside it drawn as its arrow alone, its opened list offering
 // the recipe's variants by their bare names, and standing on the variant selected, as the
 // extension posts it: the one remembered for the recipe on this mission, else the recipe's
 // default. Picking another variant posts it to the extension, which remembers it and posts the
@@ -192,9 +194,9 @@ declare function acquireVsCodeApi(): VsCodeApi;
 
   type PageRecipe = PageChoices &
     (
-      | { kind: 'runnable'; name: string; group: RecipeGroup; lines: string[] }
-      | { kind: 'looped'; name: string; group: RecipeGroup; lines: string[] }
-      | { kind: 'unknown'; name: string; group: RecipeGroup; lines: string[]; placeholders: string[]; file: string }
+      | { kind: 'runnable'; name: string; group: RecipeGroup; description?: string; lines: string[] }
+      | { kind: 'looped'; name: string; group: RecipeGroup; description?: string; lines: string[] }
+      | { kind: 'unknown'; name: string; group: RecipeGroup; description?: string; lines: string[]; placeholders: string[]; file: string }
     );
 
   type RecipePart = { state: 'read'; recipes: PageRecipe[] } | { state: 'failed'; cause: string };
@@ -933,10 +935,15 @@ declare function acquireVsCodeApi(): VsCodeApi;
     });
   }
 
-  /** One run of a mission page's recipe entries, in the order given, each with its variant dropdown beside it. */
+  /**
+   * One run of a mission page's recipe entries, in the order given, each on a row of its own: its
+   * button with its variant dropdown beside it, then the recipe's one line of description to their
+   * right, when it has one.
+   */
   function recipeList(mission: Mission, entries: PageRecipe[], busy: boolean): HTMLElement {
     const list = element('div', undefined, 'recipe-list');
     for (const recipe of entries) {
+      const row = element('div', undefined, 'recipe-row');
       const variant = recipe.variants[recipe.selected]?.name;
       const item = element('span', undefined, 'recipe-entry');
       if (recipe.kind === 'runnable') {
@@ -954,7 +961,11 @@ declare function acquireVsCodeApi(): VsCodeApi;
         item.append(entry);
       }
       item.append(variantDropdown(mission, recipe));
-      list.append(item);
+      row.append(item);
+      if (recipe.description !== undefined) {
+        row.append(element('span', recipe.description, 'recipe-description'));
+      }
+      list.append(row);
     }
     return list;
   }

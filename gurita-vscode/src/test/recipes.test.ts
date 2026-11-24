@@ -399,6 +399,85 @@ test('every shipped chain declares exactly one step, and no shipped recipe decla
   assert.ok(!recipes.some((recipe) => /extra requirement surface stretch/i.test(recipe.name)));
 });
 
+/** The description the one recipe of an own-file text carries, or undefined when it has none. */
+function descriptionOf(text: string): string | undefined {
+  const recipes = parseOwnRecipes(text, OWN);
+  assert.strictEqual(recipes.length, 1);
+  return recipes[0].description;
+}
+
+test('a recipe carries the one line its Description: line gives, read beside the stage line before its first fence or ####', () => {
+  assert.strictEqual(descriptionOf('### Recipe\nStage: finish\nDescription: Close the mission.\n```\necho <path>\n```\n'), 'Close the mission.');
+  assert.strictEqual(descriptionOf('### Recipe\nDescription:   Spaces trimmed.  \nStage: finish\n```\necho <path>\n```\n'), 'Spaces trimmed.');
+  assert.strictEqual(descriptionOf('### Recipe\n\nProse first.\nDescription:No space.\n\n```\necho <path>\n```\n'), 'No space.');
+  assert.strictEqual(descriptionOf('### Recipe\nDescription: Above the variants.\n#### One\n```\necho <path>\n```\n'), 'Above the variants.');
+  const both = parseOwnRecipes('### Recipe\nStage: derive tasks\nDescription: Derive it.\n```\necho <path>\n```\n', OWN)[0];
+  assert.strictEqual(both.stage, 'derive', 'the description line leaves the stage line read');
+  assert.deepStrictEqual(firstVariant(both).lines, ['echo <path>'], 'the description line is no line of the recipe');
+});
+
+test('a recipe with no description line, more than one, one of no text, or one inside or after a fence or under a #### has no description', () => {
+  const none = parseOwnRecipes('### Recipe\n```\necho <path>\n```\n', OWN)[0];
+  assert.strictEqual(none.description, undefined);
+  assert.ok(!('description' in none));
+  assert.strictEqual(descriptionOf('### Recipe\nDescription: One.\nDescription: Two.\n```\necho <path>\n```\n'), undefined);
+  assert.strictEqual(descriptionOf('### Recipe\nDescription:   \n```\necho <path>\n```\n'), undefined);
+  assert.strictEqual(descriptionOf('### Recipe\n  Description: Indented.\n```\necho <path>\n```\n'), undefined);
+  assert.strictEqual(descriptionOf('### Recipe\n```\necho <path>\nDescription: In the fence.\n```\n'), undefined);
+  assert.strictEqual(descriptionOf('### Recipe\n```\necho <path>\n```\nDescription: After the fence.\n'), undefined);
+  assert.strictEqual(descriptionOf('### Recipe\n#### Variant\nDescription: Under a variant.\n```\necho <path>\n```\n'), undefined);
+  const inFence = parseOwnRecipes('### Recipe\n```\nDescription: In the fence.\n```\n', OWN)[0];
+  assert.deepStrictEqual(firstVariant(inFence).lines, ['Description: In the fence.'], 'a description line inside the fence is an ordinary line');
+});
+
+test('the shipped file is read the same way, and an own recipe joining a shipped one keeps the shipped description', () => {
+  const shippedText = '## Recipes\n### Chain\nStage: finish\nDescription: The shipped one.\n```\necho <path>\n```\n### Bare\n```\necho <path>\n```\n';
+  const ownText =
+    '### Chain\nDescription: Not read.\n```\necho own <path>\n```\n### Bare\nDescription: Not read either.\n```\necho own <path>\n```\n### Mine\nDescription: My own.\n```\necho <path>\n```\n';
+  const shippedList = parseShippedRecipes(shippedText, SHIPPED);
+  assert.strictEqual(byName(shippedList, 'Chain').description, 'The shipped one.');
+  const merged = mergeRecipes(shippedList, parseOwnRecipes(ownText, OWN));
+  assert.strictEqual(byName(merged, 'Chain').description, 'The shipped one.');
+  assert.strictEqual(byName(merged, 'Bare').description, undefined, "the shipped recipe's declaration stands, its lack of one included");
+  assert.strictEqual(byName(merged, 'Mine').description, 'My own.');
+  const file = '/home/someone/.gurita/variants.json';
+  const store = parseVariantStore(JSON.stringify({ variants: [{ recipe: 'Chain', name: 'Stored', lines: ['echo stored <path>'] }] }), file);
+  assert.strictEqual(byName(overlayVariantStore(merged, store, file), 'Chain').description, 'The shipped one.', 'the variant store keeps it');
+  assert.deepStrictEqual(
+    pageRecipes(merged, ['path']).map((entry) => [entry.name, entry.description]),
+    [
+      ['Chain', 'The shipped one.'],
+      ['Bare', undefined],
+      ['Mine', 'My own.'],
+    ],
+    'a mission page is posted each recipe with its description',
+  );
+  const bare = pageRecipes(merged, ['path']).find((entry) => entry.name === 'Bare');
+  assert.ok(bare !== undefined && !('description' in bare), 'a recipe with none is posted with none');
+});
+
+test('every shipped chain carries one description line, and no other shipped recipe carries one', () => {
+  const text = fs.readFileSync(SHIPPED_RECIPES, 'utf8');
+  const recipes = parseShippedRecipes(text, SHIPPED_RECIPES);
+  const buttons: readonly string[] = Object.values(BUTTON_RECIPES);
+  const chains = recipes.filter((recipe) => !buttons.includes(recipe.name) && !firstVariant(recipe).singleTask);
+  assert.strictEqual(chains.length, 6);
+  for (const recipe of recipes) {
+    if (chains.includes(recipe)) {
+      assert.ok(recipe.description !== undefined && recipe.description.trim() !== '', `${recipe.name} carries a description`);
+      assert.ok(!recipe.description.includes('\n'), `${recipe.name}'s description is one line`);
+    } else {
+      assert.strictEqual(recipe.description, undefined, recipe.name);
+    }
+  }
+  const page = pageRecipes(stageRecipes(recipes, undefined), ['path']);
+  assert.deepStrictEqual(
+    page.map((entry) => entry.name),
+    chains.map((recipe) => recipe.name),
+  );
+  assert.ok(page.every((entry) => entry.description === byName(recipes, entry.name).description), 'each chain reaches the page with its description');
+});
+
 test('no shipped execute variant holds a derive-tasks line, each holding its complete-all-tasks line alone, and no shipped recipe is looped', () => {
   const recipes = parseShippedRecipes(fs.readFileSync(SHIPPED_RECIPES, 'utf8'), SHIPPED_RECIPES);
   const execute = recipes.filter((recipe) => recipe.stage === 'execute');

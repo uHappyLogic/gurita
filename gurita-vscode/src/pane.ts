@@ -1854,7 +1854,9 @@ export function pageShell(webview: vscode.Webview, scripts: vscode.Uri[], title:
   .pane-tabs button[aria-selected="true"] { border-bottom-color: var(--vscode-focusBorder); font-weight: 600; }
   .pane { padding-top: 0.6em; }
   .recipes h4 { margin: 0.8em 0 0.3em; }
-  .recipe-list { display: flex; flex-wrap: wrap; gap: 0.4em; }
+  .recipe-list { display: flex; flex-direction: column; align-items: stretch; gap: 0.4em; }
+  .recipe-row { display: flex; align-items: center; gap: 0.8em; }
+  .recipe-description { flex: 1 1 auto; min-width: 0; opacity: 0.85; }
   .recipe-entry { display: inline-flex; align-items: stretch; gap: 0.2em; }
   select.recipe-variant { -webkit-appearance: none; appearance: none; box-sizing: border-box; width: 1.8em; min-width: 1.8em; padding: 0; cursor: pointer; font: inherit; color: transparent; border: 1px solid var(--vscode-dropdown-border); background-color: var(--vscode-dropdown-background); background-image: linear-gradient(45deg, transparent 50%, var(--vscode-dropdown-foreground) 50%), linear-gradient(135deg, var(--vscode-dropdown-foreground) 50%, transparent 50%); background-position: calc(50% - 0.2em) 55%, calc(50% + 0.2em) 55%; background-size: 0.4em 0.4em; background-repeat: no-repeat; }
   select.recipe-variant option { color: var(--vscode-dropdown-foreground); background: var(--vscode-dropdown-background); }

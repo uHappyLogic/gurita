@@ -327,7 +327,9 @@ test("each mission's page draws its shipped recipes under Actions with no headin
   const section = page.root.all().find((each) => each.has('recipes')) as FakeElement;
   assert.deepStrictEqual(
     section.children.filter((child): child is FakeElement => child instanceof FakeElement).map((child) =>
-      child.has('recipe-list') ? child.children.map((entry) => shownName((entry as FakeElement).children[0] as FakeElement)) : child.textContent,
+      child.has('recipe-list')
+        ? child.children.map((row) => shownName(((row as FakeElement).children[0] as FakeElement).children[0] as FakeElement))
+        : child.textContent,
     ),
     ['Actions', ['Approve all standing recommendations and review again', 'Prepare tasks', 'Prepare tasks (Antigravity)'], 'Your actions', ['Mine everywhere']],
     'the shipped recipes stand directly under Actions, in the order posted, and the own group below them',
@@ -355,6 +357,72 @@ test("a page with no own recipe draws no Your actions heading, and one with only
   beta.send(pageOf(mission(BETA, 'Beta', { step: 'derive', recipes: { state: 'read', recipes: [runnable('Mine', 'own', ['echo <path>'])] } })));
   assert.deepStrictEqual(recipeGroups(beta), ['Your actions']);
   assert.deepStrictEqual(recipeNames(beta), ['Mine']);
+});
+
+test('each action is drawn on a row of its own, its one line of description to the right of its button and dropdown', () => {
+  const described = (entry: unknown, description: string): unknown => ({ ...(entry as object), description });
+  const page = loadPage();
+  page.send(
+    pageOf(
+      mission(ALPHA, 'Alpha', {
+        step: 'derive',
+        recipes: {
+          state: 'read',
+          recipes: [
+            described(runnable('Prepare tasks', 'shipped', ['echo <path>']), 'Derive the task list.'),
+            runnable('Prepare tasks (Antigravity)', 'shipped', ['agy -p "/gurita:derive-tasks --mission <path>"']),
+            described(
+              {
+                kind: 'unknown',
+                name: 'Odd',
+                group: 'own',
+                lines: ['echo <odd>'],
+                placeholders: ['odd'],
+                file: '/home/someone/.gurita/recipes.md',
+                variants: [{ name: 'default', own: true }],
+                selected: 0,
+              },
+              'Something of my own, with `code` kept as typed.',
+            ),
+          ],
+        },
+      }),
+    ),
+  );
+  const section = page.root.all().find((each) => each.has('recipes')) as FakeElement;
+  const lists = section.children.filter((child): child is FakeElement => child instanceof FakeElement && child.has('recipe-list'));
+  const rows = lists.flatMap((list) => list.children as FakeElement[]);
+  assert.strictEqual(rows.length, 3, 'one row per action');
+  assert.ok(rows.every((row) => row.tagName === 'div' && row.has('recipe-row')), 'every action stands on a row of its own');
+  const shape = rows.map((row) =>
+    (row.children as FakeElement[]).map((child) =>
+      child.has('recipe-entry')
+        ? [
+            'entry',
+            (child.children as FakeElement[]).map((part) =>
+              part.has('recipe') ? `button ${shownName(part)}` : part.has('recipe-unknown') ? 'unknown' : part.has('recipe-variant') ? 'dropdown' : part.tagName,
+            ),
+          ]
+        : [child.has('recipe-description') ? 'description' : child.tagName, child.textContent],
+    ),
+  );
+  assert.deepStrictEqual(shape, [
+    [['entry', ['button Prepare tasks', 'dropdown']], ['description', 'Derive the task list.']],
+    [['entry', ['button Prepare tasks (Antigravity)', 'dropdown']]],
+    [['entry', ['unknown', 'dropdown']], ['description', 'Something of my own, with `code` kept as typed.']],
+  ]);
+  assert.deepStrictEqual(recipeNames(page).slice(0, 2), ['Prepare tasks', 'Prepare tasks (Antigravity)'], 'the buttons keep their names');
+  assert.strictEqual(named(page, 'Prepare tasks').title, 'echo <path>', "the hover text still shows the variant's lines");
+  const rules = stylesheetRules();
+  const rule = (selector: string): Map<string, string> => {
+    const found = rules.find((each) => each.selectors.includes(selector));
+    assert.ok(found !== undefined, `the stylesheet holds a rule for ${selector}`);
+    return found.declarations;
+  };
+  assert.strictEqual(rule('.recipe-list').get('flex-direction'), 'column', 'the rows stack, one beneath the other');
+  assert.ok(!rule('.recipe-list').has('flex-wrap'), 'the list no longer wraps its buttons side by side');
+  assert.strictEqual(rule('.recipe-row').get('display'), 'flex', 'each row lays its description to the right of its button');
+  assert.ok(rule('.recipe-description') !== undefined);
 });
 
 test("each recipe button shows its name with the selected variant's name beneath it, exactly as named and never the values its lines carry, and its lines in its hover text", () => {

@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Action Rows With Descriptions
-
-Draw each button of a mission page's action list on a row of its own with one line of description to its right, read from a `Description:` line the recipe reader takes beside the `Stage:` line, in the shipped file and a person's own file alike, where today the buttons stand side by side in one wrapping row and what a chain does shows only as raw lines in its hover text. Every chain in `gurita-vscode/shipped_recipes.md` gains its `Description:` line; verified by reader tests of the line and page tests of the rows, with `gurita-vscode/README.md` documenting the line.
-
----
-
 ## Git State Changes Re-Read the Missions
 
 Create a second `vscode.workspace.createFileSystemWatcher` beside the mission-document watcher in `src/pane.ts`, over the repository's git directory as `git rev-parse --absolute-git-dir` (and `--git-common-dir` for a linked worktree's refs) resolves it from the project root, covering only `HEAD`, `refs/heads/**`, and `packed-refs`, with lock files, the index, objects, and remote refs ignored, so a commit, a pull, or a branch switch made outside the extension's runs no longer leaves a mission's next step and review-round count stale until Refresh. A pure function beside `eventEffect` in `src/refresh.ts` maps each event to an effect asking for a full re-read (`live: true`) through the existing 300 ms debounce, and no other extension is used. Verified by refresh and pane tests of the watched patterns, the mapped effect, and the debounced re-read, with `gurita-vscode/README.md` saying what is watched.

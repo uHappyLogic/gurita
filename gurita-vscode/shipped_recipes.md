@@ -8,6 +8,8 @@ The recipes Gurita for VS Code ships: `scripts/bundle.js` copies this file into 
 
 A `Stage:` line beneath a chain's heading, once for the whole recipe, names the one step of the mission workflow the chain runs: first review round, additional review round, derive tasks, execute tasks, follow up tasks, or finish.
 
+A `Description:` line beside it, once for the whole recipe, gives the one line of description a mission page shows to the right of the chain's button.
+
 ## Recipes
 
 Each `###` heading is one recipe, its name the button's. A recipe of several variants holds one `####` sub-heading per variant, naming it above its own fenced block, and a recipe of one block and no `####` is a recipe of one variant.
@@ -21,6 +23,7 @@ Model mapping: `fable` → `gemini-4-argon`, `opus` → `claude-opus-5-5`.
 
 ### First run
 Stage: first review round
+Description: Explore the starting state, review the requirements, then annotate every open question with alternatives and a recommendation.
 ```
 claude -p "/gurita:specify-mission-starting-state --mission <path>" --dangerously-skip-permissions --model "fable" --effort xhigh;
 claude -p "/gurita:review-mission-requirements --mission <path>" --dangerously-skip-permissions --model "fable" --effort xhigh;
@@ -30,6 +33,7 @@ claude "/gurita:recommend-all-open-questions --mission <path>" --dangerously-ski
 
 ### Approve all standing recommendations and review again
 Stage: additional review round
+Description: Record every standing recommendation as its answer, review again, and annotate the questions the review raises.
 
 #### default
 ```
@@ -41,6 +45,7 @@ claude "/gurita:recommend-all-open-questions --mission <path>" --dangerously-ski
 
 ### Prepare tasks
 Stage: derive tasks
+Description: Record every standing recommendation as its answer, then derive the mission's task list.
 ```
 claude -p "/gurita:answer-all-open-questions-with-recommendation --mission <path>" --dangerously-skip-permissions --model "fable" --effort high;
 claude -p "/gurita:derive-tasks --mission <path>" --dangerously-skip-permissions --model "fable" --effort xhigh;
@@ -48,6 +53,7 @@ claude -p "/gurita:derive-tasks --mission <path>" --dangerously-skip-permissions
 
 ### Prepare and Execute tasks
 Stage: derive tasks
+Description: Record every standing recommendation, derive the task list, then complete every task one by one.
 
 #### Normal difficulty
 ```
@@ -65,6 +71,7 @@ claude "/gurita:complete-all-tasks --mission <path>" --dangerously-skip-permissi
 
 ### Execute tasks
 Stage: execute tasks
+Description: Complete every remaining task one by one, committing each with its verified bar.
 
 #### Normal difficulty
 ```
@@ -95,6 +102,7 @@ agy -p "/gurita:complete-task --mission <path> <Task Title>" --dangerously-skip-
 
 ### Finish mission
 Stage: finish
+Description: Remove the mission's directory in one commit whose body summarizes what it accomplished.
 ```
 claude -p "/gurita:finish-mission --mission <path>" --dangerously-skip-permissions --model "opus" --effort high;
 ```

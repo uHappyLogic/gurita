@@ -38,7 +38,12 @@
 // labels its block (first review round, additional review round, derive tasks, execute tasks,
 // follow up tasks, or finish); an own recipe that joins a shipped one keeps the shipped recipe's
 // declaration. A recipe with no such line, with more than one,
-// or with a name the reader does not know, `define` included, counts as undeclared. A mission page
+// or with a name the reader does not know, `define` included, counts as undeclared. Beside it a
+// recipe may carry one line of description, by one `Description: <text>` line read by the same
+// rule, standing outside any fence between its heading and its first fence or first `####`
+// sub-heading, its text trimmed; a recipe with none, with more than one, or with one of no text
+// has no description, and an own recipe that joins a shipped one keeps the shipped recipe's. A
+// mission page draws each recipe's button on a row of its own with the description to its right. A mission page
 // lists only the recipes that fit the step its diagram fills: those declaring that step, beside them
 // the additional review round's when derive tasks is filled, or when first review round is while
 // any question is open, and follow up tasks' when finish is, and every undeclared recipe whatever
@@ -86,6 +91,9 @@ export const SLOT_LINE = '<single-task line>';
 
 /** The marker opening a recipe's stage line, written at column 0 before the step's name. */
 export const STAGE_MARKER = 'Stage:';
+
+/** The marker opening a recipe's description line, written at column 0 before its one line of text. */
+export const DESCRIPTION_MARKER = 'Description:';
 
 /**
  * The step names a stage line may give, each exactly as the workflow diagram labels its block,
@@ -141,6 +149,11 @@ export interface Recipe {
    * chooses the mission pages that list the recipe, an undeclared one being listed on every page.
    */
   stage?: WorkflowStep;
+  /**
+   * The one line of text its one description line gives, left out when it has none: a mission
+   * page draws it to the right of the recipe's button.
+   */
+  description?: string;
   /** The default the variant store picks for the recipe, left out when it picks none. */
   picked?: VariantRef;
 }
@@ -163,6 +176,8 @@ interface Block {
   variants: { name: string; lines: Lines }[];
   /** The names its stage lines give, read outside any fence before its first fence or `####`. */
   stages: string[];
+  /** The texts its description lines give, read by the stage lines' rule. */
+  descriptions: string[];
 }
 
 const FENCE = /^\s*```/;
@@ -173,8 +188,8 @@ const INTERACTIVE_MARK = /(?:^|\s)#\s*interactive\s*$/;
 /**
  * Splits a Markdown text into its `###` blocks, reading headings outside fences only: each block
  * with the first fence beneath its heading, its `####` sub-headings each with the first fence
- * beneath it, and the stage lines standing outside any fence between the block's heading and its
- * first fence or first sub-heading.
+ * beneath it, and the stage and description lines standing outside any fence between the block's
+ * heading and its first fence or first sub-heading.
  */
 function blocks(text: string): Block[] {
   const found: Block[] = [];
@@ -211,7 +226,7 @@ function blocks(text: string): Block[] {
       continue;
     }
     if (line.startsWith('### ')) {
-      current = { name: line.slice(4).trim(), section, lines: undefined, variants: [], stages: [] };
+      current = { name: line.slice(4).trim(), section, lines: undefined, variants: [], stages: [], descriptions: [] };
       found.push(current);
       target = current;
       opened = false;
@@ -226,6 +241,8 @@ function blocks(text: string): Block[] {
       opened = true;
     } else if (current && !opened && line.startsWith(STAGE_MARKER)) {
       current.stages.push(line.slice(STAGE_MARKER.length).trim());
+    } else if (current && !opened && line.startsWith(DESCRIPTION_MARKER)) {
+      current.descriptions.push(line.slice(DESCRIPTION_MARKER.length).trim());
     }
   }
   return found;
@@ -237,6 +254,14 @@ function blocks(text: string): Block[] {
  */
 export function declaredStage(stages: readonly string[]): WorkflowStep | undefined {
   return stages.length === 1 ? STAGE_NAMES.get(stages[0]) : undefined;
+}
+
+/**
+ * The description a recipe's description lines give: the text of its one description line,
+ * undefined when it has none, more than one, or one of no text.
+ */
+export function declaredDescription(descriptions: readonly string[]): string | undefined {
+  return descriptions.length === 1 && descriptions[0] !== '' ? descriptions[0] : undefined;
 }
 
 /**
@@ -328,11 +353,13 @@ function classify(block: Block, group: RecipeGroup, own: boolean, file: string):
     }
   }
   const stage = declaredStage(block.stages);
+  const description = declaredDescription(block.descriptions);
   return {
     name: block.name,
     group,
     variants,
     ...(stage === undefined ? {} : { stage }),
+    ...(description === undefined ? {} : { description }),
   };
 }
 
@@ -368,7 +395,7 @@ export function parseOwnRecipes(text: string, file: string): Recipe[] {
  * Merges the two lists: the shipped recipes in the shipped file's order, an own recipe carrying a
  * shipped recipe's name joining that recipe, its variants listed after the shipped variants and
  * kept beside any shipped variant of the same name, the shipped recipe keeping its name, group,
- * and stage; every other own recipe follows the shipped recipes, in the own file's order.
+ * stage, and description; every other own recipe follows the shipped recipes, in the own file's order.
  */
 export function mergeRecipes(shipped: Recipe[], own: Recipe[]): Recipe[] {
   const ownByName = new Map(own.map((recipe) => [recipe.name, recipe]));
@@ -422,7 +449,7 @@ export function copiedRecipe(stored: StoredVariant): string | undefined {
  * shipped variant and a copy of an own variant of that name stand side by side as the two do.
  * A stored copy of a renamed single-task line, whose `copies` names another recipe, stands in for
  * that recipe's variant as a recipe of its own name, listed directly after the recipe it copies
- * from, with that recipe's group and stage, the copied variant left out there; such a copy under a
+ * from, with that recipe's group, stage, and description, the copied variant left out there; such a copy under a
  * name the files hold stands in for nothing, and one whose variant the files no longer list is
  * listed as the stored variants of a recipe the list does not hold are.
  * Stored variants of a recipe the list does not hold form a recipe of that name in the own group,
@@ -509,6 +536,7 @@ export function overlayVariantStore(recipes: readonly Recipe[], store: VariantSt
           group: recipe.group,
           variants: [storedVariant(line, file), ...storedOnly(line.recipe)],
           ...(recipe.stage === undefined ? {} : { stage: recipe.stage }),
+          ...(recipe.description === undefined ? {} : { description: recipe.description }),
         }),
       );
     }
@@ -615,12 +643,14 @@ export interface PageChoices {
   selected: number;
 }
 
-/** A recipe as one of its variants draws it on a mission page: its name and group, and that variant. */
+/** A recipe as one of its variants draws it on a mission page: its name, group, and description, and that variant. */
 export type PageEntry =
   | {
       kind: 'runnable';
       name: string;
       group: RecipeGroup;
+      /** The recipe's one line of description, left out when it has none. */
+      description?: string;
       /** The variant's lines as written, placeholders included. */
       lines: string[];
     }
@@ -628,6 +658,7 @@ export type PageEntry =
       kind: 'looped';
       name: string;
       group: RecipeGroup;
+      description?: string;
       /** The variant's lines as written, the slot line last. */
       lines: string[];
     }
@@ -635,6 +666,7 @@ export type PageEntry =
       kind: 'unknown';
       name: string;
       group: RecipeGroup;
+      description?: string;
       lines: string[];
       /** The placeholder names the extension does not know, in order of first appearance. */
       placeholders: string[];
@@ -656,11 +688,13 @@ export const LOOPED_PLACEHOLDERS: readonly string[] = ['path', 'Task Title'];
  * or undefined when the page leaves the variant off.
  */
 function variantEntry(recipe: Recipe, runs: Variant, fillable: readonly string[]): PageEntry | undefined {
+  const description = recipe.description === undefined ? {} : { description: recipe.description };
   if (runs.unknownPlaceholders.length > 0) {
     return {
       kind: 'unknown',
       name: recipe.name,
       group: recipe.group,
+      ...description,
       lines: [...runs.lines],
       placeholders: [...runs.unknownPlaceholders],
       file: runs.file,
@@ -668,14 +702,14 @@ function variantEntry(recipe: Recipe, runs: Variant, fillable: readonly string[]
   }
   if (runs.looped) {
     if (runs.knownPlaceholders.every((name) => LOOPED_PLACEHOLDERS.includes(name))) {
-      return { kind: 'looped', name: recipe.name, group: recipe.group, lines: [...runs.lines] };
+      return { kind: 'looped', name: recipe.name, group: recipe.group, ...description, lines: [...runs.lines] };
     }
     return undefined;
   }
   if (runs.lines.length === 0 || runs.knownPlaceholders.some((name) => !fillable.includes(name))) {
     return undefined;
   }
-  return { kind: 'runnable', name: recipe.name, group: recipe.group, lines: [...runs.lines] };
+  return { kind: 'runnable', name: recipe.name, group: recipe.group, ...description, lines: [...runs.lines] };
 }
 
 /** Whether at least one of the variant's lines runs on one of the harnesses `disabled` names. */
