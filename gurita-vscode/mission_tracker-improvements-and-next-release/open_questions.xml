@@ -68,4 +68,10 @@
       <drawback>The repository then names one chain two ways, and the listing README, which points readers to the snippet file as holding the same recipes, sends them to a document where the button&apos;s name does not appear. The mismatch persists with no task recording it, so it is likely to stay until someone notices.</drawback>
     </alternative>
   </open-question>
+  <open-question id="Interactive line Codex switch">
+    <question>In the Settings window of Gurita for VS Code, a recipe line&apos;s harness dropdown is to offer Codex beside Claude Code and Antigravity. A headless line has a documented Codex form, `codex exec &apos;$gurita:&lt;skill&gt; …&apos; --dangerously-bypass-approvals-and-sandbox`, and that form is the only one checked on Codex. An interactive line, a bare `claude &quot;…&quot;` or an `agy -i &quot;…&quot;` ending in `# interactive`, opens on the prompt and keeps its session open, and no Codex form is recorded for it. What does switching an interactive line to Codex give?</question>
+  </open-question>
+  <open-question id="Codex switch with empty lists">
+    <question>In the Settings window of Gurita for VS Code, a line switched to another harness takes that harness&apos;s first listed model and keeps its effort or takes the harness&apos;s first listed one, and today the switch is refused with an error when that harness&apos;s model list or effort list is empty. The harness dropdown is to offer Codex, whose model list and new effort list hold only the values that recipe lines and the person&apos;s own additions carry, so either list can be empty, while a Codex line can also run at the account&apos;s defaults with no model and no effort written. What happens when a line is switched to Codex while Codex&apos;s model list or effort list is empty?</question>
+  </open-question>
 </open-questions>
