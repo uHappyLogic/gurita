@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## File the Open VSX Namespace Claim
-
-File the ownership claim for the `BusyMinds` namespace on Open VSX, directly after the namespace's creation and in the way Open VSX's own documentation gives for claiming a namespace, the runner filing it through `gh` under the maintainer's account unless the claim's issue already exists; the mission claims ownership only as far as filing. The task changes no tracked file and is done once the claim's issue exists, verified by reading the issue back, and whether the claim is granted is neither waited for nor recorded.
-
----
-
 ## Manifest Publisher Set to BusyMinds
 
 Change the manifest's `publisher` from `uhappylogic` to `BusyMinds`, the Marketplace publisher the maintainer already owns, and make every place under `gurita-vscode/` that names the extension's id, the README's install and uninstall lines among them, name `BusyMinds.gurita-vscode`, leaving the `uHappyLogic` GitHub account and the distribution repository names as they are. It is verified by `npm test` and `npm run package` passing, the packaged VSIX's manifest naming the publisher `BusyMinds`, and no `uhappylogic.gurita-vscode` remaining under `gurita-vscode/` outside the mission directory.
