@@ -4,6 +4,7 @@ import { execFileSync } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { GIT_WATCHED_PATTERN, WATCHED_PATTERN } from '../refresh';
 // The mission windows' and the Settings window's answers to what their pages post, against a stub
 // of the `vscode` module standing in for the editor: the webview panels, a mission window per
 // mission and the one Settings window, the messages each page posts and each panel is posted, the
@@ -101,13 +102,25 @@ class StubThemeIcon {
   constructor(readonly id: string) {}
 }
 
-/** A file system watcher the stub's editor created: the listeners registered on it by event kind, and whether it was disposed. */
+/**
+ * A file system watcher the stub's editor created: the directory and glob it was created over, the
+ * listeners registered on it by event kind, and whether it was disposed.
+ */
 interface StubWatcher {
+  base: string;
+  pattern: string;
   listeners: Record<'create' | 'change' | 'delete', ((uri: { fsPath: string }) => void)[]>;
   disposed: boolean;
 }
 /** Every file system watcher the stub's editor created, in order. */
 const watchers: StubWatcher[] = [];
+
+/** The watcher over the mission documents the extension created last. */
+function documentWatcher(): StubWatcher {
+  const found = [...watchers].reverse().find((each) => each.pattern === WATCHED_PATTERN);
+  assert.ok(found !== undefined, 'the mission documents are watched');
+  return found;
+}
 
 /** The workspace the stub's editor holds open: its folders and the `gurita` settings it answers with. */
 const workspace = {
@@ -136,8 +149,8 @@ const stub = {
       return workspace.folders;
     },
     getConfiguration: () => ({ get: (key: string) => workspace.settings[key] }),
-    createFileSystemWatcher: () => {
-      const watcher: StubWatcher = { listeners: { create: [], change: [], delete: [] }, disposed: false };
+    createFileSystemWatcher: (glob: { base: { fsPath: string }; pattern: string }) => {
+      const watcher: StubWatcher = { base: glob.base.fsPath, pattern: glob.pattern, listeners: { create: [], change: [], delete: [] }, disposed: false };
       watchers.push(watcher);
       const on = (kind: keyof StubWatcher['listeners']) => (listener: (uri: { fsPath: string }) => void) => {
         watcher.listeners[kind].push(listener);
@@ -2576,7 +2589,7 @@ test("the live read and its one watcher outlast every mission window, every debo
       return page;
     };
     const fire = (kind: keyof StubWatcher['listeners'], file: string) => {
-      for (const listener of watchers[watchers.length - 1].listeners[kind]) {
+      for (const listener of documentWatcher().listeners[kind]) {
         listener({ fsPath: path.join(root, OMEGA, file) });
       }
     };
@@ -2584,8 +2597,8 @@ test("the live read and its one watcher outlast every mission window, every debo
     const livePosted = (from: number) => posted.slice(from).filter((message) => ['page', 'liveFailure', 'notLive'].includes((message as { type?: string }).type ?? ''));
 
     assert.deepStrictEqual((await omegaAfter({ type: 'refresh' })).tasks.headings, []);
-    const count = watchers.length;
-    const watcher = watchers[count - 1];
+    const watcher = documentWatcher();
+    const count = watchers.filter((each) => each.pattern === WATCHED_PATTERN).length;
     assert.strictEqual(watcher.disposed, false);
 
     // A change no event reports is not shown: a ready message is answered from the current read.
@@ -2608,7 +2621,7 @@ test("the live read and its one watcher outlast every mission window, every debo
     await wait(1500);
     assert.deepStrictEqual(livePosted(from), [], 'nothing is posted while no window is open');
     assert.deepStrictEqual((await omegaAfter({ type: 'ready', mission: OMEGA })).tasks.headings, ['First task'], "the reopened window's ready message is answered with the re-read the event caused");
-    assert.strictEqual(watchers.length, count, 'reopening a window creates no second watcher');
+    assert.strictEqual(watchers.filter((each) => each.pattern === WATCHED_PATTERN).length, count, 'reopening a window creates no second watcher');
 
     // The window is hidden: an event is re-read all the same, and shown by the ready message the page posts when shown.
     const shownPane = openWindow(OMEGA);
@@ -2626,6 +2639,82 @@ test("the live read and its one watcher outlast every mission window, every debo
     assert.deepStrictEqual(shown.questions.questions?.map((each) => each.id), ['Pane Layout'], 'an event during a hidden pane shows in its next ready answer');
     assert.deepStrictEqual(shown.tasks.headings, ['First task']);
     assert.strictEqual(watcher.disposed, false);
+  } finally {
+    process.env.HOME = home;
+  }
+});
+
+/** A mission whose review commits the git-state test makes outside the extension's runs. */
+const GIT_STATE = 'pkg/mission_git_state/';
+
+test("a commit made outside the extension's runs re-reads everything through the debounce, the git directory watched beside the mission documents for HEAD, packed-refs, and the branch refs only", async () => {
+  const home = process.env.HOME;
+  process.env.HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-home-'));
+  try {
+    const root = project(GIT_STATE);
+    const files = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-recipes-'));
+    fs.writeFileSync(path.join(files, 'shipped_recipes.md'), SHIPPED_TEXT);
+    packaged.set('bundled/missions.py', path.join(__dirname, '..', '..', '..', 'core', 'tools', 'missions.py'));
+    packaged.set('bundled/shipped_recipes.md', path.join(files, 'shipped_recipes.md'));
+    workspace.folders = [{ uri: { fsPath: root } }];
+    workspace.settings = { ownRecipesFile: path.join(files, 'recipes.md') };
+    type Page = { path: string; step?: string; additionalRounds?: number };
+    const first = (await pageAfter({ type: 'refresh' }, GIT_STATE)) as unknown as Page;
+    assert.strictEqual(first.step, 'first-review', 'no review commit is held yet');
+
+    const gitDir = path.join(root, '.git');
+    const deadline = Date.now() + 5000;
+    while (!watchers.some((each) => each.base === gitDir && !each.disposed) && Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    const own = watchers.filter((each) => each.base === gitDir && !each.disposed);
+    assert.deepStrictEqual(
+      own.map((each) => each.pattern),
+      [GIT_WATCHED_PATTERN],
+      'one watcher over the git directory, covering HEAD, packed-refs, and the branch refs',
+    );
+    const gitWatcher = own[0];
+    assert.deepStrictEqual(
+      [gitWatcher.listeners.create.length, gitWatcher.listeners.change.length, gitWatcher.listeners.delete.length],
+      [1, 1, 1],
+      'it listens to every kind of event',
+    );
+    assert.strictEqual(documentWatcher().base, root, 'the mission documents stay watched beside it');
+
+    const fire = (kind: keyof StubWatcher['listeners'], ...file: string[]) => {
+      for (const listener of gitWatcher.listeners[kind]) {
+        listener({ fsPath: path.join(gitDir, ...file) });
+      }
+    };
+    const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+    const window = openWindow(GIT_STATE);
+    const pagesFrom = (from: number) => window.posts.slice(from).filter((message) => message.type === 'page');
+
+    // A review commit made by hand: no mission document changes, only git state.
+    git(root, 'commit', '-q', '--allow-empty', '-m', `Requirements-review: ${GIT_STATE}`);
+    let from = window.posts.length;
+    fire('create', 'refs', 'heads', 'main.lock');
+    fire('change', 'index');
+    fire('change', 'refs', 'remotes', 'origin', 'main');
+    fire('create', 'objects', 'ab', 'cdef');
+    await wait(1000);
+    assert.deepStrictEqual(pagesFrom(from), [], 'a lock file, the index, a remote ref, or an object re-reads nothing');
+
+    fire('change', 'refs', 'heads', 'main');
+    fire('change', 'HEAD');
+    fire('change', 'packed-refs');
+    const posted = await windowPosted(GIT_STATE, 'page', from);
+    assert.strictEqual((posted.mission as Page).step, 'derive', 'the burst re-reads the review count, so the next step moves on');
+    await wait(1000);
+    assert.strictEqual(pagesFrom(from).length, 1, 'the burst is debounced into one re-read');
+
+    // Two more by hand: the full re-read counts them as additional rounds.
+    git(root, 'commit', '-q', '--allow-empty', '-m', `Requirements-review: ${GIT_STATE}`);
+    git(root, 'commit', '-q', '--allow-empty', '-m', `Requirements-review: ${GIT_STATE}`);
+    from = window.posts.length;
+    fire('delete', 'HEAD');
+    const again = await windowPosted(GIT_STATE, 'page', from);
+    assert.strictEqual((again.mission as Page).additionalRounds, 2, 'the review-round count is read afresh');
   } finally {
     process.env.HOME = home;
   }

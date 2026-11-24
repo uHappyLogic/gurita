@@ -4,7 +4,7 @@ import { execFileSync } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { LivePrintError, NO_FOLDER_CAUSE, parseLive, projectRoot, readLive } from '../live';
+import { LivePrintError, NO_FOLDER_CAUSE, gitDirectories, parseLive, projectRoot, readLive } from '../live';
 
 const MISSIONS_TOOL = path.join(__dirname, '..', '..', '..', 'core', 'tools', 'missions.py');
 
@@ -52,6 +52,24 @@ test('a line not in the live form is refused', () => {
 
 test('no open folder is the read never run', async () => {
   assert.deepStrictEqual(await readLive(undefined, MISSIONS_TOOL), { state: 'failed', cause: NO_FOLDER_CAUSE });
+});
+
+test("the git directory and the common directory are one outside a linked worktree, and a linked worktree's own directory sits beside the common one", async () => {
+  const root = project();
+  assert.deepStrictEqual(await gitDirectories(root), { gitDir: path.join(root, '.git'), commonDir: path.join(root, '.git') });
+  const linked = path.join(fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-live-worktree-'))), 'side');
+  git(root, 'worktree', 'add', '-q', '-b', 'side', linked);
+  const read = await gitDirectories(linked);
+  assert.ok('gitDir' in read, JSON.stringify(read));
+  assert.strictEqual(read.commonDir, path.join(root, '.git'), "the linked worktree's refs live in the common directory");
+  assert.strictEqual(path.dirname(read.gitDir), path.join(root, '.git', 'worktrees'), 'its own HEAD lives in a directory of its own');
+  assert.ok(fs.existsSync(path.join(read.gitDir, 'HEAD')));
+});
+
+test('a folder in no git work tree gives the cause the git directory could not be read', async () => {
+  const outside = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-live-none-')));
+  const read = await gitDirectories(outside);
+  assert.ok('cause' in read && read.cause !== '', JSON.stringify(read));
 });
 
 test('the project root is the git top level of a folder inside it', async () => {

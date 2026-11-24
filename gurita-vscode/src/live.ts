@@ -4,10 +4,12 @@
 // level: one line per live mission in path order, three tab-separated fields, the path with its
 // trailing slash, `started` or `defined`, and the title. A read that fails carries its cause
 // verbatim, classified by nothing: the tool's stderr when it ran and failed, the spawn error when
-// a command could not be started, or that no folder is open. This module imports nothing from
-// `vscode`.
+// a command could not be started, or that no folder is open. The git directory and the common
+// directory a linked worktree's branch refs live in are read from the same top level, for the
+// session's watch of git state. This module imports nothing from `vscode`.
 
 import { execFile } from 'node:child_process';
+import * as nodePath from 'node:path';
 
 /** One live mission as `missions.py live` prints it. */
 export interface LiveMission {
@@ -78,6 +80,24 @@ export async function projectRoot(folder: string, git = 'git'): Promise<{ root: 
     return { cause: result.cause };
   }
   return { root: result.stdout.trim() };
+}
+
+/**
+ * The git directory of the work tree whose top level is `root` and the common directory its branch
+ * refs live in, both absolute, read by `git rev-parse --absolute-git-dir --git-common-dir` run from
+ * `root`, the common directory resolved against `root` when git prints it relative; the two are the
+ * same outside a linked worktree. Or the cause they could not be read.
+ */
+export async function gitDirectories(root: string, git = 'git'): Promise<{ gitDir: string; commonDir: string } | { cause: string }> {
+  const result = await run(git, ['rev-parse', '--absolute-git-dir', '--git-common-dir'], root);
+  if (!result.ok) {
+    return { cause: result.cause };
+  }
+  const [gitDir, commonDir] = result.stdout.split('\n').map((line) => line.replace(/\r$/, ''));
+  if (gitDir === undefined || gitDir === '' || commonDir === undefined || commonDir === '') {
+    return { cause: `git rev-parse printed no git directory: ${result.stdout.trim()}` };
+  }
+  return { gitDir, commonDir: nodePath.resolve(root, commonDir) };
 }
 
 /**

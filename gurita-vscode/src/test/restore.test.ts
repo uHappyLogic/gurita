@@ -5,6 +5,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { loadScript } from './fakePage';
+import { WATCHED_PATTERN } from '../refresh';
 // The mission windows and the Settings window restored after a restart or a window reload, against
 // a stub of the `vscode` module standing in for the editor: the serializers the extension's
 // activation registers, the panels the editor hands them on a restore and those the extension
@@ -43,7 +44,7 @@ const serializers = new Map<string, { deserializeWebviewPanel(panel: unknown, st
 /** The commands the extension registered, by id. */
 const commands = new Map<string, (...args: unknown[]) => unknown>();
 
-/** The number of file system watchers the stub's editor created. */
+/** The number of file system watchers over the mission documents the stub's editor created, the one over the git state left out. */
 let watchers = 0;
 
 class StubTreeItem {
@@ -155,8 +156,10 @@ const stub = {
       return workspace.folders;
     },
     getConfiguration: () => ({ get: () => undefined }),
-    createFileSystemWatcher: () => {
-      watchers++;
+    createFileSystemWatcher: (glob: { pattern: string }) => {
+      if (glob.pattern === WATCHED_PATTERN) {
+        watchers++;
+      }
       const on = () => () => disposable;
       return { onDidCreate: on(), onDidChange: on(), onDidDelete: on(), dispose(): void {} };
     },

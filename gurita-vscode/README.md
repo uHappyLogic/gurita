@@ -259,8 +259,16 @@ keyboard navigation between editors, and when a click on its row opens it afresh
 side-bar view nor the mission's page draws a control for bringing the terminal forward.
 
 The live missions are re-read by themselves after each run, once you dismiss the run's terminal,
-and on changes to any mission's `requirements.md`, `open_questions.xml`, or `TASKS_TODO.md`; git
-state is not watched. The extension reads no mission and watches no file until the side-bar view
+and on changes to any mission's `requirements.md`, `open_questions.xml`, or `TASKS_TODO.md`. Git
+state is watched beside them: in the repository's git directory, as
+`git rev-parse --absolute-git-dir` gives it, the extension watches `HEAD`, `packed-refs`, and the branch refs
+under `refs/heads/` (a linked worktree's `HEAD` in its own git directory and its branch refs in the
+`--git-common-dir` it shares), and leaves lock files, the index, objects, and remote refs
+unwatched. So a commit, a pull, or a branch switch made outside the extension's runs, in a terminal
+or another tool, re-reads everything **Refresh** re-reads, after the same short pause that gathers
+a burst of file changes into one re-read, and a mission's next step, its review-round count, and
+whether it is started no longer stay stale until you press **Refresh**. No other extension is used
+for it. The extension reads no mission and watches no file until the side-bar view
 is first shown or a Gurita command first runs; from then the read and the watch last until the
 extension deactivates, kept current whether a window is shown, hidden, or closed, so a window
 shown or opened again draws the latest read at once. While the live missions cannot be read,

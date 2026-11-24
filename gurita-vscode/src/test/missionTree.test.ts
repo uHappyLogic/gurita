@@ -4,6 +4,7 @@ import { execFileSync } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { WATCHED_PATTERN } from '../refresh';
 // The side-bar view's tree, against a stub of the `vscode` module standing in for the editor: a
 // tree stand-in recording the view the extension creates and its data provider, the event
 // emitter, tree items, and theme icons, beside the file system watcher, the terminals, the
@@ -15,11 +16,17 @@ const Module = require('node:module') as {
 
 const disposable = { dispose(): void {} };
 
-/** A file system watcher the stub's editor created: the listeners registered on it by event kind. */
+/** A file system watcher the stub's editor created: the glob it was created over and the listeners registered on it by event kind. */
 interface StubWatcher {
+  pattern: string;
   listeners: Record<'create' | 'change' | 'delete', ((uri: { fsPath: string }) => void)[]>;
 }
 const watchers: StubWatcher[] = [];
+
+/** The watchers over the mission documents, leaving out the one over the git state. */
+function documentWatchers(): StubWatcher[] {
+  return watchers.filter((each) => each.pattern === WATCHED_PATTERN);
+}
 
 /** A terminal the stub's editor created, with the options it was created with. */
 interface StubTerminal {
@@ -135,8 +142,8 @@ const stub = {
       return workspace.folders;
     },
     getConfiguration: () => ({ get: () => undefined }),
-    createFileSystemWatcher: () => {
-      const watcher: StubWatcher = { listeners: { create: [], change: [], delete: [] } };
+    createFileSystemWatcher: (glob: { pattern: string }) => {
+      const watcher: StubWatcher = { pattern: glob.pattern, listeners: { create: [], change: [], delete: [] } };
       watchers.push(watcher);
       const on = (kind: keyof StubWatcher['listeners']) => (listener: (uri: { fsPath: string }) => void) => {
         watcher.listeners[kind].push(listener);
@@ -338,7 +345,7 @@ test("the tree is created under the manifest's view id, and nothing is read befo
     'the first resolution draws the two mission-starting rows and no mission row until the read settles',
   );
   await until(() => redraws > 0, 'the first read redraws the tree');
-  assert.strictEqual(watchers.length, 1, 'the first read that succeeds watches the mission documents');
+  assert.strictEqual(documentWatchers().length, 1, 'the first read that succeeds watches the mission documents');
   assert.deepStrictEqual(
     items().map((each) => each.label),
     [...STARTING_LABELS, 'Alpha mission', 'Beta mission', 'Gamma mission', 'Delta mission'],
@@ -426,7 +433,7 @@ test("a run's start and end each redraw the tree, its mission's row spinning whi
 test('a burst of file events and the refresh command each re-read and redraw the tree', async () => {
   fs.writeFileSync(path.join(root, BETA, 'TASKS_TODO.md'), '# TASKS TODO\n\n## Build it\n\nBuild it.\n\n---\n\n## Test it\n\nTest it.\n\n---\n');
   const before = redraws;
-  for (const listener of watchers[0].listeners.change) {
+  for (const listener of documentWatchers()[0].listeners.change) {
     listener({ fsPath: path.join(root, BETA, 'TASKS_TODO.md') });
   }
   await until(() => redraws > before && item('Beta mission').description === 'Execute tasks · 0 questions · 2 tasks', 'the burst redraws the row');

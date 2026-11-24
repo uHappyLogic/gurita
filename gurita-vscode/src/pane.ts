@@ -123,10 +123,10 @@
 //
 // The live read belongs to the extension's session, not to any window: the extension reads no
 // mission and watches no file until the side-bar view is first resolved, a Gurita command first
-// runs, or a window is restored after a reload, and whichever comes first starts the session's live read, which, with the one file system watcher over the mission documents under
-// the project root, created with the first live read that succeeds, lasts until the extension
+// runs, or a window is restored after a reload, and whichever comes first starts the session's live read, which, with the file system watcher over the mission documents under
+// the project root and the one over its git state, created with the first live read that succeeds, lasts until the extension
 // deactivates, released neither when a window is hidden nor when every window is closed. The
-// watcher's events are debounced so that a burst of writes causes one re-read, made whatever is
+// watchers' events are debounced so that a burst of writes causes one re-read, made whatever is
 // visible. A change to a mission's requirements file, question document, or task list re-reads
 // that mission's documents in process against the live list last read, its introduction's title
 // and goal among them, choosing its next step, and with it the recipes its page lists, and its
@@ -134,14 +134,18 @@
 // `requirements.md`, or changing a `TASKS_TODO.md`, also re-runs `missions.py live`.
 // A re-read posts to a window only while it is shown, a burst's only to the windows of the missions
 // it touched; a hidden window's page is drawn from the current read by the ready message it posts
-// when shown, so no stale flag is kept. The refresh command re-reads everything, as a fallback. Git
-// state is not watched. Every re-read the session keeps, a full one or a burst's, is told to the
+// when shown, so no stale flag is kept. A second watcher covers the repository's git state, the
+// files that move `HEAD` in the git directory `git rev-parse --absolute-git-dir` gives and, for a
+// linked worktree, the branch refs in its `--git-common-dir`, lock files, the index, objects, and
+// remote refs ignored, so a commit, a pull, or a branch switch made outside the extension's runs
+// re-reads everything through the same debounce. The refresh command re-reads everything, as a
+// fallback. Every re-read the session keeps, a full one or a burst's, is told to the
 // side-bar view's tree (`missionTree.ts`), which redraws its rows from it.
 
 import * as os from 'node:os';
 import * as vscode from 'vscode';
 import { MissionDocuments, readMissionDocuments } from './documents';
-import { LiveMission, LiveRead, projectRoot, readLive } from './live';
+import { LiveMission, LiveRead, gitDirectories, projectRoot, readLive } from './live';
 import { PreviewRead, SingleTaskLine, loopArguments, ruleFile, runOverrides, runPreview, singleTaskLines } from './loop';
 import {
   BUTTON_RECIPES,
@@ -176,7 +180,7 @@ import {
 import { variantStoreFile } from './variantStore';
 import { disabledCommands, readHarnessStates } from './harnessSettings';
 import { Harness } from './lineValues';
-import { FileEventKind, RefreshBatch, RefreshQueue, WATCHED_PATTERN, eventEffect } from './refresh';
+import { FileEventKind, RefreshBatch, RefreshQueue, WATCHED_PATTERN, eventEffect, gitEventEffect, gitWatches } from './refresh';
 import { OPTIONAL_PLACEHOLDERS } from './placeholders';
 import { refuseWhileRunning, runnerFile, runningMissions, showRunTerminal, startChain, startLoop } from './runs';
 import { MissionWorkflow, WorkflowStep, missionWorkflow, reviewCount } from './workflow';
@@ -374,7 +378,7 @@ let current: Current | undefined;
 /** The cause the latest live read failed with, kept while the failure stands so an edit can post it again. */
 let failure: string | undefined;
 
-/** The watcher over the mission documents, and the project root it was created over. */
+/** The watchers over the mission documents and the git state, and the project root they were created over. */
 let watcher: { root: string; disposables: vscode.Disposable[] } | undefined;
 
 /**
@@ -728,8 +732,9 @@ export function openMissionWindows(): string[] {
 }
 
 /**
- * Watches the mission documents under the project root `root`, replacing a watcher created over
- * another root. Each event is handed to the debounce as the effect it asks for.
+ * Watches the mission documents under the project root `root`, and its git state beside them,
+ * replacing the watchers created over another root. Each event is handed to the debounce as the
+ * effect it asks for.
  */
 function watch(root: string): void {
   if (watcher?.root === root) {
@@ -743,7 +748,7 @@ function watch(root: string): void {
       queue?.add(effect);
     }
   };
-  watcher = {
+  const own = {
     root,
     disposables: [
       created.onDidCreate(event('created')),
@@ -752,6 +757,32 @@ function watch(root: string): void {
       created,
     ],
   };
+  watcher = own;
+  void watchGit(own);
+}
+
+/**
+ * Watches the git state of the project root `own.root` beside its mission documents: the files that
+ * move `HEAD` in the git directory, and a linked worktree's branch refs in the common directory, as
+ * `git rev-parse` resolves them. Each event asks for the full re-read Refresh makes, through the same
+ * debounce. Nothing is watched when the directories cannot be read or the watch was replaced
+ * meanwhile, Refresh staying the fallback.
+ */
+async function watchGit(own: { root: string; disposables: vscode.Disposable[] }): Promise<void> {
+  const directories = await gitDirectories(own.root);
+  if (watcher !== own || 'cause' in directories) {
+    return;
+  }
+  for (const each of gitWatches(directories.gitDir, directories.commonDir)) {
+    const created = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(vscode.Uri.file(each.base), each.pattern));
+    const event = (uri: vscode.Uri) => {
+      const effect = gitEventEffect(each.base, uri.fsPath);
+      if (effect !== undefined) {
+        queue?.add(effect);
+      }
+    };
+    own.disposables.push(created.onDidCreate(event), created.onDidChange(event), created.onDidDelete(event), created);
+  }
 }
 
 function unwatch(): void {

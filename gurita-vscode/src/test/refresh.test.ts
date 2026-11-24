@@ -2,7 +2,17 @@ import { test } from 'node:test';
 import * as assert from 'node:assert';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { RefreshBatch, RefreshQueue, eventEffect } from '../refresh';
+import {
+  GIT_HEAD_PATTERN,
+  GIT_REFS_PATTERN,
+  GIT_WATCHED_PATTERN,
+  RefreshBatch,
+  RefreshQueue,
+  WATCHED_PATTERN,
+  eventEffect,
+  gitEventEffect,
+  gitWatches,
+} from '../refresh';
 
 const ROOT = path.join(path.sep, 'project');
 
@@ -56,6 +66,73 @@ test('a file outside a mission directory or outside the root asks nothing', () =
   assert.strictEqual(eventEffect(ROOT, at('mission_alpha', 'notes.md'), 'changed'), undefined);
   assert.strictEqual(eventEffect(ROOT, path.join(path.sep, 'elsewhere', 'mission_x', 'TASKS_TODO.md'), 'changed'), undefined);
   assert.strictEqual(eventEffect(ROOT, ROOT, 'changed'), undefined);
+});
+
+const GIT_DIR = path.join(ROOT, '.git');
+
+/** The full re-read a git event asks for. */
+const FULL_REREAD = { mission: '', documents: false, live: true };
+
+test('the mission documents and the files that move HEAD are the watched patterns', () => {
+  assert.strictEqual(WATCHED_PATTERN, '**/mission_*/{requirements.md,open_questions.xml,TASKS_TODO.md}');
+  assert.strictEqual(GIT_WATCHED_PATTERN, '{HEAD,packed-refs,refs/heads/**}');
+  assert.strictEqual(GIT_HEAD_PATTERN, 'HEAD');
+  assert.strictEqual(GIT_REFS_PATTERN, '{packed-refs,refs/heads/**}');
+});
+
+test('a git directory that is its own common directory is watched once, for HEAD, packed-refs, and the branch refs', () => {
+  assert.deepStrictEqual(gitWatches(GIT_DIR, GIT_DIR), [{ base: GIT_DIR, pattern: GIT_WATCHED_PATTERN }]);
+  assert.deepStrictEqual(gitWatches(GIT_DIR, `${GIT_DIR}${path.sep}`), [{ base: GIT_DIR, pattern: GIT_WATCHED_PATTERN }]);
+});
+
+test("a linked worktree's HEAD is watched in its git directory and its branch refs in the common one", () => {
+  const linked = path.join(GIT_DIR, 'worktrees', 'side');
+  assert.deepStrictEqual(gitWatches(linked, GIT_DIR), [
+    { base: linked, pattern: GIT_HEAD_PATTERN },
+    { base: GIT_DIR, pattern: GIT_REFS_PATTERN },
+  ]);
+});
+
+test('HEAD, packed-refs, and a branch ref ask for a full re-read, whatever the event', () => {
+  for (const file of [['HEAD'], ['packed-refs'], ['refs', 'heads', 'main'], ['refs', 'heads', 'feature', 'nested']]) {
+    assert.deepStrictEqual(gitEventEffect(GIT_DIR, path.join(GIT_DIR, ...file)), FULL_REREAD, file.join('/'));
+  }
+});
+
+test('a lock file, the index, objects, remote refs, and other git files ask nothing', () => {
+  for (const file of [
+    ['HEAD.lock'],
+    ['packed-refs.lock'],
+    ['refs', 'heads', 'main.lock'],
+    ['index'],
+    ['index.lock'],
+    ['objects', 'ab', 'cdef0123'],
+    ['refs', 'remotes', 'origin', 'main'],
+    ['refs', 'tags', 'v1'],
+    ['refs', 'heads'],
+    ['ORIG_HEAD'],
+    ['FETCH_HEAD'],
+    ['logs', 'HEAD'],
+    ['config'],
+  ]) {
+    assert.strictEqual(gitEventEffect(GIT_DIR, path.join(GIT_DIR, ...file)), undefined, file.join('/'));
+  }
+  assert.strictEqual(gitEventEffect(GIT_DIR, GIT_DIR), undefined);
+  assert.strictEqual(gitEventEffect(GIT_DIR, path.join(ROOT, 'HEAD')), undefined, 'a file outside the git directory');
+});
+
+test("a git event's full re-read goes through the debounce, merged with a burst of document events", async () => {
+  const flushed: RefreshBatch[] = [];
+  const queue = new RefreshQueue((batch) => flushed.push(batch), 20);
+  queue.add({ mission: 'a/mission_x/', documents: true, live: false });
+  for (const file of [['refs', 'heads', 'main'], ['HEAD']]) {
+    const effect = gitEventEffect(GIT_DIR, path.join(GIT_DIR, ...file));
+    assert.ok(effect !== undefined);
+    queue.add(effect);
+  }
+  assert.strictEqual(flushed.length, 0);
+  await wait(60);
+  assert.deepStrictEqual(flushed, [{ missions: ['a/mission_x/'], live: true }]);
 });
 
 function wait(ms: number): Promise<void> {

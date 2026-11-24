@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Git State Changes Re-Read the Missions
-
-Create a second `vscode.workspace.createFileSystemWatcher` beside the mission-document watcher in `src/pane.ts`, over the repository's git directory as `git rev-parse --absolute-git-dir` (and `--git-common-dir` for a linked worktree's refs) resolves it from the project root, covering only `HEAD`, `refs/heads/**`, and `packed-refs`, with lock files, the index, objects, and remote refs ignored, so a commit, a pull, or a branch switch made outside the extension's runs no longer leaves a mission's next step and review-round count stale until Refresh. A pure function beside `eventEffect` in `src/refresh.ts` maps each event to an effect asking for a full re-read (`live: true`) through the existing 300 ms debounce, and no other extension is used. Verified by refresh and pane tests of the watched patterns, the mapped effect, and the debounced re-read, with `gurita-vscode/README.md` saying what is watched.
-
----
-
 ## Notices of What Would Stop a Run
 
 Show on a mission page, each only while its condition holds, two notices of what would stop a run before it is started: one while another started mission holds the mission's scope, the bundled missions tool's `gate <path>` printing anything, which stops every run that derives, adds, or completes tasks, and one while `requirements.md` or `open_questions.xml` holds an uncommitted change, which stops the answer sweep. Both conditions are read with the mission's other facts on every re-read; verified by tests of the two reads against a git fixture and page tests of each notice shown and gone, with `gurita-vscode/README.md` describing them.
