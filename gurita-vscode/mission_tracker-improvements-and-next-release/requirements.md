@@ -97,5 +97,7 @@ Five missions under `gurita-vscode/` are finished, all between 2026-11-20 and 20
 
 - **Recommendation button recipe fate.** The `### answer-open-question-with-recommendation` section leaves `gurita-vscode/shipped_recipes.md`, and its name leaves `BUTTON_RECIPES` with the button, so the Settings window no longer lists it among its fixed-name button recipes. Nothing is added for state a user stored under the name. Through the existing overlay rule, any stored variants in `~/.gurita/variants.json`, or a recipe of that name in the user's own recipe file, become an own recipe of that name, which the Settings window lists as an ordinary editable recipe with no fixed-name note, where the user can delete it. A mission page draws none of its variants, because each holds the `<Short Title>` placeholder the recipe list cannot fill. A picked default and remembered `workspaceState` selections stay where they are, read by nothing.
 
+- **Alternative button layout.** On a question card each alternative's id stands alone on its head line. Directly beneath it, above the alternative's text, a row of its own holds the "Answer with this alternative" button, whose label reads the title and then the variant's name on one line, with today's arrow-only variant dropdown kept beside it. The selection is still remembered per mission, question, and alternative.
+
 ## Out of Scope
 
