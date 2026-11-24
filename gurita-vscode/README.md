@@ -153,8 +153,8 @@ every state of the window, on the mission's page, the failure state, and the not
 the page itself draws no Settings control. Its page opens on an introduction, then holds the
 workflow diagram under a heading of its own, **Workflow**, marking where it starts, the recipe
 buttons of the recipes that fit the step its diagram fills, each with a dropdown of its variants beside it (see The recipes a
-page lists), the **New task** button with its dropdown in a row of its own, and directly beneath
-that row two panes behind one row of two headers, **Open questions**, holding the question view
+page lists), the row of mission-wide actions, **New task** and **Ask in mission context**, each
+with its dropdown, and directly beneath that row two panes behind one row of two headers, **Open questions**, holding the question view
 parsed from `open_questions.xml`, and **Remaining tasks**, holding the remaining task headings of
 `TASKS_TODO.md`. The introduction shows the mission's title alone, the first `# ` heading of its
 `requirements.md`, with one **Show goal** button beside it that shows the whole goal beneath the
@@ -166,8 +166,9 @@ consecutive `- ` lines as a bulleted list, and text between two backticks as cod
 links, headings, and numbered lists show as plain text. The goal is hidden every time the page
 loads: it stays shown through every redraw while the page stays shown, but whether it is shown is
 not saved, so opening the window again, showing it again after it was hidden, or the failure
-state or the notice below standing in between, hides it afresh. **New task** stands above the headers rather than inside either pane, so it is
-drawn on every mission page whichever pane is shown and whatever step the diagram fills. The two
+state or the notice below standing in between, hides it afresh. The row of mission-wide actions stands above the headers rather than inside either pane, so
+**New task** and **Ask in mission context** are drawn on every mission page whichever pane is
+shown and whatever step the diagram fills. The two
 headers are of equal width and together fill the window's whole width, and only the selected
 pane's content is shown beneath them. A page opens on **Remaining tasks** when git holds at least
 one `Requirements-review:` commit for the mission (the count the workflow diagram reads) and no
@@ -199,7 +200,10 @@ document's notice stays in its own pane. The diagram is display only: its blocks
 and gate nothing. **New task** runs the `discuss-new-task` recipe for the page's mission: you
 type the issue, and an interactive conversation clarifies it into tasks and adds them to the
 mission's task list through `submit-task` inside that same conversation, so there is no separate
-submit button. The question view shows one fully opened card per question, one at a time under a
+submit button. **Ask in mission context** runs the `ask-in-mission-context` recipe for the page's
+mission: you type your question before the run starts, an empty question being refused, and an
+interactive session opens on the answer, drawn from the mission's goal, decisions, task lists,
+and live deliverables, and stays open for follow-up questions, editing nothing. The question view shows one fully opened card per question, one at a time under a
 position counter such as `3 / 12`: **Previous** and **Next**, or the left and right arrow keys,
 move between the cards, **First**, before **Previous**, jumps straight back to the first card,
 and a dependency on a card links to the named question's card. Each card
@@ -224,20 +228,20 @@ Every push button a mission window draws has one look: the theme's primary butto
 one the recipe buttons carry, with a clearly visible 1px outline in the theme's contrast border
 colour, or its foreground colour where the theme sets none, so each button stands out against the
 page and its own fill alike. That covers the recipe buttons, **Start run**, the question card's
-**Discuss** and **Answer**, every **Answer with this alternative**, **New task**, **Show goal** and **Hide goal**, **First**, **Previous**, **Next**, and **Close preview**, and in the Settings
+**Discuss** and **Answer**, every **Answer with this alternative**, **New task**, **Ask in mission context**, **Show goal** and **Hide goal**, **First**, **Previous**, **Next**, and **Close preview**, and in the Settings
 window its edit controls (**Enable** and **Disable**, **Add model**, **Add effort**, and
 **Remove**, **Duplicate**, **Rename**, **Delete**, **Make default**, and **Reset**) and **Check
 again**. A disabled button is drawn faded. The two pane headers and the links of a card's
 dependencies keep their own unfilled look.
 
-Every value a button needs (an answer, an issue description, a discussion note, and for the
+Every value a button needs (an answer, an issue description, a question, a discussion note, and for the
 side-bar view's rows a goal and a scope typed as a path from the project root) is typed into
 VS Code's own input box, one line per value. Only the discussion note may be left empty. A click
 on a recipe button starts its run at once in a terminal; every recipe button shows its lines,
 placeholders included, before you click. While a run started for a mission is going, until you
 dismiss its terminal, that mission's page shows it: every action button on the page (the recipe
-buttons, the buttons on the question card and its alternatives, a preview's **Start run**, and
-**New task**) is disabled, the workflow diagram's filled block pulses, and beneath the diagram an
+buttons, the buttons on the question card and its alternatives, a preview's **Start run**,
+**New task**, and **Ask in mission context**) is disabled, the workflow diagram's filled block pulses, and beneath the diagram an
 indicator says that the mission is waiting for its run's terminal to close. The indicator's space
 is kept on the page whether or not a run is going, so its showing and hiding moves none of the
 page's content. The recipe dropdowns
@@ -450,7 +454,7 @@ nothing, and a recipe every variant of which is left out loses its button. Where
 selected for a recipe or its default is left out, the button stands on the default if that
 variant is still listed and otherwise on the first listed variant; the remembered selection is
 kept and comes back once the harness is enabled again. The buttons that run a recipe by its fixed
-name (on the question card and its alternatives, and **New task**) are reached the same way: such a variant leaves the dropdown beside the button and a
+name (on the question card and its alternatives, **New task**, and **Ask in mission context**) are reached the same way: such a variant leaves the dropdown beside the button and a
 click on it starts nothing, the button stands on its default or its first remaining variant as a
 recipe button does, and a button left with no variant stays drawn but disabled, with no dropdown
 beside it, until the harness is enabled again. The side-bar view's **New mission** and **Define
@@ -704,8 +708,8 @@ shipped recipes come first and your own under **Your actions** below them, a var
 placeholder the page cannot fill is left off, and one holding a placeholder the extension does not
 know is shown as a non-runnable entry when selected. The list follows the step, so it changes
 whenever a run or a change to a mission document moves the diagram's filled block. The buttons
-that run a recipe by its fixed name (on the question card and its alternatives, and **New task**)
-are offered whatever the step, as are the side-bar view's **New mission** and **Define mission**
+that run a recipe by its fixed name (on the question card and its alternatives, **New task**, and
+**Ask in mission context**) are offered whatever the step, as are the side-bar view's **New mission** and **Define mission**
 rows.
 
 Under the page's **Actions** heading the list is drawn in two parts. First come the shipped
@@ -744,10 +748,11 @@ recipe by its fixed name are never listed on the page; those buttons carry their
 
 ### The buttons that run a recipe by its fixed name
 
-Four buttons on a mission's page run a recipe by its fixed name, whatever the step: **Discuss**
+Five buttons on a mission's page run a recipe by its fixed name, whatever the step: **Discuss**
 and **Answer** on the question card, **Answer with this alternative** on each of its
-alternatives, and **New task**. The two rows that start a mission, **New mission** and **Define
-mission**, run theirs from the side-bar view (see The rows that start a mission above). The four pick a variant as the recipe buttons do. Beside each stands a dropdown of its
+alternatives, and **New task** and **Ask in mission context** in the row of mission-wide actions
+above the pane headers. The two rows that start a mission, **New mission** and **Define
+mission**, run theirs from the side-bar view (see The rows that start a mission above). The five pick a variant as the recipe buttons do. Beside each stands a dropdown of its
 recipe's variants, drawn as its arrow alone and listing, opened, the variants in the recipe's
 order, each by its bare name with no mark for your own. Every **Answer with this alternative**
 button has such a dropdown of its own beside it, one per alternative on the card, so each
@@ -759,7 +764,8 @@ The dropdown stands on the variant selected, and the button's label, its hover t
 all follow it. Each button, every **Answer with this alternative** button included, standing on
 its own dropdown's variant, shows its name and, beneath it, the name of the variant selected, always and exactly as the variant is
 named, in the recipe buttons' form, with that variant's lines as written in its hover text, so
-**New task** on the shipped `discuss-new-task` reads `default` beneath its name; an **Answer
+**New task** on the shipped `discuss-new-task` and **Ask in mission context** on the shipped
+`ask-in-mission-context` each read `default` beneath their names; an **Answer
 with this alternative** button, on its alternative's row of its own, reads the variant's name
 after its name on the same line instead. A click runs the
 variant the dropdown shows, and only when the window's last post of the button stood on that
@@ -767,7 +773,7 @@ variant; picking another variant starts nothing, so these dropdowns stay enabled
 run is going.
 
 The variant you select is remembered in VS Code's storage for the open workspace (the extension's
-`workspaceState`). For **Discuss**, **Answer**, and **New task**
+`workspaceState`). For **Discuss**, **Answer**, **New task**, and **Ask in mission context**
 it is remembered per recipe on each mission, keyed by the mission's path, in the same map as the
 recipe buttons' selections, so every card of a mission shares its selection. For each **Answer
 with this alternative** button it is remembered per mission, question, and alternative, keyed by
@@ -857,11 +863,13 @@ of your own whose last line is the slot line `<single-task line>` (see the loope
 below), and no shipped recipe declares **follow up tasks**. Besides the chains, the file carries the following,
 none of which declares a step and each of which is one block:
 
-- The six button recipes, each one `claude` line named by the skill it invokes:
-  `discuss-open-question`, `discuss-mission-goal`, `discuss-new-task`, `answer-open-question`,
-  `answer-open-question-with-alternative`, and `define-mission-goal`. The buttons run the recipe of these fixed names; `discuss-new-task`'s
-  one line is
+- The seven button recipes, each one `claude` line named by the skill it invokes:
+  `discuss-open-question`, `discuss-mission-goal`, `discuss-new-task`, `ask-in-mission-context`,
+  `answer-open-question`, `answer-open-question-with-alternative`, and `define-mission-goal`. The
+  buttons run the recipe of these fixed names; `discuss-new-task`'s one line is
   `claude "/gurita:discuss-new-task --mission <path> <issue description>" --dangerously-skip-permissions --model "fable" --effort high; # interactive`,
+  `ask-in-mission-context`'s is
+  `claude "/gurita:ask-in-mission-context --mission <path> <question>" --dangerously-skip-permissions --model "fable" --effort high; # interactive`,
   and `discuss-open-question`'s is
   `claude "/gurita:discuss-open-question --mission <path> <Short Title>. <note>" --dangerously-skip-permissions --model "fable" --effort xhigh; # interactive`.
 - The single-task lines, each one headless line holding `<Task Title>`:
@@ -911,7 +919,8 @@ Each line is one of three kinds, read from its text:
 - **A shell step** otherwise: it runs as written.
 
 The placeholders the extension knows are `<path>`, `<Task Title>`, `<Short Title>`,
-`<Alternative Id>`, `<goal>`, `<scope>`, `<answer text>`, `<issue description>`, and `<note>`.
+`<Alternative Id>`, `<goal>`, `<scope>`, `<answer text>`, `<issue description>`, `<question>`,
+and `<note>`.
 `<note>`, the discussion note, is the one optional placeholder: when it is empty the line is
 built with it dropped, together with the `. ` written directly before it, so the line reads as if
 it held no note. A mission page fills `<path>`; a
@@ -925,7 +934,7 @@ Values never enter a line's text: each placeholder is written as a reference to 
 variable set in the run's environment, named `GURITA_` followed by the placeholder upper-cased
 with spaces turned into underscores: `GURITA_PATH`, `GURITA_TASK_TITLE`, `GURITA_SHORT_TITLE`,
 `GURITA_ALTERNATIVE_ID`, `GURITA_GOAL`, `GURITA_SCOPE`, `GURITA_ANSWER_TEXT`,
-`GURITA_ISSUE_DESCRIPTION`, and `GURITA_NOTE`. A shell step
+`GURITA_ISSUE_DESCRIPTION`, `GURITA_QUESTION`, and `GURITA_NOTE`. A shell step
 in your own recipe may read them as `"$GURITA_TASK_TITLE"` and the like.
 
 ## The looped task run and the rule file

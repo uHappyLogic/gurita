@@ -880,7 +880,7 @@ test('the own recipe file defaults to ~/.gurita/recipes.md and honours the setti
   assert.strictEqual(ownRecipesFile('$HOME/recipes.md', '/home/someone'), '$HOME/recipes.md');
 });
 
-test('the button recipes carry the six fixed names, each the bare name of its skill', () => {
+test('the button recipes carry the seven fixed names, each the bare name of its skill', () => {
   assert.deepStrictEqual(Object.values(BUTTON_RECIPES), [
     'discuss-open-question',
     'answer-open-question',
@@ -888,6 +888,7 @@ test('the button recipes carry the six fixed names, each the bare name of its sk
     'discuss-mission-goal',
     'define-mission-goal',
     'discuss-new-task',
+    'ask-in-mission-context',
   ]);
 });
 
@@ -924,6 +925,38 @@ test('the shipped recipe file carries every button recipe as one Claude Code blo
   const found = buttonRecipe(recipes, BUTTON_RECIPES.discussTask, ['path', 'issue description']);
   assert.ok(found.state === 'found');
   assert.ok(!pageRecipes(recipes, ['path']).some((entry) => entry.name === BUTTON_RECIPES.discussTask));
+});
+
+test('an ask-in-mission-context recipe holds the question as a known placeholder and runs from its fixed-name button only', () => {
+  const recipes = parseShippedRecipes(
+    '## Recipes\n\n### ask-in-mission-context\n```\nclaude "/gurita:ask-in-mission-context --mission <path> <question>" --model "fable"; # interactive\n```\n',
+    SHIPPED,
+  );
+  const recipe = runs(recipes, BUTTON_RECIPES.askMission);
+  assert.deepStrictEqual(recipe.knownPlaceholders, ['path', 'question']);
+  assert.deepStrictEqual(recipe.unknownPlaceholders, []);
+  assert.strictEqual(recipe.singleTask, false);
+  assert.deepStrictEqual(pageRecipes(recipes, ['path']), [], 'kept out of the recipe list by its name');
+  assert.deepStrictEqual(pageRecipes(recipes, ['path', 'question']), [], 'even where the page could fill the question');
+  const found = buttonRecipe(recipes, BUTTON_RECIPES.askMission, ['path', 'question']);
+  assert.ok(found.state === 'found');
+  const short = buttonRecipe(recipes, BUTTON_RECIPES.askMission, ['path']);
+  assert.ok(short.state === 'refused');
+  assert.match(short.cause, /has no value for: <question>\./);
+});
+
+test('the shipped ask-in-mission-context recipe is one interactive Claude Code line, kept out of the recipe list at every step', () => {
+  const file = path.join(__dirname, '..', '..', 'shipped_recipes.md');
+  const recipes = parseShippedRecipes(fs.readFileSync(file, 'utf8'), file);
+  const recipe = runs(recipes, BUTTON_RECIPES.askMission);
+  assert.deepStrictEqual(recipe.lines, [
+    'claude "/gurita:ask-in-mission-context --mission <path> <question>" --dangerously-skip-permissions --model "fable" --effort high; # interactive',
+  ]);
+  assert.strictEqual(isHeadless(recipe.lines[0]), false);
+  assert.strictEqual(byName(recipes, BUTTON_RECIPES.askMission).stage, undefined, 'it declares no step');
+  const found = buttonRecipe(recipes, BUTTON_RECIPES.askMission, ['path', 'question']);
+  assert.ok(found.state === 'found');
+  assert.ok(!pageRecipes(recipes, ['path']).some((entry) => entry.name === BUTTON_RECIPES.askMission));
 });
 
 test('the shipped discuss-open-question recipe carries the optional note directly after the Short Title', () => {

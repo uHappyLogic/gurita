@@ -96,10 +96,10 @@ function named(page: Page, text: string): FakeElement {
 
 type PaneName = 'questions' | 'tasks';
 
-/** The page's action buttons with each pane shown: its recipe buttons, its question card's buttons, and New task. */
+/** The page's action buttons with each pane shown: its recipe buttons, its question card's buttons, New task, and Ask in mission context. */
 const ACTIONS: Record<PaneName, string[]> = {
-  questions: ['review', 'complete', 'New task', 'Discuss', 'Answer', 'Answer with this alternative'],
-  tasks: ['review', 'complete', 'New task'],
+  questions: ['review', 'complete', 'New task', 'Ask in mission context', 'Discuss', 'Answer', 'Answer with this alternative'],
+  tasks: ['review', 'complete', 'New task', 'Ask in mission context'],
 };
 
 /** The buttons that stay enabled whatever runs, with each pane shown. */
@@ -546,7 +546,7 @@ test('no dropdown stands beside a fixed-name button posted with nothing, and the
     for (const select of selects) {
       assert.strictEqual(select.disabled, false);
     }
-    for (const text of ['Discuss', 'Answer', 'Answer with this alternative', 'New task']) {
+    for (const text of ['Discuss', 'Answer', 'Answer with this alternative', 'New task', 'Ask in mission context']) {
       if (buttons(page).some((each) => shownName(each) === text)) {
         assert.ok(!section.all().includes(named(page, text)), `${text} stands outside the recipe list`);
       }
@@ -557,6 +557,7 @@ test('no dropdown stands beside a fixed-name button posted with nothing, and the
 /** Each fixed-name button's label, the button's key, and the hover text it shows while its recipe cannot be read. */
 const FIXED_BUTTONS: [string, string, string][] = [
   ['New task', 'discussTask', 'Type an issue and open an interactive discussion of it into tasks for this mission'],
+  ['Ask in mission context', 'askMission', 'Type a question and open an interactive session answering it in the context of this mission'],
   ['Discuss', 'discussQuestion', 'Type an optional note and open an interactive discussion of this question'],
   ['Answer', 'answerQuestion', 'Record an answer you type as the decision'],
   ['Answer with this alternative', 'answerWithAlternative', 'Record keep as the decision'],
@@ -569,7 +570,7 @@ interface BuiltMission {
 
 /**
  * The message posting Alpha's window its page, built by `build`, its answer-with-alternative entry
- * of `entries` posted once for every alternative of every question, and the other four with the
+ * of `entries` posted once for every alternative of every question, and the other buttons with the
  * mission.
  */
 function liveButtons(entries: Record<string, unknown>, running: string[] = [], build: (missionPath: string, title: string) => unknown = mission): unknown {
@@ -624,7 +625,7 @@ test("every fixed-name button shows its name with its selected variant's name be
         [[label, 'default'], `claude -p "/gurita:${key} --mission <path>" --model "${model}" --effort ${effort};`],
       ]),
     );
-  assert.deepStrictEqual(fixedShown(page), expected('fable', 'xhigh'), 'all four buttons, with either pane shown');
+  assert.deepStrictEqual(fixedShown(page), expected('fable', 'xhigh'), 'all five buttons, with either pane shown');
 
   // A default picked in the settings view reaches every button with the pages posted again.
   page.send(liveButtons(fixedButtons('opus', 'high')));
@@ -867,15 +868,18 @@ test('a dropdown beside each fixed-name button offers its variants and stands on
   own[1].change('0');
   named(page, 'Remaining tasks').click();
   (dropdownBeside(page, 'New task') as FakeElement).change('0');
+  (dropdownBeside(page, 'Ask in mission context') as FakeElement).change('0');
   assert.deepStrictEqual(page.posted.slice(count), [
     { type: 'selectButtonVariant', button: 'discussQuestion', mission: ALPHA, variant: 'Fable' },
     { type: 'selectAlternativeVariant', mission: ALPHA, question: 'Pane Layout', alternative: 'drop', variant: 'Fable' },
     { type: 'selectButtonVariant', button: 'discussTask', mission: ALPHA, variant: 'Fable' },
+    { type: 'selectButtonVariant', button: 'askMission', mission: ALPHA, variant: 'Fable' },
   ]);
 
   // A click posts the variant selected.
   count = page.posted.length;
   named(page, 'New task').click();
+  named(page, 'Ask in mission context').click();
   named(page, 'Open questions').click();
   named(page, 'Answer').click();
   for (const each of buttons(page).filter((node) => shownName(node) === 'Answer with this alternative')) {
@@ -883,6 +887,7 @@ test('a dropdown beside each fixed-name button offers its variants and stands on
   }
   assert.deepStrictEqual(page.posted.slice(count), [
     { type: 'taskButton', mission: ALPHA, variant: 'Opus' },
+    { type: 'askButton', mission: ALPHA, variant: 'Opus' },
     { type: 'questionButton', button: 'answerQuestion', mission: ALPHA, question: 'Pane Layout', variant: 'Opus' },
     { type: 'alternativeButton', mission: ALPHA, question: 'Pane Layout', alternative: 'keep', variant: 'Opus' },
     { type: 'alternativeButton', mission: ALPHA, question: 'Pane Layout', alternative: 'drop', variant: 'Opus' },
@@ -1304,55 +1309,71 @@ test('a mission page draws one row of two pane headers with only the selected pa
   assert.strictEqual(page.root.all().filter((each) => each.tagName === 'h3' && ['Open questions', 'Remaining tasks'].includes(each.textContent)).length, 0);
 });
 
-/** Asserts the New task button stands in a row of its own directly above the pane headers, and nowhere inside a pane. */
-function assertNewTaskAbovePanes(page: Page): void {
-  const newTask = named(page, 'New task');
+/** The buttons of the page's row of mission-wide actions, in order. */
+const MISSION_ACTIONS = ['New task', 'Ask in mission context'];
+
+/**
+ * Asserts the row of mission-wide actions, New task and then Ask in mission context, each with its
+ * dropdown, stands directly above the pane headers, and that neither button stands inside a pane.
+ */
+function assertMissionActionsAbovePanes(page: Page): void {
   const panes = page.root.all().filter((each) => each.has('panes'));
   assert.strictEqual(panes.length, 1);
   const rows = panes[0].children as FakeElement[];
   const headers = rows.findIndex((each) => each.has('pane-tabs'));
   assert.ok(headers > 0, 'a row stands above the pane headers');
   const row = rows[headers - 1];
-  assert.ok(row.has('new-task'), 'the row directly above the headers is the New task row');
-  assert.ok(row.all().includes(newTask), 'New task stands in that row');
+  assert.ok(row.has('mission-actions'), 'the row directly above the headers is the row of mission-wide actions');
   assert.deepStrictEqual(
     row.all().filter((each) => each.tagName === 'button').map(shownName),
-    ['New task'],
-    'the row holds New task alone',
+    MISSION_ACTIONS,
+    'the row holds New task and Ask in mission context, in that order',
   );
-  for (const pane of page.root.all().filter((each) => each.has('pane'))) {
-    assert.ok(!pane.all().includes(newTask), 'New task stands in no pane');
-    assert.ok(!pane.all().some((each) => each.textContent === 'New task'), 'no pane draws New task');
+  for (const label of MISSION_ACTIONS) {
+    const node = named(page, label);
+    assert.ok(row.all().includes(node), `${label} stands in that row`);
+    for (const pane of page.root.all().filter((each) => each.has('pane'))) {
+      assert.ok(!pane.all().includes(node), `${label} stands in no pane`);
+      assert.ok(!pane.all().some((each) => each.textContent === label), `no pane draws ${label}`);
+    }
   }
 }
 
-test('the New task button stands above the pane headers with either pane shown, and not inside Remaining tasks', () => {
+test('the row of mission-wide actions, New task and Ask in mission context, stands above the pane headers at every step with either pane shown, and not inside a pane', () => {
   for (const step of ['define', 'first-review', 'additional-review', 'derive', 'execute', 'follow-up', 'finish', undefined]) {
     const page = loadPage();
     page.send(pageOf(mission(ALPHA, 'Alpha', step === undefined ? {} : { step })));
     assert.strictEqual(shownPane(page), 'questions');
-    assertNewTaskAbovePanes(page);
-    assert.strictEqual(named(page, 'New task').disabled, false);
+    assertMissionActionsAbovePanes(page);
+    for (const label of MISSION_ACTIONS) {
+      assert.strictEqual(named(page, label).disabled, false);
+    }
     named(page, 'Remaining tasks').click();
     assert.strictEqual(shownPane(page), 'tasks');
-    assertNewTaskAbovePanes(page);
+    assertMissionActionsAbovePanes(page);
     assert.ok(texts(page).includes('First Task'));
     named(page, 'Open questions').click();
     named(page, 'New task').click();
     assert.deepStrictEqual(page.posted.slice(-1), [{ type: 'taskButton', mission: ALPHA }]);
+    named(page, 'Ask in mission context').click();
+    assert.deepStrictEqual(page.posted.slice(-1), [{ type: 'askButton', mission: ALPHA }]);
   }
 
-  // A page that opens on Open questions draws it too, and a run for the mission disables it with either pane shown.
+  // A page that opens on Open questions draws it too, and a run for the mission disables both buttons with either pane shown.
   const page = loadPage();
   page.send(liveWith('questions', [ALPHA]));
   eachPane(page, () => {
-    assertNewTaskAbovePanes(page);
-    assert.strictEqual(named(page, 'New task').disabled, true);
+    assertMissionActionsAbovePanes(page);
+    for (const label of MISSION_ACTIONS) {
+      assert.strictEqual(named(page, label).disabled, true);
+    }
   });
   page.send(liveWith('questions'));
   eachPane(page, () => {
-    assertNewTaskAbovePanes(page);
-    assert.strictEqual(named(page, 'New task').disabled, false);
+    assertMissionActionsAbovePanes(page);
+    for (const label of MISSION_ACTIONS) {
+      assert.strictEqual(named(page, label).disabled, false);
+    }
   });
 });
 
@@ -1550,7 +1571,7 @@ test('a harness check or settings message posted to a mission window changes not
   assert.deepStrictEqual(pageShape(posted), pageShape(plain));
   const clicks = (page: Page): unknown[] => {
     const count = page.posted.length;
-    for (const text of ['review', 'complete', 'Discuss', 'Answer', 'Answer with this alternative', 'New task']) {
+    for (const text of ['review', 'complete', 'Discuss', 'Answer', 'Answer with this alternative', 'New task', 'Ask in mission context']) {
       named(page, text).click();
     }
     return page.posted.slice(count);
@@ -1664,6 +1685,7 @@ test('every push button a mission window draws carries one class of the one shar
     'Answer',
     'Answer with this alternative',
     'New task',
+    'Ask in mission context',
     'First',
     'Previous',
     'Next',

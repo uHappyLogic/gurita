@@ -20,6 +20,7 @@ test('each session variable is GURITA_ and the placeholder upper-cased, spaces t
     'GURITA_SCOPE',
     'GURITA_ANSWER_TEXT',
     'GURITA_ISSUE_DESCRIPTION',
+    'GURITA_QUESTION',
     'GURITA_NOTE',
   ]);
 });
@@ -38,6 +39,19 @@ test('the issue description is a known placeholder, filled through GURITA_ISSUE_
     GURITA_PATH: 'gurita-vscode/mission_x/',
     GURITA_ISSUE_DESCRIPTION: 'The pane is slow',
   });
+});
+
+test('the question is a known, required placeholder, filled through GURITA_QUESTION', () => {
+  assert.ok(KNOWN_PLACEHOLDERS.includes('question'));
+  assert.ok(!OPTIONAL_PLACEHOLDERS.includes('question'), 'an empty question is never dropped from a line');
+  assert.strictEqual(sessionVariable('question'), 'GURITA_QUESTION');
+  assert.strictEqual(
+    buildLine(
+      'claude "/gurita:ask-in-mission-context --mission <path> <question>" --dangerously-skip-permissions --model "fable" --effort high; # interactive',
+      { path: 'gurita-vscode/mission_x/', question: 'Why two panes?' },
+    ),
+    'claude "/gurita:ask-in-mission-context --mission ${GURITA_PATH} ${GURITA_QUESTION}" --dangerously-skip-permissions --model "fable" --effort high; # interactive',
+  );
 });
 
 test('a placeholder inside double quotes is written as a bare reference', () => {

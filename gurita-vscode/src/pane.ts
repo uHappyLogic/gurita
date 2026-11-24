@@ -77,7 +77,8 @@
 // run
 // through the same run path: on a question's card the discuss and answer buttons, on an
 // alternative on that card the answer-with-alternative button,
-// and on a mission's page, in its row above the pane headers, the new-task button. The
+// and on a mission's page, in its row of mission-wide actions above the pane headers, the new-task
+// and ask-in-mission-context buttons. The
 // Short Title and the Alternative Id come from the card clicked, every typed value from
 // VS Code's own input box, one line per value, and each value reaches its line only as its
 // `GURITA_*` session variable. The discuss button always asks for an optional discussion note,
@@ -85,7 +86,8 @@
 // `<Short Title>. <note>`, an empty one leaves the line as if it held no note, and Escape starts
 // nothing. While a chain started for a mission is running, from its start until its terminal
 // closes, that mission's page draws every action button on it disabled, its recipe buttons, its
-// question card's buttons, its preview's start button, and its New task button, pulses its
+// question card's buttons, its preview's start button, and its New task and Ask in mission context
+// buttons, pulses its
 // workflow diagram's filled block, and shows beneath the diagram the run indicator, saying that the
 // mission is waiting for its run's terminal to close, whose space is reserved while no run is
 // going, so its showing moves nothing on the page, while its two pane headers and every other mission's window stay
@@ -209,6 +211,7 @@ type PageMessage =
   | { type: 'questionButton'; button: QuestionButton; mission: string; question: string; variant: string }
   | { type: 'alternativeButton'; mission: string; question: string; alternative: string; variant: string }
   | { type: 'taskButton'; mission: string; variant: string }
+  | { type: 'askButton'; mission: string; variant: string }
   | { type: 'selectButtonVariant'; button: FixedButton; mission: string; variant: string }
   | { type: 'selectAlternativeVariant'; mission: string; question: string; alternative: string; variant: string }
   | { type: 'previewLoop'; mission: string; recipe: string; variant: string }
@@ -223,7 +226,7 @@ type RecipeRead = { state: 'read'; recipes: Recipe[]; disabled: Harness[] } | { 
 /** The recipe list one mission's page shows, or the cause the recipes could not be read. */
 type RecipePart = { state: 'read'; recipes: PageRecipe[] } | { state: 'failed'; cause: string };
 
-/** One of the six buttons outside the recipe list, each running the recipe of its fixed name. */
+/** One of the seven buttons outside the recipe list, each running the recipe of its fixed name. */
 type FixedButton = keyof typeof BUTTON_RECIPES;
 
 /**
@@ -234,7 +237,7 @@ type FixedButton = keyof typeof BUTTON_RECIPES;
 type PageButton = Exclude<FixedButton, MissionButton | 'answerWithAlternative'>;
 
 /** The fixed-name buttons on a mission's page posted once with its mission, by the button. */
-const PAGE_BUTTONS: readonly PageButton[] = ['discussQuestion', 'answerQuestion', 'discussTask'];
+const PAGE_BUTTONS: readonly PageButton[] = ['discussQuestion', 'answerQuestion', 'discussTask', 'askMission'];
 
 /**
  * What a fixed-name button runs, as its dropdown, label, and hover text show it: the variants it
@@ -682,7 +685,9 @@ function hookMissionWindow(context: vscode.ExtensionContext, mission: string, cr
       } else if (message?.type === 'alternativeButton') {
         runAlternativeButton(context, win, message.mission, message.question, message.alternative, message.variant);
       } else if (message?.type === 'taskButton') {
-        void runTaskButton(context, win, message.mission, message.variant);
+        void runMissionAction(context, win, 'discussTask', message.mission, message.variant);
+      } else if (message?.type === 'askButton') {
+        void runMissionAction(context, win, 'askMission', message.mission, message.variant);
       } else if (message?.type === 'selectButtonVariant') {
         void selectButtonVariant(context, win, message.button, message.mission, message.variant);
       } else if (message?.type === 'selectAlternativeVariant') {
@@ -1382,6 +1387,15 @@ const QUESTION_BUTTONS: Record<QuestionButton, { typed: string[] }> = {
   answerQuestion: { typed: ['answer text'] },
 };
 
+/** A button of a mission page's row of mission-wide actions. */
+type MissionAction = 'discussTask' | 'askMission';
+
+/** The placeholder values each button of a mission page's row of mission-wide actions has typed, in the order it asks for them. */
+const MISSION_ACTIONS: Record<MissionAction, { typed: string[] }> = {
+  discussTask: { typed: ['issue description'] },
+  askMission: { typed: ['question'] },
+};
+
 /** The placeholder values each mission-starting row has typed, in the order it asks for them. */
 const MISSION_BUTTONS: Record<MissionButton, { typed: string[] }> = {
   discussGoal: { typed: ['goal'] },
@@ -1395,7 +1409,8 @@ const BUTTON_PLACEHOLDERS: Record<FixedButton, readonly string[]> = {
   answerWithAlternative: ['path', 'Short Title', 'Alternative Id'],
   discussGoal: MISSION_BUTTONS.discussGoal.typed,
   defineMission: MISSION_BUTTONS.defineMission.typed,
-  discussTask: ['path', 'issue description'],
+  discussTask: ['path', ...MISSION_ACTIONS.discussTask.typed],
+  askMission: ['path', ...MISSION_ACTIONS.askMission.typed],
 };
 
 /** The input box's prompt for each typed value. */
@@ -1407,6 +1422,7 @@ const PROMPTS: Record<string, { prompt: string; placeHolder?: string }> = {
     placeHolder: '.',
   },
   'issue description': { prompt: 'The issue, to be clarified into tasks for this mission' },
+  question: { prompt: 'The question, answered in the context of this mission' },
   note: {
     prompt: 'An optional note for the discussion, carried after the Short Title; leave it empty for none',
     placeHolder: 'Optional',
@@ -1540,13 +1556,21 @@ function runAlternativeButton(
 }
 
 /**
- * Runs the new-task button on the page of the mission window `win`, as the latest answer posted it
- * to the window: the issue description typed into an input box, the mission's path from the page,
- * the lines those of the variant named `variant` the latest answer posted the button standing on. A
- * mission the window does not show, a variant the latest answer did not post the button standing
- * on, or a mission with a running chain, starts nothing.
+ * Runs the button `button` of the row of mission-wide actions on the page of the mission window
+ * `win`, New task or Ask in mission context, as the latest answer posted it to the window: the
+ * value it has typed, the issue description or the question, asked for in an input box that
+ * refuses an empty entry, the mission's path from the page, the lines those of the variant named
+ * `variant` the latest answer posted the button standing on. A mission the window does not show, a
+ * variant the latest answer did not post the button standing on, a mission with a running chain,
+ * or a box dismissed with Escape starts nothing.
  */
-async function runTaskButton(context: vscode.ExtensionContext, win: MissionWindow, mission: string, variant: unknown): Promise<void> {
+async function runMissionAction(
+  context: vscode.ExtensionContext,
+  win: MissionWindow,
+  button: MissionAction,
+  mission: string,
+  variant: unknown,
+): Promise<void> {
   const posted = postedFor(win, mission);
   if (posted === undefined) {
     return;
@@ -1554,12 +1578,12 @@ async function runTaskButton(context: vscode.ExtensionContext, win: MissionWindo
   if (refuseWhileRunning(mission)) {
     return;
   }
-  const recipe = postedButton(posted.buttons, 'discussTask', variant);
+  const recipe = postedButton(posted.buttons, button, variant);
   if (recipe === undefined) {
     return;
   }
   const root = posted.root;
-  const typed = await askValues(['issue description']);
+  const typed = await askValues(MISSION_ACTIONS[button].typed);
   if (typed === undefined) {
     return;
   }

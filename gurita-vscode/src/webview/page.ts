@@ -27,8 +27,9 @@
 // such as "additional review round 2". The block of the step to run next, which the extension
 // chooses and posts, is filled purple, and no block is filled when the extension chose none; the
 // diagram is display only, its blocks no buttons, gating nothing. Below
-// it stand the recipe buttons, then the new-task button, posting the page's mission, in a row of
-// its own drawn on every mission page whichever pane is shown and at every step, and then two
+// it stand the recipe buttons, then the page's row of mission-wide actions, the New task and Ask in
+// mission context buttons, each posting the page's mission, drawn on every mission page whichever
+// pane is shown and at every step, and then two
 // panes behind one row of two headers directly beneath it, Open questions and Remaining tasks, of
 // equal width and together filling the window's whole width, with only the selected pane's content
 // beneath them: the question view in Open questions, and in Remaining tasks the remaining task
@@ -53,7 +54,7 @@
 // name beneath it, exactly as the variant is named, carries that variant's lines as written in its
 // hover text, and starts that variant's chain for the page's mission when clicked, and a selected
 // variant holding a placeholder the extension does not know is shown as a non-runnable entry
-// naming it and its file. The four buttons on a mission's page outside the recipe list, which run a
+// naming it and its file. The five buttons on a mission's page outside the recipe list, which run a
 // recipe by its fixed name, take the recipe list's pick mechanics, as the extension posts them with
 // the mission: a dropdown beside each, drawn as its arrow alone, offers the variants the
 // button can run by their bare names and stands on the one selected, the one remembered for the
@@ -93,7 +94,8 @@
 // a file that did not read is replaced by that file's notice alone. While a chain started for the
 // mission is running, as the extension posts when a run starts, when its terminal closes, and with
 // every redraw, the page draws every action button on it disabled, its recipe buttons,
-// its question card's buttons, its preview's start button, and its New task button, its
+// its question card's buttons, its preview's start button, and its New task and Ask in mission
+// context buttons, its
 // workflow diagram's filled block pulses, and the run indicator beneath the diagram shows its one
 // line, that the mission is waiting for its run's terminal to close. The indicator is drawn on
 // every page, kept out of sight while no run is going, so its space is reserved whether or not it
@@ -197,8 +199,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
 
   type RecipePart = { state: 'read'; recipes: PageRecipe[] } | { state: 'failed'; cause: string };
 
-  /** One of the four buttons on a mission's page outside the recipe list, each running the recipe of its fixed name. */
-  type FixedButton = 'discussQuestion' | 'answerQuestion' | 'answerWithAlternative' | 'discussTask';
+  /** One of the five buttons on a mission's page outside the recipe list, each running the recipe of its fixed name. */
+  type FixedButton = 'discussQuestion' | 'answerQuestion' | 'answerWithAlternative' | 'discussTask' | 'askMission';
 
   /**
    * What a fixed-name button runs, as the extension posts it: the variants its dropdown offers and
@@ -807,21 +809,29 @@ declare function acquireVsCodeApi(): VsCodeApi;
     return view;
   }
 
-  /** The New task button's row of its own, drawn above the pane headers whichever pane is shown. */
-  function drawNewTask(mission: Mission, busy: boolean): HTMLElement {
-    const row = element('div', undefined, 'controls new-task');
-    row.append(
-      fixedEntry(
-        'discussTask',
-        mission.buttons?.discussTask,
-        'New task',
-        'Type an issue and open an interactive discussion of it into tasks for this mission',
-        'action',
-        busy,
-        mission.path,
-        (variant) => vscode.postMessage({ type: 'taskButton', mission: mission.path, variant }),
-      ),
-    );
+  /**
+   * The buttons of the page's row of mission-wide actions, in order, each with its fixed-name
+   * button, its label, the hover text it shows while its recipe cannot be read, and the message
+   * type its click posts.
+   */
+  const MISSION_ACTIONS: [FixedButton, string, string, string][] = [
+    ['discussTask', 'New task', 'Type an issue and open an interactive discussion of it into tasks for this mission', 'taskButton'],
+    ['askMission', 'Ask in mission context', 'Type a question and open an interactive session answering it in the context of this mission', 'askButton'],
+  ];
+
+  /**
+   * The page's row of mission-wide actions, New task and Ask in mission context, each with its
+   * dropdown beside it, drawn above the pane headers whichever pane is shown.
+   */
+  function drawMissionActions(mission: Mission, busy: boolean): HTMLElement {
+    const row = element('div', undefined, 'controls mission-actions');
+    for (const [key, label, hover, type] of MISSION_ACTIONS) {
+      row.append(
+        fixedEntry(key, mission.buttons?.[key], label, hover, 'action', busy, mission.path, (variant) =>
+          vscode.postMessage({ type, mission: mission.path, variant }),
+        ),
+      );
+    }
     return row;
   }
 
@@ -1049,7 +1059,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
   }
 
   /**
-   * The two panes: the New task button's row, then one row of two headers of equal width, Open
+   * The two panes: the row of mission-wide actions, then one row of two headers of equal width, Open
    * questions and Remaining tasks, directly beneath it, and beneath them the selected pane's
    * content alone. The headers stay enabled while a chain runs.
    */
@@ -1066,7 +1076,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
       tab.dataset.focus = `pane-${pane}`;
       headers.append(tab);
     }
-    panes.append(drawNewTask(mission, busy), headers, shown === 'tasks' ? drawTasks(mission) : drawQuestions(mission, busy));
+    panes.append(drawMissionActions(mission, busy), headers, shown === 'tasks' ? drawTasks(mission) : drawQuestions(mission, busy));
     return panes;
   }
 

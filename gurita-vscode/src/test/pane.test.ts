@@ -18,6 +18,8 @@ interface StubTerminal {
   args: string[];
   /** The `preserveFocus` argument of every `show` call, in order. */
   shows: (boolean | undefined)[];
+  /** The environment the terminal was created with, its session variables among it. */
+  env?: Record<string, string>;
 }
 
 const created: StubTerminal[] = [];
@@ -216,10 +218,11 @@ const stub = {
       };
       return panel;
     },
-    createTerminal(options: { name: string; shellArgs?: string[] }): StubTerminal & { show(preserveFocus?: boolean): void } {
+    createTerminal(options: { name: string; shellArgs?: string[]; env?: Record<string, string> }): StubTerminal & { show(preserveFocus?: boolean): void } {
       const terminal = {
         name: options.name,
         args: [...(options.shellArgs ?? [])],
+        env: options.env === undefined ? undefined : { ...options.env },
         shows: [] as (boolean | undefined)[],
         show(preserveFocus?: boolean): void {
           terminal.shows.push(preserveFocus);
@@ -1964,7 +1967,7 @@ test("the settings view lists the named single-task lines and carries out each l
 /** A mission no earlier test holds a run for. */
 const MU = 'pkg/mission_mu/';
 
-/** The lines of the six fixed-name button recipes in the fixed-button test's shipped file, by button. */
+/** The lines of the seven fixed-name button recipes in the fixed-button test's shipped file, by button. */
 const BUTTON_LINES: Record<string, string> = {
   discussQuestion: 'claude "/gurita:discuss-open-question --mission <path> <Short Title>. <note>" --model "fable" --effort xhigh; # interactive',
   answerQuestion: 'claude -p "/gurita:answer-open-question --mission <path> <Short Title>. <answer text>" --model "fable" --effort high;',
@@ -1972,6 +1975,7 @@ const BUTTON_LINES: Record<string, string> = {
   discussGoal: 'claude "/gurita:discuss-mission-goal <goal>" --model "fable" --effort xhigh; # interactive',
   defineMission: 'claude -p "/gurita:define-mission-goal --at <scope> <goal>" --model "sonnet" --effort medium;',
   discussTask: 'claude "/gurita:discuss-new-task --mission <path> <issue description>" --model "opus" --effort xhigh; # interactive',
+  askMission: 'claude "/gurita:ask-in-mission-context --mission <path> <question>" --model "fable" --effort high; # interactive',
 };
 
 /** The fixed name of the recipe each button runs. */
@@ -1982,15 +1986,16 @@ const BUTTON_NAMES: Record<string, string> = {
   discussGoal: 'discuss-mission-goal',
   defineMission: 'define-mission-goal',
   discussTask: 'discuss-new-task',
+  askMission: 'ask-in-mission-context',
 };
 
-/** The shipped file of the fixed-button test: the recipe-list test's recipes and the six button recipes. */
+/** The shipped file of the fixed-button test: the recipe-list test's recipes and the seven button recipes. */
 const BUTTON_SHIPPED_TEXT = `${SHIPPED_TEXT}${Object.keys(BUTTON_LINES)
   .map((key) => `\n### ${BUTTON_NAMES[key]}\n\`\`\`\n${BUTTON_LINES[key]}\n\`\`\`\n`)
   .join('')}`;
 
 /**
- * The own file of the fixed-button test: one more variant for three of the button recipes, and a
+ * The own file of the fixed-button test: one more variant for four of the button recipes, and a
  * recipe under the removed button name `answer-open-question-with-recommendation`, which no button runs.
  */
 const BUTTON_OWN_TEXT = `### discuss-open-question
@@ -2007,6 +2012,12 @@ echo <goal> <scope>
 ### discuss-new-task
 \`\`\`
 claude -p "/gurita:complete-task --mission <path> <Task Title>" --model "opus" --effort high;
+\`\`\`
+
+### ask-in-mission-context
+#### Sonnet
+\`\`\`
+claude "/gurita:ask-in-mission-context --mission <path> <question>" --model "sonnet" --effort medium; # interactive
 \`\`\`
 
 ### answer-open-question-with-recommendation
@@ -2052,16 +2063,17 @@ test("every fixed-name button on a mission's page is posted with the variants it
       send(message);
       return postedButtons(await windowPosted(MU, 'page', from));
     };
-    const shipped = (key: string, own = false): PostedButton => ({
+    const shipped = (key: string, own?: string): PostedButton => ({
       state: 'offered',
       lines: [BUTTON_LINES[key]],
-      variants: own ? [{ name: 'default', own: false }, { name: 'default', own: true }] : [{ name: 'default', own: false }],
+      variants: own !== undefined ? [{ name: 'default', own: false }, { name: own, own: true }] : [{ name: 'default', own: false }],
       selected: 0,
     });
     const initial: Record<string, PostedButton> = {
-      discussQuestion: shipped('discussQuestion', true),
+      discussQuestion: shipped('discussQuestion', 'default'),
       answerQuestion: shipped('answerQuestion'),
       discussTask: shipped('discussTask'),
+      askMission: shipped('askMission', 'Sonnet'),
     };
 
     const first = await buttonsAfter({ type: 'refresh' });
@@ -2070,7 +2082,7 @@ test("every fixed-name button on a mission's page is posted with the variants it
       initial,
       'with no pick each button stands on its first listed variant, the shipped one, an own variant the button cannot run left out of its dropdown, the answer-with-alternative buttons posted per alternative instead',
     );
-    const card = Object.keys(first).filter((key) => key !== 'discussTask');
+    const card = Object.keys(first).filter((key) => key !== 'discussTask' && key !== 'askMission');
     assert.deepStrictEqual(card, ['discussQuestion', 'answerQuestion'], "the card's two head buttons, and no answer-with-recommendation button even with a recipe of its old name standing");
     showSettings();
 
@@ -2115,6 +2127,109 @@ test("every fixed-name button on a mission's page is posted with the variants it
     }
     assert.strictEqual(created.length, count + 1);
     assert.match(created[created.length - 1].args.join(' '), / chain -- claude "\/gurita:discuss-new-task/);
+    assert.strictEqual(execFileSync('git', ['status', '--porcelain', '--ignored'], { cwd: root, encoding: 'utf8' }), '', "nothing is written into the project's tree");
+  } finally {
+    process.env.HOME = home;
+  }
+});
+
+/** Missions no earlier test holds a run for, each starting at most one run in the Ask in mission context test. */
+const TAU = 'pkg/mission_tau/';
+const KOPPA = 'mission_koppa/';
+
+test('the Ask in mission context button asks for a required question, refusing an empty one, and starts the variant its dropdown stands on with the question as GURITA_QUESTION', async () => {
+  const home = process.env.HOME;
+  const fakeHome = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-home-'));
+  process.env.HOME = fakeHome;
+  try {
+    const root = project(TAU, KOPPA);
+    const files = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-recipes-'));
+    fs.writeFileSync(path.join(files, 'shipped_recipes.md'), BUTTON_SHIPPED_TEXT);
+    fs.writeFileSync(path.join(files, 'recipes.md'), BUTTON_OWN_TEXT);
+    packaged.set('bundled/missions.py', path.join(__dirname, '..', '..', '..', 'core', 'tools', 'missions.py'));
+    packaged.set('bundled/shipped_recipes.md', path.join(files, 'shipped_recipes.md'));
+    packaged.set('runner.py', path.join(__dirname, '..', '..', 'runner.py'));
+    workspace.folders = [{ uri: { fsPath: root } }];
+    workspace.settings = { ownRecipesFile: path.join(files, 'recipes.md') };
+    workspaceState.clear();
+    /** Sends `message` and returns the Ask in mission context entry of the next page message the window of `mission` is posted after it. */
+    const askAfter = async (message: unknown, mission: string) => {
+      const from = openWindow(mission).posts.length;
+      send(message);
+      return postedButtons(await windowPosted(mission, 'page', from)).askMission;
+    };
+    /** Sends an Ask click on the page of `mission` with `values` queued for its input boxes, and returns the terminal it starts, or none, and the boxes it showed. */
+    const click = async (mission: string, variant: unknown, values: string[]) => {
+      const count = created.length;
+      const boxes = inputBoxes.length;
+      typedValues.length = 0;
+      typedValues.push(...values);
+      send({ type: 'askButton', mission, variant });
+      for (let attempt = 0; attempt < 50 && created.length === count; attempt++) {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      typedValues.length = 0;
+      return { terminal: created.length === count ? undefined : created[created.length - 1], boxes: inputBoxes.slice(boxes) };
+    };
+    openWindow(KOPPA);
+
+    let entry = await askAfter({ type: 'refresh' }, TAU);
+    assert.deepStrictEqual(
+      entry,
+      {
+        state: 'offered',
+        lines: [BUTTON_LINES.askMission],
+        variants: [{ name: 'default', own: false }, { name: 'Sonnet', own: true }],
+        selected: 0,
+      },
+      'the button is posted with its dropdown offering the shipped and the own variant, standing on the shipped default',
+    );
+
+    // The Settings window lists its recipe as a fixed-name button recipe.
+    const from = posted.length;
+    showSettings();
+    const listed = variantRows(await postedVariants(from)).find(([name]) => name === 'ask-in-mission-context');
+    assert.deepStrictEqual(listed, ['ask-in-mission-context', true, ['default (shipped) *', 'Sonnet (own)'], []]);
+    close(settingsWindow.SETTINGS_VIEW_TYPE);
+
+    // A question box dismissed with Escape starts nothing.
+    let run = await click(TAU, 'default', []);
+    assert.strictEqual(run.boxes.length, 1, 'one input box asks for the question');
+    assert.strictEqual(run.terminal, undefined, 'a dismissed box starts nothing');
+
+    // A click asks for the question in one input box, which refuses an empty entry, and runs the line with the question as its session variable.
+    run = await click(TAU, 'default', ['Why is the pane split in two?']);
+    assert.strictEqual(run.boxes.length, 1, 'one input box asks for the question');
+    const box = run.boxes[0];
+    assert.strictEqual(box.prompt, 'The question, answered in the context of this mission');
+    assert.ok(box.validateInput !== undefined);
+    assert.strictEqual(box.validateInput(''), 'Type a value, or press Escape to start nothing.', 'an empty question is refused');
+    assert.strictEqual(box.validateInput('   '), 'Type a value, or press Escape to start nothing.', 'and so is a blank one');
+    assert.strictEqual(box.validateInput('Why?'), undefined);
+    assert.ok(run.terminal !== undefined, 'the click starts a run');
+    assert.ok(
+      run.terminal.args.join(' ').includes(' chain -- claude "/gurita:ask-in-mission-context --mission ${GURITA_PATH} ${GURITA_QUESTION}" --model "fable" --effort high; # interactive'),
+      `the run's line is the interactive line of the variant selected, its placeholders written as session variables: ${run.terminal.args.join(' ')}`,
+    );
+    assert.strictEqual(run.terminal.env?.GURITA_PATH, TAU);
+    assert.strictEqual(run.terminal.env?.GURITA_QUESTION, 'Why is the pane split in two?', 'the question reaches the line only as GURITA_QUESTION');
+
+    // The dropdown's selection is remembered for the button on its mission alone, and a click then runs that variant.
+    entry = await askAfter({ type: 'selectButtonVariant', button: 'askMission', mission: KOPPA, variant: 'Sonnet' }, KOPPA);
+    assert.ok(entry.state === 'offered');
+    assert.strictEqual(entry.selected, 1);
+    assert.deepStrictEqual(entry.lines, [BUTTON_OWN_TEXT.split('\n').find((line) => line.startsWith('claude "/gurita:ask-in-mission-context'))]);
+    assert.deepStrictEqual(workspaceState.get('gurita.variantSelections'), { [KOPPA]: { 'ask-in-mission-context': 'Sonnet' } });
+    run = await click(KOPPA, 'default', ['Why?']);
+    assert.strictEqual(run.terminal, undefined, 'a variant the button was not posted standing on starts nothing');
+    assert.strictEqual(run.boxes.length, 0, 'nor asks for the question');
+    run = await click(KOPPA, 'Sonnet', ['Why?']);
+    assert.ok(run.terminal !== undefined);
+    assert.ok(
+      run.terminal.args.join(' ').includes(' chain -- claude "/gurita:ask-in-mission-context --mission ${GURITA_PATH} ${GURITA_QUESTION}" --model "sonnet" --effort medium; # interactive'),
+      run.terminal.args.join(' '),
+    );
+    assert.strictEqual(run.terminal.env?.GURITA_QUESTION, 'Why?');
     assert.strictEqual(execFileSync('git', ['status', '--porcelain', '--ignored'], { cwd: root, encoding: 'utf8' }), '', "nothing is written into the project's tree");
   } finally {
     process.env.HOME = home;

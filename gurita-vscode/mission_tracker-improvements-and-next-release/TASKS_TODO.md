@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Ask in Mission Context Button
-
-Add Ask in mission context as a fixed-name button in the same row as New task, which becomes the page's row of mission-wide actions above the two pane headers, drawn at every step, with an arrow-only variant dropdown of its own. It runs a shipped button recipe named by its skill, `ask-in-mission-context`, entered in `BUTTON_RECIPES`, kept out of the recipe list by name, and listed in the Settings window as a button recipe, its one line interactive (a bare `claude "/gurita:ask-in-mission-context --mission <path> <question>" … # interactive`), and the question is typed before the run starts through `askValues` as a required value that refuses an empty entry, as the issue description of `discuss-new-task` is today. Verified by reader, page, and pane tests of the button, its dropdown, the refused empty question, and the started run's line, with `gurita-vscode/README.md` describing the button.
-
----
-
 ## Action Rows With Descriptions
 
 Draw each button of a mission page's action list on a row of its own with one line of description to its right, read from a `Description:` line the recipe reader takes beside the `Stage:` line, in the shipped file and a person's own file alike, where today the buttons stand side by side in one wrapping row and what a chain does shows only as raw lines in its hover text. Every chain in `gurita-vscode/shipped_recipes.md` gains its `Description:` line; verified by reader tests of the line and page tests of the rows, with `gurita-vscode/README.md` documenting the line.
