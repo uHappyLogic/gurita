@@ -666,6 +666,7 @@ test("each open mission window is posted its own mission's page from the session
     assert.strictEqual(panels.length, count + 2, 'each mission gets a window of its own');
     assert.deepStrictEqual([zeta.viewType, two.viewType], [pane.MISSION_VIEW_TYPE, pane.MISSION_VIEW_TYPE]);
     assert.match(zeta.html, /page\.js/, "each window loads the mission page's script");
+    assert.match(zeta.html, /<script [^>]*text\.js[^>]*><\/script>\n<script [^>]*page\.js/, 'the text renderer loaded directly ahead of it');
     let answers = await refreshed({ [ZETA]: 'page', [ZETA_TWO]: 'page' });
     assert.strictEqual((answers[ZETA].mission as { path: string }).path, ZETA, 'each window is posted its own mission alone');
     assert.strictEqual((answers[ZETA_TWO].mission as { path: string }).path, ZETA_TWO);

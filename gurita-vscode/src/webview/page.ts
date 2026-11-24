@@ -95,7 +95,9 @@
 // the state it saves with `setState`, beside the question view's positions, saving it once on
 // every load before anything is posted, so a window that is restored after a restart or a window
 // reload hands the extension its mission's path, and its positions come back with it.
-// Every value is drawn as text, never as markup, since it comes from the workspace.
+// Every value is drawn as text, never as markup, since it comes from the workspace; the card's
+// question, rationale, and alternative texts go through the text renderer (`text.ts`), which the page
+// shell loads before this script, so a stretch between backticks in them shows as code.
 
 interface VsCodeApi {
   postMessage(message: unknown): void;
@@ -297,6 +299,16 @@ declare function acquireVsCodeApi(): VsCodeApi;
     if (className !== undefined) {
       node.className = className;
     }
+    return node;
+  }
+
+  /**
+   * An element holding the text `text` as the text renderer draws one stretch of it (`renderInline`
+   * in `text.ts`): its plain runs as text and each stretch between two backticks as code.
+   */
+  function inline<K extends keyof HTMLElementTagNameMap>(tag: K, text: string, className?: string): HTMLElementTagNameMap[K] {
+    const node = element(tag, undefined, className);
+    node.append(...renderInline(text));
     return node;
   }
 
@@ -574,7 +586,9 @@ declare function acquireVsCodeApi(): VsCodeApi;
   /**
    * One question's card, fully opened: flat, non-indented slots stacked as the Short Title with
    * the card's buttons, the question text in its area of fixed height, the pick and its rationale,
-   * the alternatives, the dependencies, and the principles.
+   * the alternatives, the dependencies, and the principles. The question, the pick's rationale, and
+   * each alternative's text, advantages, and drawbacks are drawn by the text renderer's inline part,
+   * so a stretch between backticks shows as code and every other character as written.
    */
   function drawCard(mission: Mission, question: Question, questions: Question[], busy: boolean): HTMLElement {
     const body = element('article', undefined, 'card');
@@ -594,14 +608,14 @@ declare function acquireVsCodeApi(): VsCodeApi;
     head.append(title, actions);
     body.append(head);
 
-    body.append(element('p', question.question, 'slot question-text'));
+    body.append(inline('p', question.question, 'slot question-text'));
 
     const pick = question.recommendation;
     const box = element('div', undefined, 'slot pick');
     if (pick !== undefined) {
       const named = question.alternatives.some((alternative) => alternative.id === pick.option);
       box.append(element('h5', named ? `Pick: ${pick.option}` : `Pick: ${pick.option} (names no alternative of this question)`));
-      box.append(element('p', pick.rationale));
+      box.append(inline('p', pick.rationale));
     } else {
       box.append(element('h5', 'No pick yet'));
     }
@@ -618,14 +632,14 @@ declare function acquireVsCodeApi(): VsCodeApi;
         line.append(alternativeEntry(mission, question, alternative, index, busy));
         entry.append(line);
         if (alternative.text !== '') {
-          entry.append(element('p', alternative.text));
+          entry.append(inline('p', alternative.text));
         }
         const points = element('ul');
         for (const advantage of alternative.advantages) {
-          points.append(element('li', `Advantage: ${advantage}`, 'advantage'));
+          points.append(inline('li', `Advantage: ${advantage}`, 'advantage'));
         }
         for (const drawback of alternative.drawbacks) {
-          points.append(element('li', `Drawback: ${drawback}`, 'drawback'));
+          points.append(inline('li', `Drawback: ${drawback}`, 'drawback'));
         }
         if (points.childElementCount > 0) {
           entry.append(points);

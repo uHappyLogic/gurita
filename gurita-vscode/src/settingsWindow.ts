@@ -255,7 +255,7 @@ export function openSettings(context: vscode.ExtensionContext): void {
 function hookSettings(context: vscode.ExtensionContext, created: vscode.WebviewPanel): void {
   const scripts = vscode.Uri.joinPath(context.extensionUri, 'out', 'webview');
   settingsPanel = created;
-  created.webview.html = pageShell(created.webview, vscode.Uri.joinPath(scripts, 'settings.js'), SETTINGS_TITLE);
+  created.webview.html = pageShell(created.webview, [vscode.Uri.joinPath(scripts, 'settings.js')], SETTINGS_TITLE);
   created.webview.onDidReceiveMessage(
     (message: SettingsPageMessage) => {
       if (settingsPanel !== created) {

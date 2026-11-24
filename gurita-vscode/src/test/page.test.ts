@@ -690,6 +690,49 @@ test("a question card's head carries exactly two buttons, Discuss and Answer, ea
   ]);
 });
 
+/** The children of `node` as plain shapes: a text node as its text, a `code` element as `{ code: <its text> }`. */
+function inlineShape(node: FakeElement): (string | { code: string })[] {
+  return node.children.map((child) => {
+    if (child instanceof FakeElement) {
+      assert.strictEqual(child.tagName, 'code', 'only code stands inside a card text');
+      return { code: child.textContent };
+    }
+    return child.textContent;
+  });
+}
+
+test("a card drawn from backticked text shows each backticked stretch as code, in its question, rationale, and alternative's text, advantages, and drawbacks", () => {
+  const page = loadPage();
+  const built = mission(ALPHA, 'Alpha') as { questions: { questions: Record<string, unknown>[] } };
+  built.questions.questions[0].question = 'Should `src/pane.ts` run `git log`?\n\n- not a list';
+  built.questions.questions[0].recommendation = { option: 'keep', rationale: 'It keeps `execFile`.' };
+  built.questions.questions[0].alternatives = [
+    { id: 'keep', text: 'Keep `npm test` as it is.', advantages: ['No `--flag` added.'], drawbacks: ['Stays **slow** and `a'] },
+  ];
+  page.send(pageOf(built));
+  named(page, 'Open questions').click();
+  const all = page.root.all();
+  const question = all.find((each) => each.has('question-text'));
+  assert.ok(question !== undefined);
+  assert.strictEqual(question.tagName, 'p', 'the question stays one paragraph');
+  assert.deepStrictEqual(inlineShape(question), ['Should ', { code: 'src/pane.ts' }, ' run ', { code: 'git log' }, '?\n\n- not a list']);
+  const rationale = all.find((each) => each.has('pick'))?.children.find((child): child is FakeElement => child instanceof FakeElement && child.tagName === 'p');
+  assert.ok(rationale !== undefined);
+  assert.deepStrictEqual(inlineShape(rationale), ['It keeps ', { code: 'execFile' }, '.']);
+  const alternative = all.find((each) => each.has('alternative'));
+  const text = alternative?.children.find((child): child is FakeElement => child instanceof FakeElement && child.tagName === 'p');
+  assert.ok(text !== undefined);
+  assert.deepStrictEqual(inlineShape(text), ['Keep ', { code: 'npm test' }, ' as it is.']);
+  const advantage = all.find((each) => each.has('advantage'));
+  const drawback = all.find((each) => each.has('drawback'));
+  assert.ok(advantage !== undefined && drawback !== undefined);
+  assert.deepStrictEqual(inlineShape(advantage), ['Advantage: No ', { code: '--flag' }, ' added.']);
+  assert.deepStrictEqual(inlineShape(drawback), ['Drawback: Stays **slow** and `a'], 'every other construct stays as written');
+  const codes = all.filter((each) => each.tagName === 'code');
+  assert.strictEqual(codes.length, 5);
+  assert.ok(stylesheetRules().some((rule) => rule.selectors.includes('.card code')), 'the stylesheet draws code on the card');
+});
+
 /** A live mission whose question view's first card carries two alternatives, keep and drop. */
 function twoAlternatives(missionPath: string, title: string): unknown {
   const built = mission(missionPath, title) as { questions: { questions: { alternatives: unknown[] }[] } };

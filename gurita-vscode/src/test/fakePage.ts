@@ -125,8 +125,14 @@ export interface PageLoad {
   state?: unknown;
 }
 
+/** The scripts the page shell loads ahead of the page script `script`: the text renderer ahead of a mission window's, nothing ahead of the Settings window's. */
+function loadedBefore(script: string): string[] {
+  return script === 'page.js' ? ['text.js'] : [];
+}
+
 /**
  * Loads the compiled page script `script`, by its file name under `out/webview`, into a fresh page,
+ * after the scripts the page shell loads ahead of it,
  * as the pane or the Settings window does each time it is shown, its elements laid out to the
  * widths `measure` gives, its root element carrying the data attributes and `getState` giving the
  * state `loaded` names.
@@ -170,7 +176,10 @@ export function loadScript(script: string, measure?: (element: FakeElement) => n
       },
     },
   };
-  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '..', 'webview', script), 'utf8'), context);
+  vm.createContext(context);
+  for (const each of [...loadedBefore(script), script]) {
+    vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'webview', each), 'utf8'), context);
+  }
   return {
     root,
     posted,
@@ -211,4 +220,23 @@ export function stylesheetRules(): { selectors: string[]; declarations: Map<stri
         }),
     ),
   }));
+}
+
+/** The compiled text renderer (`out/webview/text.js`) loaded into a fresh stand-in DOM, its two functions called from outside it. */
+export function loadRenderer(): {
+  renderText(text: string): FakeElement[];
+  renderInline(text: string): (FakeElement | FakeText)[];
+} {
+  const context = vm.createContext({
+    document: {
+      createElement: (tag: string) => new FakeElement(tag),
+      createTextNode: (text: string) => new FakeText(text),
+    },
+  });
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'webview', 'text.js'), 'utf8'), context);
+  return {
+    // Copied into this realm's arrays, so they compare as arrays built here do.
+    renderText: (text) => Array.from(vm.runInContext('renderText', context)(text)),
+    renderInline: (text) => Array.from(vm.runInContext('renderInline', context)(text)),
+  };
 }

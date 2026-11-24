@@ -2,10 +2,11 @@
 // mission's row in the side-bar view (`missionTree.ts`) through the hidden open-mission command,
 // which reveals the mission's window when one is already open, so several missions' windows stand
 // open at once, never two for one mission. Each window's `webview.html` is set once, to a page
-// shell whose script, loaded from the output directory through `asWebviewUri` under a content
-// security policy, posts a ready message on every load and draws what the extension answers: that
-// one mission's page, with no tab row, no refresh control, and no mission-starting button, those
-// belonging to the side-bar view. Every window draws from the session's one live read, described
+// shell whose scripts, the text renderer and then the page script, loaded from the output
+// directory through `asWebviewUri` under a content security policy, the page script posting a
+// ready message on every load and drawing what the extension answers: that one mission's page,
+// with no tab row, no refresh control, and no mission-starting button, those belonging to the
+// side-bar view. Every window draws from the session's one live read, described
 // below, and the extension answers every ready message from it, its recipes read afresh: the
 // window's mission carrying its documents as the in-process readers parse them and what
 // its seven-block workflow diagram draws: the block filled, the step to run next, chosen from the
@@ -658,7 +659,7 @@ function hookMissionWindow(context: vscode.ExtensionContext, mission: string, cr
   (created as { iconPath?: vscode.IconPath }).iconPath = new vscode.ThemeIcon(MISSION_WINDOW_ICON);
   const win: MissionWindow = { mission, panel: created };
   windows.set(mission, win);
-  created.webview.html = pageShell(created.webview, vscode.Uri.joinPath(scripts, 'page.js'), title, mission);
+  created.webview.html = pageShell(created.webview, [vscode.Uri.joinPath(scripts, 'text.js'), vscode.Uri.joinPath(scripts, 'page.js')], title, mission);
   created.webview.onDidReceiveMessage(
     (message: PageMessage) => {
       if (windows.get(mission) !== win) {
@@ -1695,8 +1696,9 @@ function nonce(): string {
 
 /**
  * The page shell `webview.html` is set to once, titled `title`: the stylesheet the mission windows
- * and the Settings window share and one page script, `script`, a mission window's or the Settings
- * window's, a mission window's root element carrying its mission's path `mission` as a data
+ * and the Settings window share and the page's scripts, `scripts`, loaded in order: a mission
+ * window's the text renderer (`text.js`) and then its page script, the Settings window's its page
+ * script alone; a mission window's root element carrying its mission's path `mission` as a data
  * attribute, which its page keeps in its saved state. The stylesheet centers the workflow diagram's row of blocks horizontally in the window,
  * as wide as the row itself and never wrapping or scrolling sideways, and under the `vertical` class
  * the page script sets when that row would overflow the window, it stacks the same blocks in a
@@ -1714,9 +1716,10 @@ function nonce(): string {
  * of their own. In the Settings window each variant
  * under Variants and Single-task lines, a deleted one included, is a card of its own: its list
  * indented under the recipe's or line's heading, a vertical line down the card's left edge, and a
- * gap between one card and the next.
+ * gap between one card and the next. On a question card a stretch of text the text renderer draws
+ * as code is set in the editor's font on the theme's code-block background.
  */
-export function pageShell(webview: vscode.Webview, script: vscode.Uri, title: string, mission?: string): string {
+export function pageShell(webview: vscode.Webview, scripts: vscode.Uri[], title: string, mission?: string): string {
   const token = nonce();
   const carried = mission === undefined ? '' : ` data-mission="${escapeAttribute(mission)}"`;
   const policy = [
@@ -1797,6 +1800,7 @@ export function pageShell(webview: vscode.Webview, script: vscode.Uri, title: st
   .card-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.3em; }
   .card .slot { margin: 0; padding: 0.5em 0 0; border-top: 1px solid var(--vscode-panel-border); margin-top: 0.5em; }
   .card .slot h5 { margin-bottom: 0.2em; }
+  .card code { font-family: var(--vscode-editor-font-family); font-size: 0.95em; background: var(--vscode-textCodeBlock-background); padding: 0 0.2em; border-radius: 3px; }
   .card .question-text { box-sizing: border-box; height: 9em; overflow-y: auto; border-top: none; margin-top: 0; }
   .alternative { margin: 0.4em 0 0; padding: 0; }
   .alternative-head { display: flex; align-items: center; gap: 0.6em; }
@@ -1824,7 +1828,7 @@ export function pageShell(webview: vscode.Webview, script: vscode.Uri, title: st
 </head>
 <body>
 <div id="root"${carried}></div>
-<script nonce="${token}" src="${webview.asWebviewUri(script).toString()}"></script>
+${scripts.map((script) => `<script nonce="${token}" src="${webview.asWebviewUri(script).toString()}"></script>`).join('\n')}
 </body>
 </html>`;
 }

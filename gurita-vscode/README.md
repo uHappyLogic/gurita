@@ -194,7 +194,12 @@ move between the cards, and a dependency on a card links to the named question's
 stacks the question text in an area of fixed height, so the pick starts at the same height on
 every card, then the pick and its rationale, the alternatives, the dependencies, and the
 principles, and carries **Discuss** and **Answer** buttons and an **Answer with this
-alternative** button on each alternative. **Discuss** always asks for an
+alternative** button on each alternative. The question, the pick's rationale, and each
+alternative's text, advantages, and drawbacks are drawn by the extension's own small text
+renderer: text between two backticks, such as a file name or a command, shows as code in the
+editor's font with no backticks around it, and nothing else is read as markup: emphasis, links,
+headings, and list markers in these texts show as plain text, each text stays one block, and a
+backtick with no closing one shows literally. **Discuss** always asks for an
 optional note first: a note you type is carried to the discussion directly after the Short
 Title, as `--mission <path> <Short Title>. <note>`; an empty note starts the discussion of the
 question alone, and Escape starts nothing. After a run removes a question the view keeps its

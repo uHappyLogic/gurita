@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Text Renderer and Code on Question Cards
-
-Add the hand-written text renderer this mission's new page texts share, built through DOM calls with no `innerHTML` and no dependency: blank-line-separated paragraphs become paragraphs, consecutive `- ` lines become a bulleted list, and text between backticks becomes code inside either, while emphasis, links, headings, numbered lists, and every other construct stay plain text. Draw the question card's texts through it, the question, the pick's rationale, and each alternative's text, advantages, and drawbacks, so the backticks around a file name or a command no longer show literally and those single-paragraph texts gain their code and nothing else. Verified by tests of the renderer's three shapes against the stand-in DOM and of a card drawn from backticked text, with `gurita-vscode/README.md` saying how the card draws code.
-
----
-
 ## Alternative Button on a Row of Its Own
 
 On a question card, leave each alternative's id alone on its head line and draw, directly beneath it and above the alternative's text, a row of its own holding the Answer with this alternative button, whose label reads the title and then the variant's name on one line, with today's arrow-only variant dropdown kept beside it. The selection stays remembered per mission, question, and alternative; verified by the page tests of the card's layout and of a pick on one alternative leaving the others where they stood, with `gurita-vscode/README.md` describing the row.
