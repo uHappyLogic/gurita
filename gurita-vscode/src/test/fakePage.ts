@@ -139,9 +139,9 @@ export interface PageLoad {
   state?: unknown;
 }
 
-/** The scripts the page shell loads ahead of the page script `script`: the text renderer ahead of a mission window's, nothing ahead of the Settings window's or the input panel's. */
+/** The scripts the page shell loads ahead of the page script `script`: the text renderer ahead of a mission window's and a finished mission's window's, nothing ahead of the Settings window's or the input panel's. */
 function loadedBefore(script: string): string[] {
-  return script === 'page.js' ? ['text.js'] : [];
+  return script === 'page.js' || script === 'finished.js' ? ['text.js'] : [];
 }
 
 /**

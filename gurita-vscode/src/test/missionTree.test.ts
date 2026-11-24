@@ -410,6 +410,9 @@ fs.writeFileSync(
 
 /** The labels of the two mission-starting rows, standing above every mission row. */
 const STARTING_LABELS = ['New mission', 'Define mission'];
+
+/** The label of the Finished missions row, standing beneath every mission row while the live read has read. */
+const FINISHED_LABEL = 'Finished missions';
 const root = project();
 workspace.folders = [{ uri: { fsPath: root } }];
 
@@ -448,11 +451,13 @@ test("the tree is created under the manifest's view id, and nothing is read befo
   await until(() => checkRuns() === 1, "the view's first resolution runs the harness check in the background");
   assert.deepStrictEqual(
     items().map((each) => each.label),
-    [...STARTING_LABELS, 'Alpha mission', 'Beta mission', 'Gamma mission', 'Delta mission'],
-    'one row per live mission, in the order the live read prints them, beneath the two mission-starting rows',
+    [...STARTING_LABELS, 'Alpha mission', 'Beta mission', 'Gamma mission', 'Delta mission', FINISHED_LABEL],
+    'one row per live mission, in the order the live read prints them, beneath the two mission-starting rows, and the Finished missions row beneath them',
   );
   for (const row of provider.getChildren()) {
-    assert.deepStrictEqual(provider.getChildren(row), [], 'no row has child rows');
+    if (provider.getTreeItem(row).label !== FINISHED_LABEL) {
+      assert.deepStrictEqual(provider.getChildren(row), [], 'no row but the Finished missions row has child rows');
+    }
   }
 });
 
@@ -555,7 +560,7 @@ test('the view shows no mission live and a failed read through its message with 
   refresh();
   await until(() => view.message === missionTree.NO_MISSION_MESSAGE, 'the view shows that no mission is live');
   assert.strictEqual(view.message, 'No mission is live.');
-  assert.deepStrictEqual(items().map((each) => each.label), STARTING_LABELS, 'no mission row is drawn with no mission live');
+  assert.deepStrictEqual(items().map((each) => each.label), [...STARTING_LABELS, FINISHED_LABEL], 'no mission row is drawn with no mission live');
   workspace.folders = undefined;
   refresh();
   await until(() => view.message !== missionTree.NO_MISSION_MESSAGE, 'the view shows the failed read');
@@ -566,7 +571,7 @@ test('the view shows no mission live and a failed read through its message with 
   await until(() => view.message === undefined, 'a read with missions clears the message');
   assert.deepStrictEqual(
     items().map((each) => each.label),
-    [...STARTING_LABELS, 'Alpha mission', 'Beta mission', 'Gamma mission', 'Delta mission'],
+    [...STARTING_LABELS, 'Alpha mission', 'Beta mission', 'Gamma mission', 'Delta mission', FINISHED_LABEL],
   );
 });
 
@@ -731,7 +736,7 @@ test('the refresh command re-reads the live missions, a mission defined since th
   await until(() => redraws > before && items().some((each) => each.label === 'Epsilon mission'), 'the refresh draws the new mission');
   assert.deepStrictEqual(
     items().map((each) => each.label),
-    [...STARTING_LABELS, 'Alpha mission', 'Beta mission', 'Gamma mission', 'Delta mission', 'Epsilon mission'],
+    [...STARTING_LABELS, 'Alpha mission', 'Beta mission', 'Gamma mission', 'Delta mission', 'Epsilon mission', FINISHED_LABEL],
     'the fresh read of the live missions is drawn, in the order it prints them',
   );
   git(root, 'rm', '-r', '-q', EPSILON);
@@ -741,7 +746,121 @@ test('the refresh command re-reads the live missions, a mission defined since th
   await until(() => redraws > again && !items().some((each) => each.label === 'Epsilon mission'), 'the refresh drops the finished mission');
   assert.deepStrictEqual(
     items().map((each) => each.label),
-    [...STARTING_LABELS, 'Alpha mission', 'Beta mission', 'Gamma mission', 'Delta mission'],
+    [...STARTING_LABELS, 'Alpha mission', 'Beta mission', 'Gamma mission', 'Delta mission', FINISHED_LABEL],
+  );
+});
+
+/** The Finished missions row of the view's root, as the provider holds it. */
+function finishedGroup(): unknown {
+  const row = provider.getChildren().find((each) => provider.getTreeItem(each).label === FINISHED_LABEL);
+  assert.ok(row !== undefined, 'the Finished missions row stands');
+  return row;
+}
+
+/** The tree items of the Finished missions row's children, as the editor draws them on expanding it. */
+async function finishedItems(): Promise<StubTreeItem[]> {
+  const children = (await provider.getChildren(finishedGroup())) as unknown[];
+  return children.map((row) => provider.getTreeItem(row));
+}
+
+test('the Finished missions row stands collapsed beneath the mission rows and expands to every finished mission, newest first, each opening its window', async () => {
+  const group = provider.getTreeItem(finishedGroup());
+  assert.strictEqual(group.collapsibleState, stub.TreeItemCollapsibleState.Collapsed, 'collapsed by default');
+  assert.strictEqual(group.id, missionTree.FINISHED_ID);
+  assert.strictEqual(group.iconPath?.id, missionTree.FINISHED_GROUP_ICON);
+  assert.strictEqual(group.command, undefined, 'a click only expands it');
+  assert.strictEqual(items()[items().length - 1].label, FINISHED_LABEL, 'it stands last, beneath the mission rows');
+
+  const EPSILON = 'web/mission_epsilon/';
+  const finished: string[] = [EPSILON];
+  for (let index = 1; index <= 12; index++) {
+    const mission = `done/mission_zeta${index}/`;
+    commit(root, `Mission-definition: ${mission}`, {
+      [`${mission}requirements.md`]: `# Zeta ${index}\n\n## Goal\n\nA goal.\n`,
+      [`${mission}open_questions.xml`]: '<open-questions/>\n',
+      [`${mission}TASKS_TODO.md`]: '# TASKS TODO\n',
+    });
+    git(root, 'rm', '-r', '-q', mission);
+    execFileSync(
+      'git',
+      ['-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '-q', '-m', `Mission-finish: ${mission}\n\nZeta ${index}\n\n- Done.`],
+      { cwd: root, stdio: 'ignore', env: { ...process.env, GIT_AUTHOR_DATE: `2099-01-${String(index).padStart(2, '0')}T10:00:00` } },
+    );
+    finished.unshift(mission);
+  }
+  const children = await finishedItems();
+  assert.deepStrictEqual(
+    children.map((each) => each.label),
+    [...Array.from({ length: 12 }, (_, index) => `Zeta ${12 - index}`), EPSILON],
+    'every finished mission, newest first with no bound, one whose finish names no title labelled by its path',
+  );
+  assert.ok(!children.some((each) => MISSION_LABELS.includes(each.label)), 'no live mission is among them');
+  const zeta = children[0];
+  assert.strictEqual(zeta.collapsibleState, stub.TreeItemCollapsibleState.None);
+  assert.strictEqual(zeta.description, '2099-01-12');
+  assert.strictEqual(zeta.tooltip, ['Zeta 12', 'done/mission_zeta12/', 'Finished: 2099-01-12'].join('\n'));
+  assert.strictEqual(zeta.iconPath?.id, missionTree.FINISHED_ICON);
+  assert.deepStrictEqual(zeta.command, {
+    command: missionTree.OPEN_FINISHED_COMMAND,
+    title: 'Open Finished Mission',
+    arguments: ['done/mission_zeta12/', 'Zeta 12'],
+  });
+  assert.notStrictEqual(zeta.id, item('Alpha mission').id);
+
+  const count = webviewPanels.length;
+  const before = terminals.length;
+  commands.get(zeta.command.command)?.(...(zeta.command.arguments ?? []));
+  assert.deepStrictEqual(
+    webviewPanels.slice(count).map((each) => [each.viewType, each.title]),
+    [['gurita.finishedMission', 'Zeta 12']],
+    "the click opens the finished mission's window, titled with its title",
+  );
+  commands.get(zeta.command.command)?.(...(zeta.command.arguments ?? []));
+  assert.strictEqual(webviewPanels.length, count + 1, 'a second click opens no second window');
+  assert.strictEqual(webviewPanels[count].reveals, 1, 'it reveals the open one');
+  commands.get(missionTree.OPEN_FINISHED_COMMAND)?.();
+  assert.strictEqual(webviewPanels.length, count + 1, 'the command opens nothing without a mission path');
+  assert.strictEqual(terminals.length, before, 'and starts no run');
+});
+
+test('the Finished missions row expands to one note while no mission is finished or the read fails, and stands not while the live read fails', async () => {
+  const refresh = commands.get(missionTree.REFRESH_COMMAND);
+  assert.ok(refresh !== undefined);
+  const empty = emptyProject();
+  workspace.folders = [{ uri: { fsPath: empty } }];
+  refresh();
+  await until(() => view.message === missionTree.NO_MISSION_MESSAGE, 'the view shows that no mission is live');
+  const failed = await finishedItems();
+  assert.deepStrictEqual(
+    failed.map((each) => [each.label, each.collapsibleState, each.command]),
+    [[missionTree.FINISHED_FAILURE_LABEL, 0, undefined]],
+    'a repository with no commit yet gives the record no log to read',
+  );
+  assert.strictEqual(missionTree.FINISHED_FAILURE_LABEL, 'The finished missions could not be read.');
+  assert.match(failed[0].tooltip ?? '', /^Error: /, "the tool's Error: line stands as its hover text");
+
+  git(empty, 'add', 'CLAUDE.md');
+  git(empty, 'commit', '-q', '-m', 'Workflow-bootstrap: missions');
+  const none = await finishedItems();
+  assert.deepStrictEqual(none.map((each) => [each.label, each.collapsibleState, each.command]), [[missionTree.NO_FINISHED_LABEL, 0, undefined]]);
+  assert.strictEqual(missionTree.NO_FINISHED_LABEL, 'No mission is finished.');
+
+  workspace.folders = undefined;
+  refresh();
+  await until(() => view.message !== missionTree.NO_MISSION_MESSAGE, 'the view shows the failed read');
+  assert.ok(!items().some((each) => each.label === FINISHED_LABEL), 'no Finished missions row while the live read fails');
+  workspace.folders = [{ uri: { fsPath: root } }];
+  refresh();
+  await until(() => view.message === undefined && items().some((each) => each.label === 'Alpha mission'), 'the read with missions is drawn again');
+});
+
+test('the manifest contributes the finished-mission command and hides it from the Command Palette', () => {
+  const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8'));
+  assert.ok(manifest.contributes.commands.some((each: { command: string }) => each.command === missionTree.OPEN_FINISHED_COMMAND));
+  assert.ok(
+    manifest.contributes.menus.commandPalette.some(
+      (entry: { command: string; when: string }) => entry.command === missionTree.OPEN_FINISHED_COMMAND && entry.when === 'false',
+    ),
   );
 });
 
@@ -791,7 +910,7 @@ const MISSION_LABELS = ['Alpha mission', 'Beta mission', 'Gamma mission', 'Delta
 test("the harness check runs once, in the background from the view's first resolution, a passing check standing no notice row, and neither Refresh nor a re-read runs it again", async () => {
   assert.strictEqual(checkRuns(), 1, 'every re-read and Refresh so far left the one background run');
   assert.strictEqual(settingsWindow.sessionHarnessCheck()?.state, 'checked');
-  assert.deepStrictEqual(items().map((each) => each.label), [...STARTING_LABELS, ...MISSION_LABELS], 'a passing check stands no notice row');
+  assert.deepStrictEqual(items().map((each) => each.label), [...STARTING_LABELS, ...MISSION_LABELS, FINISHED_LABEL], 'a passing check stands no notice row');
   const refresh = commands.get(missionTree.REFRESH_COMMAND);
   assert.ok(refresh !== undefined);
   const before = redraws;
@@ -823,7 +942,7 @@ test('each enabled harness whose CLI is found and whose plugin is not installed,
     assert.deepStrictEqual(row.command, { command: settingsWindow.SETTINGS_COMMAND, title: 'Open Settings' });
     assert.deepStrictEqual(
       items().map((each) => each.label),
-      [pluginNotice.PLUGIN_NOTICE_LABEL, ...STARTING_LABELS, ...MISSION_LABELS],
+      [pluginNotice.PLUGIN_NOTICE_LABEL, ...STARTING_LABELS, ...MISSION_LABELS, FINISHED_LABEL],
       'the notice row stands above New mission and Define mission',
     );
     assert.strictEqual(view.message, undefined, "the view's message is left to the live read");
@@ -876,7 +995,7 @@ test("a check that could not be run at all stands the notice row with its cause,
   workspace.folders = [{ uri: { fsPath: empty } }];
   refresh();
   await until(() => view.message === missionTree.NO_MISSION_MESSAGE, 'the view shows that no mission is live');
-  assert.deepStrictEqual(items().map((each) => each.label), [pluginNotice.PLUGIN_NOTICE_LABEL, ...STARTING_LABELS]);
+  assert.deepStrictEqual(items().map((each) => each.label), [pluginNotice.PLUGIN_NOTICE_LABEL, ...STARTING_LABELS, FINISHED_LABEL]);
   workspace.folders = undefined;
   refresh();
   await until(() => view.message !== missionTree.NO_MISSION_MESSAGE, 'the view shows the failed read');
@@ -935,7 +1054,7 @@ test('the bootstrap offer row stands at the top, above New mission and Define mi
     await contextFiles(files);
     assert.deepStrictEqual(
       items().map((each) => each.label),
-      stands ? [BOOTSTRAP_LABEL, ...STARTING_LABELS, ...MISSION_LABELS] : [...STARTING_LABELS, ...MISSION_LABELS],
+      stands ? [BOOTSTRAP_LABEL, ...STARTING_LABELS, ...MISSION_LABELS, FINISHED_LABEL] : [...STARTING_LABELS, ...MISSION_LABELS, FINISHED_LABEL],
       `${what}: ${stands ? 'the row stands above the mission-starting rows' : 'no row stands'}`,
     );
   }
@@ -990,7 +1109,7 @@ test('a click on the bootstrap offer row runs init-mission-base-workflow at the 
   closeTerminal?.(run);
   assert.ok(redraws > redrawn, "the run's end redraws the tree");
   assert.strictEqual(bootstrapRow(), undefined, 'the offer is gone once CLAUDE.md holds the heading');
-  assert.deepStrictEqual(items().map((each) => each.label), [...STARTING_LABELS, ...MISSION_LABELS]);
+  assert.deepStrictEqual(items().map((each) => each.label), [...STARTING_LABELS, ...MISSION_LABELS, FINISHED_LABEL]);
   await contextFiles({ claude: BOOTSTRAPPED });
 });
 
@@ -1001,7 +1120,7 @@ test('the bootstrap offer row stands beneath the plugin notice row, whatever har
   await until(() => noticeRow() !== undefined, 'the notice row stands');
   assert.deepStrictEqual(
     items().map((each) => each.label),
-    [pluginNotice.PLUGIN_NOTICE_LABEL, BOOTSTRAP_LABEL, ...STARTING_LABELS, ...MISSION_LABELS],
+    [pluginNotice.PLUGIN_NOTICE_LABEL, BOOTSTRAP_LABEL, ...STARTING_LABELS, ...MISSION_LABELS, FINISHED_LABEL],
     'the notice row first, then the bootstrap offer row, then the mission-starting rows',
   );
   checkPrints();

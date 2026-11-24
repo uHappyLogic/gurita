@@ -1,5 +1,6 @@
 // The side-bar view: the one view of the extension's activity-bar container, a native tree of leaf
-// rows with no child rows: first, while it stands, the plugin notice row described below, then the
+// rows but one, the Finished missions row described below, which has child rows: first, while it
+// stands, the plugin notice row described below, then the
 // two rows that start a mission, New mission and Define mission,
 // standing above the mission rows in every state of the view, each drawn as `startingRows.ts` lays
 // it out from the variant the project remembers for its recipe, a click on it running that variant
@@ -45,6 +46,20 @@
 // runs the remembered variant, which asks for no value, at the project root, the run belonging to
 // no mission. Once either file holds the heading the row is gone at the next redraw, which the
 // bootstrap's commit, the run's end, and Refresh each bring.
+//
+// While the session's live read has read the project root, the tree holds the Finished missions row
+// at its bottom, beneath the mission rows, a row with no mission live included: collapsed by
+// default, its expansion lists every finished mission the record holds, read afresh at each
+// expansion and each redraw while it stays expanded, as the bundled missions tool's `missions .`
+// prints them with no `--last`, every `finished` line kept, newest first as the tool sorts them,
+// with no count, setting, or further row limiting the list (`finishedMissions.ts`). Each finished
+// mission's row is a leaf labelled with the mission's title, its path when its finish commit names
+// none, described by the date it was finished,
+// with its title, path, and finish date as its hover text, and its click runs a hidden command of
+// its own that opens that mission's window, its summary and its completed tasks
+// (`finishedWindow.ts`), or reveals it when one is open. With no mission finished the row expands
+// to one leaf saying so, and while the read fails to one leaf with the failure line, the cause as
+// its hover text.
 
 import * as os from 'node:os';
 import * as vscode from 'vscode';
@@ -70,6 +85,8 @@ import { SETTINGS_COMMAND, onHarnessCheck, refreshSettings, sessionHarnessCheck,
 import { BOOTSTRAP_ROW, STARTING_ROWS, StartingButton, StartingRow, startingRow } from './startingRows';
 import { BOOTSTRAP_REASON, bootstrapOffered } from './bootstrapOffer';
 import { variantStoreFile } from './variantStore';
+import { FinishedMission, readFinishedMissions } from './finishedMissions';
+import { OPEN_FINISHED_COMMAND, openFinishedWindow } from './finishedWindow';
 
 /** The hidden command a click on a mission row runs, opening or revealing that mission's window. */
 export { OPEN_MISSION_COMMAND };
@@ -116,8 +133,39 @@ export const PLUGIN_NOTICE_ICON = 'warning';
 /** The id of the plugin notice row's tree item. */
 export const PLUGIN_NOTICE_ID = 'gurita.pluginNotice';
 
-/** A row of the side-bar view: the plugin notice row with its hover text, the bootstrap offer row or a mission-starting row, or a live mission's row. */
-export type TreeRow = { kind: 'notice'; tooltip: string } | { kind: 'starting'; row: StartingRow } | { kind: 'mission'; row: MissionRow };
+/** The hidden command a click on a finished mission's row runs, opening or revealing that mission's window. */
+export { OPEN_FINISHED_COMMAND };
+
+/** The label of the row whose children are the finished missions. */
+export const FINISHED_LABEL = 'Finished missions';
+
+/** The id of the Finished missions row's tree item. */
+export const FINISHED_ID = 'gurita.finishedMissions';
+
+/** The icon of the Finished missions row. */
+export const FINISHED_GROUP_ICON = 'archive';
+
+/** The icon of each finished mission's row. */
+export const FINISHED_ICON = 'pass';
+
+/** The label of the one child the Finished missions row expands to while no mission is finished. */
+export const NO_FINISHED_LABEL = 'No mission is finished.';
+
+/** The label of the one child the Finished missions row expands to while the finished missions cannot be read. */
+export const FINISHED_FAILURE_LABEL = 'The finished missions could not be read.';
+
+/**
+ * A row of the side-bar view: the plugin notice row with its hover text, the bootstrap offer row or
+ * a mission-starting row, a live mission's row, the Finished missions row, a finished mission's row
+ * beneath it, or the one note beneath it saying none is finished or the read failed.
+ */
+export type TreeRow =
+  | { kind: 'notice'; tooltip: string }
+  | { kind: 'starting'; row: StartingRow }
+  | { kind: 'mission'; row: MissionRow }
+  | { kind: 'finishedGroup' }
+  | { kind: 'finished'; mission: FinishedMission }
+  | { kind: 'finishedNote'; label: string; tooltip?: string };
 
 /**
  * Each harness's enabled state, read afresh from the variant store file; every harness enabled,
@@ -233,6 +281,81 @@ export function rowItem(row: MissionRow): vscode.TreeItem {
   return item;
 }
 
+/** The tree item drawing the Finished missions row: collapsed by default, its children the finished missions. */
+export function finishedGroupItem(): vscode.TreeItem {
+  const item = new vscode.TreeItem(FINISHED_LABEL, vscode.TreeItemCollapsibleState.Collapsed);
+  item.id = FINISHED_ID;
+  item.iconPath = new vscode.ThemeIcon(FINISHED_GROUP_ICON);
+  return item;
+}
+
+/** The label of a finished mission's row: its title, or its path when its finish commit's body names none (the tool's `-`). */
+export function finishedLabel(mission: FinishedMission): string {
+  return mission.title === '-' || mission.title === '' ? mission.path : mission.title;
+}
+
+/**
+ * The tree item drawing the finished mission `mission`: a leaf labelled with its title, described
+ * by the date it was finished, whose click opens that mission's window or reveals it.
+ */
+export function finishedItem(mission: FinishedMission): vscode.TreeItem {
+  const label = finishedLabel(mission);
+  const item = new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.None);
+  item.id = `${FINISHED_ID}.${mission.path}`;
+  item.description = mission.date;
+  item.tooltip = [label, mission.path, `Finished: ${mission.date}`].join('\n');
+  item.iconPath = new vscode.ThemeIcon(FINISHED_ICON);
+  item.command = { command: OPEN_FINISHED_COMMAND, title: 'Open Finished Mission', arguments: [mission.path, label] };
+  return item;
+}
+
+/** The tree item drawing the note beneath the Finished missions row: a leaf with no click. */
+export function finishedNoteItem(label: string, tooltip?: string): vscode.TreeItem {
+  const item = new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.None);
+  item.id = `${FINISHED_ID}.note`;
+  if (tooltip !== undefined) {
+    item.tooltip = tooltip;
+  }
+  return item;
+}
+
+/**
+ * The children of the Finished missions row: one row per finished mission of the project at
+ * `root`, newest first, read afresh with the bundled missions tool, every one kept; else the one
+ * note saying none is finished, or that the read failed with its cause.
+ */
+export async function finishedRows(context: vscode.ExtensionContext, root: string | undefined): Promise<TreeRow[]> {
+  if (root === undefined) {
+    return [];
+  }
+  const read = await readFinishedMissions(root, context.asAbsolutePath('bundled/missions.py'));
+  if (read.state === 'failed') {
+    return [{ kind: 'finishedNote', label: FINISHED_FAILURE_LABEL, tooltip: read.cause }];
+  }
+  if (read.missions.length === 0) {
+    return [{ kind: 'finishedNote', label: NO_FINISHED_LABEL }];
+  }
+  return read.missions.map((mission): TreeRow => ({ kind: 'finished', mission }));
+}
+
+/** The tree item drawing the row `element`, whatever its kind. */
+function treeItem(element: TreeRow): vscode.TreeItem {
+  switch (element.kind) {
+    case 'notice':
+      return noticeItem(element.tooltip);
+    case 'starting':
+      return startingItem(element.row);
+    case 'mission':
+      return rowItem(element.row);
+    case 'finishedGroup':
+      return finishedGroupItem();
+    case 'finished':
+      return finishedItem(element.mission);
+    case 'finishedNote':
+      return finishedNoteItem(element.label, element.tooltip);
+  }
+}
+
 /**
  * Creates the side-bar view's tree, its rows and its message redrawn on every re-read the session's live read keeps, and
  * returns it so the run listeners can redraw it at every run's start and end.
@@ -243,11 +366,10 @@ export function registerMissionTree(context: vscode.ExtensionContext): MissionTr
   let drawnNotice: string | undefined;
   const provider: vscode.TreeDataProvider<TreeRow> = {
     onDidChangeTreeData: changed.event,
-    getTreeItem: (element: TreeRow) =>
-      element.kind === 'notice' ? noticeItem(element.tooltip) : element.kind === 'starting' ? startingItem(element.row) : rowItem(element.row),
-    getChildren(element?: TreeRow): TreeRow[] {
+    getTreeItem: treeItem,
+    getChildren(element?: TreeRow): TreeRow[] | Promise<TreeRow[]> {
       if (element !== undefined) {
-        return [];
+        return element.kind === 'finishedGroup' ? finishedRows(context, sessionRoot()) : [];
       }
       startLiveRead(context);
       startHarnessCheck(context);
@@ -256,6 +378,7 @@ export function registerMissionTree(context: vscode.ExtensionContext): MissionTr
         ...(drawnNotice === undefined ? [] : [{ kind: 'notice', tooltip: drawnNotice } as TreeRow]),
         ...startingRows(context, bootstrapStands()).map((row): TreeRow => ({ kind: 'starting', row })),
         ...missionRows().map((row): TreeRow => ({ kind: 'mission', row })),
+        ...(sessionRoot() === undefined ? [] : [{ kind: 'finishedGroup' } as TreeRow]),
       ];
     },
   };
@@ -287,6 +410,14 @@ export function registerMissionTree(context: vscode.ExtensionContext): MissionTr
     vscode.commands.registerCommand(OPEN_MISSION_COMMAND, (mission?: unknown) => {
       if (typeof mission === 'string') {
         openMissionWindow(context, mission);
+      } else {
+        startLiveRead(context);
+      }
+    }),
+    vscode.commands.registerCommand(OPEN_FINISHED_COMMAND, (mission?: unknown, title?: unknown) => {
+      const root = sessionRoot();
+      if (typeof mission === 'string' && root !== undefined) {
+        openFinishedWindow(context, root, mission, typeof title === 'string' && title !== '' ? title : mission);
       } else {
         startLiveRead(context);
       }

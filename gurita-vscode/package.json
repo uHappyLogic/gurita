@@ -98,6 +98,11 @@
         "command": "gurita.openMission",
         "title": "Open Mission",
         "category": "Gurita"
+      },
+      {
+        "command": "gurita.openFinishedMission",
+        "title": "Open Finished Mission",
+        "category": "Gurita"
       }
     ],
     "menus": {
@@ -155,6 +160,10 @@
         },
         {
           "command": "gurita.openMission",
+          "when": "false"
+        },
+        {
+          "command": "gurita.openFinishedMission",
           "when": "false"
         }
       ]

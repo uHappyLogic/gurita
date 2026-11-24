@@ -42,9 +42,11 @@ own, independent of the Gurita plugin's. To remove it, run
 ## The side-bar view
 
 The extension contributes an activity-bar entry, **Gurita**, its icon three octopus arms,
-holding one side-bar view, **Missions**: a native tree of rows
-with no child rows, the two rows that start a mission, **New mission** and **Define mission**,
-standing above one row per live mission, in the order `missions.py live` prints them. While the
+holding one side-bar view, **Missions**: a native tree of rows, the two rows that start a
+mission, **New mission** and **Define mission**, standing above one row per live mission, in the
+order `missions.py live` prints them, and beneath them all the **Finished missions** row, the one
+row with child rows, which expands to the missions already finished (see The Finished missions
+row below). While the
 Gurita plugin is missing or outdated on a harness you use, a plugin notice row stands above them
 all (see The plugin notice row below), and while the project has not been bootstrapped for the
 mission workflow, a bootstrap offer row stands above the two rows that start a mission (see The
@@ -183,6 +185,42 @@ with no mission live the message is `No mission is live.`, and while the live mi
 read it is `The live missions could not be read.` followed by the cause as the read gave it. A read
 that lists missions clears the message, and the view's other contents stay as they are in every
 state.
+
+### The Finished missions row
+
+Beneath the mission rows stands one more row, **Finished missions**, collapsed by default, which
+expands to every mission the project's record holds as finished: each mission whose directory a
+`Mission-finish:` commit removed. The list is read with the bundled missions tool's `missions .`,
+with no `--last`, keeping every `finished` line, newest first as the tool sorts them; no count, no
+setting, and no further row limits it, so a long-lived project lists all its finished missions. The
+row stands whenever the live missions have been read, with no mission live too, and not while
+they cannot be read, since the read needs the project root. The list is read afresh each time you
+expand the row and at every redraw of the tree while it stays expanded, so a mission finished
+while the view is open appears there once its finish commit lands, as its mission row leaves the
+list above.
+
+- Each finished mission's row is labelled with the mission's title, the first line of its finish
+  commit's body (its path when that body names none), and described by the date it was finished,
+  with its title, path, and finish date as its hover text.
+- With no mission finished the row expands to one line, `No mission is finished.`, and while the
+  finished missions cannot be read to `The finished missions could not be read.`, with the tool's
+  error line as its hover text (a repository with no commit yet gives the tool no log to read).
+
+A click on a finished mission's row opens that mission's own window in the editor area, titled
+with its title and carrying the archive codicon, or brings it forward when it is already open; the
+command behind the click (`gurita.openFinishedMission`) is hidden from the Command Palette. The
+window shows the mission's title, its path, and the date it was finished, then, under **Summary**,
+the summary its finish commit carries, read with the missions tool's `summary <path>` and drawn by
+the text renderer the mission windows use, so its `- ` bullets show as a bulleted list and text
+between backticks as code. Under **Completed tasks** it lists the mission's completed tasks, read
+with `tasks <path> --with-body`, newest first, each drawn as a mission window's Tasks pane draws
+one: its title, beneath it the **Open commit** link with the commit's abbreviated hash, which
+opens that commit as a read-only text document in an editor tab of its own, and beneath that its
+verified bar. They are shown at once, behind no button. A summary or task list that cannot be
+read shows its own failure line with the tool's error line beneath it, and a mission with no
+completed task shows `No task is completed.` Both are read each time the window's page loads. The
+window starts no run and holds no action button, and it is not restored after a restart or a
+window reload; open it again from its row.
 
 ## The mission windows
 
@@ -391,7 +429,8 @@ every open window replaces its whole page with one line saying so,
 be clicked against a failed read; each window stays open and draws its mission's page again on
 the next read that succeeds. A window whose mission stops being live, finished or its directory
 otherwise gone, stays open and shows one fixed notice, `This mission is no longer live.`, with no
-diagram, recipe, pane, or action button, until you close it; should a later read list the path
+diagram, recipe, pane, or action button, until you close it (a finished mission's summary and
+completed tasks are then under the Finished missions row in the side-bar view); should a later read list the path
 again, after a reverted finish or a branch switched back, the window draws that mission's page
 again. When a single mission document is missing or does not parse, only the part of the page
 drawn from it is replaced by a notice naming the file.

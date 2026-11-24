@@ -1885,7 +1885,11 @@ function nonce(): string {
  * and the workflow diagram's heading stands above its blocks. The Tasks pane sets its two parts'
  * headings, the completed tasks' control beside the second on one line, with a gap between the
  * parts, and each task's heading in the body's size with a completed task's commit link and its
- * brief's or verified bar's paragraphs and lists beneath it. On a question card, in the goal, and in a task's brief or bar a stretch of text the text renderer draws as code is set
+ * brief's or verified bar's paragraphs and lists beneath it. A finished mission's window sets its
+ * title as a heading with its path and finish date beneath it, and its Summary and Completed tasks
+ * parts one beneath the other with a gap between them, each completed task drawn as the Tasks pane
+ * draws one. On a question card, in the goal, in a task's brief or bar, and on a finished mission's
+ * window a stretch of text the text renderer draws as code is set
  * in the editor's font on the theme's code-block background. The input panel sets its prompt above
  * a textarea as wide as the page, in the editor's font and the theme's input colours, its refusal
  * line beneath it in the error colour, keeping its space while empty, and Run and Cancel beneath.
@@ -1982,7 +1986,7 @@ export function pageShell(webview: vscode.Webview, scripts: vscode.Uri[], title:
   .card-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.3em; }
   .card .slot { margin: 0; padding: 0.5em 0 0; border-top: 1px solid var(--vscode-panel-border); margin-top: 0.5em; }
   .card .slot h5 { margin-bottom: 0.2em; }
-  .card code, .introduction code, .tasks code { font-family: var(--vscode-editor-font-family); font-size: 0.95em; background: var(--vscode-textCodeBlock-background); padding: 0 0.2em; border-radius: 3px; }
+  .card code, .introduction code, .tasks code, .finished code { font-family: var(--vscode-editor-font-family); font-size: 0.95em; background: var(--vscode-textCodeBlock-background); padding: 0 0.2em; border-radius: 3px; }
   .card .question-text { box-sizing: border-box; height: 9em; overflow-y: auto; border-top: none; margin-top: 0; }
   .alternative { margin: 0.4em 0 0; padding: 0; }
   .alternative-head { display: flex; align-items: center; gap: 0.6em; }
@@ -2000,6 +2004,10 @@ export function pageShell(webview: vscode.Webview, scripts: vscode.Uri[], title:
   .task-list .task-commit { margin: 0.2em 0; }
   .task-list .task-brief p, .task-list .task-brief ul, .task-list .task-bar p, .task-list .task-bar ul { margin: 0.3em 0; }
   .task-part + .task-part { margin-top: 1em; }
+  .finished-head h2 { margin: 1em 0 0.2em; font-size: 1.3em; }
+  .finished-facts { margin: 0 0 1em; opacity: 0.85; }
+  .finished-part + .finished-part { margin-top: 1em; }
+  .finished-summary .summary-text p, .finished-summary .summary-text ul { margin: 0.3em 0; }
   .task-part-heading { margin: 0 0 0.5em; font-size: 1.05em; }
   .task-part-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0.8em; margin: 0 0 0.5em; }
   .task-part-head .task-part-heading { margin: 0; }

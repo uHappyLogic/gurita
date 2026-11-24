@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Finished Missions Under One Expandable Row
-
-Add one row to the Missions view, collapsed by default, that expands to every finished mission the record holds: the extension calls the bundled missions tool's `missions .` with no `--last` and keeps every `finished` line, newest first as the tool sorts them, with no count, setting, or further row limiting the list. A click on a finished mission opens a window showing that mission's summary, drawn by the text renderer, and its completed tasks, each with its verified bar and commit link as the Tasks pane draws them. Verified by tests of the finished-mission reads against a git fixture, tree tests of the row and its children, and page tests of the window, with `gurita-vscode/README.md` describing both.
-
----
-
 ## Capture Principles on Finished Missions
 
 Offer a Capture principles action on a finished mission's window that runs `capture-mission-principle-updates` with the mission's path as its positional argument and no `--mission`, from a shipped button recipe named by its skill whose one line is interactive, since capture asks for one confirmation before it commits. Verified by reader and pane tests of the action's recipe, the filled path, and the started run, with `gurita-vscode/README.md` describing the action.
