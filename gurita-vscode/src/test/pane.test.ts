@@ -1278,10 +1278,10 @@ test("disabling a harness is stored in the variant store's harness part and leav
 });
 
 /** Waits until the extension has posted the harness lists beyond the first `from`, and returns them as read. */
-async function postedLists(from: number): Promise<Record<string, { models: string[]; efforts?: string[] }>> {
-  const message = (await postedOf('harnessLists', from)) as { lists: { state: string; lists?: Record<string, { models: string[]; efforts?: string[] }> } };
+async function postedLists(from: number): Promise<Record<string, { models: string[]; efforts: string[] }>> {
+  const message = (await postedOf('harnessLists', from)) as { lists: { state: string; lists?: Record<string, { models: string[]; efforts: string[] }> } };
   assert.strictEqual(message.lists.state, 'read', JSON.stringify(message.lists));
-  return message.lists.lists as Record<string, { models: string[]; efforts?: string[] }>;
+  return message.lists.lists as Record<string, { models: string[]; efforts: string[] }>;
 }
 
 test("the settings view's model and effort lists are derived from the recipe lines, and an added or removed entry is stored as an overlay in the harness part", async () => {
@@ -1294,7 +1294,7 @@ test("the settings view's model and effort lists are derived from the recipe lin
     fs.writeFileSync(path.join(files, 'recipes.md'), `${OWN_TEXT}
 ### Codex finish
 \`\`\`
-codex exec "/gurita:finish-mission --mission <path>" -m gpt-5.5;
+codex exec "/gurita:finish-mission --mission <path>" -m gpt-5.5 -c model_reasoning_effort=high;
 \`\`\`
 `);
     packaged.set('bundled/shipped_recipes.md', path.join(files, 'shipped_recipes.md'));
@@ -1310,12 +1310,13 @@ codex exec "/gurita:finish-mission --mission <path>" -m gpt-5.5;
     );
 
     let from = posted.length;
+    const opened = from;
     showSettings();
     assert.deepStrictEqual(await postedLists(from), {
       claude: { models: ['fable', 'opus', 'sonnet'], efforts: ['xhigh', 'high'] },
       antigravity: { models: ['gemini-4-argon', 'claude-opus-5-5', 'gemini-4-neon'], efforts: ['medium', 'high', 'xhigh'] },
-      codex: { models: ['gpt-5.5'] },
-    }, "the shipped, own, and stored lines' values, Codex with no effort list");
+      codex: { models: ['gpt-5.5'], efforts: ['high'] },
+    }, "the shipped, own, and stored lines' values, Codex's effort read from its override");
 
     inputBoxes.length = 0;
     typedValues.length = 0;
@@ -1343,13 +1344,20 @@ codex exec "/gurita:finish-mission --mission <path>" -m gpt-5.5;
     typedValues.push('gpt-5.5-codex');
     from = posted.length;
     send({ type: 'addHarnessValue', harness: 'codex', kind: 'model' });
-    assert.deepStrictEqual(await postedLists(from).then((lists) => lists.codex), { models: ['gpt-5.5', 'gpt-5.5-codex'] });
+    assert.deepStrictEqual(await postedLists(from).then((lists) => lists.codex), { models: ['gpt-5.5', 'gpt-5.5-codex'], efforts: ['high'] });
+    typedValues.push('low');
+    from = posted.length;
+    send({ type: 'addHarnessValue', harness: 'codex', kind: 'effort' });
+    assert.deepStrictEqual(await postedLists(from).then((lists) => lists.codex), { models: ['gpt-5.5', 'gpt-5.5-codex'], efforts: ['high', 'low'] });
+    from = posted.length;
+    send({ type: 'removeHarnessValue', harness: 'codex', kind: 'effort', value: 'high' });
+    assert.deepStrictEqual(await postedLists(from).then((lists) => lists.codex.efforts), ['low'], 'an effort a Codex line carries is taken out of the offer');
 
     const written = JSON.parse(fs.readFileSync(store, 'utf8'));
     assert.deepStrictEqual(written.harnesses, {
       antigravity: { enabled: false, removedModels: ['claude-opus-5-5'], addedEfforts: ['low'] },
       claude: {},
-      codex: { addedModels: ['gpt-5.5-codex'] },
+      codex: { addedModels: ['gpt-5.5-codex'], addedEfforts: ['low'], removedEfforts: ['high'] },
     }, 'the overlay is kept in the harness part beside the enabled state');
     assert.strictEqual(written.variants.length, 1, 'the stored variant is kept');
     assert.ok(!fs.readFileSync(path.join(files, 'recipes.md'), 'utf8').includes('gpt-5.5-codex'), 'the own recipe file is not written');
@@ -1357,16 +1365,31 @@ codex exec "/gurita:finish-mission --mission <path>" -m gpt-5.5;
     const before = fs.readFileSync(store, 'utf8');
     const boxes = inputBoxes.length;
     from = posted.length;
-    send({ type: 'addHarnessValue', harness: 'codex', kind: 'effort' });
     send({ type: 'addHarnessValue', harness: 'agy', kind: 'model' });
     send({ type: 'addHarnessValue', harness: 'claude', kind: 'models' });
     send({ type: 'removeHarnessValue', harness: 'claude', kind: 'model', value: 'not-offered' });
     send({ type: 'removeHarnessValue', harness: 'codex', kind: 'effort', value: 'high' });
+    send({ type: 'addHarnessValue', harness: 'codex', kind: 'effort' });
     send({ type: 'addHarnessValue', harness: 'claude', kind: 'effort' });
     await new Promise((resolve) => setTimeout(resolve, 50));
-    assert.strictEqual(inputBoxes.length, boxes + 1, 'only the effort of a harness holding an effort list is asked for');
-    assert.deepStrictEqual(posted.slice(from), [], 'no list the harness holds, no entry offered, or a dismissed box writes and posts nothing');
+    assert.strictEqual(inputBoxes.length, boxes + 2, "only a known harness's model or effort list is asked for, Codex's effort list included");
+    assert.deepStrictEqual(posted.slice(from), [], 'no harness or list named, no entry offered, or a dismissed box writes and posts nothing');
     assert.strictEqual(fs.readFileSync(store, 'utf8'), before);
+
+    // A Codex line's effort dropdown offers Codex's effort list, and a pick rewrites the override's level.
+    const listedCodex = (await postedVariants(opened)).find((each) => each.name === 'Codex finish');
+    assert.ok(listedCodex !== undefined);
+    assert.deepStrictEqual((listedCodex.variants as EditedVariant[]).map((each) => each.editors), [[{ harness: 'codex', model: 'gpt-5.5', effort: 'high' }]]);
+    send({ type: 'replaceLineValue', recipe: 'Codex finish', variant: { name: listedCodex.variants[0].name, origin: 'own' }, line: 0, kind: 'effort', value: 'max' });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    assert.strictEqual(fs.readFileSync(store, 'utf8'), before, 'an effort the Codex list does not offer writes nothing');
+    from = posted.length;
+    send({ type: 'replaceLineValue', recipe: 'Codex finish', variant: { name: listedCodex.variants[0].name, origin: 'own' }, line: 0, kind: 'effort', value: 'low' });
+    const changedCodex = (await postedVariants(from)).find((each) => each.name === 'Codex finish');
+    assert.ok(changedCodex !== undefined);
+    const custom = changedCodex.variants[changedCodex.variants.length - 1] as EditedVariant;
+    assert.deepStrictEqual(custom.lines, ['codex exec "/gurita:finish-mission --mission <path>" -m gpt-5.5 -c model_reasoning_effort=low;']);
+    assert.deepStrictEqual(custom.editors, [{ harness: 'codex', model: 'gpt-5.5', effort: 'low' }]);
   } finally {
     process.env.HOME = home;
   }

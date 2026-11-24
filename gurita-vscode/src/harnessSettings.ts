@@ -10,10 +10,10 @@
 // list a mission window is posted (`pageRecipes` in `recipes.ts`), while the buttons that run a recipe by its
 // fixed name and the looped run's named single-task lines are untouched.
 //
-// Its model list and its one effort list for the whole harness, Codex holding a model list and no
-// effort list: each list is derived from the values the lines of the shipped recipes, the own
-// recipes, and the stored variants carry, in that order of first appearance, `--model` and
-// `--effort` on a `claude` or `agy` line and `-m` on a `codex` line, as `lineValues.ts` reads
+// Its model list and its one effort list for the whole harness: each list is derived from the
+// values the lines of the shipped recipes, the own recipes, and the stored variants carry, in that
+// order of first appearance, `--model` and `--effort` on a `claude` or `agy` line, and `-m` and the
+// config override `-c model_reasoning_effort=<level>` on a `codex` line, as `lineValues.ts` reads
 // them. The extension ships no list of its own and queries no harness. Laid over each derived
 // list is the person's overlay, kept in the harness's object as `addedModels` and
 // `removedModels`, and `addedEfforts` and `removedEfforts`, each an array of text: an added entry,
@@ -40,11 +40,10 @@ export type HarnessStates = Record<HarnessKey, boolean>;
 /** Which of a harness's two lists: its models or its efforts. */
 export type ListKind = 'model' | 'effort';
 
-/** One harness's lists as the settings view offers them: its models, and its efforts where it takes any. */
+/** One harness's lists as the settings view offers them: its models and its efforts. */
 export interface HarnessList {
   models: string[];
-  /** Left out for a harness that holds no effort list, Codex. */
-  efforts?: string[];
+  efforts: string[];
 }
 
 /** Each harness's lists, by its key. */
@@ -138,11 +137,6 @@ export function isListKind(value: unknown): value is ListKind {
   return value === 'model' || value === 'effort';
 }
 
-/** Whether the harness `key` holds a list of `kind`: every harness a model list, every one but Codex an effort list. */
-export function holdsList(key: HarnessKey, kind: ListKind): boolean {
-  return kind === 'model' || key !== 'codex';
-}
-
 /** The harness key of the lines that open with the command `cli`. */
 function keyOf(cli: LineHarness): HarnessKey {
   return (HARNESSES.find((harness) => harness.cli === cli) as CheckedHarness).key;
@@ -152,7 +146,7 @@ function keyOf(cli: LineHarness): HarnessKey {
 export function derivedLists(lines: Iterable<string>): HarnessLists {
   const lists = {} as HarnessLists;
   for (const harness of HARNESSES) {
-    lists[harness.key] = holdsList(harness.key, 'effort') ? { models: [], efforts: [] } : { models: [] };
+    lists[harness.key] = { models: [], efforts: [] };
   }
   for (const line of lines) {
     const read = readLine(line);
@@ -163,7 +157,7 @@ export function derivedLists(lines: Iterable<string>): HarnessLists {
     if (read.model !== undefined && !list.models.includes(read.model)) {
       list.models.push(read.model);
     }
-    if (read.effort !== undefined && list.efforts !== undefined && !list.efforts.includes(read.effort)) {
+    if (read.effort !== undefined && !list.efforts.includes(read.effort)) {
       list.efforts.push(read.effort);
     }
   }
@@ -196,19 +190,13 @@ export function harnessLists(store: VariantStore, file: string, lines: Iterable<
   for (const harness of HARNESSES) {
     const entry = part[harness.key];
     const each = derived[harness.key];
-    lists[harness.key] = { models: overlaid(each.models, entry, 'model') };
-    if (each.efforts !== undefined) {
-      lists[harness.key].efforts = overlaid(each.efforts, entry, 'effort');
-    }
+    lists[harness.key] = { models: overlaid(each.models, entry, 'model'), efforts: overlaid(each.efforts, entry, 'effort') };
   }
   return lists;
 }
 
-/** Refuses a list the harness does not hold, and an empty entry. */
-function checkedEdit(key: HarnessKey, kind: ListKind, value: string): void {
-  if (!holdsList(key, kind)) {
-    throw new Error(`The harness "${key}" holds no ${kind} list.`);
-  }
+/** Refuses an empty entry. */
+function checkedEdit(kind: ListKind, value: string): void {
   if (value === '') {
     throw new Error(`An empty ${kind} cannot be added to or removed from a list.`);
   }
@@ -234,10 +222,10 @@ function withOverlay(store: VariantStore, part: Record<string, unknown>, key: Ha
  * other value of the harness part is kept as read.
  */
 export function withListValueAdded(store: VariantStore, file: string, lines: Iterable<string>, key: HarnessKey, kind: ListKind, value: string): VariantStore {
-  checkedEdit(key, kind, value);
+  checkedEdit(kind, value);
   const part = harnessPart(store, file);
   const derived = derivedLists(lines)[key];
-  const carried = (kind === 'model' ? derived.models : derived.efforts ?? []).includes(value);
+  const carried = (kind === 'model' ? derived.models : derived.efforts).includes(value);
   const added = overlayEntries(part[key], OVERLAY[kind].added);
   const removed = overlayEntries(part[key], OVERLAY[kind].removed).filter((each) => each !== value);
   if (!carried && !added.includes(value)) {
@@ -252,10 +240,10 @@ export function withListValueAdded(store: VariantStore, file: string, lines: Ite
  * value of the harness part is kept as read.
  */
 export function withListValueRemoved(store: VariantStore, file: string, lines: Iterable<string>, key: HarnessKey, kind: ListKind, value: string): VariantStore {
-  checkedEdit(key, kind, value);
+  checkedEdit(kind, value);
   const part = harnessPart(store, file);
   const derived = derivedLists(lines)[key];
-  const carried = (kind === 'model' ? derived.models : derived.efforts ?? []).includes(value);
+  const carried = (kind === 'model' ? derived.models : derived.efforts).includes(value);
   const added = overlayEntries(part[key], OVERLAY[kind].added).filter((each) => each !== value);
   const removed = overlayEntries(part[key], OVERLAY[kind].removed);
   if (carried && !removed.includes(value)) {

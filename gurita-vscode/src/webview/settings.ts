@@ -40,7 +40,7 @@
 // extension, which stores the state and posts it again. The control is drawn whatever the check
 // reports, while it runs or could not run included, and the state is redrawn only from what the
 // extension posts. Under Models and efforts the window draws each harness's model list and its
-// one effort list, Codex's model list alone: each entry with its remove control, and each list
+// one effort list: each entry with its remove control, and each list
 // with its add control, each posted to the extension, which asks for an added entry in VS Code's
 // own input box, writes the change, and posts the lists again. Under Variants the window draws
 // every recipe the extension posts, the chains, the nine fixed-name button recipes, and the
@@ -58,7 +58,8 @@
 // line `<single-task line>`, and a command the extension does not know, as its text. Only a line
 // the extension posts with an editor, a `claude` or `agy` line carrying both `--model` and
 // `--effort`, gets a model and an effort dropdown after its harness, a Codex line carrying `-m` its
-// model dropdown alone, every other line staying read-only. A line with both dropdowns shows its
+// model dropdown and, when it also carries `-c model_reasoning_effort=<level>`, its effort
+// dropdown, every other line staying read-only. A line with both dropdowns shows its
 // harness as a dropdown offering Claude Code and Antigravity, standing on the one it runs on, in
 // the harness's place on a skill row and before the model dropdown on a line drawn as its text; a
 // pick of the other posts the line and the harness to the extension, which rewrites the line onto
@@ -121,10 +122,10 @@ declare function acquireVsCodeApi(): VsCodeApi;
   /** Each harness's enabled state, by its key, or the cause it could not be read. */
   type HarnessSettings = { state: 'read'; enabled: Record<string, boolean> } | { state: 'failed'; cause: string };
 
-  /** One harness's lists: its models, and its efforts where it holds an effort list. */
+  /** One harness's lists: its models and its efforts. */
   interface HarnessList {
     models: string[];
-    efforts?: string[];
+    efforts: string[];
   }
 
   /** Each harness's model and effort lists, by its key, or the cause they could not be read. */
@@ -556,7 +557,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
 
   /**
    * The window's part of model and effort lists: the cause they could not be read, or for
-   * each harness its model list and, but for a harness holding none, its effort list, each entry
+   * each harness its model list and its effort list, each entry
    * with its remove control and each list with its add control.
    */
   function drawLists(): HTMLElement {
@@ -583,9 +584,6 @@ declare function acquireVsCodeApi(): VsCodeApi;
       harness.append(element('h5', name));
       for (const [kind, label, addLabel] of LISTS) {
         const entries = kind === 'model' ? lists.models : lists.efforts;
-        if (entries === undefined) {
-          continue;
-        }
         const row = element('div', undefined, 'value-list');
         row.dataset.kind = kind;
         row.append(element('span', label, 'value-label'));
@@ -706,7 +704,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
    * gets one, its effort dropdown, every other line read-only. A line with both dropdowns, on
    * Claude Code or Antigravity, shows its harness as a dropdown picking between the two, in the
    * place a skill row's harness stands and before the model dropdown on a line drawn as its text; a
-   * Codex line keeps its harness as text.
+   * Codex line, with or without its effort dropdown, keeps its harness as text.
    */
   function drawLines(recipe: string, variant: SettingsVariant, focus: string): HTMLElement {
     const list = element('ul', undefined, 'variant-lines');

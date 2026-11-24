@@ -40,9 +40,9 @@
 // The window enables and disables each harness: a click of a harness's enable or disable control
 // writes that state to the harness part of the variant store file and posts it again. Every
 // harness starts enabled and stays so until the person disables it, the check never changing it.
-// The window holds each harness's model list and its one effort list for the whole harness, Codex
-// a model list alone, derived afresh from the `--model` and `--effort` values, on a Codex line
-// `-m`, the lines of the shipped recipes, the project recipes, the own recipes, and the stored variants carry, with the
+// The window holds each harness's model list and its one effort list for the whole harness,
+// derived afresh from the `--model` and `--effort` values, on a Codex line `-m` and the config
+// override `-c model_reasoning_effort=<level>`, the lines of the shipped recipes, the project recipes, the own recipes, and the stored variants carry, with the
 // person's overlay from the harness part of the variant store file laid over them. A click of a
 // list's add control asks for the entry in VS Code's own input box, whose validation refuses an
 // empty entry and one the list already offers, and a click of an entry's remove control takes it
@@ -59,7 +59,8 @@
 // validation refusing an empty name and one the recipe's other variants carry. Each variant is
 // posted with its lines and the line editor each gets: a `claude` or `agy` line carrying both
 // `--model` and `--effort` gets model and effort dropdowns and a harness dropdown offering Claude
-// Code and Antigravity, a Codex line carrying `-m` its model dropdown alone, and every other line
+// Code and Antigravity, a Codex line carrying `-m` its model dropdown and, when it also carries the
+// override, its effort dropdown, keeping its harness as text, and every other line
 // is shown as its text, read-only. A model or effort pick replaces the value the line carries
 // through the store's edit (`replaceLineValue`), a harness pick rewrites the line onto the other
 // harness (`replaceLineHarness`), a shipped, project, or own variant left untouched and a `custom N` holding
@@ -113,7 +114,6 @@ import {
   HarnessStates,
   ListKind,
   editHarnessList,
-  holdsList,
   isHarnessKey,
   isListKind,
   readHarnessLists,
@@ -587,11 +587,11 @@ function harnessName(key: string): string {
  * Adds an entry to the harness `harness`'s list of `kind`: the entry is asked for in VS Code's own
  * input box, whose validation refuses an empty entry and one the list already offers, and written
  * to the overlay in the harness part of the variant store file, the lists then posted again. A key
- * naming no harness, a list the harness does not hold, lists that cannot be read, or a dismissed
+ * naming no harness, a kind naming no list, lists that cannot be read, or a dismissed
  * box writes nothing; a store that cannot be written is told in an error notification.
  */
 async function addHarnessValue(context: vscode.ExtensionContext, target: vscode.WebviewPanel, harness: unknown, kind: unknown): Promise<void> {
-  if (settingsPanel !== target || !isHarnessKey(harness) || !isListKind(kind) || !holdsList(harness, kind)) {
+  if (settingsPanel !== target || !isHarnessKey(harness) || !isListKind(kind)) {
     return;
   }
   const read = readListsOf(context);
@@ -599,7 +599,7 @@ async function addHarnessValue(context: vscode.ExtensionContext, target: vscode.
     void vscode.window.showErrorMessage(`The ${kind} list could not be read: ${read.cause}`);
     return;
   }
-  const offered = kind === 'model' ? read.lists[harness].models : read.lists[harness].efforts ?? [];
+  const offered = kind === 'model' ? read.lists[harness].models : read.lists[harness].efforts;
   const typed = await vscode.window.showInputBox({
     prompt: `The ${kind} to add to the ${harnessName(harness)} ${kind} list`,
     placeHolder: kind === 'model' ? 'a model name' : 'an effort level',
@@ -620,14 +620,14 @@ async function addHarnessValue(context: vscode.ExtensionContext, target: vscode.
 /**
  * Removes the entry `value` from the offer of the harness `harness`'s list of `kind`, written to the
  * overlay in the harness part of the variant store file, the lists then posted again. A key naming
- * no harness, a list the harness does not hold, or an entry the list does not offer writes nothing.
+ * no harness, a kind naming no list, or an entry the list does not offer writes nothing.
  */
 async function removeHarnessValue(context: vscode.ExtensionContext, target: vscode.WebviewPanel, harness: unknown, kind: unknown, value: unknown): Promise<void> {
-  if (settingsPanel !== target || !isHarnessKey(harness) || !isListKind(kind) || !holdsList(harness, kind) || typeof value !== 'string') {
+  if (settingsPanel !== target || !isHarnessKey(harness) || !isListKind(kind) || typeof value !== 'string') {
     return;
   }
   const read = readListsOf(context);
-  if (read.state === 'failed' || !(kind === 'model' ? read.lists[harness].models : read.lists[harness].efforts ?? []).includes(value)) {
+  if (read.state === 'failed' || !(kind === 'model' ? read.lists[harness].models : read.lists[harness].efforts).includes(value)) {
     return;
   }
   editList(context, target, harness, kind, 'remove', value);
@@ -910,7 +910,7 @@ async function editLineValue(
     void vscode.window.showErrorMessage(`The ${kind} list could not be read: ${lists.cause}`);
     return;
   }
-  const offered = kind === 'model' ? lists.lists[editor.harness].models : lists.lists[editor.harness].efforts ?? [];
+  const offered = kind === 'model' ? lists.lists[editor.harness].models : lists.lists[editor.harness].efforts;
   if (!offered.includes(value) || settingsPanel !== target) {
     return;
   }
@@ -1001,7 +1001,7 @@ async function editLineHarness(
   if (settingsPanel !== target) {
     return;
   }
-  const offer = { models: lists.lists[picked.key].models, efforts: lists.lists[picked.key].efforts ?? [] };
+  const offer = { models: lists.lists[picked.key].models, efforts: lists.lists[picked.key].efforts };
   try {
     const files = recipeFiles(context);
     replaceLineHarness(files.store, readRecipes(files.shipped, files.own, undefined, files.project), recipe, named, line, picked.cli, offer);

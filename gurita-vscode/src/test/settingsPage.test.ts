@@ -730,14 +730,14 @@ test('harness settings that could not be read are named in the window, with no c
 });
 
 /** Each harness's lists as the extension posts them. */
-function harnessListsMessage(lists: Record<string, { models: string[]; efforts?: string[] }>): unknown {
+function harnessListsMessage(lists: Record<string, { models: string[]; efforts: string[] }>): unknown {
   return { type: 'harnessLists', lists: { state: 'read', lists } };
 }
 
 const LISTS = {
   claude: { models: ['fable', 'opus'], efforts: ['xhigh', 'high'] },
   antigravity: { models: ['gemini-4-argon'], efforts: [] },
-  codex: { models: ['gpt-5.5'] },
+  codex: { models: ['gpt-5.5'], efforts: ['high', 'medium'] },
 };
 
 /** Each harness's lists the window draws: its key, then each list's kind and its entries, in order. */
@@ -763,7 +763,7 @@ function focused(page: Page, key: string): FakeElement {
   return found;
 }
 
-test("the window draws each harness's model list and effort list, Codex its model list alone, each entry with a remove control and each list with an add control", () => {
+test("the window draws each harness's model list and effort list, Codex's included, each entry with a remove control and each list with an add control", () => {
   const page = loadSettings();
   assert.ok(texts(page).includes('Models and efforts'));
   assert.deepStrictEqual(listRows(page), [], 'nothing is drawn before the extension posts the lists');
@@ -771,13 +771,21 @@ test("the window draws each harness's model list and effort list, Codex its mode
   assert.deepStrictEqual(listRows(page), [
     ['claude', [['model', ['fable', 'opus']], ['effort', ['xhigh', 'high']]]],
     ['antigravity', [['model', ['gemini-4-argon']], ['effort', []]]],
-    ['codex', [['model', ['gpt-5.5']]]],
+    ['codex', [['model', ['gpt-5.5']], ['effort', ['high', 'medium']]]],
   ]);
   assert.ok(texts(page).includes('No entry'), 'an empty list says so');
-  for (const key of ['add-model-claude', 'add-effort-claude', 'add-model-antigravity', 'add-effort-antigravity', 'add-model-codex', 'remove-effort-claude-high']) {
+  for (const key of [
+    'add-model-claude',
+    'add-effort-claude',
+    'add-model-antigravity',
+    'add-effort-antigravity',
+    'add-model-codex',
+    'add-effort-codex',
+    'remove-effort-claude-high',
+    'remove-effort-codex-medium',
+  ]) {
     focused(page, key);
   }
-  assert.strictEqual(page.root.querySelector('[data-focus="add-effort-codex"]'), null, 'Codex has no effort list to add to');
   const view = settingsView(page);
   assert.ok(view !== undefined);
   assert.deepStrictEqual(
@@ -794,10 +802,14 @@ test('an add or remove control posts its edit and the lists change only when the
   focused(page, 'add-model-codex').click();
   focused(page, 'add-effort-antigravity').click();
   focused(page, 'remove-model-claude-opus').click();
+  focused(page, 'add-effort-codex').click();
+  focused(page, 'remove-effort-codex-high').click();
   assert.deepStrictEqual(page.posted.slice(count), [
     { type: 'addHarnessValue', harness: 'codex', kind: 'model' },
     { type: 'addHarnessValue', harness: 'antigravity', kind: 'effort' },
     { type: 'removeHarnessValue', harness: 'claude', kind: 'model', value: 'opus' },
+    { type: 'addHarnessValue', harness: 'codex', kind: 'effort' },
+    { type: 'removeHarnessValue', harness: 'codex', kind: 'effort', value: 'high' },
   ]);
   assert.deepStrictEqual(listRows(page)[0], ['claude', [['model', ['fable', 'opus']], ['effort', ['xhigh', 'high']]]], 'nothing changes until the extension posts it');
   page.send(harnessListsMessage({ ...LISTS, claude: { models: ['fable', 'haiku'], efforts: ['xhigh', 'high'] } }));
@@ -1002,6 +1014,7 @@ test('variants that could not be read are named in the window, with no control d
 
 const MODEL_ONLY_LINE = 'claude -p "/gurita:provide-alternatives-to-all-open-questions --mission <path>" --model "opus";';
 const CODEX_LINE = 'codex exec "/gurita:finish-mission --mission <path>" -m gpt-5.5;';
+const CODEX_EFFORT_LINE = "codex exec '$gurita:derive-tasks --mission <path>' -m gpt-5.5 -c model_reasoning_effort=xhigh;";
 
 /** A variant list whose variants carry their line editors, as the extension posts them. */
 const EDITED_VARIANTS = {
@@ -1038,9 +1051,12 @@ const EDITED_VARIANTS = {
           {
             name: 'Codex',
             origin: 'own',
-            lines: [CODEX_LINE],
-            editors: [{ harness: 'codex', model: 'gpt-5.5' }],
-            rows: [{ skill: 'finish-mission', interactive: false, harness: 'codex' }],
+            lines: [CODEX_LINE, CODEX_EFFORT_LINE],
+            editors: [{ harness: 'codex', model: 'gpt-5.5' }, { harness: 'codex', model: 'gpt-5.5', effort: 'xhigh' }],
+            rows: [
+              { skill: 'finish-mission', interactive: false, harness: 'codex' },
+              { skill: 'derive-tasks', interactive: false, harness: 'codex' },
+            ],
             isDefault: false,
           },
         ],
@@ -1081,7 +1097,7 @@ function lineRows(page: Page): [string[], [string, string[], string | undefined]
 const CC_HARNESS: [string, string[], string] = ['line-harness', ['Claude Code', 'Antigravity'], 'Claude Code'];
 const AGY_HARNESS: [string, string[], string] = ['line-harness', ['Claude Code', 'Antigravity'], 'Antigravity'];
 
-test("the line editor draws each line as its row, and only a line with both --model and --effort gets the harness's model and whole effort lists, a Codex line its model alone", () => {
+test("the line editor draws each line as its row, a line with both --model and --effort getting the harness's model and whole effort lists, a Codex line its model and, with the effort override, its effort", () => {
   const page = loadSettings();
   page.send(harnessListsMessage(LISTS));
   page.send(EDITED_VARIANTS);
@@ -1092,7 +1108,8 @@ test("the line editor draws each line as its row, and only a line with both --mo
     [['<single-task line>'], []],
     [['review-mission-requirements'], [AGY_HARNESS, ['line-model', ['gemini-4-argon'], 'gemini-4-argon'], ['line-effort', ['medium'], 'medium']]],
     [['finish-mission', 'Codex'], [['line-model', ['gpt-5.5'], 'gpt-5.5']]],
-  ], 'a line without both flags, a shell step, and the slot line draw no control; a value the list lacks is offered as the line carries it; a Codex line keeps its harness as text');
+    [['derive-tasks', 'Codex'], [['line-model', ['gpt-5.5'], 'gpt-5.5'], ['line-effort', ['xhigh', 'high', 'medium'], 'xhigh']]],
+  ], 'a line without both flags, a shell step, and the slot line draw no control; a value the list lacks is offered as the line carries it; a Codex line keeps its harness as text, with no effort dropdown when written without the override');
   page.send(harnessListsMessage({ ...LISTS, antigravity: { models: ['gemini-4-argon', 'claude-opus-5-5'], efforts: ['low', 'medium', 'high'] } }));
   assert.deepStrictEqual(lineRows(page)[4][1], [
     AGY_HARNESS,
@@ -1118,11 +1135,13 @@ test("a pick in a line's dropdown posts the line, the kind, and the value, and t
   focused(page, 'line-effort-0-0-0').change('high');
   focused(page, 'line-model-0-2-0').change('gpt-5.5');
   focused(page, 'line-model-0-2-0').change('gpt-5.5');
-  assert.strictEqual(page.root.querySelector('[data-focus="line-effort-0-2-0"]'), null, 'a Codex line has no effort dropdown');
+  focused(page, 'line-effort-0-2-1').change('medium');
+  assert.strictEqual(page.root.querySelector('[data-focus="line-effort-0-2-0"]'), null, 'a Codex line written without the override has no effort dropdown');
   assert.strictEqual(page.root.querySelector('[data-focus="line-model-0-0-1"]'), null, 'a line with --model alone has no model dropdown');
   assert.deepStrictEqual(page.posted.slice(count), [
     { type: 'replaceLineValue', recipe: 'First run', variant: { name: 'Claude Code', origin: 'shipped' }, line: 0, kind: 'model', value: 'opus' },
     { type: 'replaceLineValue', recipe: 'First run', variant: { name: 'Claude Code', origin: 'shipped' }, line: 0, kind: 'effort', value: 'high' },
+    { type: 'replaceLineValue', recipe: 'First run', variant: { name: 'Codex', origin: 'own' }, line: 1, kind: 'effort', value: 'medium' },
   ], 'a pick of the value the line carries posts nothing');
   assert.strictEqual(lineRows(page)[0][1][1][2], 'fable', 'nothing changes until the extension posts it');
   const copied = { ...EDITED_VARIANTS.variants.recipes[0].variants[0], name: 'Claude Code', origin: 'stored', copies: { name: 'Claude Code', origin: 'shipped' } };
@@ -1178,9 +1197,10 @@ test("a pick in a line's harness dropdown posts the line and the harness, a Code
       ],
     },
   });
-  assert.deepStrictEqual(lineRows(page)[6], [[summarize], [CC_HARNESS, ['line-model', ['fable', 'opus'], 'opus'], ['line-effort', ['xhigh', 'high'], 'high']]], 'a line drawn as its text gets its harness dropdown before the model dropdown');
+  assert.deepStrictEqual(lineRows(page)[7], [[summarize], [CC_HARNESS, ['line-model', ['fable', 'opus'], 'opus'], ['line-effort', ['xhigh', 'high'], 'high']]], 'a line drawn as its text gets its harness dropdown before the model dropdown');
   assert.strictEqual(page.root.querySelector('[data-focus="line-harness-0-0-1"]'), null, 'a line with --model alone has no harness dropdown');
   assert.strictEqual(page.root.querySelector('[data-focus="line-harness-0-2-0"]'), null, 'a Codex line has no harness dropdown');
+  assert.strictEqual(page.root.querySelector('[data-focus="line-harness-0-2-1"]'), null, 'nor one carrying the effort override');
   const count = page.posted.length;
   focused(page, 'line-harness-0-0-0').change('antigravity');
   focused(page, 'line-harness-0-1-0').change('antigravity');

@@ -12,11 +12,15 @@
 // `claude`, `agy`, or `codex`; any other line (a shell step, the slot line `<single-task line>`,
 // a command the extension does not know) has no harness and carries no value. On `claude` and
 // `agy` the model is the value of `--model` and the effort that of `--effort`; on `codex` the
-// model is the value of `-m` and no effort is read. A flag's value is the word after it, or the
-// text after `=` in the `--flag=value` form, read as the shell would read the word, quotes
-// removed; a flag with no value, or an empty one, carries nothing, and of a flag written twice the
-// last is the one read and replaced. Only the line's first command is read: its words end at the
-// first `;`, `&`, or `|`, or a `#` opening a word, standing outside quotes, so a flag written
+// model is the value of `-m` and the effort is the config override
+// `-c model_reasoning_effort=<level>`, the `--config` spelling read as well, its level the text
+// after the override's first `=`, a level written as a quoted TOML string
+// (`model_reasoning_effort="high"`) read without its quotes and replaced in them, and a `-c` naming
+// another key read as no effort. A flag's value is the word after it, or the text after `=` in the
+// `--flag=value` form, read as the shell would read the word, quotes removed; a flag with no value,
+// or an empty one, carries nothing, and of a flag (or an override of the effort's key) written
+// twice the last is the one read and replaced. Only the line's first command is read: its words
+// end at the first `;`, `&`, or `|`, or a `#` opening a word, standing outside quotes, so a flag written
 // inside the quoted prompt or after the line's closing `;` is never read. The skill a line runs
 // is read from the same first command: the name after the first `/gurita:` or `$gurita:` opening a
 // word of its arguments or a part of one, the quoted prompt being one word. This module imports
@@ -34,11 +38,17 @@ export interface LineValues {
   effort?: string;
 }
 
-/** The flag carrying each harness's model, and its effort where the harness takes one. */
-const FLAGS: Readonly<Record<Harness, { model: string; effort?: string }>> = {
-  claude: { model: '--model', effort: '--effort' },
-  agy: { model: '--model', effort: '--effort' },
-  codex: { model: '-m' },
+/**
+ * Where a harness's effort stands: as the value of one flag, or as the level of a config override
+ * of one key, written as the value of any of `flags`.
+ */
+type EffortSpec = { flag: string } | { flags: readonly string[]; key: string };
+
+/** The flag carrying each harness's model, and where each carries its effort. */
+const FLAGS: Readonly<Record<Harness, { model: string; effort: EffortSpec }>> = {
+  claude: { model: '--model', effort: { flag: '--effort' } },
+  agy: { model: '--model', effort: { flag: '--effort' } },
+  codex: { model: '-m', effort: { flags: ['-c', '--config'], key: 'model_reasoning_effort' } },
 };
 
 /** One shell word of a line: its text as the shell reads it and where it stands in the line. */
@@ -139,6 +149,68 @@ function valueSpan(line: string, command: Word[], flag: string): ValueSpan | und
   return span;
 }
 
+/**
+ * A value as it stands in a line, with the text its span is rewritten with to carry another value:
+ * the value alone for a flag's value, the override with the other level for a config override.
+ */
+interface WritableSpan extends ValueSpan {
+  /** The span's shell-read text with `other` in the place of the value it carries. */
+  with: (other: string) => string;
+}
+
+/** A flag's value span, rewritten whole by another value. */
+function plainSpan(span: ValueSpan | undefined): WritableSpan | undefined {
+  return span === undefined ? undefined : { ...span, with: (other: string) => other };
+}
+
+/** Where the last non-empty effort a config override of `key` carries stands, or undefined when none carries one. */
+function overrideSpan(line: string, command: Word[], flags: readonly string[], key: string): WritableSpan | undefined {
+  let found: WritableSpan | undefined;
+  for (let index = 1; index < command.length; index++) {
+    const word = command[index];
+    const raw = line.slice(word.start, word.end);
+    let value: ValueSpan | undefined;
+    if (flags.includes(word.text)) {
+      const next = command[index + 1];
+      if (next === undefined) {
+        continue;
+      }
+      value = { text: next.text, start: next.start, end: next.end };
+      index++;
+    } else {
+      const flag = flags.find((each) => raw.startsWith(`${each}=`));
+      if (flag === undefined) {
+        continue;
+      }
+      value = { text: word.text.slice(flag.length + 1), start: word.start + flag.length + 1, end: word.end };
+    }
+    const equals = value.text.indexOf('=');
+    if (equals < 0 || value.text.slice(0, equals).trim() !== key) {
+      continue;
+    }
+    const rest = value.text.slice(equals + 1);
+    const written = rest.trim();
+    const before = value.text.slice(0, equals + 1) + rest.slice(0, rest.length - rest.trimStart().length);
+    const after = rest.slice(rest.trimEnd().length);
+    const quote = written.length >= 2 && (written[0] === '"' || written[0] === "'") && written.endsWith(written[0]) ? written[0] : '';
+    const level = quote === '' ? written : written.slice(1, -1);
+    found =
+      level === ''
+        ? undefined
+        : { text: level, start: value.start, end: value.end, with: (other: string) => `${before}${quote}${other}${quote}${after}` };
+  }
+  return found;
+}
+
+/** Where the effort a line's command carries stands on `harness`, or undefined when it carries none. */
+function effortSpan(line: string, command: Word[], harness: Harness): WritableSpan | undefined {
+  const spec = FLAGS[harness].effort;
+  if ('flag' in spec) {
+    return plainSpan(valueSpan(line, command, spec.flag));
+  }
+  return overrideSpan(line, command, spec.flags, spec.key);
+}
+
 /** Reads the harness, model, and effort a line carries, or undefined for a line of no known harness. */
 export function readLine(line: string): LineValues | undefined {
   const command = words(line);
@@ -147,16 +219,13 @@ export function readLine(line: string): LineValues | undefined {
     return undefined;
   }
   const values: LineValues = { harness };
-  const flags = FLAGS[harness];
-  const model = valueSpan(line, command, flags.model);
+  const model = valueSpan(line, command, FLAGS[harness].model);
   if (model !== undefined) {
     values.model = model.text;
   }
-  if (flags.effort !== undefined) {
-    const effort = valueSpan(line, command, flags.effort);
-    if (effort !== undefined) {
-      values.effort = effort.text;
-    }
+  const effort = effortSpan(line, command, harness);
+  if (effort !== undefined) {
+    values.effort = effort.text;
   }
   return values;
 }
@@ -204,15 +273,12 @@ function replaceValue(line: string, kind: 'model' | 'effort', value: string): st
   if (harness === undefined) {
     return undefined;
   }
-  const flag = FLAGS[harness][kind];
-  if (flag === undefined) {
-    return undefined;
-  }
-  const span = valueSpan(line, command, flag);
+  const span: WritableSpan | undefined =
+    kind === 'effort' ? effortSpan(line, command, harness) : plainSpan(valueSpan(line, command, FLAGS[harness].model));
   if (span === undefined) {
     return undefined;
   }
-  return line.slice(0, span.start) + quoted(value, line.slice(span.start, span.end)) + line.slice(span.end);
+  return line.slice(0, span.start) + quoted(span.with(value), line.slice(span.start, span.end)) + line.slice(span.end);
 }
 
 /** The line with its model replaced by `model`, or undefined when the line carries no model. */

@@ -19,16 +19,62 @@ const CLAUDE_LINE =
 const AGY_LINE =
   'agy -p "/gurita:review-mission-requirements --mission <path>" --dangerously-skip-permissions --model "gemini-4-argon" --effort medium;';
 const CODEX_LINE = 'codex exec "/gurita:review-mission-requirements --mission <path>" -m gpt-5.5;';
+const CODEX_EFFORT_LINE =
+  "codex exec '$gurita:review-mission-requirements --mission <path>' --dangerously-bypass-approvals-and-sandbox -m gpt-5.5 -c model_reasoning_effort=high;";
 
 test('a claude, agy, or codex line yields its harness, model, and effort', () => {
   assert.deepStrictEqual(readLine(CLAUDE_LINE), { harness: 'claude', model: 'fable', effort: 'xhigh' });
   assert.deepStrictEqual(readLine(AGY_LINE), { harness: 'agy', model: 'gemini-4-argon', effort: 'medium' });
   assert.deepStrictEqual(readLine(CODEX_LINE), { harness: 'codex', model: 'gpt-5.5' });
+  assert.deepStrictEqual(readLine(CODEX_EFFORT_LINE), { harness: 'codex', model: 'gpt-5.5', effort: 'high' });
 });
 
-test('a Codex line takes its model from -m and reads no effort', () => {
+test('a Codex line takes its model from -m and its effort from the model_reasoning_effort override, never from --model or --effort', () => {
   assert.deepStrictEqual(readLine('codex exec "/gurita:finish-mission" --model gpt-5.5 --effort high;'), { harness: 'codex' });
   assert.deepStrictEqual(readLine('codex -m "gpt-5.5" "/gurita:finish-mission"'), { harness: 'codex', model: 'gpt-5.5' });
+  assert.deepStrictEqual(readLine('codex exec "/x" -c model_reasoning_effort=low;'), { harness: 'codex', effort: 'low' });
+});
+
+test('a Codex effort is read from -c and --config in every spelling, a quoted TOML level without its quotes', () => {
+  for (const [line, effort] of [
+    ['codex exec "/x" -m gpt-5.5 --config model_reasoning_effort=medium;', 'medium'],
+    ['codex exec "/x" -m gpt-5.5 --config=model_reasoning_effort=xhigh;', 'xhigh'],
+    ['codex exec "/x" -m gpt-5.5 -c=model_reasoning_effort=low;', 'low'],
+    ['codex exec "/x" -m gpt-5.5 -c \'model_reasoning_effort="high"\';', 'high'],
+    ['codex exec "/x" -m gpt-5.5 -c "model_reasoning_effort=\'minimal\'";', 'minimal'],
+    ['codex exec "/x" -m gpt-5.5 -c "model_reasoning_effort = high";', 'high'],
+  ]) {
+    assert.deepStrictEqual(readLine(line), { harness: 'codex', model: 'gpt-5.5', effort }, line);
+  }
+});
+
+test('a Codex override of another key, an empty level, or one inside the prompt carries no effort, and the last override wins', () => {
+  assert.deepStrictEqual(readLine('codex exec "/x" -m gpt-5.5 -c model_verbosity=high -c sandbox_mode=read-only;'), { harness: 'codex', model: 'gpt-5.5' });
+  assert.deepStrictEqual(readLine('codex exec "/x" -m gpt-5.5 -c model_reasoning_effort=;'), { harness: 'codex', model: 'gpt-5.5' });
+  assert.deepStrictEqual(readLine('codex exec "/x" -m gpt-5.5 -c;'), { harness: 'codex', model: 'gpt-5.5' });
+  assert.deepStrictEqual(readLine('codex exec "/x -c model_reasoning_effort=high" -m gpt-5.5;'), { harness: 'codex', model: 'gpt-5.5' });
+  assert.deepStrictEqual(readLine('codex exec "/x" -c model_reasoning_effort=high; codex -c model_reasoning_effort=low'), { harness: 'codex', effort: 'high' });
+  assert.deepStrictEqual(
+    readLine('codex exec "/x" -c model_reasoning_effort=low -c model_verbosity=high --config model_reasoning_effort=high;'),
+    { harness: 'codex', effort: 'high' },
+  );
+  assert.deepStrictEqual(readLine('claude -p "/x" -c model_reasoning_effort=high;'), { harness: 'claude' }, 'claude and agy read no override');
+});
+
+test('replacing a Codex effort rewrites only the level, in the spelling and quoting it was written in', () => {
+  assert.strictEqual(
+    replaceEffort(CODEX_EFFORT_LINE, 'xhigh'),
+    "codex exec '$gurita:review-mission-requirements --mission <path>' --dangerously-bypass-approvals-and-sandbox -m gpt-5.5 -c model_reasoning_effort=xhigh;",
+  );
+  assert.strictEqual(replaceEffort('codex exec "/x" --config=model_reasoning_effort=low;', 'medium'), 'codex exec "/x" --config=model_reasoning_effort=medium;');
+  assert.strictEqual(replaceEffort('codex exec "/x" -c \'model_reasoning_effort="high"\';', 'low'), 'codex exec "/x" -c \'model_reasoning_effort="low"\';');
+  assert.strictEqual(replaceEffort('codex exec "/x" -c "model_reasoning_effort = high";', 'low'), 'codex exec "/x" -c "model_reasoning_effort = low";');
+  assert.strictEqual(
+    replaceEffort('codex exec "/x" -c model_reasoning_effort=low -c model_verbosity=high --config model_reasoning_effort=high;', 'medium'),
+    'codex exec "/x" -c model_reasoning_effort=low -c model_verbosity=high --config model_reasoning_effort=medium;',
+    'of an override written twice the last is replaced',
+  );
+  assert.strictEqual(replaceModel(CODEX_EFFORT_LINE, 'gpt-5.5-mini'), CODEX_EFFORT_LINE.replace('-m gpt-5.5', '-m gpt-5.5-mini'), 'the model is replaced apart from the effort');
 });
 
 test('claude and agy take no model from -m', () => {
@@ -88,6 +134,8 @@ test('a value the line does not carry is never inserted', () => {
   assert.strictEqual(replaceModel('claude -p "/x" --effort high;', 'opus'), undefined);
   assert.strictEqual(replaceEffort('claude -p "/x" --model opus;', 'high'), undefined);
   assert.strictEqual(replaceEffort(CODEX_LINE, 'high'), undefined);
+  assert.strictEqual(replaceEffort('codex exec "/x" -m gpt-5.5 -c model_verbosity=high;', 'high'), undefined);
+  assert.strictEqual(replaceEffort('codex exec "/x" --effort high;', 'low'), undefined);
   assert.strictEqual(replaceModel('claude -p "/x --model opus";', 'fable'), undefined);
   assert.strictEqual(replaceModel(SLOT_LINE, 'opus'), undefined);
   assert.strictEqual(replaceModel('git pull --model x;', 'opus'), undefined);
@@ -96,6 +144,7 @@ test('a value the line does not carry is never inserted', () => {
 test('an empty replacement value is refused', () => {
   assert.throws(() => replaceModel(CLAUDE_LINE, ''));
   assert.throws(() => replaceEffort(CLAUDE_LINE, ''));
+  assert.throws(() => replaceEffort(CODEX_EFFORT_LINE, ''));
 });
 
 test("the skill a line runs is read from its first command's arguments, a line of no known harness running none", () => {
@@ -176,6 +225,7 @@ test('every shipped claude or agy line with both flags rewrites onto the other h
 test('a harness pick leaves a line on the picked harness as it is, rewrites no other line, and refuses an empty offer', () => {
   assert.strictEqual(rewriteHarness(CLAUDE_LINE, 'claude', CLAUDE_OFFER), CLAUDE_LINE);
   assert.strictEqual(rewriteHarness(CODEX_LINE, 'claude', CLAUDE_OFFER), undefined, 'a Codex line keeps its harness');
+  assert.strictEqual(rewriteHarness(CODEX_EFFORT_LINE, 'agy', AGY_OFFER), undefined, 'a Codex line carrying a model and an effort keeps its harness too');
   assert.strictEqual(rewriteHarness('claude -p "/gurita:finish-mission" --model opus;', 'agy', AGY_OFFER), undefined, 'a line without both flags');
   assert.strictEqual(rewriteHarness('git pull --model x --effort y;', 'agy', AGY_OFFER), undefined);
   assert.strictEqual(rewriteHarness(SLOT_LINE, 'agy', AGY_OFFER), undefined);

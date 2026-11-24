@@ -127,7 +127,8 @@ above the mission rows.
 - Its description shows the harness, model, and effort of the variant remembered for its recipe,
   read from that variant's lines, for example `Claude Code · sonnet · medium` for the shipped
   `define-mission-goal`. A variant whose lines carry different values names each once, separated
-  by commas, a value no line carries is left out (a Codex line has no effort), and a variant
+  by commas, a value no line carries is left out (a Codex line written without its effort
+  override has no effort), and a variant
   whose lines carry none of the three is described by its name.
 - Its hover text names the recipe, as `Action: <name>`, and the variant, with the variant's
   lines as written beneath them.
@@ -660,12 +661,17 @@ is passed to the runner.
 ### Model and effort lists
 
 Under **Models and efforts** the window holds each harness's model list and its one effort list
-for the whole harness; Codex holds a model list and no effort list. The extension ships no list
+for the whole harness, Claude Code, Antigravity, and Codex alike. The extension ships no list
 of its own and queries no harness: each list is read, every time the window opens, from the values
 the lines of the shipped recipes, your own recipes, and your stored variants carry, `--model` and
-`--effort` on a `claude` or `agy` line and `-m` on a `codex` line, in the order they first appear.
-Codex's model list therefore starts from the Codex lines you have. The list keeps no record of
-which model takes which effort.
+`--effort` on a `claude` or `agy` line, and on a `codex` line `-m` for the model and the config
+override `-c model_reasoning_effort=<level>` for the effort, in the order they first appear. The
+override is read in the `--config` spelling too (`--config model_reasoning_effort=high`,
+`--config=model_reasoning_effort=high`), a level written as a quoted TOML string
+(`-c 'model_reasoning_effort="high"'`) is read without its quotes, and a `-c` naming another key is
+no effort; `--effort` on a `codex` line is not Codex's effort and is not read. Codex's lists
+therefore start from the Codex lines you have. The list keeps no record of which model takes which
+effort.
 
 Each entry has a **Remove** control, which takes it out of the offer, and each list an **Add
 model** or **Add effort** control, which asks for an entry no line uses yet in VS Code's own input
@@ -732,12 +738,14 @@ Beneath each variant stands its line editor, one row per line. A line of a known
 mark), and the line as written in its hover text; on the right of the row stand its harness
 (Claude Code, Antigravity, or Codex) and then its dropdowns. Every other line, a shell step,
 the slot line `<single-task line>`, or a command the extension does not know, is drawn as its
-text. Only a line of a known harness carrying both `--model` and `--effort`, a `claude` or `agy`
-line, gets a model dropdown and an effort dropdown, and its harness is a dropdown too, offering
-Claude Code and Antigravity and standing on the one the line runs on (on a line drawn as its
-text, it stands before the model dropdown); a `codex` line carrying `-m` gets its model dropdown
-alone, since Codex holds no effort list, and keeps its harness as text, Codex not being offered
-in the harness dropdown; every other line, a `claude` or `agy` line without both flags included,
+text. A `claude` or `agy` line carrying both `--model` and `--effort` gets a model dropdown and an
+effort dropdown, and its harness is a dropdown too, offering Claude Code and Antigravity and
+standing on the one the line runs on (on a line drawn as its text, it stands before the model
+dropdown). A `codex` line carrying `-m` gets its model dropdown and, when it also carries the
+override `-c model_reasoning_effort=<level>`, an effort dropdown beside it; a `codex` line written
+without the override has no effort dropdown, since a pick inserts no text, until you write the
+override into the line yourself. A `codex` line keeps its harness as text, Codex not being offered
+in the harness dropdown. Every other line, a `claude` or `agy` line without both flags included,
 gets no dropdown and stays read-only, its harness shown as text. Drawing the rows changes no line,
 stored value, or mission page. The model dropdown offers the harness's model list and the
 effort dropdown its whole effort list, as **Models and efforts** holds them, whatever the line's
@@ -746,7 +754,9 @@ given an effort its model lacks is accepted and stops when it is run, with the h
 message, as a hand-written line does.
 
 A model or effort pick replaces the value the line already carries, in the quoting it was written
-in, and inserts no text into the line. A harness pick rewrites the line onto the picked harness:
+in, and inserts no text into the line; on a `codex` line an effort pick rewrites only the
+override's level, so `-c model_reasoning_effort=high` becomes `-c model_reasoning_effort=xhigh`, in
+the spelling and quoting the override was written in. A harness pick rewrites the line onto the picked harness:
 the line keeps its prompt, its other flags, and its headless or interactive form, so
 `claude -p "…"` becomes `agy -p "…"`, an interactive `claude "…"` becomes `agy -i "…"`, and back;
 it takes the picked harness's first listed model, and it keeps its effort when that harness's

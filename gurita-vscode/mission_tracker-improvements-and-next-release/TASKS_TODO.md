@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Effort on Codex Lines
-
-Read and replace a Codex line's effort in `lineValues.ts` as the config override `-c model_reasoning_effort=<level>`, the `--config` spelling read as well, as `--effort` is read and replaced on the other harnesses' lines. The Settings window gains a Codex effort list under Models and efforts, built like the other two from the values the shipped recipes, own recipes, and stored variants carry with the person's `addedEfforts`/`removedEfforts` overlay on top, and a Codex line gets both a model dropdown and an effort dropdown, a line written without the override having no effort dropdown. Verified by line-value, harness-list, and Settings tests, with `gurita-vscode/README.md` describing the list.
-
----
-
 ## Codex in the Harness Dropdown
 
 Offer Codex in a headless line's harness dropdown in the Settings window, beside Claude Code and Antigravity: a switch to Codex writes `codex exec '$gurita:<skill> …'` with `--dangerously-bypass-approvals-and-sandbox` as the counterpart of `--dangerously-skip-permissions`, the model as `-m`, and the effort as `-c model_reasoning_effort=<level>`, kept when Codex's effort list offers it and the list's first otherwise, and a Codex line switched back to Claude Code or Antigravity keeps or maps its effort the same way. An empty Codex model list still refuses the switch with today's error notification, so every line the switch writes carries `-m`, while an empty Codex effort list lets the switch go ahead with no effort override written. Verified by line-value tests of each switch and its round trip and Settings tests of the dropdown and both empty-list cases, with `gurita-vscode/README.md` describing the switch.

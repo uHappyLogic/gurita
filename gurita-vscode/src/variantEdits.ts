@@ -30,8 +30,9 @@
 // variants a hiding record hides, and each variant's lines
 // with the line editor each one gets (`lineEditor`): only a `claude` or `agy` line carrying both
 // `--model` and `--effort` gets model and effort controls, and a harness control picking between
-// Claude Code and Antigravity, and a `codex` line carrying `-m` its model control alone, every
-// other line shown as its text, read-only. A harness pick (`replaceLineHarness`) rewrites the
+// Claude Code and Antigravity, and a `codex` line carrying `-m` its model control and, when it also
+// carries the override `-c model_reasoning_effort=<level>`, its effort control, keeping its
+// harness, every other line shown as its text, read-only. A harness pick (`replaceLineHarness`) rewrites the
 // line onto the picked harness as `rewriteHarness` in `lineValues.ts` does, with that harness's
 // lists as the settings view offers them, and stores the changed line as a model or effort pick
 // is stored. Each line is also posted
@@ -174,8 +175,9 @@ export function resettableVariants(store: VariantStore, recipe: string): ReadVar
 /**
  * The line editor one line of a variant gets in the settings view: the key of the harness whose
  * lists its dropdowns offer, the model the line carries, and the effort it carries, left out for a
- * Codex line, which gets its model control alone. A line posted with an effort, on Claude Code or
- * Antigravity, also gets a harness control picking between those two.
+ * Codex line written without the effort override, which gets its model control alone. A line
+ * posted with an effort, on Claude Code or Antigravity, also gets a harness control picking
+ * between those two.
  */
 export interface LineEditor {
   harness: CheckedHarness['key'];
@@ -185,7 +187,8 @@ export interface LineEditor {
 
 /**
  * The line editor `line` gets: model and effort controls for a `claude` or `agy` line carrying
- * both `--model` and `--effort`, a model control alone for a `codex` line carrying `-m`, and none,
+ * both `--model` and `--effort`, a model control for a `codex` line carrying `-m` and an effort
+ * control beside it when the line also carries `-c model_reasoning_effort=<level>`, and none,
  * the line shown as its text, read-only, for every other line, a line of a known harness without
  * both flags included.
  */
@@ -199,7 +202,7 @@ export function lineEditor(line: string): LineEditor | undefined {
     return undefined;
   }
   if (read.harness === 'codex') {
-    return { harness, model: read.model };
+    return read.effort === undefined ? { harness, model: read.model } : { harness, model: read.model, effort: read.effort };
   }
   return read.effort === undefined ? undefined : { harness, model: read.model, effort: read.effort };
 }

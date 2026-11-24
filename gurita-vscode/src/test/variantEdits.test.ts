@@ -486,7 +486,7 @@ test('the settings list holds every recipe but the single-task lines, a recipe w
   assert.deepStrictEqual(listed.filter((recipe) => recipe.fixed).map((recipe) => recipe.name), ['answer-open-question']);
 });
 
-test('only a claude or agy line carrying both --model and --effort gets model and effort controls, a codex line with -m its model control alone', () => {
+test('only a claude or agy line carrying both --model and --effort gets model and effort controls, a codex line with -m its model control and, with the effort override, its effort control', () => {
   assert.deepStrictEqual(lineEditor('claude -p "/gurita:finish-mission --mission <path>" --model "opus" --effort high;'), {
     harness: 'claude',
     model: 'opus',
@@ -494,11 +494,18 @@ test('only a claude or agy line carrying both --model and --effort gets model an
   });
   assert.deepStrictEqual(lineEditor('agy -p "x" --model=gemini-4-argon --effort medium;'), { harness: 'antigravity', model: 'gemini-4-argon', effort: 'medium' });
   assert.deepStrictEqual(lineEditor('codex exec "/gurita:finish-mission --mission <path>" -m gpt-5.5;'), { harness: 'codex', model: 'gpt-5.5' });
+  assert.deepStrictEqual(lineEditor("codex exec '$gurita:finish-mission --mission <path>' -m gpt-5.5 -c model_reasoning_effort=high;"), {
+    harness: 'codex',
+    model: 'gpt-5.5',
+    effort: 'high',
+  });
+  assert.deepStrictEqual(lineEditor('codex exec "x" -m gpt-5.5 --effort high;'), { harness: 'codex', model: 'gpt-5.5' }, "a Codex line's --effort gives no effort control");
   for (const line of [
     'claude -p "x" --model "opus";',
     'agy -p "x" --effort high;',
     'claude "/gurita:discuss-mission-goal <goal>"; # interactive',
     'codex exec "x";',
+    'codex exec "x" -c model_reasoning_effort=high;',
     '<single-task line>',
     'echo <path>',
     'gemini -p "x" --model "pro" --effort high;',
