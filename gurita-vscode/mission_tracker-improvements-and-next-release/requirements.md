@@ -127,5 +127,9 @@ Five missions under `gurita-vscode/` are finished, all between 2026-11-20 and 20
 
 - **Finished missions bound.** The finished-missions row expands to every finished mission the record holds: the extension calls the bundled tool's `missions .` with no `--last` and keeps every `finished` line, newest first as the tool sorts them. No count, setting, or further row limits the list.
 
+### Listing README
+
+- **Reference document location.** The reference prose moves into one new Markdown file in the extension's own directory, standing beside `README.md`, `BUILDING.md`, and `CHANGELOG.md` (for example `gurita-vscode/USAGE.md`), keeping the README's current section order (side-bar view, mission windows, Settings window, recipes, looped task run, runner). `.vscodeignore` keeps it out of the VSIX as it keeps `BUILDING.md`, and the shortened README links to it by its absolute GitHub URL, the form its `BUILDING.md` link already takes.
+
 ## Out of Scope
 
