@@ -772,22 +772,31 @@ their own on the page, and the notes on running the `agy` lines stand as prose a
 recipe section. Each chain is shipped once, not once per harness: a line is moved onto the other
 harness from its harness dropdown in the Settings window (see Variants above), so no recipe is
 grouped into one copy per harness. Three shipped recipes hold `####` variants:
-`Requirements iteration` (`default` and `Mixed-agent (Gemini reviews, Claude annotates)`),
+`Approve all standing recommendations and review again` (`default` alone),
 `Prepare and Execute tasks`, and `Execute tasks` (each `Normal difficulty` and
 `Critical tasks`); every other shipped recipe is one fenced block with no `####` sub-heading, a
 recipe of one variant named by its heading. A stored copy of
 a variant the file no longer holds, such as an `Antigravity` variant an earlier copy of the file
 shipped, stays listed as a stored variant of its recipe, after the shipped one.
 
+`Approve all standing recommendations and review again` was shipped as `Requirements iteration`,
+which also held a second variant, `Mixed-agent (Gemini reviews, Claude annotates)`, that the file
+no longer ships. Nothing carries what you stored or selected under the old name over to the new
+one, as nothing renames what you stored under a one-block recipe's old variant name: variants you
+stored under `Requirements iteration`, stored copies of its `default` or mixed-agent variant
+included, form a recipe of your own called `Requirements iteration`, listed last under
+**Your recipes** and, declaring no step, on every page; a hiding record or a picked default under
+the old name matches no variant, so the renamed recipe shows its shipped variant and opens on it;
+and a remembered selection is kept only while that recipe of your own still lists the variant it
+names. Move what you want to keep onto the new name by hand in the Settings window.
+
 Every chain in the file declares the one step it runs, once for the whole recipe, and spans no
 other:
 
 - **first review round**: `First run`, one block of `claude` lines.
-- **additional review round**: `Requirements iteration`, whose `default` variant is one block of
-  `claude` lines (the answer sweep, a review, the alternatives pass, and an interactive
-  recommendation pass) and whose second variant, `Mixed-agent (Gemini reviews, Claude annotates)`,
-  mixes `agy` and `claude` lines: an `agy` review followed by the `claude` alternatives pass,
-  recommendation pass, and answer sweep.
+- **additional review round**: `Approve all standing recommendations and review again`, whose one
+  variant, `default`, is one block of `claude` lines (the answer sweep, a review, the
+  alternatives pass, and an interactive recommendation pass).
 - **derive tasks**: `Prepare tasks`, the answer sweep and `derive-tasks`, one block of `claude`
   lines; and `Prepare and Execute tasks`, whose two variants, `Normal difficulty` and
   `Critical tasks`, each hold those two lines followed by the `complete-all-tasks` line of the
@@ -799,11 +808,13 @@ other:
   `Prepare and Execute tasks`, before an execution chain completes them.
 - **finish**: `Finish mission`, one `claude` line.
 
-A page filling **derive tasks** thus lists `Requirements iteration`, `Prepare tasks`, and
-`Prepare and Execute tasks`; one filling **first review round** lists `Requirements iteration`
-beside `First run` while a question is open, such as on a mission whose first review left
+A page filling **derive tasks** thus lists
+`Approve all standing recommendations and review again`, `Prepare tasks`, and
+`Prepare and Execute tasks`; one filling **first review round** lists
+`Approve all standing recommendations and review again` beside `First run` while a question is open, such as on a mission whose first review left
 questions lacking alternatives or a pick, and `First run` alone on a fresh mission with no open
-question; one filling **additional review round** lists `Requirements iteration` alone; one
+question; one filling **additional review round** lists
+`Approve all standing recommendations and review again` alone; one
 filling **execute tasks** lists `Execute tasks`; and one filling **finish** lists
 `Finish mission`. No shipped recipe is looped, so the looped task run is reached through a recipe
 of your own whose last line is the slot line `<single-task line>` (see the looped task run

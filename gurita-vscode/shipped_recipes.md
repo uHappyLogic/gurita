@@ -28,7 +28,7 @@ claude -p "/gurita:provide-alternatives-to-all-open-questions --mission <path>" 
 claude "/gurita:recommend-all-open-questions --mission <path>" --dangerously-skip-permissions --model "fable" --effort xhigh; # interactive
 ```
 
-### Requirements iteration
+### Approve all standing recommendations and review again
 Stage: additional review round
 
 #### default
@@ -37,14 +37,6 @@ claude -p "/gurita:answer-all-open-questions-with-recommendation --mission <path
 claude -p "/gurita:review-mission-requirements --mission <path>" --dangerously-skip-permissions --model "fable" --effort high;
 claude -p "/gurita:provide-alternatives-to-all-open-questions --mission <path>" --dangerously-skip-permissions --model "opus" --effort high;
 claude "/gurita:recommend-all-open-questions --mission <path>" --dangerously-skip-permissions --model "fable" --effort xhigh; # interactive
-```
-
-#### Mixed-agent (Gemini reviews, Claude annotates)
-```
-agy -p "/gurita:review-mission-requirements --mission <path>" --dangerously-skip-permissions --model "gemini-4-argon" --effort medium;
-claude -p "/gurita:provide-alternatives-to-all-open-questions --mission <path>" --dangerously-skip-permissions --model "opus" --effort high;
-claude -p "/gurita:recommend-all-open-questions --mission <path>" --dangerously-skip-permissions --model "fable" --effort xhigh;
-claude -p "/gurita:answer-all-open-questions-with-recommendation --mission <path>" --dangerously-skip-permissions --model "fable" --effort high;
 ```
 
 ### Prepare tasks

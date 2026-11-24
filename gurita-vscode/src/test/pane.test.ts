@@ -2353,7 +2353,7 @@ Stage: first review round
 claude -p "/gurita:review-mission-requirements --mission <path>" --model "fable" --effort xhigh;
 \`\`\`
 
-### Requirements iteration
+### Approve all standing recommendations and review again
 Stage: additional review round
 \`\`\`
 claude -p "/gurita:review-mission-requirements --mission <path>" --model "fable" --effort xhigh;
@@ -2407,17 +2407,17 @@ test("a page filling first review round lists the additional review round's reci
     assert.deepStrictEqual(page(FRESH)?.recipes.recipes.map((entry) => entry.name), ['First run'], 'a fresh mission with no open question lists First run alone');
     assert.deepStrictEqual(
       page(REVIEWED)?.recipes.recipes.map((entry) => entry.name),
-      ['First run', 'Requirements iteration', 'Mixed review'],
+      ['First run', 'Approve all standing recommendations and review again', 'Mixed review'],
       'an open question lists the additional review round beside First run',
     );
     const count = created.length;
-    send({ type: 'runRecipe', mission: REVIEWED, recipe: 'Requirements iteration', variant: 'default' });
-    send({ type: 'runRecipe', mission: FRESH, recipe: 'Requirements iteration', variant: 'default' });
-    sendFrom(FRESH, { type: 'runRecipe', mission: REVIEWED, recipe: 'Requirements iteration', variant: 'default' });
+    send({ type: 'runRecipe', mission: REVIEWED, recipe: 'Approve all standing recommendations and review again', variant: 'default' });
+    send({ type: 'runRecipe', mission: FRESH, recipe: 'Approve all standing recommendations and review again', variant: 'default' });
+    sendFrom(FRESH, { type: 'runRecipe', mission: REVIEWED, recipe: 'Approve all standing recommendations and review again', variant: 'default' });
     assert.deepStrictEqual(
       created.slice(count).map((terminal) => terminal.name),
-      [`Gurita: Requirements iteration (${REVIEWED})`],
-      'Requirements iteration runs from the page listing it, and from no other',
+      [`Gurita: Approve all standing recommendations and review again (${REVIEWED})`],
+      'Approve all standing recommendations and review again runs from the page listing it, and from no other',
     );
   } finally {
     process.env.HOME = home;

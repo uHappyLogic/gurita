@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Rename the Requirements Iteration Chain
-
-Rename the shipped recipe `Requirements iteration` in `gurita-vscode/shipped_recipes.md` to `Approve all standing recommendations and review again`, keeping its `default` variant with every line unchanged as the recipe's only one and removing the `Mixed-agent (Gemini reviews, Claude annotates)` variant altogether with no replacement, and rename the `### Requirements iteration` heading of `snippets/GURITA_USAGE.md` in the same change, that heading alone. State stored under the old name gets no migration and no alias, the variant store format, `overlayVariantStore`, `variantEdits.ts`, and the `workspaceState` selections staying unchanged, and `gurita-vscode/README.md` says that nothing carries stored state over to the new name. Verified by the recipe tests reading the renamed one-variant recipe and stored variants under the old name forming an own recipe called `Requirements iteration`, with the test files and `CLAUDE.md`'s layout entry naming the recipe as renamed.
-
----
-
 ## Actions Named Where a Recipe Is Fired
 
 Call a recipe an "action" wherever the user fires one and an "action recipe" in the Settings window: the mission page's `Recipes` and `Your recipes` headings, its failure line (`The actions could not be read.`), the error notifications (`No action is named <name>.`), the hover text of the side-bar view's two mission-starting rows (`Action: <name>`), and the Settings window's note, prompts, and refusals. The recipe files, their `## Recipes` heading (`RECIPE_SECTION`), the `gurita.ownRecipesFile` setting with its description, and the README's prose keep "recipe", the README stating once that each recipe in a recipe file is shown as an action where it is fired and as an action recipe in the Settings window. Verified by the page, pane, tree, and Settings tests asserting the renamed texts and by a check of the manifest's unchanged setting.

@@ -298,7 +298,7 @@ test("each mission's page draws its shipped recipes under no heading, then its o
   const derive = {
     state: 'read',
     recipes: [
-      runnable('Requirements iteration', 'shipped', ['claude -p "/gurita:review-mission-requirements --mission <path>"']),
+      runnable('Approve all standing recommendations and review again', 'shipped', ['claude -p "/gurita:review-mission-requirements --mission <path>"']),
       runnable('Prepare tasks', 'shipped', ['claude -p "/gurita:derive-tasks --mission <path>"']),
       runnable('Prepare tasks (Antigravity)', 'shipped', ['agy -p "/gurita:derive-tasks --mission <path>"']),
       runnable('Mine everywhere', 'own', ['echo <path>']),
@@ -322,14 +322,14 @@ test("each mission's page draws its shipped recipes under no heading, then its o
   };
   const page = loadPage();
   page.send(pageOf(mission(ALPHA, 'Alpha', { step: 'derive', recipes: derive })));
-  assert.deepStrictEqual(recipeNames(page), ['Requirements iteration', 'Prepare tasks', 'Prepare tasks (Antigravity)', 'Mine everywhere']);
+  assert.deepStrictEqual(recipeNames(page), ['Approve all standing recommendations and review again', 'Prepare tasks', 'Prepare tasks (Antigravity)', 'Mine everywhere']);
   assert.deepStrictEqual(recipeGroups(page), ['Your recipes']);
   const section = page.root.all().find((each) => each.has('recipes')) as FakeElement;
   assert.deepStrictEqual(
     section.children.filter((child): child is FakeElement => child instanceof FakeElement).map((child) =>
       child.has('recipe-list') ? child.children.map((entry) => shownName((entry as FakeElement).children[0] as FakeElement)) : child.textContent,
     ),
-    ['Recipes', ['Requirements iteration', 'Prepare tasks', 'Prepare tasks (Antigravity)'], 'Your recipes', ['Mine everywhere']],
+    ['Recipes', ['Approve all standing recommendations and review again', 'Prepare tasks', 'Prepare tasks (Antigravity)'], 'Your recipes', ['Mine everywhere']],
     'the shipped recipes stand directly under Recipes, in the order posted, and the own group below them',
   );
   assert.ok(!recipeGroups(page).includes('Claude Code') && !recipeGroups(page).includes('Antigravity'));
@@ -1331,7 +1331,7 @@ test('a harness check or settings message posted to a mission window changes not
 
 test("after a harness is disabled in the Settings window the page draws the list the extension posts: the variant gone from its dropdown and a recipe left with none gone", () => {
   const both = runnable(
-    'Requirements iteration',
+    'Approve all standing recommendations and review again',
     'shipped',
     ['claude -p "/gurita:review-mission-requirements --mission <path>"'],
     [
@@ -1347,11 +1347,11 @@ test("after a harness is disabled in the Settings window the page draws the list
       .all()
       .filter((each) => each.tagName === 'option')
       .map((each) => each.textContent);
-  assert.deepStrictEqual(recipeNames(page), ['Requirements iteration', 'Gemini review']);
+  assert.deepStrictEqual(recipeNames(page), ['Approve all standing recommendations and review again', 'Gemini review']);
   assert.deepStrictEqual(options(), ['Claude Code', 'Antigravity', 'default']);
-  const narrowed = runnable('Requirements iteration', 'shipped', (both as { lines: string[] }).lines, [{ name: 'Claude Code', own: false }]);
+  const narrowed = runnable('Approve all standing recommendations and review again', 'shipped', (both as { lines: string[] }).lines, [{ name: 'Claude Code', own: false }]);
   page.send(pageOf(mission(ALPHA, 'Alpha', { step: 'derive', recipes: { state: 'read', recipes: [narrowed] } })));
-  assert.deepStrictEqual(recipeNames(page), ['Requirements iteration']);
+  assert.deepStrictEqual(recipeNames(page), ['Approve all standing recommendations and review again']);
   assert.deepStrictEqual(options(), ['Claude Code'], 'the left-out variant is gone from the dropdown, and the recipe left with none with its button');
   assert.ok(texts(page).includes('Discuss'), 'the fixed-name buttons are drawn as before');
 });

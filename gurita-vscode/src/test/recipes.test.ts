@@ -7,6 +7,7 @@ import {
   BUTTON_RECIPES,
   buttonRecipe,
   declaredStage,
+  defaultVariant,
   firstVariant,
   isHeadless,
   mergeRecipes,
@@ -377,7 +378,7 @@ test('every shipped chain declares exactly one step, and no shipped recipe decla
     chains.map((recipe) => [recipe.group, recipe.name, recipe.stage]),
     [
       ['shipped', 'First run', 'first-review'],
-      ['shipped', 'Requirements iteration', 'additional-review'],
+      ['shipped', 'Approve all standing recommendations and review again', 'additional-review'],
       ['shipped', 'Prepare tasks', 'derive'],
       ['shipped', 'Prepare and Execute tasks', 'derive'],
       ['shipped', 'Execute tasks', 'execute'],
@@ -444,23 +445,23 @@ test('Prepare and Execute tasks declares derive tasks, each variant the two Prep
   assert.deepStrictEqual(recipe.variants.map((variant) => variant.name), ['Normal difficulty', 'Critical tasks']);
 });
 
-test('First run, Prepare tasks, and Finish mission are each one block with no `####`, Requirements iteration holds default and the mixed-agent chain, and no shipped chain variant but the mixed-agent one holds a line run on Antigravity', () => {
+test('First run, Prepare tasks, and Finish mission are each one block with no `####`, Approve all standing recommendations and review again holds default alone, the mixed-agent chain shipped nowhere, and no shipped chain variant holds a line run on Antigravity', () => {
   const recipes = parseShippedRecipes(fs.readFileSync(SHIPPED_RECIPES, 'utf8'), SHIPPED_RECIPES);
   const variants = (name: string) =>
     byName(recipes, name).variants.map((variant) => [variant.name, variant.lines.map((line) => line.split(' ')[0])]);
   assert.deepStrictEqual(variants('First run'), [['default', ['claude', 'claude', 'claude', 'claude']]]);
-  const MIXED = 'Mixed-agent (Gemini reviews, Claude annotates)';
-  assert.deepStrictEqual(variants('Requirements iteration'), [
-    ['default', ['claude', 'claude', 'claude', 'claude']],
-    [MIXED, ['agy', 'claude', 'claude', 'claude']],
-  ]);
-  assert.deepStrictEqual(byName(recipes, 'Requirements iteration').variants[1].lines, [
-    'agy -p "/gurita:review-mission-requirements --mission <path>" --dangerously-skip-permissions --model "gemini-4-argon" --effort medium;',
-    'claude -p "/gurita:provide-alternatives-to-all-open-questions --mission <path>" --dangerously-skip-permissions --model "opus" --effort high;',
-    'claude -p "/gurita:recommend-all-open-questions --mission <path>" --dangerously-skip-permissions --model "fable" --effort xhigh;',
+  assert.deepStrictEqual(variants('Approve all standing recommendations and review again'), [['default', ['claude', 'claude', 'claude', 'claude']]]);
+  assert.deepStrictEqual(byName(recipes, 'Approve all standing recommendations and review again').variants[0].lines, [
     'claude -p "/gurita:answer-all-open-questions-with-recommendation --mission <path>" --dangerously-skip-permissions --model "fable" --effort high;',
+    'claude -p "/gurita:review-mission-requirements --mission <path>" --dangerously-skip-permissions --model "fable" --effort high;',
+    'claude -p "/gurita:provide-alternatives-to-all-open-questions --mission <path>" --dangerously-skip-permissions --model "opus" --effort high;',
+    'claude "/gurita:recommend-all-open-questions --mission <path>" --dangerously-skip-permissions --model "fable" --effort xhigh; # interactive',
   ]);
-  assert.ok(!recipes.some((recipe) => recipe.name.startsWith('Mixed-agent')), 'the mixed-agent chain is no recipe of its own');
+  assert.ok(!recipes.some((recipe) => recipe.name === 'Requirements iteration'), 'the old name is shipped no more');
+  assert.ok(
+    !recipes.some((recipe) => recipe.name.startsWith('Mixed-agent') || recipe.variants.some((variant) => variant.name.startsWith('Mixed-agent'))),
+    'the mixed-agent chain is shipped as no recipe and no variant',
+  );
   assert.deepStrictEqual(variants('Prepare tasks'), [['default', ['claude', 'claude']]]);
   assert.deepStrictEqual(variants('Finish mission'), [['default', ['claude']]]);
   const single = recipes.filter((recipe) => firstVariant(recipe).singleTask);
@@ -477,9 +478,6 @@ test('First run, Prepare tasks, and Finish mission are each one block with no `#
   }
   for (const recipe of recipes.filter((each) => !single.includes(each))) {
     for (const variant of recipe.variants) {
-      if (recipe.name === 'Requirements iteration' && variant.name === MIXED) {
-        continue;
-      }
       assert.ok(!variant.lines.some((line) => line.startsWith('agy ')), `${recipe.name} / ${variant.name} ships no Antigravity line`);
       assert.ok(!/Claude Code|Antigravity/.test(variant.name), `${recipe.name} / ${variant.name} names no harness`);
     }
@@ -515,6 +513,54 @@ test('a stored copy of a shipped variant the file no longer holds stays listed a
     ['Normal difficulty', 'Critical tasks'],
     'a hiding record of a removed variant hides nothing that stands',
   );
+});
+
+test('stored variants under the old name Requirements iteration form an own recipe of that name, and nothing under it reaches the renamed recipe', () => {
+  const recipes = parseShippedRecipes(fs.readFileSync(SHIPPED_RECIPES, 'utf8'), SHIPPED_RECIPES);
+  const RENAMED = 'Approve all standing recommendations and review again';
+  const OLD = 'Requirements iteration';
+  const MIXED = 'Mixed-agent (Gemini reviews, Claude annotates)';
+  const file = '/home/someone/.gurita/variants.json';
+  const copied = ['claude -p "/gurita:review-mission-requirements --mission <path>" --dangerously-skip-permissions --model "opus" --effort high;'];
+  const mixed = ['agy -p "/gurita:review-mission-requirements --mission <path>" --dangerously-skip-permissions --model "gemini-4-argon" --effort medium;'];
+  const mine = ['claude -p "/gurita:review-mission-requirements --mission <path>" --dangerously-skip-permissions --model "fable" --effort xhigh;'];
+  const store = parseVariantStore(
+    JSON.stringify({
+      variants: [
+        { recipe: OLD, name: 'default', lines: copied, copies: { name: 'default', origin: 'shipped' } },
+        { recipe: OLD, name: MIXED, lines: mixed, copies: { name: MIXED, origin: 'shipped' } },
+        { recipe: OLD, name: 'Mine', lines: mine },
+      ],
+      hidden: [{ recipe: OLD, name: 'default', origin: 'shipped' }],
+      defaults: [{ recipe: OLD, name: MIXED, origin: 'shipped' }],
+    }),
+    file,
+  );
+  const overlaid = overlayVariantStore(recipes, store, file);
+  const renamed = byName(overlaid, RENAMED);
+  assert.deepStrictEqual(
+    renamed.variants.map((variant) => [variant.name, variant.own, variant.stored === true, variant.lines]),
+    [['default', false, false, byName(recipes, RENAMED).variants[0].lines]],
+    'the renamed recipe shows its one shipped variant, no record under the old name hiding or replacing it',
+  );
+  assert.strictEqual(renamed.picked, undefined, 'a picked default under the old name is no pick of the renamed recipe');
+  assert.strictEqual(defaultVariant(renamed).name, 'default', 'the renamed recipe opens on its first variant');
+  const orphan = byName(overlaid, OLD);
+  assert.strictEqual(orphan.group, 'own');
+  assert.strictEqual(orphan.stage, undefined, 'the orphan recipe declares no step');
+  assert.deepStrictEqual(
+    orphan.variants.map((variant) => [variant.name, variant.own, variant.stored === true, variant.lines]),
+    [
+      ['default', true, true, copied],
+      [MIXED, true, true, mixed],
+      ['Mine', true, true, mine],
+    ],
+    'every variant stored under the old name, stored copies of its default and mixed-agent variant included, stands in the orphan recipe',
+  );
+  assert.strictEqual(overlaid[overlaid.length - 1], orphan, 'the orphan recipe is listed last');
+  for (const step of WORKFLOW_STEPS) {
+    assert.ok(stageRecipes(overlaid, step).includes(orphan), `the orphan recipe is listed on a page filling ${step}`);
+  }
 });
 
 test("every single-task line this repository's rule file names is a shipped single-task heading", () => {
@@ -631,16 +677,16 @@ test('each step lists exactly the shipped chains that fit it, and no step chosen
   const recipes = parseShippedRecipes(fs.readFileSync(SHIPPED_RECIPES, 'utf8'), SHIPPED_RECIPES);
   const at = (step: WorkflowStep | undefined) =>
     pageRecipes(stageRecipes(recipes, step), ['path']).map((entry) => [entry.group, entry.name]);
-  const review = [['shipped', 'Requirements iteration']];
+  const review = [['shipped', 'Approve all standing recommendations and review again']];
   assert.deepStrictEqual(at('first-review'), [['shipped', 'First run']], 'a fresh mission with no open question lists First run alone');
   assert.deepStrictEqual(
     pageRecipes(stageRecipes(recipes, 'first-review', true), ['path']).map((entry) => [entry.group, entry.name]),
     [['shipped', 'First run'], ...review],
-    'a first review round with a question open lists Requirements iteration beside First run',
+    'a first review round with a question open lists Approve all standing recommendations and review again beside First run',
   );
-  assert.deepStrictEqual(at('additional-review'), review, 'the additional review round lists Requirements iteration alone');
+  assert.deepStrictEqual(at('additional-review'), review, 'the additional review round lists Approve all standing recommendations and review again alone');
   assert.deepStrictEqual(at('derive'), [
-    ['shipped', 'Requirements iteration'],
+    ['shipped', 'Approve all standing recommendations and review again'],
     ['shipped', 'Prepare tasks'],
     ['shipped', 'Prepare and Execute tasks'],
   ]);

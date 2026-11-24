@@ -26,7 +26,7 @@ claude -p "/gurita:provide-alternatives-to-all-open-questions --mission <path>" 
 claude "/gurita:recommend-all-open-questions --mission <path>" --dangerously-skip-permissions --model "fable" --effort xhigh; # interactive
 ```
 
-### Requirements iteration
+### Approve all standing recommendations and review again
 Stage: additional review round
 ```
 claude -p "/gurita:answer-all-open-questions-with-recommendation --mission <path>" --dangerously-skip-permissions --model "fable" --effort high;
