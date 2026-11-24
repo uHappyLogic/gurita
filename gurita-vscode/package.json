@@ -158,6 +158,12 @@
           "default": "",
           "scope": "application",
           "markdownDescription": "The path of your own recipe file, read beside the shipped recipes. Left empty, `~/.gurita/recipes.md` is read. A leading `~` stands for your home directory."
+        },
+        "gurita.autoCloseFinishedRuns": {
+          "type": "boolean",
+          "default": true,
+          "scope": "application",
+          "markdownDescription": "Close a run's terminal by itself once the run finishes: a chain that ran all its lines, or a looped task run that ends with no task remaining, prints its report and exits without waiting for a keypress. A run that stopped still waits for a keypress. Turned off, every run's terminal waits for a keypress."
         }
       }
     }

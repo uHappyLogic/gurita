@@ -184,7 +184,7 @@ const stub = {
     get workspaceFolders() {
       return workspace.folders;
     },
-    getConfiguration: () => ({ get: (key: string) => workspace.settings[key] }),
+    getConfiguration: () => ({ get: (key: string, fallback?: unknown) => (key in workspace.settings ? workspace.settings[key] : fallback) }),
     openTextDocument: (uri: StubUri): Promise<StubDocument> => Promise.resolve({ uri, languageId: 'plaintext' }),
     createFileSystemWatcher: (glob: { base: { fsPath: string }; pattern: string }) => {
       const watcher: StubWatcher = { base: glob.base.fsPath, pattern: glob.pattern, listeners: { create: [], change: [], delete: [] }, disposed: false };
@@ -1258,7 +1258,7 @@ test("disabling a harness is stored in the variant store's harness part and leav
       await new Promise((resolve) => setTimeout(resolve, 10));
     }
     assert.deepStrictEqual(created.slice(count).map((terminal) => terminal.name), ['Gurita: discuss-mission-goal']);
-    assert.match(created[created.length - 1].args.join(' '), /^\S+ chain -- agy /);
+    assert.match(created[created.length - 1].args.join(' '), /^\S+ chain --close-when-finished -- agy /);
 
     from = posted.length;
     send({ type: 'setHarnessEnabled', harness: 'agy', enabled: false });
@@ -1524,14 +1524,14 @@ test('the settings view lists every recipe with its variants and carries out eac
     assert.deepStrictEqual(shown.dropdown, ['Claude Code', 'Gemini', 'default'], 'a deleted duplicate leaves the store');
 
     // The fixed-name button runs the default picked in the settings view, its pages posted again with every edit.
-    assert.match(await discussGoal(), / chain -- agy /, 'the shipped variant runs first');
+    assert.match(await discussGoal(), / chain --close-when-finished -- agy /, 'the shipped variant runs first');
     recipes = (await edit({ type: 'pickDefault', recipe: 'discuss-mission-goal', variant: { name: 'default', origin: 'own' } })).recipes;
     assert.deepStrictEqual(variantRows(recipes)[3][2], ['default (shipped)', 'default (own) *']);
-    assert.match(await discussGoal(), / chain -- claude /, 'the picked own variant runs');
+    assert.match(await discussGoal(), / chain --close-when-finished -- claude /, 'the picked own variant runs');
     recipes = (await edit({ type: 'deleteVariant', recipe: 'discuss-mission-goal', variant: { name: 'default', origin: 'own' } })).recipes;
     assert.deepStrictEqual(variantRows(recipes)[3], ['discuss-mission-goal', true, ['default (shipped) *'], ['default (own)']]);
     assert.deepStrictEqual(stored().defaults, [{ recipe: 'First run', name: 'Antigravity', origin: 'shipped' }], 'deleting the picked default drops its pick');
-    assert.match(await discussGoal(), / chain -- agy /, 'the button falls back to the first listed variant');
+    assert.match(await discussGoal(), / chain --close-when-finished -- agy /, 'the button falls back to the first listed variant');
 
     // A dismissed box, a message naming no listed variant, or no variant in form writes and posts nothing.
     const before = fs.readFileSync(store, 'utf8');
@@ -2211,7 +2211,7 @@ test("every fixed-name button on a mission's page is posted with the variants it
       await new Promise((resolve) => setTimeout(resolve, 10));
     }
     assert.strictEqual(created.length, count + 1);
-    assert.match(created[created.length - 1].args.join(' '), / chain -- claude "\/gurita:discuss-new-task/);
+    assert.match(created[created.length - 1].args.join(' '), / chain --close-when-finished -- claude "\/gurita:discuss-new-task/);
     assert.strictEqual(execFileSync('git', ['status', '--porcelain', '--ignored'], { cwd: root, encoding: 'utf8' }), '', "nothing is written into the project's tree");
   } finally {
     process.env.HOME = home;
@@ -2293,7 +2293,7 @@ test('the Ask in mission context button asks for a required question, refusing a
     assert.strictEqual(box.validateInput('Why?'), undefined);
     assert.ok(run.terminal !== undefined, 'the click starts a run');
     assert.ok(
-      run.terminal.args.join(' ').includes(' chain -- claude "/gurita:ask-in-mission-context --mission ${GURITA_PATH} ${GURITA_QUESTION}" --model "fable" --effort high; # interactive'),
+      run.terminal.args.join(' ').includes(' chain --close-when-finished -- claude "/gurita:ask-in-mission-context --mission ${GURITA_PATH} ${GURITA_QUESTION}" --model "fable" --effort high; # interactive'),
       `the run's line is the interactive line of the variant selected, its placeholders written as session variables: ${run.terminal.args.join(' ')}`,
     );
     assert.strictEqual(run.terminal.env?.GURITA_PATH, TAU);
@@ -2311,7 +2311,7 @@ test('the Ask in mission context button asks for a required question, refusing a
     run = await click(KOPPA, 'Sonnet', ['Why?']);
     assert.ok(run.terminal !== undefined);
     assert.ok(
-      run.terminal.args.join(' ').includes(' chain -- claude "/gurita:ask-in-mission-context --mission ${GURITA_PATH} ${GURITA_QUESTION}" --model "sonnet" --effort medium; # interactive'),
+      run.terminal.args.join(' ').includes(' chain --close-when-finished -- claude "/gurita:ask-in-mission-context --mission ${GURITA_PATH} ${GURITA_QUESTION}" --model "sonnet" --effort medium; # interactive'),
       run.terminal.args.join(' '),
     );
     assert.strictEqual(run.terminal.env?.GURITA_QUESTION, 'Why?');
@@ -2510,9 +2510,9 @@ test("a fixed-name button's dropdown selection is remembered in workspaceState p
       undefined,
       'a click posted for the removed answer-with-recommendation button starts nothing',
     );
-    assert.match((await click({ type: 'questionButton', button: 'discussQuestion', mission: NU, question: 'Pane Layout', variant: 'Gemini' }, [''])) ?? '', / chain -- agy -i "\/gurita:discuss-open-question/);
+    assert.match((await click({ type: 'questionButton', button: 'discussQuestion', mission: NU, question: 'Pane Layout', variant: 'Gemini' }, [''])) ?? '', / chain --close-when-finished -- agy -i "\/gurita:discuss-open-question/);
     assert.strictEqual(await click({ type: 'alternativeButton', mission: XI, question: 'Pane Layout', alternative: 'drop', variant: 'Sonnet' }), undefined, "another mission's page keeps its own selection");
-    assert.match((await click({ type: 'questionButton', button: 'discussQuestion', mission: XI, question: 'Pane Layout', variant: 'default' }, [''])) ?? '', / chain -- claude "\/gurita:discuss-open-question/, 'and runs it');
+    assert.match((await click({ type: 'questionButton', button: 'discussQuestion', mission: XI, question: 'Pane Layout', variant: 'default' }, [''])) ?? '', / chain --close-when-finished -- claude "\/gurita:discuss-open-question/, 'and runs it');
     assert.strictEqual(await click({ type: 'alternativeButton', mission: OMICRON, question: 'Pane Layout', alternative: 'keep', variant: 'Sonnet' }), undefined, "a pick on one alternative leaves the card's other buttons where they stood");
     assert.match((await click({ type: 'alternativeButton', mission: OMICRON, question: 'Pane Layout', alternative: 'drop', variant: 'Sonnet' })) ?? '', /--model "sonnet"/, 'each button runs the variant its own dropdown stands on');
     assert.strictEqual(await click({ type: 'alternativeButton', mission: PI, question: 'Pane Layout', alternative: 'drop', variant: 'Sonnet' }), undefined);
@@ -2531,7 +2531,7 @@ test("a fixed-name button's dropdown selection is remembered in workspaceState p
     assert.strictEqual(await click({ type: 'questionButton', button: 'discussQuestion', mission: RHO, question: 'Pane Layout', variant: 'Gemini' }, ['']), undefined, 'a variant left out for a disabled harness starts nothing');
     await liveAfter({ type: 'setHarnessEnabled', harness: 'antigravity', enabled: true }, RHO);
     assert.deepStrictEqual(dropdown(RHO, 'discussQuestion')[1], 'Gemini', 'enabled again, the remembered selection comes back');
-    assert.match((await click({ type: 'taskButton', mission: RHO, variant: 'default' }, ['An issue'])) ?? '', / chain -- claude "\/gurita:discuss-new-task/);
+    assert.match((await click({ type: 'taskButton', mission: RHO, variant: 'default' }, ['An issue'])) ?? '', / chain --close-when-finished -- claude "\/gurita:discuss-new-task/);
 
     // The remembered variants go from the own file: they are dropped and the buttons fall back to the default.
     fs.writeFileSync(path.join(files, 'recipes.md'), '');

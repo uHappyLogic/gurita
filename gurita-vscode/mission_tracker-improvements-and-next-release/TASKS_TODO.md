@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Auto-Close Setting for Finished Runs
-
-Contribute one setting beside `gurita.ownRecipesFile`, shipped on, under which a run's terminal closes by itself: a chain that ran all its lines, and a looped task run that ends on `Loop finished: no task remains`, prints its report and exits without waiting for a keypress, so its terminal closes and the mission's page unblocks. A chain that stopped and a loop that stopped (an unresolved assignment, a task that did not end on `Task completed.`, or an unreadable task list) still wait for a keypress, and with the setting off every run waits as today. Verified by `runner_tests` of both kinds of run under both values and by run tests of the setting reaching the runner, with `gurita-vscode/README.md` documenting the setting.
-
----
-
 ## Plugin Notice Row in the Missions View
 
 Run the harness check in the background as soon as the Missions view first draws in a session, through the same `checkHarnesses` path the Settings window uses, its result kept for the rest of the session as today, so only the Settings window's Check again and the end of an install or update run run it afresh and the view's Refresh does not. While at least one harness that is Enabled in the Settings window and whose CLI is found fails its install or version check (not installed, listing unreadable, installed but disabled, or older than the packaged version), or the check could not be run at all, the tree holds a plugin notice row at its top, above New mission and Define mission, with a warning icon, a label saying the plugin is missing or outdated, and a click opening the Settings window; disabled harnesses and harnesses whose CLI is not found never count, the view's message keeps only `No mission is live.` and the read-failure line, and no notification is shown. Verified by tree tests against the `vscode` stub of the row in each counted and uncounted case and of the check's one background run, with `gurita-vscode/README.md` describing the row.

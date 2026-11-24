@@ -12,8 +12,12 @@
 // forward without taking the focus. A run a mission-starting row
 // starts belongs to no mission and is refused for none. A looped run is started the same way, its
 // arguments the runner's `loop` command line, the runner filling the loop's values itself. The
-// extension learns that a run ended when its terminal closes, which the runner delays until the
-// person dismisses it, and then re-reads the live missions.
+// extension learns that a run ended when its terminal closes, and then re-reads the live missions.
+// The runner delays that close until the person dismisses it, except that while the setting
+// `gurita.autoCloseFinishedRuns` is on, read when each run starts, every run is started with the
+// runner's `--close-when-finished`, so a chain that ran all its lines and a loop that ends with no
+// task remaining exit after their report and their terminal closes by itself; a run that stopped
+// still waits for a keypress.
 
 import * as vscode from 'vscode';
 import { buildLine, sessionEnvironment } from './placeholders';
@@ -24,6 +28,26 @@ export const ALREADY_RUNNING = 'A chain is already running for this mission.';
 
 const RUNNER_FILE = 'runner.py';
 const PYTHON = 'python3';
+
+/** The setting, under the `gurita` section, that closes a finished run's terminal by itself; on unless set. */
+export const AUTO_CLOSE_SETTING = 'autoCloseFinishedRuns';
+
+/** The runner's option that makes a finished run exit without waiting for a keypress. */
+export const CLOSE_WHEN_FINISHED = '--close-when-finished';
+
+/**
+ * The runner's argument list `args` (its file, its command, then the command's arguments) with
+ * `--close-when-finished` written directly after the command when `autoClose` holds, and `args`
+ * unchanged otherwise.
+ */
+export function runnerArguments(args: readonly string[], autoClose: boolean): string[] {
+  return autoClose ? [...args.slice(0, 2), CLOSE_WHEN_FINISHED, ...args.slice(2)] : [...args];
+}
+
+/** Whether the auto-close setting is on, as it stands now; a value that is not a boolean counts as on. */
+function autoCloseFinishedRuns(): boolean {
+  return vscode.workspace.getConfiguration('gurita').get<unknown>(AUTO_CLOSE_SETTING, true) !== false;
+}
 
 /** The terminal of each mission's running runner and of each run a mission-starting row started. */
 const running = new RunningRuns<vscode.Terminal>();
@@ -135,7 +159,7 @@ function launch(
   const terminal = vscode.window.createTerminal({
     name: mission === undefined ? `Gurita: ${recipe}` : `Gurita: ${recipe} (${mission})`,
     shellPath: PYTHON,
-    shellArgs: args,
+    shellArgs: runnerArguments(args, autoCloseFinishedRuns()),
     cwd: root,
     env,
     isTransient: true,

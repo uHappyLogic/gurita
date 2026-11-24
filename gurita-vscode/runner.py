@@ -4,8 +4,8 @@
 Stdlib only, Python 3.9 or later, shipped in the extension's package beside its `bundled/`
 directory and runnable by hand outside the editor.
 
-    runner.py chain -- LINE...
-    runner.py loop --mission PATH --rules FILE --line NAME LINE... [--override TITLE NAME]... -- LINE...
+    runner.py chain [--close-when-finished] -- LINE...
+    runner.py loop --mission PATH --rules FILE --line NAME LINE... [--override TITLE NAME]... [--close-when-finished] -- LINE...
     runner.py preview --mission PATH --rules FILE --line NAME LINE...
 
 Each LINE is one argument after `--`. A line is one of three kinds, inferred from its text:
@@ -31,7 +31,10 @@ table); a verdict-kind line never counts, so the review's convergence line below
 line is passed over. The check makes the shell exit unless that line is a success or no-op
 line, and a print holding no such line stops the chain, its last non-blank line reported as
 the line read. Once the shell has exited the runner prints the line the run ended on and the
-recipe line it stopped at, then waits for a keypress before exiting.
+recipe line it stopped at, then waits for a keypress before exiting. With
+`--close-when-finished`, which the extension passes while its auto-close setting is on, a chain
+that ran all its lines exits after its report without waiting, while a chain that stopped or
+ended early still waits.
 
 The values a line references reach it through the environment the runner is started in, as
 `"$GURITA_*"` session variables; the command line carries none.
@@ -68,6 +71,9 @@ written as a reference to its variable in the form its quoting needs, so the val
 enter a line's text, only its step marker. The run goes on to the next task only when the
 session ran to its end and the line the slot line's check read from its print, as a chain's check reads one, was
 `Task completed.`, stops on any other line read, and ends when no heading remains; it closes as a chain does, on its report and a keypress.
+With `--close-when-finished` a loop that ends on `Loop finished: no task remains` exits after its
+report without waiting, while a loop that stopped (an unresolved assignment, a task that did not
+end on `Task completed.`, or an unreadable task list) still waits.
 """
 
 import argparse
@@ -355,6 +361,13 @@ def wait_for_key() -> None:
         termios.tcsetattr(fd, termios.TCSADRAIN, saved)
 
 
+def close_or_wait(finished: bool, close_when_finished: bool) -> None:
+    """Wait for a keypress unless the run finished and the run was told to close when it does."""
+    if finished and close_when_finished:
+        return
+    wait_for_key()
+
+
 def wait_for_shell(process: "subprocess.Popen[bytes]") -> int:
     """The session shell's exit status, an interrupt meant for the shell never ending the wait."""
     while True:
@@ -364,7 +377,7 @@ def wait_for_shell(process: "subprocess.Popen[bytes]") -> int:
             continue
 
 
-def run_chain(lines: List[str]) -> int:
+def run_chain(lines: List[str], close_when_finished: bool = False) -> int:
     fixed_lines = FIXED_LINES_FILE
     if any(line_kind(line) == HEADLESS for line in lines):
         read_fixed_lines(fixed_lines)
@@ -378,7 +391,7 @@ def run_chain(lines: List[str]) -> int:
         shutil.rmtree(run_dir, ignore_errors=True)
     sys.stdout.write("\n" + "\n".join(printed) + "\n")
     sys.stdout.flush()
-    wait_for_key()
+    close_or_wait(finished, close_when_finished)
     return 0 if finished else 1
 
 
@@ -724,6 +737,7 @@ def run_loop(
     named: List[Tuple[str, str]],
     overrides: List[Tuple[str, str]],
     lines: List[str],
+    close_when_finished: bool = False,
 ) -> int:
     slot = slot_number(lines)
     read_fixed_lines(FIXED_LINES_FILE)
@@ -762,8 +776,16 @@ def run_loop(
             break
         completed += 1
     say(["", *ending, f"Tasks completed: {completed}"])
-    wait_for_key()
+    close_or_wait(finished, close_when_finished)
     return 0 if finished else 1
+
+
+def add_close_when_finished(parser: argparse.ArgumentParser, ended: str) -> None:
+    parser.add_argument(
+        "--close-when-finished",
+        action="store_true",
+        help=f"exit without waiting for a keypress when {ended}; a run that stopped still waits",
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -780,6 +802,7 @@ def build_parser() -> argparse.ArgumentParser:
         "line whose print's last success, no-op, or stop fixed line is not a success or no-op "
         "line, or whose print holds none.",
     )
+    add_close_when_finished(chain, "the chain ran all its lines")
     chain.add_argument("lines", nargs="+", metavar="LINE")
     check = commands.add_parser(
         "check",
@@ -840,6 +863,7 @@ def build_parser() -> argparse.ArgumentParser:
         dest="overrides",
         help="the single-task line name a task takes in place of the rules' result; repeatable",
     )
+    add_close_when_finished(loop, "the loop ends with no task remaining")
     loop.add_argument("lines", nargs="+", metavar="LINE")
     return parser
 
@@ -848,7 +872,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     args = build_parser().parse_args(argv)
     try:
         if args.command == "chain":
-            return run_chain(args.lines)
+            return run_chain(args.lines, args.close_when_finished)
         if args.command == "loop":
             return run_loop(
                 args.mission,
@@ -856,6 +880,7 @@ def main(argv: Optional[List[str]] = None) -> int:
                 [tuple(pair) for pair in args.named],
                 [tuple(pair) for pair in args.overrides],
                 args.lines,
+                args.close_when_finished,
             )
         if args.command == "preview":
             return run_preview(args.mission, args.rules, [tuple(pair) for pair in args.lines])

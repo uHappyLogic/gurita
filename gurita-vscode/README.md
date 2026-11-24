@@ -95,8 +95,8 @@ and `gurita.pickStartingVariant`) are hidden from the Command Palette.
   step is one of **First review round**, **Additional review round**, **Derive tasks**,
   **Execute tasks**, and **Finish**, chosen as a mission window's workflow diagram chooses its
   filled block.
-- Its icon spins while a run started for the mission is going, until you dismiss the run's
-  terminal, and is a steady mission icon otherwise.
+- Its icon spins while a run started for the mission is going, until the run's terminal
+  closes, and is a steady mission icon otherwise.
 - Its hover text spells out all five facts in full beside the mission's path: the title, the
   next step, the number of open questions, the number of remaining tasks, and whether a run is
   going.
@@ -273,8 +273,8 @@ typed as a path from the project root, are typed into VS Code's own input box, o
 value, as are the Settings window's names and list entries. Only the discussion note may be left
 empty. A click
 on a recipe button starts its run at once in a terminal; every recipe button shows its lines,
-placeholders included, before you click. While a run started for a mission is going, until you
-dismiss its terminal, that mission's page shows it: every action button on the page (the recipe
+placeholders included, before you click. While a run started for a mission is going, until its
+terminal closes, that mission's page shows it: every action button on the page (the recipe
 buttons, the buttons on the question card and its alternatives, a preview's **Start run**,
 **New task**, and **Ask in mission context**) is disabled, the workflow diagram's filled block pulses, and beneath the diagram an
 indicator says that the mission is waiting for its run's terminal to close. The indicator's space
@@ -311,7 +311,7 @@ reach the window by a click on its row in the side-bar view, a click on its edit
 keyboard navigation between editors, and when a click on its row opens it afresh. Neither the
 side-bar view nor the mission's page draws a control for bringing the terminal forward.
 
-The live missions are re-read by themselves after each run, once you dismiss the run's terminal,
+The live missions are re-read by themselves after each run, once the run's terminal closes,
 and on changes to any mission's `requirements.md`, `open_questions.xml`, or `TASKS_TODO.md`. Git
 state is watched beside them: in the repository's git directory, as
 `git rev-parse --absolute-git-dir` gives it, the extension watches `HEAD`, `packed-refs`, and the branch refs
@@ -1093,10 +1093,23 @@ The marker shows every session-variable reference in the line, such as `${GURITA
 `${GURITA_TASK_TITLE}`, as its value, so it names the real mission path and task title; nothing
 else in the line is expanded, and the line that runs keeps its references as written. The marker
 is never part of the output a headless line's check reads. When the chain ends it
-prints the line the run ended on and the recipe line it stopped at, then waits for a keypress;
-the terminal closes, and the live missions are re-read, once you dismiss it.
+prints the line the run ended on and the recipe line it stopped at; the terminal closes, and the
+live missions are re-read, once the runner exits.
 
 The runner can also be run by hand outside the editor, from the installed extension's own
 directory, which holds it beside `bundled/` (for VS Code,
 `~/.vscode/extensions/busyminds.gurita-vscode-<version>/`); `python3 runner.py --help` lists its `chain`, `preview`, and `loop` commands
 and their arguments.
+
+### Closing a finished run's terminal
+
+The user setting `gurita.autoCloseFinishedRuns`, on unless you turn it off, closes a run's
+terminal by itself once the run finishes: a chain that ran all its lines, and a looped task run
+that ends on `Loop finished: no task remains`, print their report and exit without waiting, so
+the terminal closes and the mission's page is usable again at once. A run that stopped still
+prints `Press any key to close this terminal.` and waits for a keypress, so you can read why: a
+chain that stopped or ended early, and a looped run that stopped on an unresolved assignment, on a
+task that did not end on `Task completed.`, or on a task list it could not read. With the setting
+off, every run waits for a keypress, finished or stopped, and its terminal closes once you
+dismiss it. The setting is read each time a run starts, and the extension passes it to the runner
+as the option `--close-when-finished` of its `chain` and `loop` commands.
