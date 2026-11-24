@@ -105,5 +105,9 @@ Five missions under `gurita-vscode/` are finished, all between 2026-11-20 and 20
 
 - **Alternative button layout.** On a question card each alternative's id stands alone on its head line. Directly beneath it, above the alternative's text, a row of its own holds the "Answer with this alternative" button, whose label reads the title and then the variant's name on one line, with today's arrow-only variant dropdown kept beside it. The selection is still remembered per mission, question, and alternative.
 
+### Typed values
+
+- **Multi-line input mechanism.** One webview panel serves every multi-line value at all three sites: where `askValues` reaches the answer text, the goal, or the issue description, the host opens a small input panel as an editor tab holding one textarea, the value's prompt above it, and Run and Cancel. It resolves the value when Run is pressed, or undefined when Cancel is pressed or the tab is closed, exactly as a dismissed input box does today. The mission page and the side-bar tree are unchanged, so nothing is typed on a mission page, and the scope, the discussion note, and the Settings window's values stay in `vscode.window.showInputBox`.
+
 ## Out of Scope
 
