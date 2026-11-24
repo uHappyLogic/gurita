@@ -6,23 +6,25 @@
 //
 //   `variants` — the stored variants, in order, each `{ "recipe", "name", "lines" }`, a recipe
 //     name, a variant name, and the variant's literal lines as an array of strings, and, for a
-//     stored copy, `"copies": { "name", "origin" }` naming the shipped or own variant it stands in
-//     for, `origin` being `shipped` or `own`, and, for a stored copy of a named single-task line
+//     stored copy, `"copies": { "name", "origin" }` naming the shipped, project, or own variant it
+//     stands in for, `origin` being `shipped`, `project`, or `own`, and, for a stored copy of a named single-task line
 //     renamed in the settings view, `"recipe"` in it too, naming the recipe the copied variant
 //     belongs to, the copy then standing in for it as a line of the copy's own recipe name, and,
 //     for a stored variant made from another variant, a duplicate or a `custom N` a line edit adds,
 //     `"from": { "name", "origin" }` naming the variant it was made from, `origin` being
-//     `shipped`, `own`, or `stored`, with `"recipe"` in it too where that variant belongs to
+//     `shipped`, `project`, `own`, or `stored`, with `"recipe"` in it too where that variant belongs to
 //     another recipe, the variant whose lines a reset returns it to;
 //   `hidden` — the records that hide a variant, each `{ "recipe", "name", "origin" }`, `origin`
-//     being `shipped` or `own`;
+//     being `shipped`, `project`, or `own`;
 //   `defaults` — each recipe's picked default, `{ "recipe", "name", "origin" }`, `origin` being
-//     `shipped`, `own`, or `stored`;
+//     `shipped`, `project`, `own`, or `stored`;
 //   `harnesses` — the part set aside for harness values, kept as read here, each harness's
 //     enabled state and the overlay on its model and effort lists read and written in it by
 //     `harnessSettings.ts`.
 //
-// A missing file holds nothing; a file that is not in this form is refused with an error naming it.
+// The origin `project` names a variant of the project's recipe file, `gurita_recipes.md` at the
+// project root. A missing file holds nothing; a file that is not in this form is refused with an
+// error naming it.
 // How the records are laid over the recipe list is the recipe reader's (`overlayVariantStore` in
 // `recipes.ts`), and the edits the settings view makes are `variantEdits.ts`'s; this module reads
 // the file and writes it whole, the harness part written back as read. It imports nothing from
@@ -34,8 +36,17 @@ import * as path from 'node:path';
 /** The default path of the variant store, under the person's home directory beside the default own recipe file. */
 export const DEFAULT_VARIANT_STORE_FILE = '~/.gurita/variants.json';
 
-/** Where a variant comes from: the shipped file, the person's own recipe file, or the variant store. */
-export type VariantOrigin = 'shipped' | 'own' | 'stored';
+/** Where a variant read from a file comes from: the shipped file, the project's recipe file, or the person's own recipe file. */
+export type ReadOrigin = 'shipped' | 'project' | 'own';
+
+/** The origins a variant read from a file may carry, in the order the reader merges them. */
+export const READ_ORIGINS: readonly ReadOrigin[] = ['shipped', 'project', 'own'];
+
+/** Where a variant comes from: the shipped file, the project's recipe file, the person's own recipe file, or the variant store. */
+export type VariantOrigin = ReadOrigin | 'stored';
+
+/** Every origin a variant may carry. */
+const VARIANT_ORIGINS: readonly VariantOrigin[] = [...READ_ORIGINS, 'stored'];
 
 /** A variant of one recipe, named by its variant name and where it comes from. */
 export interface VariantRef {
@@ -46,7 +57,7 @@ export interface VariantRef {
 /** A variant read from a file, which a stored copy may stand in for and a hiding record may hide. */
 export interface ReadVariantRef {
   name: string;
-  origin: 'shipped' | 'own';
+  origin: ReadOrigin;
   /**
    * The recipe the variant belongs to, named only where it differs from the recipe of the stored
    * copy standing in for it: a renamed single-task line, listed under its new name.
@@ -67,17 +78,17 @@ export interface StoredVariant {
   recipe: string;
   name: string;
   lines: string[];
-  /** The shipped or own variant this stored copy stands in for, keeping its place. */
+  /** The shipped, project, or own variant this stored copy stands in for, keeping its place. */
   copies?: ReadVariantRef;
   /** The variant this stored variant was made from, whose lines a reset returns it to. */
   from?: SourceRef;
 }
 
-/** One record hiding a shipped or own variant of a recipe. */
+/** One record hiding a shipped, project, or own variant of a recipe. */
 export interface HiddenVariant {
   recipe: string;
   name: string;
-  origin: 'shipped' | 'own';
+  origin: ReadOrigin;
 }
 
 /** One recipe's picked default. */
@@ -168,16 +179,16 @@ export function parseVariantStore(text: string, file: string): VariantStore {
       if (
         !isRecord(copies) ||
         typeof copies.name !== 'string' ||
-        !isOrigin(copies.origin, ['shipped', 'own']) ||
+        !isOrigin(copies.origin, READ_ORIGINS) ||
         (copies.recipe !== undefined && typeof copies.recipe !== 'string')
       ) {
         throw new VariantStoreError(
-          `The variant store ${file} holds a record ${index + 1} in "variants" whose "copies" does not name a shipped or own variant.`,
+          `The variant store ${file} holds a record ${index + 1} in "variants" whose "copies" does not name a shipped, project, or own variant.`,
         );
       }
       stored.copies = {
         name: copies.name,
-        origin: copies.origin as 'shipped' | 'own',
+        origin: copies.origin as ReadOrigin,
         ...(copies.recipe === undefined || copies.recipe === stored.recipe ? {} : { recipe: copies.recipe as string }),
       };
     }
@@ -186,11 +197,11 @@ export function parseVariantStore(text: string, file: string): VariantStore {
       if (
         !isRecord(from) ||
         typeof from.name !== 'string' ||
-        !isOrigin(from.origin, ['shipped', 'own', 'stored']) ||
+        !isOrigin(from.origin, VARIANT_ORIGINS) ||
         (from.recipe !== undefined && typeof from.recipe !== 'string')
       ) {
         throw new VariantStoreError(
-          `The variant store ${file} holds a record ${index + 1} in "variants" whose "from" does not name a shipped, own, or stored variant.`,
+          `The variant store ${file} holds a record ${index + 1} in "variants" whose "from" does not name a shipped, project, own, or stored variant.`,
         );
       }
       stored.from = {
@@ -203,15 +214,15 @@ export function parseVariantStore(text: string, file: string): VariantStore {
   });
   part(parsed, 'hidden', file).forEach((raw, index) => {
     const record = stringFields(raw, 'hidden', index, ['recipe', 'name'], file);
-    if (!isOrigin(record.origin, ['shipped', 'own'])) {
-      throw new VariantStoreError(`The variant store ${file} holds a record ${index + 1} in "hidden" whose "origin" is not shipped or own.`);
+    if (!isOrigin(record.origin, READ_ORIGINS)) {
+      throw new VariantStoreError(`The variant store ${file} holds a record ${index + 1} in "hidden" whose "origin" is not shipped, project, or own.`);
     }
-    store.hidden.push({ recipe: record.recipe as string, name: record.name as string, origin: record.origin as 'shipped' | 'own' });
+    store.hidden.push({ recipe: record.recipe as string, name: record.name as string, origin: record.origin as ReadOrigin });
   });
   part(parsed, 'defaults', file).forEach((raw, index) => {
     const record = stringFields(raw, 'defaults', index, ['recipe', 'name'], file);
-    if (!isOrigin(record.origin, ['shipped', 'own', 'stored'])) {
-      throw new VariantStoreError(`The variant store ${file} holds a record ${index + 1} in "defaults" whose "origin" is not shipped, own, or stored.`);
+    if (!isOrigin(record.origin, VARIANT_ORIGINS)) {
+      throw new VariantStoreError(`The variant store ${file} holds a record ${index + 1} in "defaults" whose "origin" is not shipped, project, own, or stored.`);
     }
     store.defaults.push({ recipe: record.recipe as string, name: record.name as string, origin: record.origin as VariantOrigin });
   });

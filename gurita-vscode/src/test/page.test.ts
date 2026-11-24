@@ -254,6 +254,7 @@ function recipeGroups(page: Page): string[] {
 interface Choice {
   name: string;
   own: boolean;
+  project?: true;
 }
 
 /**
@@ -346,6 +347,82 @@ test("each mission's page draws its shipped recipes under Actions with no headin
   assert.deepStrictEqual(recipeGroups(beta), ['Your actions']);
   named(beta, 'Finish mission').click();
   assert.deepStrictEqual(beta.posted[beta.posted.length - 1], { type: 'runRecipe', mission: BETA, recipe: 'Finish mission', variant: 'default' });
+});
+
+test('the project recipes stand under Project actions, directly below the shipped recipes and above Your actions, drawn only when one is posted', () => {
+  const page = loadPage();
+  page.send(
+    pageOf(
+      mission(ALPHA, 'Alpha', {
+        step: 'derive',
+        recipes: {
+          state: 'read',
+          recipes: [
+            runnable('Prepare tasks', 'shipped', ['echo shipped <path>']),
+            runnable('Project review', 'project', ['echo project <path>'], [{ name: 'default', own: false, project: true }]),
+            runnable('Mine', 'own', ['echo own <path>']),
+          ],
+        },
+      }),
+    ),
+  );
+  const section = page.root.all().find((each) => each.has('recipes')) as FakeElement;
+  assert.deepStrictEqual(
+    section.children.filter((child): child is FakeElement => child instanceof FakeElement).map((child) =>
+      child.has('recipe-list')
+        ? child.children.map((row) => shownName(((row as FakeElement).children[0] as FakeElement).children[0] as FakeElement))
+        : child.textContent,
+    ),
+    ['Actions', ['Prepare tasks'], 'Project actions', ['Project review'], 'Your actions', ['Mine']],
+    'the shipped recipes, then the project group, then the own group',
+  );
+  named(page, 'Project review').click();
+  assert.deepStrictEqual(page.posted[page.posted.length - 1], { type: 'runRecipe', mission: ALPHA, recipe: 'Project review', variant: 'default' });
+  const none = loadPage();
+  none.send(
+    pageOf(
+      mission(BETA, 'Beta', {
+        step: 'derive',
+        recipes: { state: 'read', recipes: [runnable('Prepare tasks', 'shipped', ['echo <path>']), runnable('Mine', 'own', ['echo <path>'])] },
+      }),
+    ),
+  );
+  assert.deepStrictEqual(recipeGroups(none), ['Your actions'], 'no project heading while no project recipe is posted');
+  const only = loadPage();
+  only.send(pageOf(mission(BETA, 'Beta', { step: 'derive', recipes: { state: 'read', recipes: [runnable('Project review', 'project', ['echo <path>'])] } })));
+  assert.deepStrictEqual(recipeGroups(only), ['Project actions']);
+  assert.deepStrictEqual(recipeNames(only), ['Project review']);
+});
+
+test("a project variant is marked as the project's on its button and in its dropdown, every other variant drawn by its bare name", () => {
+  const page = loadPage();
+  const variants: Choice[] = [
+    { name: 'default', own: false },
+    { name: 'default', own: false, project: true },
+    { name: 'default', own: true },
+  ];
+  const send = (selected: number) =>
+    page.send(
+      pageOf(
+        mission(ALPHA, 'Alpha', {
+          step: 'derive',
+          recipes: { state: 'read', recipes: [runnable('Prepare tasks', 'shipped', ['echo <path>'], variants, selected)] },
+        }),
+      ),
+    );
+  send(1);
+  const shown = named(page, 'Prepare tasks');
+  assert.deepStrictEqual(recipeParts(shown), ['Prepare tasks', 'default', 'project'], 'the selected project variant carries its mark beside its name');
+  const dropdown = page.root.querySelector('[data-focus="variant-Prepare tasks"]') as FakeElement;
+  assert.deepStrictEqual(
+    dropdown.children.map((child) => (child as FakeElement).textContent),
+    ['default', 'default (project)', 'default'],
+    "only the project's variant is marked in the dropdown",
+  );
+  send(0);
+  assert.deepStrictEqual(recipeParts(named(page, 'Prepare tasks')), ['Prepare tasks', 'default'], 'a shipped variant carries no mark');
+  send(2);
+  assert.deepStrictEqual(recipeParts(named(page, 'Prepare tasks')), ['Prepare tasks', 'default'], 'an own variant carries no project mark');
 });
 
 test("a page with no own recipe draws no Your actions heading, and one with only own recipes no shipped list", () => {

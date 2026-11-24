@@ -265,24 +265,25 @@ export function withListValueRemoved(store: VariantStore, file: string, lines: I
 }
 
 /**
- * Every line the lists are derived from: those of the shipped recipes in `shippedFile`, of the own
- * recipes in `ownFile`, when given and present, and of the stored variants in `store`, in that
- * order, whatever the store hides or stands in for.
+ * Every line the lists are derived from: those of the shipped recipes in `shippedFile`, of the
+ * project recipes in `projectFile` and the own recipes in `ownFile`, each when given and present,
+ * and of the stored variants in `store`, in that order, whatever the store hides or stands in for.
  */
-function sourceLines(shippedFile: string, ownFile: string | undefined, store: VariantStore): string[] {
-  const read = readRecipes(shippedFile, ownFile).flatMap((recipe) => recipe.variants.flatMap((variant) => variant.lines));
+function sourceLines(shippedFile: string, ownFile: string | undefined, store: VariantStore, projectFile?: string): string[] {
+  const read = readRecipes(shippedFile, ownFile, undefined, projectFile).flatMap((recipe) => recipe.variants.flatMap((variant) => variant.lines));
   return [...read, ...store.variants.flatMap((variant) => variant.lines)];
 }
 
-/** Each harness's lists, read afresh from the two recipe files and the variant store file at `storeFile`. */
-export function readHarnessLists(shippedFile: string, ownFile: string | undefined, storeFile: string): HarnessLists {
+/** Each harness's lists, read afresh from the recipe files, the project's at `projectFile` when given, and the variant store file at `storeFile`. */
+export function readHarnessLists(shippedFile: string, ownFile: string | undefined, storeFile: string, projectFile?: string): HarnessLists {
   const store = readVariantStore(storeFile);
-  return harnessLists(store, storeFile, sourceLines(shippedFile, ownFile, store));
+  return harnessLists(store, storeFile, sourceLines(shippedFile, ownFile, store, projectFile));
 }
 
 /**
  * Adds `value` to, or removes it from, the harness `key`'s list of `kind` in the variant store file
- * at `storeFile`, read afresh with the two recipe files and written whole.
+ * at `storeFile`, read afresh with the recipe files, the project's at `projectFile` when given,
+ * and written whole.
  */
 export function editHarnessList(
   shippedFile: string,
@@ -292,9 +293,10 @@ export function editHarnessList(
   kind: ListKind,
   edit: 'add' | 'remove',
   value: string,
+  projectFile?: string,
 ): void {
   const store = readVariantStore(storeFile);
-  const lines = sourceLines(shippedFile, ownFile, store);
+  const lines = sourceLines(shippedFile, ownFile, store, projectFile);
   const edited = edit === 'add' ? withListValueAdded(store, storeFile, lines, key, kind, value) : withListValueRemoved(store, storeFile, lines, key, kind, value);
   writeVariantStore(storeFile, edited);
 }

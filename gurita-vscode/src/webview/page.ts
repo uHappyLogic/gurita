@@ -53,16 +53,20 @@
 // them those declaring the additional review round when derive tasks is filled, or when first
 // review round is while any question of the mission is open, and follow up tasks when finish is, and every recipe declaring no step, whichever block is filled, or every recipe
 // when no block is filled, under the heading "Actions"; first the shipped recipes in
-// it, one button each in the order posted, the shipped file's, under no heading of their own, and
-// below them the own recipes that carry no shipped recipe's name under "Your actions", in the own
+// it, one button each in the order posted, the shipped file's, under no heading of their own,
+// directly below them the project recipes that carry no shipped recipe's name under "Project
+// actions", in the project file's order, drawn only when at least one is posted, and below them
+// the own recipes that carry no shipped or project recipe's name under "Your actions", in the own
 // file's order, each button on a row of its own with the recipe's one line of description, as the
 // extension posts it from the recipe's `Description:` line, to its right, a recipe posted with none
 // drawing no text there, and each with a dropdown beside it drawn as its arrow alone, its opened list offering
-// the recipe's variants by their bare names, and standing on the variant selected, as the
+// the recipe's variants by their bare names, a variant of the project's recipe file marked
+// `(project)` after its name, and standing on the variant selected, as the
 // extension posts it: the one remembered for the recipe on this mission, else the recipe's
 // default. Picking another variant posts it to the extension, which remembers it and posts the
 // page again with it selected. Each button shows its recipe's name with the selected variant's
-// name beneath it, exactly as the variant is named, carries that variant's lines as written in its
+// name beneath it, exactly as the variant is named, a variant of the project's recipe file marked
+// `project` beneath its name, carries that variant's lines as written in its
 // hover text, and starts that variant's chain for the page's mission when clicked, and a selected
 // variant holding a placeholder the extension does not know is shown as a non-runnable entry
 // naming it and its file. The five buttons on a mission's page outside the recipe list, which run a
@@ -224,11 +228,15 @@ declare function acquireVsCodeApi(): VsCodeApi;
     changes?: string[];
   }
 
-  type RecipeGroup = 'shipped' | 'own';
+  type RecipeGroup = 'shipped' | 'project' | 'own';
 
-  /** One variant a recipe's dropdown offers, by its name, the one part of what the extension posts for it the page draws. */
+  /**
+   * One variant a recipe's dropdown offers, by its name and, set for a variant of the project's
+   * recipe file, its mark as the project's, the parts of what the extension posts for it the page draws.
+   */
   interface PageVariantChoice {
     name: string;
+    project?: true;
   }
 
   /** The dropdown beside a recipe: the variants it offers and the index of the selected one, which the entry describes. */
@@ -355,8 +363,12 @@ declare function acquireVsCodeApi(): VsCodeApi;
   /** The words before a completed task's commit hash on its commit link, and the link's hover text. */
   const COMMIT_LINK_PREFIX = 'Open commit ';
   const COMMIT_LINK_HOVER = "Open this task's commit, its verified bar and its whole patch, in an editor tab";
-  /** The heading of the page's group of own recipes, drawn below the shipped recipes, which have none. */
+  /** The heading of the page's group of own recipes, drawn below the shipped recipes, which have none, and the project's. */
   const OWN_GROUP_HEADING = 'Your actions';
+  /** The heading of the page's group of project recipes, drawn directly below the shipped recipes and above the own group. */
+  const PROJECT_GROUP_HEADING = 'Project actions';
+  /** The mark a variant of the project's recipe file carries beside its name, on a button and in a dropdown. */
+  const PROJECT_VARIANT_MARK = 'project';
 
   const vscode = acquireVsCodeApi();
   const root = document.getElementById('root') as HTMLElement;
@@ -449,9 +461,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
     const node = busy === undefined ? button('', className, () => onClick(variant)) : action('', className, busy, () => onClick(variant));
     node.append(element('span', label, 'recipe-name'));
     if (entry?.state === 'offered') {
-      if (variant !== undefined) {
-        node.append(element('span', variant, 'recipe-variant-name'));
-      }
+      appendVariantName(node, entry.variants[entry.selected]);
       node.title = entry.lines.join('\n');
     } else if (entry?.state === 'disabled') {
       node.disabled = true;
@@ -1060,10 +1070,14 @@ declare function acquireVsCodeApi(): VsCodeApi;
       view.append(box);
       return view;
     }
-    const shipped = recipes.recipes.filter((recipe) => recipe.group !== 'own');
+    const shipped = recipes.recipes.filter((recipe) => recipe.group !== 'own' && recipe.group !== 'project');
+    const project = recipes.recipes.filter((recipe) => recipe.group === 'project');
     const own = recipes.recipes.filter((recipe) => recipe.group === 'own');
     if (shipped.length > 0) {
       view.append(recipeList(mission, shipped, busy));
+    }
+    if (project.length > 0) {
+      view.append(element('h4', PROJECT_GROUP_HEADING), recipeList(mission, project, busy));
     }
     if (own.length > 0) {
       view.append(element('h4', OWN_GROUP_HEADING), recipeList(mission, own, busy));
@@ -1078,12 +1092,24 @@ declare function acquireVsCodeApi(): VsCodeApi;
   function recipeButton(recipe: Extract<PageRecipe, { kind: 'runnable' | 'looped' }>, busy: boolean, onClick: () => void): HTMLButtonElement {
     const node = action('', 'recipe', busy, onClick);
     node.append(element('span', recipe.name, 'recipe-name'));
-    const variant = recipe.variants[recipe.selected]?.name;
-    if (variant !== undefined) {
-      node.append(element('span', variant, 'recipe-variant-name'));
-    }
+    appendVariantName(node, recipe.variants[recipe.selected]);
     node.title = recipe.lines.join('\n');
     return node;
+  }
+
+  /**
+   * Appends to a button the name of its selected variant `variant`, exactly as the variant is
+   * named, and, for a variant of the project's recipe file, the mark that it is the project's
+   * beside it; nothing while no variant is selected.
+   */
+  function appendVariantName(node: HTMLElement, variant: PageVariantChoice | undefined): void {
+    if (variant === undefined) {
+      return;
+    }
+    node.append(element('span', variant.name, 'recipe-variant-name'));
+    if (variant.project) {
+      node.append(element('span', PROJECT_VARIANT_MARK, 'recipe-variant-origin'));
+    }
   }
 
   /**
@@ -1116,10 +1142,13 @@ declare function acquireVsCodeApi(): VsCodeApi;
     return choice;
   }
 
-  /** Appends to `choice` one option per variant of `variants`, in order, each by its bare name, the one at `selected` selected. */
+  /**
+   * Appends to `choice` one option per variant of `variants`, in order, each by its bare name, a
+   * variant of the project's recipe file marked as the project's after it, the one at `selected` selected.
+   */
   function variantOptions(choice: HTMLSelectElement, variants: PageVariantChoice[], selected: number): void {
     variants.forEach((variant, index) => {
-      const option = element('option', variant.name);
+      const option = element('option', variant.project ? `${variant.name} (${PROJECT_VARIANT_MARK})` : variant.name);
       option.value = String(index);
       option.selected = index === selected;
       choice.append(option);

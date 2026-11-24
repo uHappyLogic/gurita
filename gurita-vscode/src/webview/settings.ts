@@ -86,7 +86,7 @@ interface VsCodeApi {
 declare function acquireVsCodeApi(): VsCodeApi;
 
 (() => {
-  type RecipeGroup = 'shipped' | 'own';
+  type RecipeGroup = 'shipped' | 'project' | 'own';
 
   /** The check of a harness that failed first: its CLI, its installed plugin, or that copy's version. */
   type FailedCheck = 'cli' | 'plugin' | 'version';
@@ -130,13 +130,16 @@ declare function acquireVsCodeApi(): VsCodeApi;
   /** Each harness's model and effort lists, by its key, or the cause they could not be read. */
   type HarnessLists = { state: 'read'; lists: Record<string, HarnessList> } | { state: 'failed'; cause: string };
 
-  /** Where a variant comes from: the shipped file, the person's own recipe file, or the variant store. */
-  type VariantOrigin = 'shipped' | 'own' | 'stored';
+  /** Where a variant read from a file comes from: the shipped file, the project's recipe file, or the person's own recipe file. */
+  type ReadOrigin = 'shipped' | 'project' | 'own';
+
+  /** Where a variant comes from: a recipe file, or the variant store. */
+  type VariantOrigin = ReadOrigin | 'stored';
 
   /** A variant read from a file, which a stored copy stands in for or a hiding record hides. */
   interface ReadVariantRef {
     name: string;
-    origin: 'shipped' | 'own';
+    origin: ReadOrigin;
     /** The recipe it belongs to, named where a renamed single-task line copies it under another name. */
     recipe?: string;
   }
@@ -145,7 +148,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
   interface SettingsVariant {
     name: string;
     origin: VariantOrigin;
-    /** The shipped or own variant a stored copy stands in for. */
+    /** The shipped, project, or own variant a stored copy stands in for. */
     copies?: ReadVariantRef;
     lines: string[];
     /** The line editor each line gets, in the lines' order, null for a line shown read-only. */
@@ -610,12 +613,15 @@ declare function acquireVsCodeApi(): VsCodeApi;
     return part;
   }
 
+  /** The words naming whose a variant read from a file is, before the word `variant` or `line`. */
+  const READ_ORIGIN_WORDS: Record<ReadOrigin, string> = { shipped: 'the shipped', project: "the project's", own: 'your' };
+
   /** Where a variant comes from, as the window names it. */
   function originLabel(origin: VariantOrigin, copies?: ReadVariantRef): string {
     if (origin === 'stored') {
-      return copies === undefined ? 'stored' : `stored copy of ${copies.origin === 'own' ? 'your' : 'the shipped'} variant ${copies.name}`;
+      return copies === undefined ? 'stored' : `stored copy of ${READ_ORIGIN_WORDS[copies.origin]} variant ${copies.name}`;
     }
-    return origin === 'own' ? 'yours' : 'shipped';
+    return origin === 'own' ? 'yours' : origin === 'project' ? "the project's" : 'shipped';
   }
 
   /** The variant a control's message names: its name, where it comes from, and, for a stored copy, the variant it stands in for. */
@@ -909,7 +915,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
       heading.append(actions);
       block.append(heading);
       if (line.reset !== undefined) {
-        block.append(element('p', `Renamed from the ${line.reset.original.origin === 'own' ? 'own' : 'shipped'} line ${line.reset.recipe}`, 'variant-note'));
+        block.append(element('p', `Renamed from the ${line.reset.original.origin === 'own' ? 'own' : line.reset.original.origin === 'project' ? "project's" : 'shipped'} line ${line.reset.recipe}`, 'variant-note'));
       }
       const list = element('ul', undefined, 'variant-list');
       line.variants.forEach((variant, variantIndex) => {

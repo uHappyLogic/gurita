@@ -17,13 +17,18 @@ import {
   PAIRED_STAGES,
   pageRecipes,
   parseOwnRecipes,
+  parseProjectRecipes,
   parseShippedRecipes,
+  PROJECT_GROUP_HEADING,
+  PROJECT_RECIPES_FILE,
+  projectRecipesFile,
   readRecipes,
   Recipe,
   SLOT_LINE,
   STAGE_NAMES,
   stageRecipes,
   Variant,
+  variantOrigin,
 } from '../recipes';
 import { parseVariantStore } from '../variantStore';
 import { settingsRecipes } from '../variantEdits';
@@ -262,6 +267,110 @@ test('readRecipes reads both files and treats a missing own file as holding no r
   assert.deepStrictEqual(readRecipes(SHIPPED), shipped());
   const missing = path.join(os.tmpdir(), `gurita-no-such-recipes-${process.pid}.md`);
   assert.deepStrictEqual(readRecipes(SHIPPED, missing), shipped());
+});
+
+const PROJECT = '/work/project/gurita_recipes.md';
+
+/** Each recipe's group, name, stage, and variants, each variant by its name and where it comes from. */
+function origins(recipes: Recipe[]): [string, string, string | undefined, [string, string][]][] {
+  return recipes.map((recipe) => [
+    recipe.group,
+    recipe.name,
+    recipe.stage,
+    recipe.variants.map((variant): [string, string] => [variant.name, variantOrigin(variant)]),
+  ]);
+}
+
+test("the project's recipe file is gurita_recipes.md directly in the project root, read flat into the project group", () => {
+  assert.strictEqual(PROJECT_RECIPES_FILE, 'gurita_recipes.md');
+  assert.strictEqual(projectRecipesFile('/work/project'), path.join('/work/project', 'gurita_recipes.md'));
+  const recipes = parseProjectRecipes('Prose.\n\n## A heading\n\n### Ours\nStage: derive tasks\n```\necho ours <path>\n```\n\n### Ours\n```\necho repeated\n```\n', PROJECT);
+  assert.deepStrictEqual(origins(recipes), [['project', 'Ours', 'derive', [['default', 'project']]]]);
+  const variant = firstVariant(recipes[0]);
+  assert.strictEqual(variant.project, true);
+  assert.strictEqual(variant.own, false, "a project variant is not the person's own");
+  assert.strictEqual(variant.file, PROJECT);
+  assert.deepStrictEqual(variant.lines, ['echo ours <path>']);
+  assert.ok(!('project' in firstVariant(own()[0])) && !('project' in firstVariant(shipped()[0])), 'no other source carries the project mark');
+});
+
+test('the three sources merge shipped, then project, then own, one name forming one recipe that keeps the first source\'s name, group, and stage', () => {
+  const shippedList = parseShippedRecipes(
+    '## Recipes\n\n### Chain\nStage: finish\n#### fast\n```\necho shipped fast\n```\n#### slow\n```\necho shipped slow\n```\n\n### Only shipped\n```\necho s\n```\n',
+    SHIPPED,
+  );
+  const projectList = parseProjectRecipes(
+    '### Ours\nStage: derive tasks\n```\necho project ours\n```\n\n### Chain\nStage: execute tasks\n#### fast\n```\necho project fast\n```\n#### team\n```\necho project team\n```\n',
+    PROJECT,
+  );
+  const ownList = parseOwnRecipes(
+    '### Ours\nStage: finish\n#### mine\n```\necho own mine\n```\n\n### Chain\n#### fast\n```\necho own fast\n```\n\n### Mine\n```\necho own\n```\n',
+    OWN,
+  );
+  const merged = mergeRecipes(shippedList, ownList, projectList);
+  assert.deepStrictEqual(origins(merged), [
+    ['shipped', 'Chain', 'finish', [['fast', 'shipped'], ['slow', 'shipped'], ['fast', 'project'], ['team', 'project'], ['fast', 'own']]],
+    ['shipped', 'Only shipped', undefined, [['default', 'shipped']]],
+    ['project', 'Ours', 'derive', [['default', 'project'], ['mine', 'own']]],
+    ['own', 'Mine', undefined, [['default', 'own']]],
+  ]);
+  assert.deepStrictEqual(
+    byName(merged, 'Chain').variants.map((variant) => variant.lines[0]),
+    ['echo shipped fast', 'echo shipped slow', 'echo project fast', 'echo project team', 'echo own fast'],
+    "a variant carrying another source's variant name is kept as a second entry beside it",
+  );
+  assert.deepStrictEqual(mergeRecipes(shippedList, ownList), mergeRecipes(shippedList, ownList, []), 'no project list merges as before');
+});
+
+test('readRecipes reads the project file beside the other two, a missing project file meaning the project has no recipes', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-project-recipes-'));
+  try {
+    const file = projectRecipesFile(dir);
+    const missing = readRecipes(SHIPPED, OWN, undefined, file);
+    assert.deepStrictEqual(missing, mergeRecipes(shipped(), own()), 'an absent file holds no recipe');
+    fs.writeFileSync(file, '### Project only\n```\necho <path>\n```\n\n### Chain\n#### team\n```\necho team\n```\n');
+    const read = readRecipes(SHIPPED, OWN, undefined, file);
+    assert.deepStrictEqual(read, mergeRecipes(shipped(), own(), parseProjectRecipes(fs.readFileSync(file, 'utf8'), file)));
+    assert.deepStrictEqual(
+      byName(read, 'Chain').variants.map((variant) => [variant.name, variantOrigin(variant)]),
+      [['default', 'shipped'], ['team', 'project'], ['default', 'own']],
+    );
+    assert.strictEqual(byName(read, 'Project only').group, 'project');
+    assert.strictEqual(read.findIndex((recipe) => recipe.name === 'Project only'), shipped().length, 'the project recipes follow the shipped ones');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("a page entry marks a project variant as the project's in its dropdown, and the project heading names the group", () => {
+  assert.strictEqual(PROJECT_GROUP_HEADING, 'Project actions');
+  const merged = mergeRecipes(
+    parseShippedRecipes('## Recipes\n\n### Chain\n```\necho shipped <path>\n```\n', SHIPPED),
+    parseOwnRecipes('### Chain\n#### mine\n```\necho own <path>\n```\n', OWN),
+    parseProjectRecipes('### Chain\n#### team\n```\necho project <path>\n```\n\n### Ours\n```\necho ours <path>\n```\n', PROJECT),
+  );
+  const listed = pageRecipes(merged, ['path']);
+  assert.deepStrictEqual(
+    listed.map((entry) => [entry.name, entry.group, entry.variants]),
+    [
+      ['Chain', 'shipped', [{ name: 'default', own: false }, { name: 'team', own: false, project: true }, { name: 'mine', own: true }]],
+      ['Ours', 'project', [{ name: 'default', own: false, project: true }]],
+    ],
+  );
+  const staged = mergeRecipes(
+    parseShippedRecipes('## Recipes\n\n### Prepare\nStage: derive tasks\n```\necho <path>\n```\n', SHIPPED),
+    [],
+    parseProjectRecipes('### Ours at finish\nStage: finish\n```\necho <path>\n```\n', PROJECT),
+  );
+  assert.deepStrictEqual(
+    pageRecipes(stageRecipes(staged, 'derive'), ['path']).map((entry) => [entry.name, entry.group]),
+    [['Prepare', 'shipped']],
+    'a project recipe declaring another step is not listed, so the page draws no project heading',
+  );
+  assert.deepStrictEqual(
+    pageRecipes(stageRecipes(staged, 'finish'), ['path']).map((entry) => [entry.name, entry.group]),
+    [['Ours at finish', 'project']],
+  );
 });
 
 test('CRLF line ends are read like LF ones', () => {

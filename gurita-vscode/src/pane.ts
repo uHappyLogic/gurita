@@ -26,12 +26,13 @@
 // adds, or completes tasks whenever it prints anything, and the `git status --porcelain` lines of
 // its `requirements.md` and `open_questions.xml`, which stop the answer sweep while any stands, each
 // drawn on its page as a notice only while it holds; and the recipe list its page shows, out of the recipes
-// read afresh from the shipped recipe file and the person's own recipe file: only those whose
+// read afresh from the shipped recipe file, the project's recipe file `gurita_recipes.md` in the
+// project root the live read read, and the person's own recipe file: only those whose
 // declared stage is the step its diagram fills, beside them the additional review round's when
 // derive tasks is filled, or when first review round is while any question of the mission is open,
 // and follow up tasks' when finish is, and every undeclared recipe, or every
 // recipe when no step is chosen, laid out within that by the page's other rules, the shipped
-// recipes in the shipped file's order followed by its own group, and the leaving off of a recipe
+// recipes in the shipped file's order followed by its project group and its own group, and the leaving off of a recipe
 // holding a placeholder the page cannot fill. While the live read fails, every open window is
 // answered with the one failure state in place of its whole page, the failure line with the cause
 // beneath it, and while a successful read does not list a window's mission, that window stays open
@@ -168,9 +169,11 @@ import {
   buttonRecipe,
   ownRecipesFile,
   pageRecipes,
+  projectRecipesFile,
   readRecipes,
   selectedChoice,
   stageRecipes,
+  variantChoice,
 } from './recipes';
 import {
   ALTERNATIVE_SELECTIONS_KEY,
@@ -240,7 +243,7 @@ type PageMessage =
   | { type: 'startLoop'; mission: string; recipe: string; overrides: Record<string, string> };
 
 /**
- * The merged recipe list as read from the two recipe files, with the commands of the harnesses the
+ * The merged recipe list as read from the three recipe files, with the commands of the harnesses the
  * Settings window disabled, or the cause they could not be read.
  */
 type RecipeRead = { state: 'read'; recipes: Recipe[]; disabled: Harness[] } | { state: 'failed'; cause: string };
@@ -903,19 +906,38 @@ function shownWindows(): MissionWindow[] {
 }
 
 /**
- * Reads the shipped recipe file and the person's own recipe file into the merged recipe list, the
- * per-user variant store laid over it.
+ * Reads the shipped recipe file, the project's recipe file, and the person's own recipe file into
+ * the merged recipe list, the per-user variant store laid over it, the project's file read in the
+ * project root `root`.
  */
-function readAllRecipes(context: vscode.ExtensionContext): Recipe[] {
-  const files = recipeFiles(context);
-  return readRecipes(files.shipped, files.own, files.store);
+function readAllRecipes(context: vscode.ExtensionContext, root = sessionRoot()): Recipe[] {
+  const files = recipeFiles(context, root);
+  return readRecipes(files.shipped, files.own, files.store, files.project);
 }
 
-/** The shipped recipe file, the person's own recipe file, and the per-user variant store file. */
-export function recipeFiles(context: vscode.ExtensionContext): { shipped: string; own: string; store: string } {
+/** The recipe files the extension reads and the per-user variant store file. */
+export interface RecipeFiles {
+  shipped: string;
+  own: string;
+  store: string;
+  /** The project's recipe file, left out while no project root is known. */
+  project?: string;
+}
+
+/**
+ * The shipped recipe file, the person's own recipe file, the per-user variant store file, and the
+ * project's recipe file, `gurita_recipes.md` directly in the project root `root`, by default the
+ * one the session's live read last read through `projectRoot`, left out while none is known.
+ */
+export function recipeFiles(context: vscode.ExtensionContext, root = sessionRoot()): RecipeFiles {
   const setting = vscode.workspace.getConfiguration('gurita').get<string>('ownRecipesFile');
   const home = os.homedir();
-  return { shipped: context.asAbsolutePath('bundled/shipped_recipes.md'), own: ownRecipesFile(setting, home), store: variantStoreFile(home) };
+  return {
+    shipped: context.asAbsolutePath('bundled/shipped_recipes.md'),
+    own: ownRecipesFile(setting, home),
+    store: variantStoreFile(home),
+    ...(root === undefined ? {} : { project: projectRecipesFile(root) }),
+  };
 }
 
 /** The commands of the harnesses the Settings window disabled, read afresh from the variant store file. */
@@ -924,12 +946,13 @@ function readDisabled(): Harness[] {
 }
 
 /**
- * Reads the shipped recipe file and the person's own recipe file into the merged list, with the
- * harnesses the Settings window disabled, or the cause they could not be read.
+ * Reads the shipped recipe file, the project's recipe file in the project root `root`, and the
+ * person's own recipe file into the merged list, with the harnesses the Settings window disabled,
+ * or the cause they could not be read.
  */
-function readRecipeList(context: vscode.ExtensionContext): RecipeRead {
+function readRecipeList(context: vscode.ExtensionContext, root = sessionRoot()): RecipeRead {
   try {
-    return { state: 'read', recipes: readAllRecipes(context), disabled: readDisabled() };
+    return { state: 'read', recipes: readAllRecipes(context, root), disabled: readDisabled() };
   } catch (error) {
     return { state: 'failed', cause: error instanceof Error ? error.message : String(error) };
   }
@@ -1018,7 +1041,7 @@ async function answer(context: vscode.ExtensionContext): Promise<void> {
         workflows: new Map(read.missions.map((mission, index) => [mission.path, workflows[index]])),
         stops: new Map(read.missions.map((mission, index) => [mission.path, stops[index]])),
         completed: new Map(read.missions.map((mission, index) => [mission.path, completed[index]])),
-        recipes: readRecipeList(context),
+        recipes: readRecipeList(context, read.root),
       };
       failure = undefined;
       retitleWindows(read.missions);
@@ -1138,7 +1161,7 @@ function fixedButton(read: RecipeRead, key: FixedButton, remembered: string | un
       entry: {
         state: 'offered',
         lines,
-        variants: found.variants.map((variant) => ({ name: variant.name, own: variant.own })),
+        variants: found.variants.map(variantChoice),
         selected: found.selected,
       },
       post: { state: 'offered', recipe: found.recipe.name, lines, variants: found.variants.map((variant) => variant.name), selected: found.selected },
@@ -1443,7 +1466,7 @@ async function previewLoop(
   let recipes: Recipe[];
   let disabled: Harness[];
   try {
-    recipes = readAllRecipes(context);
+    recipes = readAllRecipes(context, root);
     disabled = readDisabled();
   } catch (error) {
     previews.delete(mission);
@@ -2078,6 +2101,8 @@ export function pageShell(webview: vscode.Webview, scripts: vscode.Uri[], title:
   select.recipe-variant option { color: var(--vscode-dropdown-foreground); background: var(--vscode-dropdown-background); }
   button.recipe .recipe-variant-name, button.action .recipe-variant-name { display: block; font-size: 0.85em; opacity: 0.8; }
   .alternative-actions button.action .recipe-variant-name { display: inline; margin-left: 0.5em; }
+  button.recipe .recipe-variant-origin, button.action .recipe-variant-origin { display: block; font-size: 0.8em; font-style: italic; opacity: 0.7; }
+  .alternative-actions button.action .recipe-variant-origin { display: inline; margin-left: 0.5em; }
   .recipe-unknown { border: 1px dashed var(--vscode-inputValidation-warningBorder); padding: 0.3em 0.9em; opacity: 0.85; }
   .preview { border-top: 1px solid var(--vscode-panel-border); margin-top: 1em; }
   .preview-tasks { border-collapse: collapse; margin: 0.5em 0; width: 100%; }

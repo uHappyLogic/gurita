@@ -2,7 +2,7 @@
 // afresh, applies one edit to it, and writes the whole store back (`writeVariantStore`); the
 // extension is the store's only writer, and no edit reads or writes the person's own recipe file or
 // the shipped one. Each edit but the reset of a deleted variant, which reads the store alone, is
-// given the recipe list the two Markdown files yield before the store is laid over it
+// given the recipe list the three Markdown files yield before the store is laid over it
 // (`readRecipes` with no store file), lays the store over it as the reader does, and names its
 // variant as that list shows it, by its name, where it comes from, and, for a stored copy, the
 // variant it stands in for.
@@ -62,6 +62,7 @@ import {
   variantOrigin,
 } from './recipes';
 import {
+  ReadOrigin,
   ReadVariantRef,
   SourceRef,
   StoredVariant,
@@ -261,7 +262,7 @@ export interface SettingsRecipe {
 }
 
 /**
- * The recipes the settings view lists, out of `base`, the list the two Markdown files yield, with
+ * The recipes the settings view lists, out of `base`, the list the three Markdown files yield, with
  * the store `store`, read from `file`, laid over it: every recipe in the merged order, the ones only
  * the store holds after them, each with its listed variants, its default marked, each stored one
  * with the variant it was made from while that variant's lines can still be read, and the variants
@@ -432,7 +433,7 @@ export function renameVariant(storeFile: string, base: readonly Recipe[], recipe
     stored.name = name;
     renamed = { ...variant, name };
   } else {
-    const copies: ReadVariantRef = { name: variant.name, origin: variantOrigin(variant) as 'shipped' | 'own' };
+    const copies: ReadVariantRef = { name: variant.name, origin: variantOrigin(variant) as ReadOrigin };
     store.variants.push({ recipe: recipe.name, name, lines: [...variant.lines], copies });
     renamed = { ...variant, name, stored: true, copies };
   }
@@ -457,7 +458,7 @@ export function deleteVariant(storeFile: string, base: readonly Recipe[], recipe
   }
   const hide: ReadVariantRef | undefined = variant.stored
     ? variant.copies
-    : { name: variant.name, origin: variantOrigin(variant) as 'shipped' | 'own' };
+    : { name: variant.name, origin: variantOrigin(variant) as ReadOrigin };
   const from = hide?.recipe ?? recipe.name;
   if (hide !== undefined && !store.hidden.some((each) => each.recipe === from && each.name === hide.name && each.origin === hide.origin)) {
     store.hidden.push({ recipe: from, name: hide.name, origin: hide.origin });
@@ -657,7 +658,7 @@ function lineOriginal(recipe: string, variants: readonly Variant[]): { recipe: s
 }
 
 /**
- * The named single-task lines the settings view lists, out of `base`, the list the two Markdown
+ * The named single-task lines the settings view lists, out of `base`, the list the three Markdown
  * files yield, with the store `store`, read from `file`, laid over it: every recipe whose default
  * is a single-task line, in the merged order, the lines only the store holds after them, each with
  * its single-task variants as `settingsRecipes` lists a recipe's, the default marked, and the
@@ -775,7 +776,7 @@ export function renameLine(storeFile: string, base: readonly Recipe[], lineName:
       recipe: name,
       name,
       lines: [...variant.lines],
-      copies: { name: variant.name, origin: variantOrigin(variant) as 'shipped' | 'own', recipe: recipe.name },
+      copies: { name: variant.name, origin: variantOrigin(variant) as ReadOrigin, recipe: recipe.name },
     });
   }
   writeVariantStore(storeFile, store);

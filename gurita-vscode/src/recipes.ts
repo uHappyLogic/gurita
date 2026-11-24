@@ -6,15 +6,20 @@
 // that every such recipe opens on a variant called `default` while a recipe of several `####`
 // variants keeps the names written. Once a recipe holds a `####` sub-heading only the
 // blocks beneath its sub-headings are read, and of a variant name repeated within one recipe the
-// first is kept. The same form is read in the shipped file and in a person's own file. The shipped
-// recipe file, `shipped_recipes.md`, yields only the recipes under its one recipe section, its
-// `## Recipes` heading, each in the shipped group, each chain shipped once and not once per
-// harness; a person's own recipe file is a flat list of `###` recipes. An own recipe carrying a
-// shipped recipe's name replaces neither that recipe nor any of its variants:
-// its variants join the shipped recipe, listed after the shipped variants under their own names and
-// marked as the person's own, an own variant carrying a shipped variant's name kept as a second
-// entry beside it; every other own recipe is listed after the shipped recipes, which keep the
-// shipped file's order, in the own file's order.
+// first is kept. The same form is read in the shipped file, in the project's file, and in a
+// person's own file. The shipped recipe file, `shipped_recipes.md`, yields only the recipes under
+// its one recipe section, its `## Recipes` heading, each in the shipped group, each chain shipped
+// once and not once per harness; the project's recipe file, `gurita_recipes.md` directly in the
+// project root (`PROJECT_RECIPES_FILE`), its absence meaning the project has no recipes, and a
+// person's own recipe file are each a flat list of `###` recipes. The three sources are merged in
+// the order shipped, project, own: a recipe carrying the name of a recipe an earlier source holds
+// replaces neither that recipe nor any of its variants: its variants join that recipe, listed after
+// the earlier sources' variants under their own names and marked by their origin, `project` or
+// `own`, a variant carrying another source's variant name kept as a second entry beside it, so all
+// three sources of one name form one recipe, which keeps the name, group, stage, and description
+// of the first source that holds it; every other project recipe is listed after the shipped
+// recipes, which keep the shipped file's order, in the project file's order, in the project group,
+// and every other own recipe after them, in the own file's order.
 // Over that merged list the per-user variant store (`variantStore.ts`) is laid wherever the
 // extension reads recipes: a stored copy stands in for the shipped or own variant it copies and
 // keeps its place in the recipe's order, a hidden variant is left out, and the further stored
@@ -37,18 +42,19 @@
 // recipe, in the shipped file and in a person's own file alike, the step named as the diagram
 // labels its block (first review round, additional review round, derive tasks, execute tasks,
 // follow up tasks, or finish); an own recipe that joins a shipped one keeps the shipped recipe's
-// declaration. A recipe with no such line, with more than one,
+// declaration, as one joining a project recipe keeps the project recipe's. A recipe with no such line, with more than one,
 // or with a name the reader does not know, `define` included, counts as undeclared. Beside it a
 // recipe may carry one line of description, by one `Description: <text>` line read by the same
 // rule, standing outside any fence between its heading and its first fence or first `####`
 // sub-heading, its text trimmed; a recipe with none, with more than one, or with one of no text
-// has no description, and an own recipe that joins a shipped one keeps the shipped recipe's. A
+// has no description, and a recipe that joins one of an earlier source keeps that recipe's. A
 // mission page draws each recipe's button on a row of its own with the description to its right. A mission page
 // lists only the recipes that fit the step its diagram fills: those declaring that step, beside them
 // the additional review round's when derive tasks is filled, or when first review round is while
 // any question is open, and follow up tasks' when finish is, and every undeclared recipe whatever
 // the step, while a page whose step could not be chosen lists every
-// recipe; the page's other rules, the shipped recipes before the own group and the placeholders it
+// recipe; the page's other rules, the shipped recipes before the project group and the project group
+// before the own group, and the placeholders it
 // cannot fill, hold within that list, and the buttons that run a recipe by its fixed name are untouched by
 // it. In the shipped file every chain declares its one step and spans no other, each variant of an
 // execution chain holding its `complete-all-tasks` line alone, while the button recipes and the
@@ -59,15 +65,27 @@
 // `vscode`.
 
 import * as fs from 'node:fs';
+import * as path from 'node:path';
 import { Harness, readLine } from './lineValues';
-import { ReadVariantRef, SourceRef, StoredVariant, VariantOrigin, VariantRef, VariantStore, readVariantStore } from './variantStore';
+import { ReadOrigin, ReadVariantRef, SourceRef, StoredVariant, VariantOrigin, VariantRef, VariantStore, readVariantStore } from './variantStore';
 import type { WorkflowStep } from './workflow';
 
 /** The one heading of the shipped recipe file whose `###` blocks are recipes. */
 export const RECIPE_SECTION = 'Recipes';
 
-/** `shipped` for a recipe of the shipped file, or `own` for an own recipe that joins no shipped one. */
-export type RecipeGroup = 'shipped' | 'own';
+/**
+ * `shipped` for a recipe of the shipped file, `project` for a project recipe that joins no shipped
+ * one, or `own` for an own recipe that joins no shipped or project one.
+ */
+export type RecipeGroup = 'shipped' | 'project' | 'own';
+
+/** The fixed name of the project's recipe file, read directly in the project root. */
+export const PROJECT_RECIPES_FILE = 'gurita_recipes.md';
+
+/** The path of the project's recipe file in the project root `root`, the git top level `projectRoot` finds. */
+export function projectRecipesFile(root: string): string {
+  return path.join(root, PROJECT_RECIPES_FILE);
+}
 
 /** The placeholders the extension knows, each written `<name>` in a line. */
 export const KNOWN_PLACEHOLDERS: readonly string[] = [
@@ -112,8 +130,10 @@ export const STAGE_NAMES: ReadonlyMap<string, WorkflowStep> = new Map<string, Wo
 export interface Variant {
   /** The `####` sub-heading's text, or `default` (`ONE_BLOCK_VARIANT`) for a recipe of one block. */
   name: string;
-  /** Whether it comes from the person's own recipe file. */
+  /** Whether it comes from the person's own recipe file, or, `stored` set, from the variant store. */
   own: boolean;
+  /** Set on a variant of the project's recipe file. */
+  project?: true;
   /** The path of the file the variant's lines came from. */
   file: string;
   /** The fenced block's non-blank lines, as written. */
@@ -128,7 +148,7 @@ export interface Variant {
   unknownPlaceholders: string[];
   /** Set on a variant of the per-user variant store, which also counts as the person's own. */
   stored?: true;
-  /** The shipped or own variant a stored copy stands in for. */
+  /** The shipped, project, or own variant a stored copy stands in for. */
   copies?: ReadVariantRef;
   /** The variant a stored variant was made from, whose lines a reset returns it to. */
   from?: SourceRef;
@@ -137,11 +157,12 @@ export interface Variant {
 export interface Recipe {
   /** The `###` heading's text, the recipe's name. */
   name: string;
-  /** `shipped`, or `own` for an own recipe that carries no shipped recipe's name. */
+  /** The group of the first source that holds it: `shipped`, `project`, or `own`. */
   group: RecipeGroup;
   /**
-   * Its variants, at least one: the shipped ones in the shipped file's order, then the ones an own
-   * recipe of the same name adds, in the own file's order.
+   * Its variants, at least one: the shipped ones in the shipped file's order, then the ones a
+   * project recipe of the same name adds, in the project file's order, then the ones an own recipe
+   * of the same name adds, in the own file's order.
    */
   variants: Variant[];
   /**
@@ -158,9 +179,9 @@ export interface Recipe {
   picked?: VariantRef;
 }
 
-/** Where a variant comes from: the variant store, the person's own recipe file, or the shipped file. */
+/** Where a variant comes from: the variant store, the person's own recipe file, the project's recipe file, or the shipped file. */
 export function variantOrigin(variant: Variant): VariantOrigin {
-  return variant.stored ? 'stored' : variant.own ? 'own' : 'shipped';
+  return variant.stored ? 'stored' : variant.project ? 'project' : variant.own ? 'own' : 'shipped';
 }
 
 /** A block of lines read beneath a heading: undefined until its first fence opens. */
@@ -309,8 +330,8 @@ export function isHeadless(line: string): boolean {
   return INVOCATION.test(line) && !INTERACTIVE_MARK.test(line);
 }
 
-/** Classifies one variant's lines by their content alone. */
-function variant(name: string, lines: readonly string[], own: boolean, file: string): Variant {
+/** Classifies one variant's lines, read from a file of origin `origin`, by their content alone. */
+function variant(name: string, lines: readonly string[], origin: ReadOrigin, file: string): Variant {
   const looped = lines.length > 0 && lines[lines.length - 1].trim() === SLOT_LINE;
   const known: string[] = [];
   const unknown: string[] = [];
@@ -326,7 +347,8 @@ function variant(name: string, lines: readonly string[], own: boolean, file: str
   const singleTask = lines.length === 1 && isHeadless(lines[0]) && known.includes('Task Title');
   return {
     name,
-    own,
+    own: origin === 'own',
+    ...(origin === 'project' ? { project: true as const } : {}),
     file,
     lines: [...lines],
     singleTask,
@@ -341,14 +363,14 @@ function variant(name: string, lines: readonly string[], own: boolean, file: str
  * kept, or, when it holds none, one variant named `default` and holding the block's own lines.
  * A heading with no fence beneath it gives a variant of no line.
  */
-function classify(block: Block, group: RecipeGroup, own: boolean, file: string): Recipe {
+function classify(block: Block, group: RecipeGroup, file: string): Recipe {
   const variants: Variant[] = [];
   if (block.variants.length === 0) {
-    variants.push(variant(ONE_BLOCK_VARIANT, block.lines ?? [], own, file));
+    variants.push(variant(ONE_BLOCK_VARIANT, block.lines ?? [], group, file));
   } else {
     for (const each of block.variants) {
       if (!variants.some((kept) => kept.name === each.name)) {
-        variants.push(variant(each.name, each.lines ?? [], own, file));
+        variants.push(variant(each.name, each.lines ?? [], group, file));
       }
     }
   }
@@ -372,13 +394,13 @@ export function parseShippedRecipes(text: string, file: string): Recipe[] {
       continue;
     }
     seen.add(block.name);
-    recipes.push(classify(block, 'shipped', false, file));
+    recipes.push(classify(block, 'shipped', file));
   }
   return recipes;
 }
 
-/** Reads a person's own recipe file's text: every `###` block, flat, the first of a repeated name kept. */
-export function parseOwnRecipes(text: string, file: string): Recipe[] {
+/** Reads a flat recipe file's text into the group `group`: every `###` block, the first of a repeated name kept. */
+function parseFlatRecipes(text: string, file: string, group: 'project' | 'own'): Recipe[] {
   const recipes: Recipe[] = [];
   const seen = new Set<string>();
   for (const block of blocks(text)) {
@@ -386,26 +408,43 @@ export function parseOwnRecipes(text: string, file: string): Recipe[] {
       continue;
     }
     seen.add(block.name);
-    recipes.push(classify(block, 'own', true, file));
+    recipes.push(classify(block, group, file));
   }
   return recipes;
 }
 
+/** Reads a person's own recipe file's text: every `###` block, flat, the first of a repeated name kept. */
+export function parseOwnRecipes(text: string, file: string): Recipe[] {
+  return parseFlatRecipes(text, file, 'own');
+}
+
+/** Reads the project's recipe file's text: every `###` block, flat, the first of a repeated name kept, each in the project group. */
+export function parseProjectRecipes(text: string, file: string): Recipe[] {
+  return parseFlatRecipes(text, file, 'project');
+}
+
 /**
- * Merges the two lists: the shipped recipes in the shipped file's order, an own recipe carrying a
- * shipped recipe's name joining that recipe, its variants listed after the shipped variants and
- * kept beside any shipped variant of the same name, the shipped recipe keeping its name, group,
- * stage, and description; every other own recipe follows the shipped recipes, in the own file's order.
+ * Merges the three lists in the order shipped, project, own: the shipped recipes in the shipped
+ * file's order, then the project recipes that carry no shipped recipe's name, in the project file's
+ * order, then the own recipes that carry neither, in the own file's order. A recipe carrying the
+ * name of one an earlier source holds joins it, its variants listed after that recipe's and kept
+ * beside any variant of the same name, the joined recipe keeping the name, group, stage, and
+ * description of the first source that holds it.
  */
-export function mergeRecipes(shipped: Recipe[], own: Recipe[]): Recipe[] {
-  const ownByName = new Map(own.map((recipe) => [recipe.name, recipe]));
+export function mergeRecipes(shipped: Recipe[], own: Recipe[], project: Recipe[] = []): Recipe[] {
   const merged: Recipe[] = [];
-  for (const recipe of shipped) {
-    const joining = ownByName.get(recipe.name);
-    merged.push(joining ? { ...recipe, variants: [...recipe.variants, ...joining.variants] } : recipe);
+  const byName = new Map<string, number>();
+  for (const source of [shipped, project, own]) {
+    for (const recipe of source) {
+      const at = byName.get(recipe.name);
+      if (at === undefined) {
+        byName.set(recipe.name, merged.length);
+        merged.push(recipe);
+      } else {
+        merged[at] = { ...merged[at], variants: [...merged[at].variants, ...recipe.variants] };
+      }
+    }
   }
-  const shippedNames = new Set(shipped.map((recipe) => recipe.name));
-  merged.push(...own.filter((recipe) => !shippedNames.has(recipe.name)));
   return merged;
 }
 
@@ -417,14 +456,14 @@ export function firstVariant(recipe: Recipe): Variant {
 /** The variant a stored record classifies as, from the store file `file`. */
 function storedVariant(stored: StoredVariant, file: string): Variant {
   return {
-    ...variant(stored.name, stored.lines, true, file),
+    ...variant(stored.name, stored.lines, 'own', file),
     stored: true,
     ...(stored.copies === undefined ? {} : { copies: { ...stored.copies } }),
     ...(stored.from === undefined ? {} : { from: { ...stored.from } }),
   };
 }
 
-/** Whether two stored variants stand in for the same shipped or own variant, or both for none. */
+/** Whether two stored variants stand in for the same shipped, project, or own variant, or both for none. */
 export function sameCopies(one: ReadVariantRef | undefined, other: ReadVariantRef | undefined): boolean {
   return one === undefined || other === undefined
     ? one === other
@@ -578,28 +617,34 @@ export function defaultVariant(recipe: Recipe): Variant {
   return pickedVariant(recipe) ?? firstVariant(recipe);
 }
 
-/**
- * Reads the shipped recipe file and, when given and present, a person's own recipe file, merges
- * them, and lays the variant store at `storeFile`, when given, over the merged list. A missing own
- * file holds no recipe and a missing store file nothing; any other read failure throws.
- */
-export function readRecipes(shippedFile: string, ownFile?: string, storeFile?: string): Recipe[] {
-  const shipped = parseShippedRecipes(fs.readFileSync(shippedFile, 'utf8'), shippedFile);
-  let own: Recipe[] = [];
-  if (ownFile !== undefined) {
-    let text: string | undefined;
-    try {
-      text = fs.readFileSync(ownFile, 'utf8');
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-        throw error;
-      }
-    }
-    if (text !== undefined) {
-      own = parseOwnRecipes(text, ownFile);
-    }
+/** The text of the file at `file`, undefined when it is not given or missing; any other read failure throws. */
+function readOptional(file: string | undefined): string | undefined {
+  if (file === undefined) {
+    return undefined;
   }
-  const merged = mergeRecipes(shipped, own);
+  try {
+    return fs.readFileSync(file, 'utf8');
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      throw error;
+    }
+    return undefined;
+  }
+}
+
+/**
+ * Reads the shipped recipe file and, when given and present, a person's own recipe file and the
+ * project's recipe file at `projectFile`, merges them in the order shipped, project, own, and lays
+ * the variant store at `storeFile`, when given, over the merged list. A missing own or project file
+ * holds no recipe and a missing store file nothing; any other read failure throws.
+ */
+export function readRecipes(shippedFile: string, ownFile?: string, storeFile?: string, projectFile?: string): Recipe[] {
+  const shipped = parseShippedRecipes(fs.readFileSync(shippedFile, 'utf8'), shippedFile);
+  const ownText = readOptional(ownFile);
+  const own = ownText === undefined ? [] : parseOwnRecipes(ownText, ownFile as string);
+  const projectText = readOptional(projectFile);
+  const project = projectText === undefined ? [] : parseProjectRecipes(projectText, projectFile as string);
+  const merged = mergeRecipes(shipped, own, project);
   if (storeFile === undefined) {
     return merged;
   }
@@ -625,14 +670,27 @@ export function ownRecipesFile(setting: string | undefined, home: string): strin
   return chosen;
 }
 
-/** The heading of the page's group of own recipes that replace no shipped recipe. */
+/** The heading of the page's group of own recipes that carry no shipped or project recipe's name. */
 export const OWN_GROUP_HEADING = 'Your actions';
 
-/** One variant a page recipe's dropdown offers: its name, which the dropdown and the button beside it show, and whether it is the person's own. */
+/** The heading of the page's group of project recipes that carry no shipped recipe's name, drawn between the shipped recipes and the own group. */
+export const PROJECT_GROUP_HEADING = 'Project actions';
+
+/**
+ * One variant a page recipe's dropdown offers: its name, which the dropdown and the button beside
+ * it show, whether it is the person's own, and whether it is the project's, which the page marks.
+ */
 export interface PageVariantChoice {
   name: string;
   /** Set for a variant of the person's own recipe file or of the variant store. */
   own: boolean;
+  /** Set for a variant of the project's recipe file. */
+  project?: true;
+}
+
+/** The dropdown choice a variant gives: its name, whether it is the person's own, and whether it is the project's. */
+export function variantChoice(variant: Variant): PageVariantChoice {
+  return { name: variant.name, own: variant.own, ...(variant.project ? { project: true as const } : {}) };
 }
 
 /** The dropdown beside a page recipe: the variants it offers, in the recipe's order, and the one selected. */
@@ -772,7 +830,7 @@ export function pageRecipes(
     }
     listed.push({
       ...drawn[selected].entry,
-      variants: drawn.map((each) => ({ name: each.variant.name, own: each.variant.own })),
+      variants: drawn.map((each) => variantChoice(each.variant)),
       selected,
     });
   }

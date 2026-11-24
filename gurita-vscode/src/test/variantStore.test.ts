@@ -12,6 +12,7 @@ import {
   overlayVariantStore,
   pageRecipes,
   parseOwnRecipes,
+  parseProjectRecipes,
   parseShippedRecipes,
   readRecipes,
   variantOrigin,
@@ -124,6 +125,55 @@ test('a missing store file holds nothing, and a store not in its form is refused
       text,
     );
   }
+});
+
+test('the store names a project variant by the origin project in its copy, from, hide, and default records, written back as read', () => {
+  const text = JSON.stringify({
+    variants: [
+      { recipe: 'Chain', name: 'Team renamed', lines: ['echo team'], copies: { name: 'team', origin: 'project' } },
+      { recipe: 'Chain', name: 'custom 1', lines: ['echo changed'], from: { name: 'team', origin: 'project' } },
+    ],
+    hidden: [{ recipe: 'Ours', name: 'default', origin: 'project' }],
+    defaults: [{ recipe: 'Ours', name: 'default', origin: 'project' }],
+  });
+  const store = parseVariantStore(text, STORE);
+  assert.deepStrictEqual(store.variants[0].copies, { name: 'team', origin: 'project' });
+  assert.deepStrictEqual(store.variants[1].from, { name: 'team', origin: 'project' });
+  assert.deepStrictEqual(store.hidden, [{ recipe: 'Ours', name: 'default', origin: 'project' }]);
+  assert.deepStrictEqual(store.defaults, [{ recipe: 'Ours', name: 'default', origin: 'project' }]);
+  assert.deepStrictEqual(parseVariantStore(serializeVariantStore(store), STORE), store, 'the store is written back as read');
+});
+
+test("the store is laid over the three sources: a project variant is copied, hidden, and picked by its own origin, and the stored-only recipes stay last in the own group", () => {
+  const project = '/work/project/gurita_recipes.md';
+  const merged = mergeRecipes(
+    parseShippedRecipes('## Recipes\n\n### Chain\n```\necho shipped\n```\n', SHIPPED),
+    parseOwnRecipes('### Chain\n#### team\n```\necho own team\n```\n\n### Mine\n```\necho mine\n```\n', OWN),
+    parseProjectRecipes('### Chain\n#### team\n```\necho project team\n```\n\n### Ours\n#### a\n```\necho a\n```\n#### b\n```\necho b\n```\n', project),
+  );
+  const store = parseVariantStore(
+    JSON.stringify({
+      variants: [
+        { recipe: 'Chain', name: 'Team renamed', lines: ['echo project team'], copies: { name: 'team', origin: 'project' } },
+        { recipe: 'Only stored', name: 'kept', lines: ['echo stored'] },
+      ],
+      hidden: [{ recipe: 'Ours', name: 'a', origin: 'project' }, { recipe: 'Chain', name: 'team', origin: 'shipped' }],
+      defaults: [{ recipe: 'Chain', name: 'team', origin: 'own' }],
+    }),
+    STORE,
+  );
+  const overlaid = overlayVariantStore(merged, store, STORE);
+  assert.deepStrictEqual(outline(overlaid), [
+    ['shipped', 'Chain', [['default', 'shipped'], ['Team renamed', 'stored'], ['team', 'own']]],
+    ['project', 'Ours', [['b', 'project']]],
+    ['own', 'Mine', [['default', 'own']]],
+    ['own', 'Only stored', [['kept', 'stored']]],
+  ]);
+  assert.deepStrictEqual(byName(overlaid, 'Chain').variants[1].copies, { name: 'team', origin: 'project' }, "the copy stands in for the project's variant in its place");
+  assert.strictEqual(defaultVariant(byName(overlaid, 'Chain')).lines[0], 'echo own team', 'a pick names its variant by origin, the own one beside the project one');
+  const picked = overlayVariantStore(merged, parseVariantStore(JSON.stringify({ defaults: [{ recipe: 'Ours', name: 'b', origin: 'project' }] }), STORE), STORE);
+  assert.strictEqual(defaultVariant(byName(picked, 'Ours')).name, 'b', "a project variant is picked by the origin project");
+  assert.strictEqual(variantOrigin(defaultVariant(byName(picked, 'Ours'))), 'project');
 });
 
 test('the store is laid over the merged list: copies stand in place, hidden variants go, further stored variants follow', () => {

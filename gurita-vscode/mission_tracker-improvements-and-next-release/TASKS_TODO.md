@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Project Recipe File as a Third Source
-
-Read the project's recipes from one file under the fixed name `gurita_recipes.md`, directly in the project root that `projectRoot` in `src/live.ts` finds, beside the shipped file and the person's own, with no setting added and an absent file meaning the project has no recipes. A project recipe carrying a shipped recipe's name joins it as further variants and an own recipe carrying a project recipe's name joins it the same way, the variants ordered shipped, then project, then own, each source in its file's order, a variant carrying another source's variant name kept as a second entry beside it and the joined recipe keeping the name, group, and `Stage:` of the first source that holds it; project variants carry a third origin, `project` (`VariantOrigin`, `ReadVariantRef`, the variant store's copy, hide, and default records), and are marked as the project's on the mission page and in the Settings window. A mission page lists the project recipes that carry no shipped recipe's name under a heading of their own, directly below the shipped ones and above the own heading, drawn only when at least one fits the step the diagram fills, the stored-only recipes staying last in the own group; verified by reader, variant-store, page, and Settings tests of the three sources, with `gurita-vscode/README.md` documenting the file.
-
----
-
 ## Effort on Codex Lines
 
 Read and replace a Codex line's effort in `lineValues.ts` as the config override `-c model_reasoning_effort=<level>`, the `--config` spelling read as well, as `--effort` is read and replaced on the other harnesses' lines. The Settings window gains a Codex effort list under Models and efforts, built like the other two from the values the shipped recipes, own recipes, and stored variants carry with the person's `addedEfforts`/`removedEfforts` overlay on top, and a Codex line gets both a model dropdown and an effort dropdown, a line written without the override having no effort dropdown. Verified by line-value, harness-list, and Settings tests, with `gurita-vscode/README.md` describing the list.

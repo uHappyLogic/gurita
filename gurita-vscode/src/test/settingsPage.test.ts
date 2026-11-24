@@ -942,6 +942,56 @@ test('each variant control posts its edit, naming the variant as listed, and the
   assert.deepStrictEqual(variantEditRows(page).map(([name, rows]) => [name, rows.map((row) => row[0][0])]), [['First run', ['default', 'Fast', 'custom 1']]]);
 });
 
+test("a project variant is marked as the project's, a stored copy of one and a hidden one too, and its controls name it by the origin project", () => {
+  const page = loadSettings();
+  page.send({
+    type: 'variants',
+    variants: {
+      state: 'read',
+      recipes: [
+        {
+          name: 'First run',
+          group: 'shipped',
+          fixed: false,
+          variants: [
+            { name: 'default', origin: 'shipped', lines: [CLAUDE_LINE], isDefault: true },
+            { name: 'team', origin: 'project', lines: [CLAUDE_LINE], isDefault: false },
+            { name: 'Team copy', origin: 'stored', copies: { name: 'fast', origin: 'project' }, lines: [AGY_LINE], isDefault: false, from: { name: 'fast', origin: 'project' } },
+            { name: 'default', origin: 'own', lines: [CLAUDE_LINE], isDefault: false },
+          ],
+          hidden: [{ name: 'slow', origin: 'project' }],
+        },
+        { name: 'Ours', group: 'project', fixed: false, variants: [{ name: 'default', origin: 'project', lines: ['echo <path>'], isDefault: true }], hidden: [] },
+      ],
+    },
+  });
+  const edits = ['Duplicate', 'Rename', 'Delete'];
+  assert.deepStrictEqual(variantEditRows(page), [
+    [
+      'First run',
+      [
+        [['default', 'shipped', 'Default'], edits],
+        [['team', "the project's"], [...edits, 'Make default']],
+        [['Team copy', "stored copy of the project's variant fast"], [...edits, 'Make default', 'Reset']],
+        [['default', 'yours'], [...edits, 'Make default']],
+        [['slow', "the project's", 'Deleted'], ['Reset']],
+      ],
+    ],
+    ['Ours', [[['default', "the project's", 'Default'], edits]]],
+  ]);
+  const count = page.posted.length;
+  for (const key of ['default-0-1', 'delete-0-1', 'reset-0-hidden-0']) {
+    const found = page.root.querySelector(`[data-focus="variant-${key}"]`);
+    assert.ok(found !== null, `no control ${key}`);
+    found.click();
+  }
+  assert.deepStrictEqual(page.posted.slice(count), [
+    { type: 'pickDefault', recipe: 'First run', variant: { name: 'team', origin: 'project' } },
+    { type: 'deleteVariant', recipe: 'First run', variant: { name: 'team', origin: 'project' } },
+    { type: 'resetVariant', recipe: 'First run', original: { name: 'slow', origin: 'project' } },
+  ]);
+});
+
 test('variants that could not be read are named in the window, with no control drawn', () => {
   const page = loadSettings();
   page.send({ type: 'variants', variants: { state: 'failed', cause: 'The variant store /home/x/.gurita/variants.json is not JSON.' } });

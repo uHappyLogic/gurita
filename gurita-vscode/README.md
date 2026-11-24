@@ -680,27 +680,29 @@ lists cannot be read, the window says so with the cause beneath it.
 
 Under **Variants** the window lists every recipe with its variants, read afresh every time the window
 opens: the chains, the nine recipes the buttons and rows outside the recipe list run by their fixed names,
-and the recipes and variants of your own recipe file, in the order the mission pages list them,
-with the recipes only your stored variants make up last. The named single-task lines are not
+and the recipes and variants of the project's recipe file and of your own recipe file, in the
+order the mission pages list them, with the recipes only your stored variants make up last. The named single-task lines are not
 listed here but under **Single-task lines** below, and neither a recipe's stage nor a disabled harness leaves anything out. Each
 variant shows its name, its lines in the name's hover text, and where it comes from (`shipped`,
-`yours` for your own recipe file, `stored` for a duplicate or a `custom N` a line edit added, or
-`stored copy of` the variant a rename made it stand in for), and the recipe's default is marked
+`the project's` for the project's recipe file, `yours` for your own recipe file, `stored` for a
+duplicate or a `custom N` a line edit added, or `stored copy of` the variant a rename made it
+stand in for), and the recipe's default is marked
 **Default**. A button recipe carries a note
 that its default is the variant its button runs until another variant is selected in the dropdown
 beside the button.
 
 Each variant has these controls, every one carried out in your per-user variant store,
-`~/.gurita/variants.json`, and never in the shipped file or your own recipe file:
+`~/.gurita/variants.json`, and never in the shipped file, the project's recipe file, or your own
+recipe file:
 
 - **Duplicate** asks for the new variant's name and adds a copy of the variant's lines under it,
   listed after the recipe's other variants and remembering the variant it was made from.
 - **Rename** asks for the new name, the box opening with the current name filled in. A shipped
-  variant or one of your own recipe file gets a stored copy of the new name standing in for it in
+  variant or one of the project's or your own recipe file gets a stored copy of the new name standing in for it in
   its place; a stored variant is renamed in the store. When the variant is the picked default,
   the pick goes with it to the new name.
-- **Delete** takes the variant out of its recipe. A shipped variant or one of your own recipe file
-  gets a record hiding it, and is then listed as **Deleted** with a **Reset** control alone; a
+- **Delete** takes the variant out of its recipe. A shipped variant or one of the project's or your
+  own recipe file gets a record hiding it, and is then listed as **Deleted** with a **Reset** control alone; a
   stored duplicate leaves the store; a stored copy leaves it and hides the variant it stood in
   for. Deleting the picked default drops the pick, and the recipe falls back to its first listed
   variant.
@@ -751,8 +753,8 @@ it takes the picked harness's first listed model, and it keeps its effort when t
 effort list offers it, taking its first listed effort otherwise (a `claude` line at `xhigh` lands
 on `agy` at the first effort Antigravity's list holds, `medium` with the shipped lists). Both
 lists are those **Models and efforts** holds. A pick, of any of the three, is written to
-`~/.gurita/variants.json`. On a shipped variant or one of your own recipe file, `default`
-included, the variant is left untouched and listed, and a stored variant named `custom N` is
+`~/.gurita/variants.json`. On a shipped variant or one of the project's or your own recipe file,
+`default` included, the variant is left untouched and listed, and a stored variant named `custom N` is
 added beside it, after the recipe's other variants, holding the changed lines, N the lowest number
 from 1 that no variant of the recipe carries (`custom 1`, then `custom 2`, a number freed by a
 delete taken again). The new variant is neither selected in any dropdown nor made the default, so
@@ -765,7 +767,8 @@ and on the mission pages.
 ### Single-task lines
 
 Under **Single-task lines** the window lists the named single-task lines the looped run takes,
-read afresh every time the window opens: the shipped ones and those of your own recipe file alike,
+read afresh every time the window opens: the shipped ones and those of the project's and your own
+recipe files alike,
 in the order the looped run's preview offers them, with the lines only your store holds last.
 Each line is headed by its name, the one `task_line_rules.txt` and the preview's override list use,
 and beneath it stand its variants: its `default` (the one variant of a line of one block, as every
@@ -841,7 +844,7 @@ claude "/gurita:complete-all-tasks --mission <path>" --dangerously-skip-permissi
 ````
 
 A recipe with one fenced block and no `####` sub-heading is a recipe of one variant, named
-`default`, in the shipped file and your own file alike, the named single-task lines included, so
+`default`, in the shipped file, the project's file, and your own file alike, the named single-task lines included, so
 every such recipe opens on a variant called `default` in its dropdown and in the Settings window; a
 recipe of several `####` variants, such as `Execute tasks` above, keeps the names written.
 Nothing renames what you stored or selected before under such a variant's old name, the
@@ -851,8 +854,8 @@ selection naming it is dropped as one naming a variant gone from the recipe. Onc
 a `####` sub-heading, only the blocks beneath its sub-headings are read, a block standing above
 the first sub-heading included in none; a sub-heading with no fence beneath it is a variant of no
 line, and of a variant name repeated within one recipe only the first is read. Headings inside a fence are lines, not headings. The
-extension reads recipes from two files, the shipped file and your own file, and reads both in this
-same form. A recipe's default is the variant picked for it in the Settings window (see Variants
+extension reads recipes from three files, the shipped file, the project's file, and your own file
+(see The project's recipe file below), and reads all three in this same form. A recipe's default is the variant picked for it in the Settings window (see Variants
 above), and while none is picked its first variant: the looped run's named single-task lines run
 the default, and the recipe button on a mission's page and each button that runs a recipe by its
 fixed name run the variant selected in the dropdown beside it, the default until you select
@@ -880,8 +883,8 @@ trimmed. A recipe with no `Stage:` line before its first fence or sub-heading, w
 one, or with a name the reader does not know (`define`, or a step's name spelled otherwise,
 capitals included) is undeclared; a `Stage:` line inside the fence is an ordinary line of the
 recipe, and one after the first fence or beneath a `####` sub-heading is not read. The same rule
-reads the shipped file and your own file, and an own recipe that joins a shipped one keeps the
-shipped recipe's declaration, its own `Stage:` line not read. The declared step chooses the
+reads the shipped file, the project's file, and your own file, and a recipe that joins one of an
+earlier file keeps that recipe's declaration, its own `Stage:` line not read. The declared step chooses the
 mission pages that list the recipe.
 
 ### The description line
@@ -906,8 +909,9 @@ of the recipe's button (see The recipes a page lists below). A recipe with no `D
 before its first fence or sub-heading, with more than one, or with one holding no text has no
 description, and its button stands on its row alone; a `Description:` line inside the fence is an
 ordinary line of the recipe, and one after the first fence or beneath a `####` sub-heading is not
-read. The same rule reads the shipped file and your own file, and an own recipe that joins a
-shipped one keeps the shipped recipe's description, its own `Description:` line not read. Every
+read. The same rule reads the shipped file, the project's file, and your own file, and a recipe
+that joins one of an earlier file keeps that recipe's description, its own `Description:` line not
+read. Every
 chain the shipped file holds carries one; its button recipes and single-task lines carry none.
 
 ### The recipes a page lists
@@ -924,7 +928,8 @@ step to run next:
 
 A page whose diagram fills no block, because a document or the git read the choice needs did not
 read, lists every recipe. The page's other rules hold within that list as described below: the
-shipped recipes come first and your own under **Your actions** below them, a variant holding a
+shipped recipes come first, the project's under **Project actions** below them, and your own under
+**Your actions** below those, a variant holding a
 placeholder the page cannot fill is left off, and one holding a placeholder the extension does not
 know is shown as a non-runnable entry when selected. The list follows the step, so it changes
 whenever a run or a change to a mission document moves the diagram's filled block. The buttons
@@ -932,15 +937,18 @@ that run a recipe by its fixed name (on the question card and its alternatives, 
 **Ask in mission context**) are offered whatever the step, as are the side-bar view's **New mission** and **Define mission**
 rows and its bootstrap offer row.
 
-Under the page's **Actions** heading the list is drawn in two parts, one recipe to a row: each
+Under the page's **Actions** heading the list is drawn in up to three parts, one recipe to a row: each
 row holds the recipe's button with its dropdown beside it and, to their right, the recipe's one
 line of description from its `Description:` line (see The description line above), a recipe
 with none standing on its row alone, while the button's hover text still shows the selected
 variant's lines. First come the shipped
-recipes, one button each in the shipped file's order, with no heading of their own; an own recipe
-carrying a shipped recipe's name joins that recipe's button rather than adding one. Then, under
-**Your actions**, come your own recipes that carry no shipped recipe's name, in your file's order,
-the heading left out when there is none. Each button shows the recipe's name and, beneath it, the
+recipes, one button each in the shipped file's order, with no heading of their own; a project or
+own recipe carrying a shipped recipe's name joins that recipe's button rather than adding one.
+Directly below them, under **Project actions**, come the recipes of the project's recipe file that
+carry no shipped recipe's name, in that file's order, the heading drawn only when at least one of
+them fits the step the diagram fills. Then, under **Your actions**, come your own recipes that
+carry no shipped or project recipe's name, in your file's order, with the recipes only your stored
+variants make up last, the heading left out when there is none. Each button shows the recipe's name and, beneath it, the
 name of the variant it runs, the one selected in its dropdown, always and exactly as the variant
 is named, so a button says which variant a click runs: `Execute tasks` on its shipped
 `Normal difficulty` variant reads `Normal difficulty` beneath its name, and a recipe of one
@@ -950,9 +958,11 @@ lines as written, and in the Settings window (see Variants above).
 
 Beside each recipe's button, or its non-runnable entry, stands a dropdown of the recipe's
 variants, drawn as its arrow alone, since the button beside it already names the variant
-selected. Opened, it lists the variants in the recipe's order, the shipped ones first, each by its
-bare name, those of your own recipe file and your variant store carrying no mark of their own;
-the Settings window says where each comes from. It offers only the variants the page can draw: a
+selected. Opened, it lists the variants in the recipe's order, the shipped ones first, then the
+project's, then your own, each by its bare name, a variant of the project's recipe file marked
+`(project)` after it, those of your own recipe file and your variant store carrying no mark of their
+own; the Settings window says where each comes from. A button whose selected variant is the
+project's shows `project` beneath the variant's name. It offers only the variants the page can draw: a
 variant holding a placeholder the page cannot fill, or no line, is left out of it, and a recipe none of whose variants the page can draw
 is not listed. The dropdown stands on the variant selected, and the button's label, its hover
 text, and a click all follow it: a click runs the variant the dropdown shows, and picking another
@@ -1109,6 +1119,27 @@ none of which declares a step and each of which is one block:
   `Single task with Opus xHigh (Claude Code)`, `Single task with Opus High (Claude Code)`, and
   `Single task with Opus High (Antigravity)`.
 
+### The project's recipe file
+
+A project can carry recipes of its own, shared by everyone who works on it, in one Markdown file
+under the fixed name `gurita_recipes.md`, directly in the project root, the top level of the git
+work tree the extension reads its missions from (beside `task_line_rules.txt`). No setting names
+it, and when the file is absent the project simply has no recipes.
+
+The file is a flat list of `###` recipes in the form above, read exactly as your own recipe file
+is (see below): `##` headings in it are ignored, of a recipe name repeated in it only the first is
+read, and a recipe may carry a `Stage:` line and a `Description:` line. The recipes are read in
+the order shipped, project, own. A project recipe carrying a shipped recipe's name joins it as
+further variants, listed after the shipped variants, and an own recipe carrying a project recipe's
+name joins it the same way, so all three files' recipes of one name form one recipe, which keeps
+the name, the `Stage:` line, and the description of the first file that holds it; a variant
+carrying another file's variant name is kept as a second entry beside it. The project's variants
+are marked as the project's on a mission page and in the Settings window, and the variant store
+names them by the origin `project` in its stored copies, hiding records, and picked defaults, so a
+rename, a delete, or a pick of one stays apart from a shipped or own variant of the same name.
+Every other project recipe is listed on a mission page under **Project actions**, between the
+shipped recipes and **Your actions**.
+
 ### Your own recipe file
 
 You can keep recipes of your own in one Markdown file, by default `~/.gurita/recipes.md`, the
@@ -1124,8 +1155,9 @@ of its variants when it writes several, joins the shipped recipe as one more var
 the shipped variants under its own variant name (a one-block own recipe's being `default`) and
 marked as your own. An own variant carrying a shipped variant's name is kept as a second
 entry beside it, so every shipped variant stays, and the shipped variant stays the one the recipe
-runs first. Every other own recipe is listed below the shipped recipes under **Your actions**,
-in the order your file lists them.
+runs first. An own recipe carrying a project recipe's name joins it the same way (see The
+project's recipe file above). Every other own recipe is listed below the shipped recipes and the
+project's under **Your actions**, in the order your file lists them.
 An own recipe may declare its step by a `Stage:` line, as a shipped one does (see the stage line
 above), and is then listed only on the pages that step fits; an undeclared one is listed on every
 page. It may carry a `Description:` line likewise (see the description line above), shown to the

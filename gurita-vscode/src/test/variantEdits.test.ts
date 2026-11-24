@@ -3,7 +3,17 @@ import * as assert from 'node:assert';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { Recipe, defaultVariant, mergeRecipes, overlayVariantStore, parseOwnRecipes, parseShippedRecipes, readRecipes, variantOrigin } from '../recipes';
+import {
+  Recipe,
+  defaultVariant,
+  mergeRecipes,
+  overlayVariantStore,
+  parseOwnRecipes,
+  parseProjectRecipes,
+  parseShippedRecipes,
+  readRecipes,
+  variantOrigin,
+} from '../recipes';
 import {
   VariantEditError,
   VariantTarget,
@@ -89,6 +99,44 @@ function refused(edit: () => void, pattern: RegExp): void {
 test('the module imports nothing from vscode', () => {
   const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'variantEdits.ts'), 'utf8');
   assert.doesNotMatch(source, /from\s+['"]vscode['"]|require\(\s*['"]vscode['"]\s*\)/);
+});
+
+test("the Settings list holds the three sources' variants, a project variant by the origin project, and its edits store that origin", () => {
+  const project = '/work/project/gurita_recipes.md';
+  const three = (): Recipe[] =>
+    mergeRecipes(
+      parseShippedRecipes('## Recipes\n\n### Chain\n```\necho shipped <path>\n```\n', SHIPPED),
+      parseOwnRecipes('### Chain\n#### mine\n```\necho own <path>\n```\n', OWN),
+      parseProjectRecipes('### Chain\n#### team\n```\necho project <path>\n```\n\n### Ours\n```\necho ours <path>\n```\n', project),
+    );
+  const listed = settingsRecipes(three(), emptyVariantStore(), STORE, []);
+  assert.deepStrictEqual(
+    listed.map((recipe) => [recipe.name, recipe.group, recipe.variants.map((each) => [each.name, each.origin, each.isDefault])]),
+    [
+      ['Chain', 'shipped', [['default', 'shipped', true], ['team', 'project', false], ['mine', 'own', false]]],
+      ['Ours', 'project', [['default', 'project', true]]],
+    ],
+  );
+  const team: VariantTarget = { name: 'team', origin: 'project' };
+  withStore((file) => {
+    pickDefault(file, three(), 'Chain', team);
+    renameVariant(file, three(), 'Chain', team, 'Team renamed');
+    deleteVariant(file, three(), 'Ours', { name: 'default', origin: 'project' });
+    const store = readVariantStore(file);
+    assert.deepStrictEqual(store.variants, [{ recipe: 'Chain', name: 'Team renamed', lines: ['echo project <path>'], copies: { name: 'team', origin: 'project' } }]);
+    assert.deepStrictEqual(store.defaults, [{ recipe: 'Chain', name: 'team', origin: 'project' }]);
+    assert.deepStrictEqual(store.hidden, [{ recipe: 'Ours', name: 'default', origin: 'project' }]);
+    const after = settingsRecipes(three(), store, file, []);
+    assert.deepStrictEqual(
+      after.map((recipe) => [recipe.name, recipe.variants.map((each) => [each.name, each.origin, each.copies?.origin, each.isDefault]), recipe.hidden]),
+      [
+        ['Chain', [['default', 'shipped', undefined, false], ['Team renamed', 'stored', 'project', true], ['mine', 'own', undefined, false]], []],
+        ['Ours', [], [{ name: 'default', origin: 'project' }]],
+      ],
+    );
+    resetVariant(file, 'Ours', { name: 'default', origin: 'project' });
+    assert.deepStrictEqual(readVariantStore(file).hidden, [], "a reset shows the project's variant again");
+  });
 });
 
 test('a duplicate is a further stored variant holding the same lines, listed after the others, the store file made where missing', () => {

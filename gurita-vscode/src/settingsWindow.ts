@@ -42,15 +42,16 @@
 // harness starts enabled and stays so until the person disables it, the check never changing it.
 // The window holds each harness's model list and its one effort list for the whole harness, Codex
 // a model list alone, derived afresh from the `--model` and `--effort` values, on a Codex line
-// `-m`, the lines of the shipped recipes, the own recipes, and the stored variants carry, with the
+// `-m`, the lines of the shipped recipes, the project recipes, the own recipes, and the stored variants carry, with the
 // person's overlay from the harness part of the variant store file laid over them. A click of a
 // list's add control asks for the entry in VS Code's own input box, whose validation refuses an
 // empty entry and one the list already offers, and a click of an entry's remove control takes it
 // out of the offer; either is written to the overlay and the lists posted again. The window also
 // edits variants: every recipe but the named single-task lines, the chains, the nine fixed-name
-// button recipes, and the recipes and variants of the own recipe file alike, each with its
-// variants as the variant store lays them over the two Markdown files, its default marked, and the
-// variants a hiding record hides. A click of a variant's duplicate, rename, delete, or default
+// button recipes, and the recipes and variants of the project's recipe file and of the own recipe
+// file alike, each with its variants as the variant store lays them over the three Markdown files,
+// a project variant marked as the project's and an own one as the person's, its default marked,
+// and the variants a hiding record hides. A click of a variant's duplicate, rename, delete, or default
 // control, or of a reset control, on a stored variant returning its lines to those of the variant
 // it was made from, its name and entry kept, and on a deleted variant showing it again, is carried
 // out through the variant store's edits (`variantEdits.ts`); a duplicate's name and a rename are
@@ -61,7 +62,7 @@
 // Code and Antigravity, a Codex line carrying `-m` its model dropdown alone, and every other line
 // is shown as its text, read-only. A model or effort pick replaces the value the line carries
 // through the store's edit (`replaceLineValue`), a harness pick rewrites the line onto the other
-// harness (`replaceLineHarness`), a shipped or own variant left untouched and a `custom N` holding
+// harness (`replaceLineHarness`), a shipped, project, or own variant left untouched and a `custom N` holding
 // the changed line added beside it, a stored variant changed in place. The window also edits the
 // named single-task lines, each under its name with its single-task variants beneath it, through
 // the store's line edits.
@@ -571,7 +572,7 @@ async function enableHarness(context: vscode.ExtensionContext, target: vscode.We
 function readListsOf(context: vscode.ExtensionContext): HarnessListsRead {
   try {
     const files = recipeFiles(context);
-    return { state: 'read', lists: readHarnessLists(files.shipped, files.own, files.store) };
+    return { state: 'read', lists: readHarnessLists(files.shipped, files.own, files.store, files.project) };
   } catch (error) {
     return { state: 'failed', cause: error instanceof Error ? error.message : String(error) };
   }
@@ -643,7 +644,7 @@ function editList(
 ): void {
   try {
     const files = recipeFiles(context);
-    editHarnessList(files.shipped, files.own, files.store, harness, kind, edit, value);
+    editHarnessList(files.shipped, files.own, files.store, harness, kind, edit, value, files.project);
   } catch (error) {
     void vscode.window.showErrorMessage(
       `The ${kind} could not be ${edit === 'add' ? 'added' : 'removed'}: ${error instanceof Error ? error.message : String(error)}`,
@@ -653,14 +654,14 @@ function editList(
 }
 
 /**
- * The recipes and variants the Settings window lists, read afresh: the shipped recipe file and the
- * person's own recipe file merged, the variant store laid over them, as `settingsRecipes` lists
+ * The recipes and variants the Settings window lists, read afresh: the shipped recipe file, the
+ * project's recipe file, and the person's own recipe file merged, the variant store laid over them, as `settingsRecipes` lists
  * them, or the cause they could not be read.
  */
 function readVariantList(context: vscode.ExtensionContext): VariantsRead {
   try {
     const files = recipeFiles(context);
-    const base = readRecipes(files.shipped, files.own);
+    const base = readRecipes(files.shipped, files.own, undefined, files.project);
     return { state: 'read', recipes: settingsRecipes(base, readVariantStore(files.store), files.store, Object.values(BUTTON_RECIPES)) };
   } catch (error) {
     return { state: 'failed', cause: error instanceof Error ? error.message : String(error) };
@@ -668,14 +669,14 @@ function readVariantList(context: vscode.ExtensionContext): VariantsRead {
 }
 
 /**
- * The named single-task lines the Settings window lists, read afresh: the shipped recipe file and
- * the person's own recipe file merged, the variant store laid over them, as `settingsLines` lists
+ * The named single-task lines the Settings window lists, read afresh: the shipped recipe file, the
+ * project's recipe file, and the person's own recipe file merged, the variant store laid over them, as `settingsLines` lists
  * them, or the cause they could not be read.
  */
 function readLineList(context: vscode.ExtensionContext): LinesRead {
   try {
     const files = recipeFiles(context);
-    return { state: 'read', ...settingsLines(readRecipes(files.shipped, files.own), readVariantStore(files.store), files.store) };
+    return { state: 'read', ...settingsLines(readRecipes(files.shipped, files.own, undefined, files.project), readVariantStore(files.store), files.store) };
   } catch (error) {
     return { state: 'failed', cause: error instanceof Error ? error.message : String(error) };
   }
@@ -691,7 +692,7 @@ function variantTargetOf(value: unknown): VariantTarget | undefined {
     return undefined;
   }
   const { name, origin, copies } = value as Record<string, unknown>;
-  if (typeof name !== 'string' || !isOrigin(origin, ['shipped', 'own', 'stored'])) {
+  if (typeof name !== 'string' || !isOrigin(origin, ['shipped', 'project', 'own', 'stored'])) {
     return undefined;
   }
   if (copies === undefined) {
@@ -701,13 +702,13 @@ function variantTargetOf(value: unknown): VariantTarget | undefined {
   return original === undefined ? undefined : { name, origin: origin as VariantTarget['origin'], copies: original };
 }
 
-/** The shipped or own variant a page message names, or undefined when it names none. */
+/** The shipped, project, or own variant a page message names, or undefined when it names none. */
 function readVariantRefOf(value: unknown): ReadVariantRef | undefined {
   if (typeof value !== 'object' || value === null) {
     return undefined;
   }
   const { name, origin, recipe } = value as Record<string, unknown>;
-  if (typeof name !== 'string' || !isOrigin(origin, ['shipped', 'own']) || (recipe !== undefined && typeof recipe !== 'string')) {
+  if (typeof name !== 'string' || !isOrigin(origin, ['shipped', 'project', 'own']) || (recipe !== undefined && typeof recipe !== 'string')) {
     return undefined;
   }
   return { name, origin: origin as ReadVariantRef['origin'], ...(recipe === undefined ? {} : { recipe: recipe as string }) };
@@ -807,7 +808,7 @@ async function editVariant(
   }
   try {
     const files = recipeFiles(context);
-    const base = readRecipes(files.shipped, files.own);
+    const base = readRecipes(files.shipped, files.own, undefined, files.project);
     if (edit === 'duplicateVariant') {
       duplicateVariant(files.store, base, recipe, named, name as string);
     } else if (edit === 'renameVariant') {
@@ -915,7 +916,7 @@ async function editLineValue(
   }
   try {
     const files = recipeFiles(context);
-    replaceLineValue(files.store, readRecipes(files.shipped, files.own), recipe, named, line, kind, value);
+    replaceLineValue(files.store, readRecipes(files.shipped, files.own, undefined, files.project), recipe, named, line, kind, value);
   } catch (error) {
     void vscode.window.showErrorMessage(`The ${kind} could not be changed: ${error instanceof Error ? error.message : String(error)}`);
   }
@@ -1003,7 +1004,7 @@ async function editLineHarness(
   const offer = { models: lists.lists[picked.key].models, efforts: lists.lists[picked.key].efforts ?? [] };
   try {
     const files = recipeFiles(context);
-    replaceLineHarness(files.store, readRecipes(files.shipped, files.own), recipe, named, line, picked.cli, offer);
+    replaceLineHarness(files.store, readRecipes(files.shipped, files.own, undefined, files.project), recipe, named, line, picked.cli, offer);
   } catch (error) {
     void vscode.window.showErrorMessage(`The harness could not be changed: ${error instanceof Error ? error.message : String(error)}`);
   }
@@ -1075,7 +1076,7 @@ async function editLine(
     let taken: string[];
     try {
       const files = recipeFiles(context);
-      taken = lineNames(readRecipes(files.shipped, files.own), readVariantStore(files.store), files.store);
+      taken = lineNames(readRecipes(files.shipped, files.own, undefined, files.project), readVariantStore(files.store), files.store);
     } catch (error) {
       void vscode.window.showErrorMessage(`The single-task lines could not be read: ${error instanceof Error ? error.message : String(error)}`);
       return;
@@ -1093,7 +1094,7 @@ async function editLine(
   }
   try {
     const files = recipeFiles(context);
-    const base = readRecipes(files.shipped, files.own);
+    const base = readRecipes(files.shipped, files.own, undefined, files.project);
     if (edit === 'duplicateLine') {
       duplicateLine(files.store, base, line, named, name as string);
     } else if (edit === 'renameLine') {
