@@ -52,6 +52,7 @@ task_line_rules.txt              — this repository's tracked rule file assigni
 host_tests/                      — on-demand host suite driving the installed CLI of the host chosen per run with `--host` against that host's installed plugin copy, outside testpaths and CI, seeded from tests/fixtures/host_project/; see CONTRIBUTING.md ## Development
 hosts/<host>/                    — committed build output, never hand-edited; published verbatim into uHappyLogic/gurita-<host> at release
 .claude/skills/release-plugin/   — maintainer-only release skill, outside core/ so no host renders it
+.claude/skills/release-vscode-extension/ — maintainer-only release skill of the extension: prepares one `Extension-release: <VERSION>` commit (manifest version, gurita-vscode/CHANGELOG.md entry) and pushes the `gurita-vscode-<VERSION>` tag whose publish-vscode-extension.yml run publishes it; publishes nothing itself
 mission_<slug>/                  — this repo's own root-scoped missions (self-dogfooding), each directly at the root; a finished mission's directory is removed by its `Mission-finish: <path>` commit
 answer_decision_principles.md    — project-wide principle store, at the project root, read by recommend-procedure.md, written only by capture-mission-principle-updates
 ideas/                           — design drafts that precede any mission, versioned so they can be revised in the open; holds the benchmark draft
