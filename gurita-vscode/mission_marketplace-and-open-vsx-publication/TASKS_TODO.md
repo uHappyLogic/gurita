@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Native Windows Check at Activation
-
-Add a check at activation: on native Windows (the platform is `win32` and the window is not a remote one) the extension shows one message saying it runs only on macOS, Linux, or through Remote-WSL, and leaves its view, windows, and runner inert instead of letting them run, while in a Remote-WSL window, where it runs on the Linux side, the check never fires; the package stays universal and installable on every platform. It is verified by `node:test` tests against the `vscode` stub covering native Windows, a remote window, and macOS or Linux, with `npm test` passing.
-
----
-
 ## Listing README and Checkout Build File
 
 Rewrite `gurita-vscode/README.md` for a person installing from a listing: it keeps the extension's whole use documentation at its present depth (the side-bar view and its rows, the mission windows, the Settings window with the harness check, `### Installing and updating the plugin`, harness enabling, model and effort lists, variants, and single-task lines, the recipes with the shipped recipe file and the user's own, the looped task run and its rule file, and the runner), states that the extension runs only on macOS, Linux, or through Remote-WSL, carries no banner and no still screenshot, and takes out or rewords only the passages addressed to someone building from the checkout. Its Requirements, Building and packaging, and hand-install sections move into a new tracked `gurita-vscode/BUILDING.md`, kept out of the VSIX through `.vscodeignore` and linked from the README by an absolute repository URL, and `CLAUDE.md`'s pointers that send the reader to `gurita-vscode/README.md` for the package build are repointed to that file. It is verified by every use section the README holds today standing in the rewritten one, by a built VSIX carrying the README and not the build file, and by no pointer to the package build still naming the README.

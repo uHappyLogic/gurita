@@ -51,8 +51,9 @@ Every Node command runs under Node 22 through nvm, in a subshell, from the repos
   add and the resets of stored variants, among them, and its single-task line
   edits, with the looped run's names and the variant a line's **Make default** picks following them, and the side-bar view's
   mission rows and their redraws and its two mission-starting rows with their runs and variant
-  QuickPick, against a tree stand-in, and the mission windows and the Settings window restored
-  after a reload, are tested against a stub of the `vscode`
+  QuickPick, against a tree stand-in, the mission windows and the Settings window restored
+  after a reload, and the check at activation that leaves everything inert on native Windows,
+  are tested against a stub of the `vscode`
   module,
   and the page script against a small stand-in for the DOM. Nothing runs inside an editor.
 - `npm run package` runs `vsce package`, which first runs the `vscode:prepublish` script: the
