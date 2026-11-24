@@ -100,6 +100,11 @@ claude -p "/gurita:complete-task --mission <path> <Task Title>" --dangerously-sk
 agy -p "/gurita:complete-task --mission <path> <Task Title>" --dangerously-skip-permissions --model "claude-opus-5-5" --effort high;
 ```
 
+### Single task with GPT-6-Luna High (Codex)
+```
+codex exec '$gurita:complete-task --mission <path> <Task Title>' --dangerously-bypass-approvals-and-sandbox -m "gpt-6-luna" -c model_reasoning_effort=high;
+```
+
 ### Finish mission
 Stage: finish
 Description: Remove the mission's directory in one commit whose body summarizes what it accomplished.

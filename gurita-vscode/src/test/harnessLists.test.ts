@@ -49,7 +49,7 @@ test('each harness has a model list and one effort list read from the lines, Cod
   assert.ok(isListKind('model') && isListKind('effort') && !isListKind('models') && !isListKind(undefined));
 });
 
-test("the shipped recipe file's lines give the lists their models and efforts, and no Codex model or effort", () => {
+test("the shipped recipe file's lines give the lists their models and efforts, Codex's from its single-task line alone", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-harness-lists-'));
   const lists = readHarnessLists(SHIPPED_RECIPES, path.join(dir, 'recipes.md'), path.join(dir, 'variants.json'));
   for (const model of ['fable', 'opus', 'sonnet']) {
@@ -63,7 +63,11 @@ test("the shipped recipe file's lines give the lists their models and efforts, a
     { models: ['claude-opus-5-5'], efforts: ['high'] },
     "Antigravity's lists come from the Antigravity single-task line alone, no shipped chain holding an agy line",
   );
-  assert.deepStrictEqual(lists.codex, { models: [], efforts: [] });
+  assert.deepStrictEqual(
+    lists.codex,
+    { models: ['gpt-6-luna'], efforts: ['high'] },
+    "Codex's lists come from the Codex single-task line alone, no shipped chain or button recipe holding a codex line",
+  );
 });
 
 test('an added entry follows the derived ones and a removed one leaves the offer, the overlay kept beside the enabled state', () => {

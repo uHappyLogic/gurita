@@ -201,7 +201,10 @@ test('every shipped claude or agy line with both flags rewrites onto the other h
   let rewritten = 0;
   for (const line of lines) {
     const read = readLine(line);
-    if (read === undefined || read.harness === 'codex' || read.model === undefined || read.effort === undefined) {
+    if (read?.harness === 'codex') {
+      continue;
+    }
+    if (read === undefined || read.model === undefined || read.effort === undefined) {
       assert.strictEqual(rewriteHarness(line, 'agy', AGY_OFFER), undefined, line);
       assert.strictEqual(rewriteHarness(line, 'codex', CODEX_OFFER), undefined, line);
       continue;
@@ -413,6 +416,14 @@ test('a codex exec line switched back to Claude Code or Antigravity keeps or map
     rewritten++;
   }
   assert.ok(rewritten >= 10, `only ${rewritten} shipped lines were rewritten`);
+  const shippedCodex = shippedRecipe('Single task with GPT-6-Luna High (Codex)').variants[0].lines[0];
+  const claude = rewriteHarness(shippedCodex, 'claude', { models: ['opus'], efforts: ['high'] }) as string;
+  assert.strictEqual(claude, 'claude -p "/gurita:complete-task --mission <path> <Task Title>" --dangerously-skip-permissions --model "opus" --effort high;');
+  assert.strictEqual(
+    rewriteHarness(claude, 'codex', { models: ['gpt-6-luna'], efforts: ['high'] }),
+    shippedCodex,
+    'the shipped Codex line switched to Claude Code and back is given back as written',
+  );
 });
 
 test('a switch to Codex refuses an empty model list and writes no effort override for an empty effort list', () => {

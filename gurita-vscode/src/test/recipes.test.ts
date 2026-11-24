@@ -634,7 +634,7 @@ test('Prepare and Execute tasks declares derive tasks, each variant the two Prep
   assert.deepStrictEqual(recipe.variants.map((variant) => variant.name), ['Normal difficulty', 'Critical tasks']);
 });
 
-test('First run, Prepare tasks, and Finish mission are each one block with no `####`, Approve all standing recommendations and review again holds default alone, the mixed-agent chain shipped nowhere, and no shipped chain variant holds a line run on Antigravity', () => {
+test('First run, Prepare tasks, and Finish mission are each one block with no `####`, Approve all standing recommendations and review again holds default alone, the mixed-agent chain shipped nowhere, and no shipped chain or button variant holds a line run on Antigravity or Codex', () => {
   const recipes = parseShippedRecipes(fs.readFileSync(SHIPPED_RECIPES, 'utf8'), SHIPPED_RECIPES);
   const variants = (name: string) =>
     byName(recipes, name).variants.map((variant) => [variant.name, variant.lines.map((line) => line.split(' ')[0])]);
@@ -660,6 +660,7 @@ test('First run, Prepare tasks, and Finish mission are each one block with no `#
       ['Single task with Opus xHigh (Claude Code)', 1],
       ['Single task with Opus High (Claude Code)', 1],
       ['Single task with Opus High (Antigravity)', 1],
+      ['Single task with GPT-6-Luna High (Codex)', 1],
     ],
   );
   for (const recipe of single) {
@@ -668,10 +669,11 @@ test('First run, Prepare tasks, and Finish mission are each one block with no `#
   for (const recipe of recipes.filter((each) => !single.includes(each))) {
     for (const variant of recipe.variants) {
       assert.ok(!variant.lines.some((line) => line.startsWith('agy ')), `${recipe.name} / ${variant.name} ships no Antigravity line`);
-      assert.ok(!/Claude Code|Antigravity/.test(variant.name), `${recipe.name} / ${variant.name} names no harness`);
+      assert.ok(!variant.lines.some((line) => line.startsWith('codex ')), `${recipe.name} / ${variant.name} ships no Codex line`);
+      assert.ok(!/Claude Code|Antigravity|Codex/.test(variant.name), `${recipe.name} / ${variant.name} names no harness`);
     }
   }
-  const named = recipes.filter((recipe) => /\((Claude Code|Antigravity)\)$/.test(recipe.name)).map((recipe) => recipe.name);
+  const named = recipes.filter((recipe) => /\((Claude Code|Antigravity|Codex)\)$/.test(recipe.name)).map((recipe) => recipe.name);
   assert.deepStrictEqual(named, single.map((recipe) => recipe.name), 'only the single-task lines name their harness in the heading');
   for (const name of Object.values(BUTTON_RECIPES)) {
     assert.deepStrictEqual(byName(recipes, name).variants.map((variant) => variant.name), ['default'], name);
@@ -803,6 +805,26 @@ test('state stored under the removed answer-open-question-with-recommendation fo
     settings.filter((each) => each.fixed).every((each) => each.name !== REMOVED),
     'it stands among no fixed-name button recipes',
   );
+});
+
+test('exactly one shipped recipe runs on Codex: the named single-task line, one headless codex exec line naming its model with -m', () => {
+  const recipes = parseShippedRecipes(fs.readFileSync(SHIPPED_RECIPES, 'utf8'), SHIPPED_RECIPES);
+  const codex = recipes.filter((recipe) => recipe.variants.some((variant) => variant.lines.some((line) => line.startsWith('codex '))));
+  assert.deepStrictEqual(codex.map((recipe) => recipe.name), ['Single task with GPT-6-Luna High (Codex)']);
+  const recipe = codex[0];
+  assert.strictEqual(recipe.group, 'shipped');
+  assert.strictEqual(recipe.stage, undefined, 'a single-task line declares no stage');
+  assert.deepStrictEqual(recipe.variants.map((variant) => variant.name), ['default']);
+  const variant = firstVariant(recipe);
+  assert.deepStrictEqual(variant.lines, [
+    "codex exec '$gurita:complete-task --mission <path> <Task Title>' --dangerously-bypass-approvals-and-sandbox -m \"gpt-6-luna\" -c model_reasoning_effort=high;",
+  ]);
+  assert.strictEqual(variant.singleTask, true, 'it is read as a named single-task line');
+  assert.strictEqual(variant.looped, false);
+  assert.ok(isHeadless(variant.lines[0]), 'its line is headless');
+  assert.deepStrictEqual(variant.knownPlaceholders, ['path', 'Task Title']);
+  assert.deepStrictEqual(variant.unknownPlaceholders, []);
+  assert.ok(!(Object.values(BUTTON_RECIPES) as string[]).includes(recipe.name), 'it is no button recipe');
 });
 
 test("every single-task line this repository's rule file names is a shipped single-task heading", () => {

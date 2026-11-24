@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Shipped Codex Single-Task Recipe
-
-Add exactly one Codex recipe to `gurita-vscode/shipped_recipes.md`, a single-task recipe standing beside the shipped single-task lines: one headless `codex exec '$gurita:complete-task …' --dangerously-bypass-approvals-and-sandbox` line that also carries `-m` with a named Codex model id taken from the catalog `codex debug models` prints, the recipe's name saying the model as the Claude Code single-task names do. No chain and no button recipe gains a Codex line or variant; verified by reader tests of the recipe as a named single-task line and a runner test of its line read as headless, with `gurita-vscode/README.md` naming the recipe.
-
----
-
 ## Screenshots and Demo From One Capture
 
 Extend `gurita-vscode/scripts/capture_demo.js` so the one run that records `media/demo.gif` also writes three screenshots as PNG files under `gurita-vscode/media/`: full-resolution frames of the side-bar view once the mission row shows and of the mission page once it has filled `derive tasks` with the questions' alternatives and picks drawn, and, in one more step after the run, of the Settings window before the session closes, against the same fixture project seeded from `tests/fixtures/host_project/` and the same `scripts/demo_claude.py` stand-in. Bring the script's flow up to the finished UI, run it, and commit the re-captured GIF with the three stills, BUILDING.md's recording entry covering both. Verified by the one command ending with all four files written and each showing the finished UI.

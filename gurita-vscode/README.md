@@ -670,8 +670,9 @@ override is read in the `--config` spelling too (`--config model_reasoning_effor
 `--config=model_reasoning_effort=high`), a level written as a quoted TOML string
 (`-c 'model_reasoning_effort="high"'`) is read without its quotes, and a `-c` naming another key is
 no effort; `--effort` on a `codex` line is not Codex's effort and is not read. Codex's lists
-therefore start from the Codex lines you have. The list keeps no record of which model takes which
-effort.
+therefore start from the one shipped Codex line, `Single task with GPT-6-Luna High (Codex)`, with
+`gpt-6-luna` and `high`, and grow with the Codex lines you have. The list keeps no record of which
+model takes which effort.
 
 Each entry has a **Remove** control, which takes it out of the offer, and each list an **Add
 model** or **Add effort** control, which asks for an entry no line uses yet in VS Code's own input
@@ -1159,8 +1160,12 @@ none of which declares a step and each of which is one block:
   and `discuss-open-question`'s is
   `claude "/gurita:discuss-open-question --mission <path> <Short Title>. <note>" --dangerously-skip-permissions --model "fable" --effort xhigh; # interactive`.
 - The single-task lines, each one headless line holding `<Task Title>`:
-  `Single task with Opus xHigh (Claude Code)`, `Single task with Opus High (Claude Code)`, and
-  `Single task with Opus High (Antigravity)`.
+  `Single task with Opus xHigh (Claude Code)`, `Single task with Opus High (Claude Code)`,
+  `Single task with Opus High (Antigravity)`, and `Single task with GPT-6-Luna High (Codex)`.
+  The last is the one shipped recipe run on Codex, its line
+  `codex exec '$gurita:complete-task --mission <path> <Task Title>' --dangerously-bypass-approvals-and-sandbox -m "gpt-6-luna" -c model_reasoning_effort=high;`,
+  its model a Codex model id from the catalog `codex debug models` prints; no chain and no button
+  recipe holds a Codex line.
 
 ### The project's recipe file
 
