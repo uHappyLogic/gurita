@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Pin ovsx as a Dev Dependency
-
-Add `ovsx` to `devDependencies` in `gurita-vscode/package.json` at an exact version, beside `@vscode/vsce` 4.1.1, and record it in `package-lock.json`, so the publish workflow and the release skill's pre-flight get the Open VSX publishing tool from the extension's own Node project after `npm ci`. It is verified by `npm ci` under the nvm Node 22 wrapper installing it into `node_modules/` and the local binary answering there, with `npm test` and `npm run package` still passing.
-
----
-
 ## Tag-Triggered Publish Workflow
 
 Add `.github/workflows/publish-vscode-extension.yml` to `uHappyLogic/gurita`, triggered only by a pushed tag matching `gurita-vscode-*`, with one job running in the GitHub environment `extension-release` and holding `permissions: id-token: write`: it checks out the tagged commit, sets up Node 22 with `actions/checkout` and `actions/setup-node` pinned to full SHAs as in the other workflows, runs `npm ci`, `npm test`, and `npm run package` in `gurita-vscode/`, and publishes the one VSIX it built to the Marketplace through the pinned `vsce publish --oidc` and to Open VSX through the local `ovsx publish`, each with `--skip-duplicate`, `ovsx` reading the token from the `OVSX_PAT` environment variable mapped from the environment's secret, so no token appears on any command line or in any log and no Marketplace token exists. It is verified without publishing: by the workflow file parsing, by its trigger matching only `gurita-vscode-*` tags and every action pinned to a full SHA, by each publish command's flags read against `vsce publish --help` and `ovsx publish --help` from the pinned local binaries, and by its build steps passing locally from a fresh `npm ci`.
