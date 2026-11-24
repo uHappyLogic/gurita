@@ -117,5 +117,7 @@ Five missions under `gurita-vscode/` are finished, all between 2026-11-20 and 20
 
 - **Harness check timing.** The harness check first runs in the background as soon as the Missions view first draws in a session (in practice at activation, which `onView:gurita.missions` triggers), through the same `checkHarnesses` path the Settings window uses. Its result stays kept for the rest of the session as today: only the Settings window's Check again and the end of an install or update run run it afresh, and the view's Refresh does not.
 
+- **View notice form.** The plugin notice and the bootstrap offer are both tree rows, standing at the top of the tree above New mission and Define mission, each present only while its condition holds: a plugin notice row (warning icon, a label saying the plugin is missing or outdated, its click opening the Settings window) and a bootstrap offer row (its click running `init-mission-base-workflow`). The view's message keeps only `No mission is live.` and the read-failure line, and no notification is shown.
+
 ## Out of Scope
 
