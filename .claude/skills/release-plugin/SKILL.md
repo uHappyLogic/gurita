@@ -11,9 +11,12 @@ in `CLAUDE.md` or `README.md`. It is a maintainer-only, project-local skill: it 
 `.claude/skills/`, outside `core/`, so no host build renders it into a `hosts/<host>/` tree
 and it never reaches a consuming project.
 
-Every tag and release is a bare `MAJOR.MINOR.PATCH`, with no `v` prefix anywhere in the
-history — the legacy `v.0.9.x` and `v0.9.7` tags were renamed to their bare form on
-2026-09-07, and no `v`-prefixed tag remains on either side.
+Every plugin tag and release is a bare `MAJOR.MINOR.PATCH`, with no `v` prefix anywhere in
+the history — the legacy `v.0.9.x` and `v0.9.7` tags were renamed to their bare form on
+2026-09-07, and no `v`-prefixed tag remains on either side. The extension under
+`gurita-vscode/` is released by `/release-vscode-extension`, never by this skill, under tags
+of its own, `gurita-vscode-<VERSION>`; every lookup of a tag here matches only the bare plugin
+form, so an extension tag never stands in for a plugin release.
 
 Nothing is written, committed, pushed, tagged, or published until every gate below has
 passed and the release notes have been composed. The pre-flight and version gates (steps 2
@@ -75,10 +78,12 @@ are Python, which reads a line and its fields without one.
 
 ### 1. Resolve the last release
 
-The last release is the **nearest tag reachable from HEAD**:
+The last release is the **nearest plugin tag reachable from HEAD**, a tag starting with a
+digit, which only the bare plugin form does, so an extension tag (`gurita-vscode-<VERSION>`)
+is never matched however near to HEAD it stands:
 
 ```bash
-git describe --tags --abbrev=0
+git describe --tags --abbrev=0 --match '[0-9]*'
 ```
 
 Call the exact tag string it prints `<LAST_TAG>`. Use it literally wherever the release run
@@ -89,10 +94,11 @@ endpoint alike. Both are ancestry questions and parse no version string; the one
 If the command fails (no tag is reachable from HEAD), stop and report that the last release
 could not be resolved.
 
-On a **resumption**, exclude this run's own tag so the anchor stays the *previous* release:
+On a **resumption**, exclude this run's own tag so the anchor stays the *previous* release,
+keeping the same `--match` beside it:
 
 ```bash
-git describe --tags --abbrev=0 --exclude=<VERSION>
+git describe --tags --abbrev=0 --match '[0-9]*' --exclude=<VERSION>
 ```
 
 ### 2. Pre-flight stops
@@ -390,7 +396,7 @@ the release prepends to that file and never creates it.
 **d. The version is strictly greater than the last release.** Compare as a **numeric
 tuple**, never by tag-name sort:
 
-1. Confirm `<LAST_TAG>` is three numeric components — every tag is bare
+1. Confirm `<LAST_TAG>` is three numeric components — every plugin tag is bare
    `MAJOR.MINOR.PATCH`, so it needs no normalization. If it is not, stop and report that
    the last release could not be compared.
 2. Split both `<VERSION>` and `<LAST_TAG>` on `.` and compare `(major, minor, patch)` as
@@ -443,7 +449,11 @@ git log -1 --format=%as <LAST_TAG>
 
 Call it `<TAG_DATE>`.
 
-**b. Keep the missions finished since `<LAST_TAG>`.** Keep every `finished` line dated
+**b. Keep the missions finished since `<LAST_TAG>`.** First drop every `finished` line whose
+path field starts with `gurita-vscode/`: such a mission is the extension's, released by
+`/release-vscode-extension` with notes of its own, and never belongs in the plugin's notes. The
+test is the path field alone — a mission scoped anywhere else, the root included, stays a
+candidate even when it changed the extension. Of the lines left, keep every one dated
 later than `<TAG_DATE>`; both are `YYYY-MM-DD`, so comparing them as strings compares the
 days. Drop every line dated earlier: that mission was finished before the last release, and
 its section stands in that release's notes or an earlier one's.
