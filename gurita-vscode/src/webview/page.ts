@@ -72,7 +72,8 @@
 // Each card stacks flat, non-indented slots: its Short Title with the discuss and answer
 // buttons, the question text in an area of fixed height, so the pick
 // starts at the same height on every card, then the pick and its rationale, then the
-// alternatives, each with its answer-with-alternative button, the dependencies, and the
+// alternatives, each with its id alone on its head line and, on a row of its own beneath it
+// and above its text, its answer-with-alternative button, the dependencies, and the
 // principles. Each button posts the Short Title and the Alternative Id of the card clicked; the
 // extension asks for any typed value in VS Code's own input box, the discuss button's optional
 // discussion note included. Every message the extension
@@ -586,9 +587,11 @@ declare function acquireVsCodeApi(): VsCodeApi;
   /**
    * One question's card, fully opened: flat, non-indented slots stacked as the Short Title with
    * the card's buttons, the question text in its area of fixed height, the pick and its rationale,
-   * the alternatives, the dependencies, and the principles. The question, the pick's rationale, and
-   * each alternative's text, advantages, and drawbacks are drawn by the text renderer's inline part,
-   * so a stretch between backticks shows as code and every other character as written.
+   * the alternatives, the dependencies, and the principles. Each alternative's id stands alone on
+   * its head line, with its answer-with-alternative button and dropdown on a row of their own
+   * beneath it, above its text. The question, the pick's rationale, and each alternative's text,
+   * advantages, and drawbacks are drawn by the text renderer's inline part, so a stretch between
+   * backticks shows as code and every other character as written.
    */
   function drawCard(mission: Mission, question: Question, questions: Question[], busy: boolean): HTMLElement {
     const body = element('article', undefined, 'card');
@@ -629,8 +632,9 @@ declare function acquireVsCodeApi(): VsCodeApi;
         const entry = element('div', undefined, picked ? 'alternative picked' : 'alternative');
         const line = element('div', undefined, 'alternative-head');
         line.append(element('h6', picked ? `${alternative.id} (picked)` : alternative.id));
-        line.append(alternativeEntry(mission, question, alternative, index, busy));
-        entry.append(line);
+        const row = element('div', undefined, 'alternative-actions');
+        row.append(alternativeEntry(mission, question, alternative, index, busy));
+        entry.append(line, row);
         if (alternative.text !== '') {
           entry.append(inline('p', alternative.text));
         }

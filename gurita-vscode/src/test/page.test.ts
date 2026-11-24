@@ -760,6 +760,53 @@ function alternativeDropdowns(page: Page): FakeElement[] {
   return page.root.all().filter((each) => each.tagName === 'select' && each.getAttribute('aria-label') === 'The variant of Answer with this alternative');
 }
 
+test("each alternative's id stands alone on its head line, with its button and dropdown on a row of their own beneath it, above its text, the label on one line", () => {
+  const page = loadPage();
+  const offered = {
+    state: 'offered',
+    lines: ['claude -p "/gurita:answer-open-question-with-alternative" --model "opus" --effort high;'],
+    variants: [
+      { name: 'Fable', own: false },
+      { name: 'Opus', own: true },
+    ],
+    selected: 1,
+  };
+  const built = twoAlternatives(ALPHA, 'Alpha') as { questions: { questions: { recommendation?: unknown }[] } };
+  built.questions.questions[0].recommendation = { option: 'drop', rationale: 'Less to keep.' };
+  page.send(liveButtons({ answerWithAlternative: offered }, [], () => built));
+  const drawn = page.root.all().filter((each) => each.has('alternative'));
+  assert.strictEqual(drawn.length, 2);
+  for (const [index, [id, heading]] of [['keep', 'keep'], ['drop', 'drop (picked)']].entries()) {
+    const entry = drawn[index];
+    const parts = entry.children.filter((child): child is FakeElement => child instanceof FakeElement);
+    assert.deepStrictEqual(
+      parts.map((part) => (part.has('alternative-head') ? 'head' : part.has('alternative-actions') ? 'row' : part.tagName)),
+      ['head', 'row', 'p'],
+      'the head line, then the button row, then the text',
+    );
+    const [head, row, text] = parts;
+    assert.deepStrictEqual(head.children.map((child) => [(child as FakeElement).tagName, child.textContent]), [['h6', heading]], `${id}'s head line holds its id alone`);
+    assert.strictEqual(text.children.map((child) => child.textContent).join(''), id === 'keep' ? 'Keep it.' : 'Drop it.');
+    assert.strictEqual(row.children.length, 1, 'the row holds one entry');
+    const item = row.children[0] as FakeElement;
+    assert.ok(item.has('recipe-entry'));
+    const [node, dropdown] = item.children as FakeElement[];
+    assert.strictEqual(item.children.length, 2, 'the button and its dropdown beside it');
+    assert.strictEqual(node.tagName, 'button');
+    assert.deepStrictEqual(recipeParts(node), ['Answer with this alternative', 'Opus'], 'the label reads the title, then the variant');
+    assert.strictEqual(dropdown, alternativeDropdowns(page)[index]);
+    assertArrowOnly(dropdown);
+  }
+  // The row's button draws the variant's name inline, on the title's line, where every other button draws it beneath.
+  const rules = stylesheetRules();
+  const inline = rules.find((rule) => rule.selectors.includes('.alternative-actions button.action .recipe-variant-name'));
+  assert.ok(inline !== undefined, 'the stylesheet holds a rule for the row');
+  assert.strictEqual(inline.declarations.get('display'), 'inline');
+  const beneath = rules.findIndex((rule) => rule.selectors.includes('button.action .recipe-variant-name'));
+  assert.strictEqual(rules[beneath].declarations.get('display'), 'block');
+  assert.ok(rules.indexOf(inline) > beneath, "the row's rule comes after the block rule it overrides");
+});
+
 test('a dropdown beside each fixed-name button offers its variants and stands on the one selected, its pick, the label, and a click following it', () => {
   const page = loadPage();
   const models = ['fable', 'opus'];

@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Alternative Button on a Row of Its Own
-
-On a question card, leave each alternative's id alone on its head line and draw, directly beneath it and above the alternative's text, a row of its own holding the Answer with this alternative button, whose label reads the title and then the variant's name on one line, with today's arrow-only variant dropdown kept beside it. The selection stays remembered per mission, question, and alternative; verified by the page tests of the card's layout and of a pick on one alternative leaving the others where they stood, with `gurita-vscode/README.md` describing the row.
-
----
-
 ## First Button on the Question Pager
 
 Add a First button before Previous in the Open questions pane's pager that jumps straight back to the first question's card without stepping back one at a time. Verified by the page tests of the jump and the position it saves, with `gurita-vscode/README.md` naming the button.

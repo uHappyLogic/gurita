@@ -1804,6 +1804,7 @@ export function pageShell(webview: vscode.Webview, scripts: vscode.Uri[], title:
   .card .question-text { box-sizing: border-box; height: 9em; overflow-y: auto; border-top: none; margin-top: 0; }
   .alternative { margin: 0.4em 0 0; padding: 0; }
   .alternative-head { display: flex; align-items: center; gap: 0.6em; }
+  .alternative-actions { display: flex; align-items: center; margin: 0.25em 0 0.2em; }
   .alternative.picked h6 { color: var(--vscode-textLink-foreground); }
   .panes { margin-top: 1em; }
   .pane-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; border-bottom: 1px solid var(--vscode-panel-border); }
@@ -1817,6 +1818,7 @@ export function pageShell(webview: vscode.Webview, scripts: vscode.Uri[], title:
   select.recipe-variant { -webkit-appearance: none; appearance: none; box-sizing: border-box; width: 1.8em; min-width: 1.8em; padding: 0; cursor: pointer; font: inherit; color: transparent; border: 1px solid var(--vscode-dropdown-border); background-color: var(--vscode-dropdown-background); background-image: linear-gradient(45deg, transparent 50%, var(--vscode-dropdown-foreground) 50%), linear-gradient(135deg, var(--vscode-dropdown-foreground) 50%, transparent 50%); background-position: calc(50% - 0.2em) 55%, calc(50% + 0.2em) 55%; background-size: 0.4em 0.4em; background-repeat: no-repeat; }
   select.recipe-variant option { color: var(--vscode-dropdown-foreground); background: var(--vscode-dropdown-background); }
   button.recipe .recipe-variant-name, button.action .recipe-variant-name { display: block; font-size: 0.85em; opacity: 0.8; }
+  .alternative-actions button.action .recipe-variant-name { display: inline; margin-left: 0.5em; }
   .recipe-unknown { border: 1px dashed var(--vscode-inputValidation-warningBorder); padding: 0.3em 0.9em; opacity: 0.85; }
   .preview { border-top: 1px solid var(--vscode-panel-border); margin-top: 1em; }
   .preview-tasks { border-collapse: collapse; margin: 0.5em 0; width: 100%; }

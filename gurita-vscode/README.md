@@ -194,7 +194,10 @@ move between the cards, and a dependency on a card links to the named question's
 stacks the question text in an area of fixed height, so the pick starts at the same height on
 every card, then the pick and its rationale, the alternatives, the dependencies, and the
 principles, and carries **Discuss** and **Answer** buttons and an **Answer with this
-alternative** button on each alternative. The question, the pick's rationale, and each
+alternative** button on each alternative. Each alternative's id stands alone on its head line,
+and directly beneath it, above the alternative's text, a row of its own holds that
+alternative's **Answer with this alternative** button, its label reading the title and then the
+selected variant's name on one line, with its variant dropdown beside it. The question, the pick's rationale, and each
 alternative's text, advantages, and drawbacks are drawn by the extension's own small text
 renderer: text between two backticks, such as a file name or a command, shows as code in the
 editor's font with no backticks around it, and nothing else is read as markup: emphasis, links,
@@ -741,7 +744,9 @@ The dropdown stands on the variant selected, and the button's label, its hover t
 all follow it. Each button, every **Answer with this alternative** button included, standing on
 its own dropdown's variant, shows its name and, beneath it, the name of the variant selected, always and exactly as the variant is
 named, in the recipe buttons' form, with that variant's lines as written in its hover text, so
-**New task** on the shipped `discuss-new-task` reads `default` beneath its name. A click runs the
+**New task** on the shipped `discuss-new-task` reads `default` beneath its name; an **Answer
+with this alternative** button, on its alternative's row of its own, reads the variant's name
+after its name on the same line instead. A click runs the
 variant the dropdown shows, and only when the window's last post of the button stood on that
 variant; picking another variant starts nothing, so these dropdowns stay enabled while a
 run is going.
