@@ -76,3 +76,5 @@ The monorepo is not the source users install from — that is `gurita-claude`, a
 ```
 
 Claude Code reads that marketplace from the checkout directory, so the `hosts/claude/` tree it points at is what gets installed and updated — no release needed.
+
+The VS Code extension under `gurita-vscode/` has a build and test loop of its own, run with Node 22 through nvm and independent of the host build and the root `VERSION`, the extension carrying a version of its own. That loop is documented in [`gurita-vscode/BUILDING.md`](gurita-vscode/BUILDING.md), not in the extension's `README.md`, which is the use documentation the listings show. The extension is released through the maintainer-only `/release-vscode-extension` skill, never through `/release-plugin`.

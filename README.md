@@ -119,6 +119,10 @@ Then, in your project root, add the mission workflow guidance to `CLAUDE.md` (`A
 
 Run `/init` to document your project — its domain context, working conventions, available tools, and how work is verified as done — in `CLAUDE.md`, so the skills can read that environment context.
 
+### Gurita for VS Code
+
+Gurita for VS Code, `BusyMinds.gurita-vscode`, adds a side-bar view and a window per mission over the plugin's missions, questions, and recipes; it needs the plugin installed to do anything. Install it from the Extensions view, through its listing on the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=BusyMinds.gurita-vscode) or, in an editor that reads Open VSX, on [Open VSX](https://open-vsx.org/extension/BusyMinds/gurita-vscode). How to use it is documented in [gurita-vscode/README.md](gurita-vscode/README.md).
+
 ## Why Gurita?
 
 Handing long-running execution to an agent breaks down in a predictable way. An agent left to run for a long time hits questions nobody decided, and it either guesses quietly and builds on the guess or stops and waits for a person. Either way, you cannot walk away.
