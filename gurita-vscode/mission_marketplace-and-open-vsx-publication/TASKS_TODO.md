@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Extension Bug Form and Manifest Links
-
-Add an extension bug form under `.github/ISSUE_TEMPLATE/` asking for the extension's own version, the editor and its version, and the platform, and give the manifest the three links a listing shows: `homepage` naming `https://github.com/uHappyLogic/gurita/tree/main/gurita-vscode#readme`, `bugs` naming the form directly through `https://github.com/uHappyLogic/gurita/issues/new?template=<form>.yml`, and `qna` naming `https://github.com/uHappyLogic/gurita/discussions/new?category=q-a`. It is verified by the form being a well-formed issue form that appears in the issue chooser beside the existing ones, by the `bugs` URL naming the form's own file, and by `npm run package` building with the three entries.
-
----
-
 ## Listing Description, Category, Keywords, and Banner
 
 Rewrite the manifest's listing metadata for a reader new to the plugin: `description` becomes one sentence saying what Gurita is (a plugin for Claude Code, Codex, and Antigravity that settles a mission's questions before handing its work to agents), what the extension adds (a side-bar view and windows over the plugin's missions, questions, and recipes), and that the plugin must be installed for it to do anything; `categories` becomes `AI` as its only entry; a `keywords` list of about six to ten entries is added, holding `gurita`, `missions`, `claude code`, `codex`, `antigravity`, and a few domain terms such as `ai agents`, `planning`, and `requirements`; and `"galleryBanner": { "color": "#9333ea", "theme": "dark" }` is added. `displayName` stays `Gurita for VS Code`, no `preview` entry is added, and no wording advertises the install and update feature, verified by reading the manifest against those values and by `npm run package` building with it.

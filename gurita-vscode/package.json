@@ -11,6 +11,11 @@
     "url": "https://github.com/uHappyLogic/gurita.git",
     "directory": "gurita-vscode"
   },
+  "homepage": "https://github.com/uHappyLogic/gurita/tree/main/gurita-vscode#readme",
+  "bugs": {
+    "url": "https://github.com/uHappyLogic/gurita/issues/new?template=extension-bug.yml"
+  },
+  "qna": "https://github.com/uHappyLogic/gurita/discussions/new?category=q-a",
   "engines": {
     "vscode": "^1.143.0"
   },
