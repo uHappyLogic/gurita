@@ -226,6 +226,41 @@
   </open-question>
   <open-question id="Commit link target">
     <question>Each completed task listed on a mission page of Gurita for VS Code is to carry a link to its `Task-completion:` commit. What does following the link open: the commit inside VS Code, and through which view or command, or the commit&apos;s page on the repository&apos;s remote host?</question>
+    <alternative id="Commit text document">
+      The link opens the commit inside VS Code only, as one read-only text document in an editor tab: the extension registers a content provider of its own scheme whose content is `git show &lt;hash&gt;` run through `execFile` from the project root, as the extension already runs `git log` and the missions tool, and opens it with the diff language, so the tab holds the subject, the verified bar as the body, and the whole patch, the brief among its removed lines. No remote host is involved and no other extension is called.
+      <advantage>It works for every commit the local repository holds, pushed or not, on any remote host or none, shows the subject, the bar, and the diff together as `tasks` and the commit record them, and adds no dependency beyond the `git` the extension already runs.</advantage>
+      <drawback>The patch is one long plain diff with no per-file side-by-side view, no syntax highlighting of the changed files&apos; own language, and no navigation between files, so a large task commit is hard to read there; the provider and its scheme are new code the extension has none of today.</drawback>
+    </alternative>
+    <alternative id="Multi-file diff editor">
+      The link opens the commit inside VS Code only, in VS Code&apos;s multi-file diff editor through the built-in `vscode.changes` command, titled by the task&apos;s heading, with one entry per file the commit changed, each comparing that file at `&lt;hash&gt;^` with the file at `&lt;hash&gt;`, both versions served by a content provider of the extension&apos;s own over `git show &lt;rev&gt;:&lt;path&gt;` and the file list read with `git show --name-status`. No remote host is involved and the built-in Git extension is not called.
+      <advantage>Each changed file reads as VS Code&apos;s own side-by-side diff, with the file&apos;s language highlighting and navigation between files, the richest in-editor view of the change, for every local commit whatever the remote.</advantage>
+      <drawback>The commit&apos;s message and verified bar are not part of the diff editor, so the reader sees the change without the record beside it unless the page already shows the bar; it is the most code of the in-editor options (file list, added, deleted, and renamed files mapped to entries, two revisions per file).</drawback>
+    </alternative>
+    <alternative id="Remote host page">
+      The link opens the commit&apos;s page on the repository&apos;s remote host only, in the browser through `vscode.env.openExternal`: the extension reads the `origin` remote&apos;s URL, turns an SSH form such as `git@github.com:uHappyLogic/gurita.git` into its web address, and appends the host&apos;s commit path (`/commit/&lt;hash&gt;` on GitHub, `/-/commit/&lt;hash&gt;` on GitLab, `/commits/&lt;hash&gt;` on Bitbucket), with no link drawn where no remote is set or its host is not one the extension knows. Nothing opens inside VS Code.
+      <advantage>It is the smallest piece of code, and the host&apos;s commit page gives the full rendered commit, message, bar, and per-file diff, in the place a team already reviews and shares commits.</advantage>
+      <drawback>A task completed and not yet pushed, the normal state while a mission runs locally, opens a not-found page; a repository with no remote, a self-hosted or unknown host, or a private repository the browser is not signed into gives no usable link, and the extension takes on a table of host URL formats.</drawback>
+    </alternative>
+    <alternative id="Text document plus remote">
+      Each completed task carries two links: the primary one opens the commit inside VS Code as the read-only `git show` text document of the extension&apos;s own scheme, and a second one, drawn only when the `origin` remote&apos;s host is one the extension knows, opens the commit&apos;s page on that host through `vscode.env.openExternal`, built as the remote-page option builds it.
+      <advantage>The in-editor link always works for any local commit while the remote link serves sharing and review on the host, so neither reader is left without a target.</advantage>
+      <drawback>It is the code of both the text document and the remote URL mapping, a second control on every completed task&apos;s row, and a remote link that still opens a not-found page for an unpushed commit.</drawback>
+    </alternative>
+    <alternative id="Diff editor plus remote">
+      Each completed task carries two links: the primary one opens the commit inside VS Code in the multi-file diff editor through `vscode.changes`, served by the extension&apos;s own `git show &lt;rev&gt;:&lt;path&gt;` reads, and a second one, drawn only when the `origin` remote&apos;s host is one the extension knows, opens the commit&apos;s page on that host through `vscode.env.openExternal`.
+      <advantage>The reader gets VS Code&apos;s richest local view of the change and, where the host is known, the host&apos;s page with the commit&apos;s message and bar, covering both local reading and sharing.</advantage>
+      <drawback>It carries the most code of any option (the diff editor&apos;s file mapping plus the host URL table), a second control on every row, the diff editor still shows no commit message or bar, and the remote link fails for an unpushed commit.</drawback>
+    </alternative>
+    <alternative id="Remote first, text document fallback">
+      Each completed task carries one link whose target is chosen when it is followed: the commit&apos;s page on the remote host through `vscode.env.openExternal` when the `origin` remote&apos;s host is one the extension knows and the commit is reachable from a remote-tracking branch (`git branch -r --contains &lt;hash&gt;` prints a line), and otherwise the read-only `git show` text document inside VS Code.
+      <advantage>One control per row that never opens a not-found page: a pushed commit goes to the host&apos;s full page and an unpushed one, or one in a repository with no known host, still opens locally.</advantage>
+      <drawback>The same link opens in two different places depending on push state the reader cannot see, which surprises; the remote-tracking check is only as fresh as the last fetch, and the code is that of both targets plus the check.</drawback>
+    </alternative>
+    <alternative id="Remote first, diff editor fallback">
+      Each completed task carries one link whose target is chosen when it is followed: the commit&apos;s page on the remote host through `vscode.env.openExternal` when the `origin` remote&apos;s host is one the extension knows and the commit is reachable from a remote-tracking branch, and otherwise the multi-file diff editor inside VS Code through `vscode.changes`, served by the extension&apos;s own `git show &lt;rev&gt;:&lt;path&gt;` reads.
+      <advantage>One control per row that always opens something useful, the host&apos;s page for a pushed commit and VS Code&apos;s per-file side-by-side view for an unpushed one or where no host is known.</advantage>
+      <drawback>The link&apos;s destination silently depends on push state, the local fallback shows no message or bar, and it carries the most moving parts of the single-link options (host URL table, remote-tracking check, diff editor file mapping).</drawback>
+    </alternative>
   </open-question>
   <open-question id="Multi-line input mechanism">
     <question>In Gurita for VS Code an answer, a mission&apos;s goal, and a new task&apos;s issue description are to be typed into a box with room for several lines. Today each is asked through `vscode.window.showInputBox`, which holds one line, and the goal is asked from the side-bar view&apos;s rows, where no page stands. An earlier mission recorded that nothing is typed on a page anywhere in the extension. What provides the multi-line box?</question>
