@@ -2,8 +2,8 @@
 
 This file covers building, packaging, and installing the extension by hand from a checkout of
 the Gurita repository. How to use the installed extension is documented in
-[`README.md`](README.md), the file the package carries and the listings show. This file is kept
-out of the package.
+[`USAGE.md`](USAGE.md), which [`README.md`](README.md), the file the package carries and the
+listings show, links to. This file and `USAGE.md` are kept out of the package.
 
 ## Requirements
 

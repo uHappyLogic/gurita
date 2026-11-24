@@ -12,6 +12,7 @@ shipped_recipes.md
 runner_tests/**
 **/__pycache__/**
 BUILDING.md
+USAGE.md
 media/demo.gif
 media/sidebar-view.png
 media/mission-page.png
