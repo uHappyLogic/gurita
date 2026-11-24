@@ -17,7 +17,7 @@
   },
   "qna": "https://github.com/uHappyLogic/gurita/discussions/new?category=q-a",
   "engines": {
-    "vscode": "^1.143.0"
+    "vscode": "^1.107.0"
   },
   "categories": [
     "AI"
@@ -170,7 +170,7 @@
   },
   "devDependencies": {
     "@types/node": "22.20.5",
-    "@types/vscode": "1.140.0",
+    "@types/vscode": "1.107.0",
     "@vscode/vsce": "4.1.1",
     "typescript": "7.0.2"
   },

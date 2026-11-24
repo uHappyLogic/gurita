@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Engine Floor for the Target Forks
-
-Lower `engines.vscode` to the oldest VS Code base among the four Open VSX editors the extension means to reach, VSCodium, Cursor, Windsurf, and Antigravity, looked up when the change is made, and re-pin `@types/vscode` exactly to the newest published typings not above that floor, so the published package installs in those forks. It is verified by the extension compiling and `npm test` passing against the re-pinned typings, by `npm run package` building, and by every statement of the floor and the pin in the extension's documents matching the manifest.
-
----
-
 ## Native Windows Check at Activation
 
 Add a check at activation: on native Windows (the platform is `win32` and the window is not a remote one) the extension shows one message saying it runs only on macOS, Linux, or through Remote-WSL, and leaves its view, windows, and runner inert instead of letting them run, while in a Remote-WSL window, where it runs on the Linux side, the check never fires; the package stays universal and installable on every platform. It is verified by `node:test` tests against the `vscode` stub covering native Windows, a remote window, and macOS or Linux, with `npm test` passing.

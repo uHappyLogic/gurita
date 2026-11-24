@@ -11,8 +11,9 @@ not published to any marketplace: it is built from this repository and installed
 
 ## Requirements
 
-- VS Code 1.143.0 or later (the manifest declares `engines.vscode` `^1.143.0`), with its `code`
-  command on `PATH` for the command-line install.
+- VS Code 1.107.0 or later (the manifest declares `engines.vscode` `^1.107.0`), or an editor
+  built on VS Code 1.107.0 or later, with its `code` command on `PATH` for the command-line
+  install.
 - Node 22 through nvm under `$HOME/.nvm`, to build and package. Node is needed only for the
   build; the installed extension needs no Node install of its own.
 - `python3`, 3.9 or later, on `PATH`: the extension runs the bundled missions tool and its own
@@ -34,7 +35,8 @@ Every Node command runs under Node 22 through nvm, in a subshell, from the repos
 ```
 
 - `npm ci` installs the pinned build dependencies from `package-lock.json` into
-  `node_modules/`: TypeScript, `@types/vscode` 1.140.0, `@types/node`, and `@vscode/vsce`.
+  `node_modules/`: TypeScript, `@types/vscode` 1.107.0 (the typings of the engine floor),
+  `@types/node`, and `@vscode/vsce`.
 - `npm run compile` compiles the extension host code (`tsconfig.json`, CommonJS) and the
   webview page's script (`tsconfig.webview.json`, with the DOM library) from `src/` into `out/`,
   one emitted file per source file, with no bundler.
@@ -182,7 +184,8 @@ A click on a mission's row in the side-bar view opens that mission's own window 
 area, titled with the mission's title, or brings it forward when it is already open, so a mission
 never has two windows. Several missions' windows stand open at once, each showing that one
 mission's page with no tab row, and you close one as you close any editor tab. Each window's
-editor tab shows the mission's title alone and the rocket codicon; while another live mission
+editor tab shows the mission's title alone and the rocket codicon (on an editor built on VS Code
+1.108.0 or later; on an older one the tab draws no icon); while another live mission
 carries the same title, each of those tabs adds its mission's scope after a dash, such as
 `Shared title — lib`, and the tabs are re-titled on every re-read. Besides the
 side-bar view there is no entry point: the Command Palette offers no command opening a window,

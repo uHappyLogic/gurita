@@ -653,7 +653,9 @@ function restoreMissionWindow(context: vscode.ExtensionContext, panel: vscode.We
  */
 function hookMissionWindow(context: vscode.ExtensionContext, mission: string, created: vscode.WebviewPanel, title: string): void {
   const scripts = vscode.Uri.joinPath(context.extensionUri, 'out', 'webview');
-  created.iconPath = new vscode.ThemeIcon(MISSION_WINDOW_ICON);
+  // A codicon as a webview panel's icon is typed from VS Code 1.108 on, above the engine floor; a
+  // host below it reads no image from the ThemeIcon and draws the tab with no icon.
+  (created as { iconPath?: vscode.IconPath }).iconPath = new vscode.ThemeIcon(MISSION_WINDOW_ICON);
   const win: MissionWindow = { mission, panel: created };
   windows.set(mission, win);
   created.webview.html = pageShell(created.webview, vscode.Uri.joinPath(scripts, 'page.js'), title, mission);
