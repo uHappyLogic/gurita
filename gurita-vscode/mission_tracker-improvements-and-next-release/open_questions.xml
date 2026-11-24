@@ -90,6 +90,21 @@
   </open-question>
   <open-question id="Auto-close looped runs">
     <question>The runner of Gurita for VS Code waits for a keypress after every chain and after every looped task run. A new setting is to close the terminal by itself when a chain ran all its lines. Does the setting also close the terminal of a looped task run that completed every task?</question>
+    <alternative id="Same setting covers loops">
+      The one new setting governs both kinds of run. With it on, a looped task run that ends on `Loop finished: no task remains` (the runner&apos;s `finished` outcome, reached once no `##` heading is left in `TASKS_TODO.md`) prints its report and exits without waiting for a keypress, so its terminal closes and the page unblocks. A loop that stopped (an unresolved assignment, a task that did not end on `Task completed.`, or an unreadable task list) still waits for a keypress, as a stopped chain does.
+      <advantage>One rule for every run: `run_chain` and `run_loop` already end the same way (report, `wait_for_key`, exit 0 when finished), so the setting skips the same wait at both, and the looped run, which is the long unattended run where an unblocked page on success matters most, gets the benefit too.</advantage>
+      <drawback>The loop&apos;s closing report (`Tasks completed: N`) and every task session&apos;s output vanish with the terminal on success, leaving only the commits and the refreshed page as the record; the setting&apos;s description and the README must say it reaches looped runs, since the tracker entry names only chains.</drawback>
+    </alternative>
+    <alternative id="Chains only">
+      The setting closes only a chain&apos;s terminal. A looped task run keeps waiting for a keypress after its report whatever the setting says and however the loop ended, exactly as today.
+      <advantage>Follows the tracker entry&apos;s wording literally and keeps the one run that can complete many tasks unattended always reviewable at its end, with the runner&apos;s loop path left unchanged.</advantage>
+      <drawback>A loop that completed every task still leaves the mission&apos;s page blocked until someone presses a key, the very wait the setting exists to remove, and a user who turned the setting on is likely to read the loop&apos;s lingering terminal as the setting not working.</drawback>
+    </alternative>
+    <alternative id="Separate loop setting">
+      Looped runs get a setting of their own beside the chain one: with it on, a looped task run that ends on `Loop finished: no task remains` exits without waiting for a keypress, while a stopped loop still waits; the chain setting does not reach loops and the loop setting does not reach chains.
+      <advantage>Lets a user auto-close short chains while still reviewing the output of a long multi-task run, or the reverse, without either choice being forced on the other.</advantage>
+      <drawback>Adds a second setting to the manifest, its description, and the README for a distinction few users are likely to want, and needs a default of its own, which depends on how the default of the chain setting is settled.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Git change detection">
     <question>Gurita for VS Code is to re-read the missions when git state changes through a commit, a pull, or a branch switch made outside its own runs; today its one file watcher covers the mission documents only. How does the extension learn of such a change: by watching files inside the repository&apos;s `.git` directory, or through the API of VS Code&apos;s built-in Git extension?</question>
