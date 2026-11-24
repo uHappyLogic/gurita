@@ -5,6 +5,7 @@
   "publisher": "BusyMinds",
   "version": "0.1.0",
   "license": "MIT",
+  "icon": "media/icon.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/uHappyLogic/gurita.git",

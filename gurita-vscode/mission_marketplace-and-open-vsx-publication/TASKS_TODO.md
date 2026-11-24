@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Listing Icon Rendered as a PNG
-
-Give the package the icon a public listing needs: the activity-bar icon's three arms as filled outlines in the same geometry, filled white or the activity bar's near-white `#d7dae0`, on a filled square in the banner's darker violet `#9333ea`, rasterized from the tracked plain-text drawings by a stdlib-only Python script under `scripts/` that writes the PNG itself through `zlib` and `struct` with no external tool, committed under `gurita-vscode/media/`, named by the manifest's `icon` entry, and never edited by hand. It is verified by a pytest test beside `tests/test_icon.py` checking that the committed file is a well-formed PNG of the listing size and equals what the generator produces, and by `npm run package` building with the icon.
-
----
-
 ## Extension Bug Form and Manifest Links
 
 Add an extension bug form under `.github/ISSUE_TEMPLATE/` asking for the extension's own version, the editor and its version, and the platform, and give the manifest the three links a listing shows: `homepage` naming `https://github.com/uHappyLogic/gurita/tree/main/gurita-vscode#readme`, `bugs` naming the form directly through `https://github.com/uHappyLogic/gurita/issues/new?template=<form>.yml`, and `qna` naming `https://github.com/uHappyLogic/gurita/discussions/new?category=q-a`. It is verified by the form being a well-formed issue form that appears in the issue chooser beside the existing ones, by the `bugs` URL naming the form's own file, and by `npm run package` building with the three entries.
