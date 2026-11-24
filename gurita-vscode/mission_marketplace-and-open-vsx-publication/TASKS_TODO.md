@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Verify Publisher, Namespace, and Open VSX Release Secret
-
-Confirm the account steps the maintainer takes by hand before the task run (creating an Eclipse account and signing the Open VSX publisher agreement, and issuing the Open VSX token into the git-ignored `.env.publish` at the repository root as `OVSX_PAT`; the Marketplace publisher `BusyMinds` already exists and no Marketplace token is issued, Trusted Publishing replacing it), create the Open VSX namespace `BusyMinds` through `ovsx create-namespace` when it does not exist yet, and create the GitHub environment `extension-release` in `uHappyLogic/gurita`, restricted to tags matching `gurita-vscode-*` and carrying no required reviewer, with its secret `OVSX_PAT` set from `.env.publish` through `gh`; `ovsx` runs through `npx` under the nvm Node 22 wrapper with `.env.publish` sourced by `set -a; . ./.env.publish; set +a`, no token value is ever printed, and the task changes no tracked file, so its commit records the bar and the task list's removal only. It is verified by exactly three checks: the publisher and the namespace exist, observed through a registry query; the Open VSX token is accepted for `BusyMinds` through `ovsx verify-pat`; and the environment exists with its tag rule and a secret named `OVSX_PAT`, read back through `gh`. When a check fails the task ends as failed, naming what the maintainer must still do, and a re-run once those steps are taken completes it; the trusted-publishing policy is not checked here, being the maintainer's step before the first publication.
-
----
-
 ## File the Open VSX Namespace Claim
 
 File the ownership claim for the `BusyMinds` namespace on Open VSX, directly after the namespace's creation and in the way Open VSX's own documentation gives for claiming a namespace, the runner filing it through `gh` under the maintainer's account unless the claim's issue already exists; the mission claims ownership only as far as filing. The task changes no tracked file and is done once the claim's issue exists, verified by reading the issue back, and whether the claim is granted is neither waited for nor recorded.
