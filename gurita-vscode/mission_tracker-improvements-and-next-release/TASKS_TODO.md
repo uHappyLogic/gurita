@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Mission Introduction Above a Headed Diagram
-
-Open a mission page with an introduction section above the workflow diagram that shows the mission's title alone by default, with one control beside it that shows and hides the whole goal beneath it, the goal as the mission's `requirements.md` holds it, drawn by the text renderer, and give the workflow diagram a heading of its own to mark where it starts. The goal is collapsed on every load of the page with no shown or hidden state saved, and the control is present whatever the goal's length, with no clamp and no overflow measurement. Verified by tests of the title and goal read and of the introduction, its toggle, and the diagram's heading against the stand-in DOM, with `gurita-vscode/README.md` describing both.
-
----
-
 ## Indicator While a Run Blocks the Page
 
 Show on a mission page, while a run started for the mission is going and its action buttons are disabled, an indicator saying that the mission is waiting for the run's terminal to close. The indicator's space is reserved whether or not it shows, so switching it on or off moves none of the page's content; verified by page tests of the indicator in both states and of its reserved space in the page shell's stylesheet, with `gurita-vscode/README.md` describing it.

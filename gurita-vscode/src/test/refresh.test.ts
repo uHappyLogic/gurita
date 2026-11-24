@@ -35,7 +35,7 @@ test('a change to a task list re-reads its mission and the live list', () => {
   }
 });
 
-test('creating or deleting a requirements file re-reads the live list, and changing one asks nothing', () => {
+test('creating or deleting a requirements file re-reads the live list, and changing one re-reads its documents', () => {
   for (const kind of ['created', 'deleted'] as const) {
     assert.deepStrictEqual(eventEffect(ROOT, at('mission_alpha', 'requirements.md'), kind), {
       mission: 'mission_alpha/',
@@ -43,7 +43,11 @@ test('creating or deleting a requirements file re-reads the live list, and chang
       live: true,
     });
   }
-  assert.strictEqual(eventEffect(ROOT, at('mission_alpha', 'requirements.md'), 'changed'), undefined);
+  assert.deepStrictEqual(eventEffect(ROOT, at('mission_alpha', 'requirements.md'), 'changed'), {
+    mission: 'mission_alpha/',
+    documents: true,
+    live: false,
+  });
 });
 
 test('a file outside a mission directory or outside the root asks nothing', () => {

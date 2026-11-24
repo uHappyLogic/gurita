@@ -1666,3 +1666,170 @@ test('every push button a mission window draws carries one class of the one shar
     assert.strictEqual(kept.declarations.get('background'), 'none', 'the headers and links keep their unfilled look');
   }
 });
+
+const GOAL = 'Ship the `alpha` page.\n\n- First part\n- Second part';
+
+/** Alpha's page message with `introduction` as its introduction part, `running` the paths of the missions with a running runner. */
+function introductionPage(introduction: unknown, running: string[] = []): unknown {
+  return pageOf({ ...(mission(ALPHA, 'Alpha') as Record<string, unknown>), introduction }, running);
+}
+
+/** The page's one introduction section. */
+function introduction(page: Page): FakeElement {
+  const found = page.root.all().filter((each) => each.has('introduction'));
+  assert.strictEqual(found.length, 1);
+  return found[0];
+}
+
+/** The introduction's goal control. */
+function goalToggle(page: Page): FakeElement {
+  const found = introduction(page).all().filter((each) => each.tagName === 'button');
+  assert.strictEqual(found.length, 1, 'the introduction holds one control');
+  return found[0];
+}
+
+/** The text a rendered node holds, its own and its children's, in order. */
+function renderedText(node: FakeElement | { textContent: string }): string {
+  return node instanceof FakeElement && node.children.length > 0 ? node.children.map(renderedText).join('') : node.textContent;
+}
+
+/** The introduction's goal area, while the goal is shown. */
+function goalArea(page: Page): FakeElement | undefined {
+  return introduction(page).all().find((each) => each.has('goal'));
+}
+
+test("the page opens on its introduction above the diagram, the mission's title alone with the goal control beside it", () => {
+  const page = loadPage();
+  page.send(introductionPage({ state: 'read', title: 'Alpha mission', goal: GOAL }));
+  const shown = page.root.all().find((each) => each.has('page')) as FakeElement;
+  assert.deepStrictEqual(
+    (shown.children as FakeElement[]).slice(0, 2).map((each) => each.className),
+    ['introduction', 'workflow'],
+    'the introduction stands first, directly above the workflow diagram',
+  );
+  const head = introduction(page).children[0] as FakeElement;
+  assert.ok(head.has('introduction-head'));
+  assert.deepStrictEqual(
+    (head.children as FakeElement[]).map((each) => [each.tagName, each.textContent]),
+    [
+      ['h2', 'Alpha mission'],
+      ['button', 'Show goal'],
+    ],
+    'the title and the control stand together on the head line',
+  );
+  assert.strictEqual(goalToggle(page).getAttribute('aria-expanded'), 'false');
+  assert.strictEqual(goalArea(page), undefined, 'the goal is hidden by default');
+  assert.ok(!texts(page).some((text) => text.includes('First part')), 'no part of the goal is drawn');
+});
+
+test('the control shows the whole goal beneath the title, drawn by the text renderer, and hides it again', () => {
+  const page = loadPage();
+  page.send(introductionPage({ state: 'read', title: 'Alpha mission', goal: GOAL }));
+  goalToggle(page).click();
+  assert.strictEqual(goalToggle(page).textContent, 'Hide goal');
+  assert.strictEqual(goalToggle(page).getAttribute('aria-expanded'), 'true');
+  const area = goalArea(page);
+  assert.ok(area !== undefined, 'the goal is shown');
+  assert.strictEqual(introduction(page).children[1], area, 'the goal stands beneath the head line');
+  const [paragraph, list] = area.children as FakeElement[];
+  assert.strictEqual(area.children.length, 2);
+  assert.strictEqual(paragraph.tagName, 'p');
+  assert.deepStrictEqual(
+    paragraph.children.map((child) => (child instanceof FakeElement ? [child.tagName, child.textContent] : ['text', child.textContent])),
+    [
+      ['text', 'Ship the '],
+      ['code', 'alpha'],
+      ['text', ' page.'],
+    ],
+  );
+  assert.strictEqual(list.tagName, 'ul');
+  assert.deepStrictEqual(list.children.map(renderedText), ['First part', 'Second part']);
+  goalToggle(page).click();
+  assert.strictEqual(goalToggle(page).textContent, 'Show goal');
+  assert.strictEqual(goalToggle(page).getAttribute('aria-expanded'), 'false');
+  assert.strictEqual(goalArea(page), undefined, 'the goal is hidden again');
+  assert.deepStrictEqual(page.posted, [{ type: 'ready' }], 'the control posts nothing to the extension');
+});
+
+test('the control is drawn whatever the length of the goal, the whole of a long one shown with no clamp', () => {
+  const long = Array.from({ length: 40 }, (_, index) => `Paragraph ${index + 1} of the goal.`).join('\n\n');
+  for (const goal of ['Short.', long]) {
+    const page = loadPage();
+    page.send(introductionPage({ state: 'read', title: 'Alpha mission', goal }));
+    assert.strictEqual(goalToggle(page).textContent, 'Show goal');
+    goalToggle(page).click();
+    const area = goalArea(page) as FakeElement;
+    assert.strictEqual(area.children.length, goal === long ? 40 : 1, 'every paragraph of the goal is drawn');
+    assert.strictEqual(area.className, 'goal', 'with no clamping class');
+  }
+  const rules = stylesheetRules().filter((rule) => rule.selectors.some((selector) => selector.startsWith('.introduction')));
+  assert.ok(rules.length > 0);
+  for (const rule of rules) {
+    for (const property of ['max-height', 'height', 'overflow', 'overflow-y', '-webkit-line-clamp', 'line-clamp']) {
+      assert.ok(!rule.declarations.has(property), `${rule.selectors.join(', ')} sets no ${property}`);
+    }
+  }
+});
+
+test('a shown goal stays shown through every redraw while the page stays shown, and is saved nowhere', () => {
+  const page = loadPage();
+  page.send(introductionPage({ state: 'read', title: 'Alpha mission', goal: GOAL }));
+  goalToggle(page).click();
+  page.send(introductionPage({ state: 'read', title: 'Alpha mission', goal: 'A revised goal.' }));
+  assert.strictEqual(goalToggle(page).textContent, 'Hide goal');
+  assert.deepStrictEqual(goalArea(page)?.children.map(renderedText), ['A revised goal.'], 'the redrawn goal is the one posted last');
+  page.send({ type: 'running', missions: [ALPHA] });
+  assert.strictEqual(goalToggle(page).textContent, 'Hide goal');
+  assert.strictEqual(goalToggle(page).disabled, false, 'the control stays enabled while a chain runs');
+  assert.ok(page.saved.length > 0);
+  for (const state of page.saved) {
+    assert.ok(!JSON.stringify(state).toLowerCase().includes('goal'), 'no shown or hidden state is saved');
+  }
+});
+
+test('the goal is hidden on every load of the page and after the failure state or the notice', () => {
+  const first = loadPage();
+  first.send(introductionPage({ state: 'read', title: 'Alpha mission', goal: GOAL }));
+  goalToggle(first).click();
+  const again = loadPage();
+  again.send(introductionPage({ state: 'read', title: 'Alpha mission', goal: GOAL }));
+  assert.strictEqual(goalArea(again), undefined, 'a page loaded afresh opens with the goal hidden');
+
+  for (const between of [{ type: 'liveFailure', cause: 'Error: no' }, { type: 'notLive', path: ALPHA }]) {
+    const page = loadPage();
+    page.send(introductionPage({ state: 'read', title: 'Alpha mission', goal: GOAL }));
+    goalToggle(page).click();
+    page.send(between);
+    page.send(introductionPage({ state: 'read', title: 'Alpha mission', goal: GOAL }));
+    assert.strictEqual(goalArea(page), undefined, `the goal is hidden again after ${between.type}`);
+    assert.strictEqual(goalToggle(page).textContent, 'Show goal');
+  }
+});
+
+test("the introduction falls back to the live title, and draws a missing goal's line or the requirements file's notice in the goal's place", () => {
+  const page = loadPage();
+  page.send(pageOf(mission(ALPHA, 'Alpha')));
+  assert.strictEqual((introduction(page).all().find((each) => each.tagName === 'h2') as FakeElement).textContent, 'Alpha', 'no introduction posted: the live title');
+  goalToggle(page).click();
+  assert.deepStrictEqual(goalArea(page)?.children.map((child) => child.textContent), ['requirements.md holds no goal.']);
+
+  page.send(introductionPage({ state: 'read', goal: '' }));
+  assert.strictEqual((introduction(page).all().find((each) => each.tagName === 'h2') as FakeElement).textContent, 'Alpha', 'no title read: the live title');
+  assert.deepStrictEqual(goalArea(page)?.children.map((child) => child.textContent), ['requirements.md holds no goal.']);
+
+  page.send(introductionPage({ state: 'failed', notice: { file: `${ALPHA}requirements.md`, reason: 'missing' } }));
+  assert.strictEqual((introduction(page).all().find((each) => each.tagName === 'h2') as FakeElement).textContent, 'Alpha');
+  assert.strictEqual(goalToggle(page).textContent, 'Hide goal');
+  const notice = (goalArea(page) as FakeElement).all().find((each) => each.has('notice'));
+  assert.ok(notice !== undefined, "the requirements file's notice stands in the goal's place");
+  assert.deepStrictEqual(notice.all().filter((each) => each.tagName === 'p').map((each) => each.textContent), [`${ALPHA}requirements.md is missing.`]);
+});
+
+test('the workflow diagram carries a heading of its own above its blocks', () => {
+  const page = diagramPage({ step: 'derive' });
+  const section = page.root.all().find((each) => each.has('workflow')) as FakeElement;
+  const [heading, flow] = section.children as FakeElement[];
+  assert.deepStrictEqual([heading.tagName, heading.textContent], ['h3', 'Workflow']);
+  assert.ok(flow.has('flow'), 'the line of blocks follows the heading');
+  assert.strictEqual(section.getAttribute('aria-label'), 'Workflow');
+});

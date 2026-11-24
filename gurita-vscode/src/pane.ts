@@ -8,7 +8,8 @@
 // with no tab row, no refresh control, and no mission-starting button, those belonging to the
 // side-bar view. Every window draws from the session's one live read, described
 // below, and the extension answers every ready message from it, its recipes read afresh: the
-// window's mission carrying its documents as the in-process readers parse them and what
+// window's mission carrying its documents as the in-process readers parse them, the title and
+// goal its page's introduction draws from `requirements.md` among them, and what
 // its seven-block workflow diagram draws: the block filled, the step to run next, chosen from the
 // mission's state, its documents' facts, and the number of `Requirements-review:` commits git
 // holds for it, and the count of those beyond the first, which the additional review round
@@ -122,10 +123,11 @@
 // the project root, created with the first live read that succeeds, lasts until the extension
 // deactivates, released neither when a window is hidden nor when every window is closed. The
 // watcher's events are debounced so that a burst of writes causes one re-read, made whatever is
-// visible. A change to a mission's question document or task list re-reads that mission's
-// documents in process against the live list last read, choosing its next step, and with it the
-// recipes its page lists, and its default pane and counting its review commits afresh, and creating
-// or deleting a `requirements.md`, or changing a `TASKS_TODO.md`, also re-runs `missions.py live`.
+// visible. A change to a mission's requirements file, question document, or task list re-reads
+// that mission's documents in process against the live list last read, its introduction's title
+// and goal among them, choosing its next step, and with it the recipes its page lists, and its
+// default pane and counting its review commits afresh, and creating or deleting a
+// `requirements.md`, or changing a `TASKS_TODO.md`, also re-runs `missions.py live`.
 // A re-read posts to a window only while it is shown, a burst's only to the windows of the missions
 // it touched; a hidden window's page is drawn from the current read by the ready message it posts
 // when shown, so no stale flag is kept. The refresh command re-reads everything, as a fallback. Git
@@ -1716,8 +1718,11 @@ function nonce(): string {
  * of their own. In the Settings window each variant
  * under Variants and Single-task lines, a deleted one included, is a card of its own: its list
  * indented under the recipe's or line's heading, a vertical line down the card's left edge, and a
- * gap between one card and the next. On a question card a stretch of text the text renderer draws
- * as code is set in the editor's font on the theme's code-block background.
+ * gap between one card and the next. A mission page's introduction sets its title as a heading
+ * with its goal control beside it on one line and the goal's paragraphs and lists beneath them,
+ * and the workflow diagram's heading stands above its blocks. On a question card and in the goal
+ * a stretch of text the text renderer draws as code is set in the editor's font on the theme's
+ * code-block background.
  */
 export function pageShell(webview: vscode.Webview, scripts: vscode.Uri[], title: string, mission?: string): string {
   const token = nonce();
@@ -1737,7 +1742,13 @@ export function pageShell(webview: vscode.Webview, scripts: vscode.Uri[], title:
 <style nonce="${token}">
   body { font-family: var(--vscode-font-family); color: var(--vscode-foreground); padding: 0 1em; }
   .failure pre, .notice pre { white-space: pre-wrap; font-family: var(--vscode-editor-font-family); }
+  .introduction { margin: 1em 0 0; }
+  .introduction-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0.8em; }
+  .introduction h2 { margin: 0; font-size: 1.3em; }
+  .introduction .goal { margin-top: 0.5em; }
+  .introduction .goal p, .introduction .goal ul { margin: 0.4em 0; }
   .workflow { margin: 1em 0; }
+  .workflow h3 { margin: 0 0 0.5em; }
   .workflow .flow { display: flex; flex-wrap: nowrap; align-items: center; gap: 0.4em; width: max-content; margin: 0 auto; }
   .workflow .block { border: 1px solid var(--vscode-descriptionForeground); border-radius: 4px; padding: 0.3em 0.8em; white-space: nowrap; }
   .workflow .block.optional { border-style: dashed; }
@@ -1800,7 +1811,7 @@ export function pageShell(webview: vscode.Webview, scripts: vscode.Uri[], title:
   .card-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.3em; }
   .card .slot { margin: 0; padding: 0.5em 0 0; border-top: 1px solid var(--vscode-panel-border); margin-top: 0.5em; }
   .card .slot h5 { margin-bottom: 0.2em; }
-  .card code { font-family: var(--vscode-editor-font-family); font-size: 0.95em; background: var(--vscode-textCodeBlock-background); padding: 0 0.2em; border-radius: 3px; }
+  .card code, .introduction code { font-family: var(--vscode-editor-font-family); font-size: 0.95em; background: var(--vscode-textCodeBlock-background); padding: 0 0.2em; border-radius: 3px; }
   .card .question-text { box-sizing: border-box; height: 9em; overflow-y: auto; border-top: none; margin-top: 0; }
   .alternative { margin: 0.4em 0 0; padding: 0; }
   .alternative-head { display: flex; align-items: center; gap: 0.6em; }

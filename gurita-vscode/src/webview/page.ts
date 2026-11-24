@@ -4,7 +4,15 @@
 // whole page while the live missions cannot be read, the one failure state, the failure line with
 // the cause beneath it; or, while the live read does not list the window's mission, one fixed
 // notice that the mission is no longer live, drawing no diagram, recipe, pane, or action button. A
-// later answer that carries the mission's page draws it again. A page opens on the workflow diagram, drawn by this script
+// later answer that carries the mission's page draws it again. A page opens on its introduction:
+// the mission's title, read from its `requirements.md` as the extension posts it, else the live
+// read's title, alone by default, with one Show goal control beside it that shows the whole goal
+// beneath the title, drawn by the text renderer, and turns into Hide goal, which hides it again,
+// whatever the goal's length, with no clamp and no overflow measurement. The goal is hidden on
+// every load of the page: whether it is shown is held in this script's memory only, through the
+// redraws while the page stays shown, never saved with `setState`, so the failure state, the
+// no-longer-live notice, a reopening, or a hidden window shown again hides it afresh. Beneath the
+// introduction stands the workflow diagram under a heading of its own, Workflow, drawn by this script
 // with no Mermaid: the choices a person makes as one line of seven neutral blocks joined by arrows,
 // define, first review round, additional review round, derive tasks, execute tasks, follow up
 // tasks, and finish, with no frame, loop arrow, or handoff label, the two optional blocks,
@@ -87,8 +95,8 @@
 // every redraw, the page draws every action button on it disabled, its recipe buttons,
 // its question card's buttons, its preview's start button, and its New task button, and its
 // workflow diagram's filled block pulses; the recipe dropdowns and the fixed-name buttons' dropdowns, the question view's
-// first, previous, and next buttons and dependency links, the preview's close button, and the two pane
-// headers stay enabled, and the left and right arrow keys move the question view only while its
+// first, previous, and next buttons and dependency links, the preview's close button, the
+// introduction's goal control, and the two pane headers stay enabled, and the left and right arrow keys move the question view only while its
 // pane is shown. The page draws no Settings control and nothing from the harness check: the
 // settings live in the Settings window of their own, drawn by its own script (`settings.ts`), and a
 // disabled harness reaches the page only as the recipe lists and fixed-name buttons the extension
@@ -97,9 +105,10 @@
 // the state it saves with `setState`, beside the question view's positions, saving it once on
 // every load before anything is posted, so a window that is restored after a restart or a window
 // reload hands the extension its mission's path, and its positions come back with it.
-// Every value is drawn as text, never as markup, since it comes from the workspace; the card's
-// question, rationale, and alternative texts go through the text renderer (`text.ts`), which the page
-// shell loads before this script, so a stretch between backticks in them shows as code.
+// Every value is drawn as text, never as markup, since it comes from the workspace; the mission's
+// goal and the card's question, rationale, and alternative texts go through the text renderer
+// (`text.ts`), which the page shell loads before this script, so a stretch between backticks in
+// them shows as code, and the goal's paragraphs and `- ` lists show as such.
 
 interface VsCodeApi {
   postMessage(message: unknown): void;
@@ -132,6 +141,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
     message?: string;
   }
 
+  type IntroductionPart = { state: 'read'; title?: string; goal: string } | { state: 'failed'; notice: Notice };
   type QuestionPart = { state: 'read'; questions: Question[] } | { state: 'failed'; notice: Notice };
   type TaskPart = { state: 'read'; headings: string[] } | { state: 'failed'; notice: Notice };
 
@@ -144,6 +154,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
     path: string;
     state: string;
     title: string;
+    /** The title and goal its introduction draws, from its `requirements.md`; drawn as the live title with no goal when absent. */
+    introduction?: IntroductionPart;
     questions: QuestionPart;
     tasks: TaskPart;
     /** The step to run next, which the diagram fills; absent when none could be chosen. */
@@ -246,6 +258,12 @@ declare function acquireVsCodeApi(): VsCodeApi;
   const NOT_LIVE_LINE = 'This mission is no longer live.';
   const RECIPE_FAILURE_LINE = 'The actions could not be read.';
   const PREVIEW_FAILURE_LINE = 'The preview could not be run.';
+  const NO_GOAL_LINE = 'requirements.md holds no goal.';
+  /** The labels of the introduction's control while the goal is hidden and while it is shown. */
+  const SHOW_GOAL = 'Show goal';
+  const HIDE_GOAL = 'Hide goal';
+  /** The heading drawn above the workflow diagram. */
+  const WORKFLOW_HEADING = 'Workflow';
   /** The buttons on a question's card, each with its label and the hover text it shows while its recipe cannot be read. */
   const QUESTION_BUTTONS: [FixedButton, string, string][] = [
     ['discussQuestion', 'Discuss', 'Type an optional note and open an interactive discussion of this question'],
@@ -292,6 +310,11 @@ declare function acquireVsCodeApi(): VsCodeApi;
    * shown and never saved, so the failure state, the notice, or a fresh page opens on the default.
    */
   let picked: { mission: string; pane: MissionPane } | undefined;
+  /**
+   * The mission whose goal the introduction shows, held while the page stays shown and never
+   * saved, so the failure state, the notice, or a fresh page hides the goal again.
+   */
+  let goalShown: string | undefined;
 
   function element<K extends keyof HTMLElementTagNameMap>(tag: K, text?: string, className?: string): HTMLElementTagNameMap[K] {
     const node = document.createElement(tag);
@@ -529,7 +552,44 @@ declare function acquireVsCodeApi(): VsCodeApi;
   }
 
   /**
-   * The workflow diagram: its seven blocks in one line joined by arrows, the optional ones dashed,
+   * The mission's introduction: its title alone, the one in `requirements.md`, else the live read's,
+   * with the control beside it showing or hiding the goal beneath it, the goal drawn by the text
+   * renderer while shown, or the requirements file's notice in its place when that file did not
+   * read. The control is drawn whatever the goal's length and stays enabled while a chain runs.
+   */
+  function drawIntroduction(mission: Mission): HTMLElement {
+    const section = element('section', undefined, 'introduction');
+    section.setAttribute('aria-label', 'Introduction');
+    const part = mission.introduction;
+    const title = part?.state === 'read' && part.title !== undefined ? part.title : mission.title;
+    const shown = goalShown === mission.path;
+    const head = element('div', undefined, 'introduction-head');
+    const toggle = button(shown ? HIDE_GOAL : SHOW_GOAL, 'control goal-toggle', () => toggleGoal(mission.path));
+    toggle.setAttribute('aria-expanded', String(shown));
+    toggle.dataset.focus = 'goal-toggle';
+    head.append(element('h2', title, 'mission-title'), toggle);
+    section.append(head);
+    if (shown) {
+      const goal = element('div', undefined, 'goal');
+      if (part?.state === 'failed') {
+        goal.append(drawNotice(part.notice));
+      } else {
+        const blocks = renderText(part?.goal ?? '');
+        goal.append(...(blocks.length > 0 ? blocks : [element('p', NO_GOAL_LINE)]));
+      }
+      section.append(goal);
+    }
+    return section;
+  }
+
+  /** Shows the goal of the mission at `mission` when it is hidden and hides it when it is shown. */
+  function toggleGoal(mission: string): void {
+    goalShown = goalShown === mission ? undefined : mission;
+    draw();
+  }
+
+  /**
+   * The workflow diagram under its heading: its seven blocks in one line joined by arrows, the optional ones dashed,
    * the additional review round carrying `rounds` when given. The block of `step` is filled, and
    * pulses while `busy`, a chain started for the mission running; every block is display only.
    * The line is drawn as a horizontal row, and `fitWorkflow` turns it into a vertical stack once
@@ -537,7 +597,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
    */
   function drawWorkflow(step: WorkflowStep | undefined, rounds: number | undefined, busy: boolean): HTMLElement {
     const section = element('section', undefined, 'workflow');
-    section.setAttribute('aria-label', 'Workflow');
+    section.setAttribute('aria-label', WORKFLOW_HEADING);
+    section.append(element('h3', WORKFLOW_HEADING));
     const flow = element('div', undefined, 'flow');
     flow.setAttribute('role', 'list');
     WORKFLOW_BLOCKS.forEach(([each, name, optional], index) => {
@@ -995,7 +1056,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
     const page = element('section', undefined, 'page');
     page.setAttribute('aria-label', mission.title);
     const busy = running.has(mission.path);
-    page.append(drawWorkflow(mission.step, mission.additionalRounds, busy), drawRecipes(mission, busy));
+    page.append(drawIntroduction(mission), drawWorkflow(mission.step, mission.additionalRounds, busy), drawRecipes(mission, busy));
     const preview = previews.get(mission.path);
     if (preview !== undefined) {
       page.append(drawPreview(mission, preview, busy));
@@ -1017,6 +1078,9 @@ declare function acquireVsCodeApi(): VsCodeApi;
     const focused = document.activeElement instanceof HTMLElement ? document.activeElement.dataset.focus : undefined;
     if (picked !== undefined && picked.mission !== shownMission.path) {
       picked = undefined;
+    }
+    if (goalShown !== undefined && goalShown !== shownMission.path) {
+      goalShown = undefined;
     }
     card = undefined;
     diagram = undefined;
@@ -1059,6 +1123,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
       }
       if (drawn !== 'page') {
         picked = undefined;
+        goalShown = undefined;
       }
       shownMission = message.mission;
       running = new Set(message.running ?? []);
@@ -1067,10 +1132,12 @@ declare function acquireVsCodeApi(): VsCodeApi;
     } else if (message.type === 'liveFailure') {
       drawn = 'failure';
       picked = undefined;
+      goalShown = undefined;
       drawFailure(message.cause);
     } else if (message.type === 'notLive') {
       drawn = 'notLive';
       picked = undefined;
+      goalShown = undefined;
       previews.clear();
       drawNotLive();
     } else if (message.type === 'running') {

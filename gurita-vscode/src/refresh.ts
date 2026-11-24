@@ -1,10 +1,11 @@
 // What a file event on a mission document asks of the session's live read, and the debounce that
 // gathers a burst of events into one re-read. The session's watcher covers the mission documents only, the files the
 // discovery pattern's directories hold: `requirements.md`, `open_questions.xml`, and
-// `TASKS_TODO.md` directly inside a `mission_*` directory. A change to a mission's question
-// document or task list re-reads that mission's documents in process, and creating or deleting a
-// `requirements.md`, or changing a `TASKS_TODO.md`, also re-runs `missions.py live`, since those
-// are what move the live list and its `started` or `defined`. Every event inside the debounce
+// `TASKS_TODO.md` directly inside a `mission_*` directory. A change to a mission's requirements
+// file, question document, or task list re-reads that mission's documents in process, the
+// requirements file being where its page's introduction reads the title and goal, and creating or
+// deleting a `requirements.md`, or changing a `TASKS_TODO.md`, also re-runs `missions.py live`,
+// since those are what move the live list and its `started` or `defined`. Every event inside the debounce
 // window is merged into one batch, handed on once the window passes with no further event. This
 // module imports nothing from `vscode`.
 
@@ -31,9 +32,9 @@ export interface EventEffect {
 
 /**
  * What an event of `kind` on the file `file` asks of the live read whose project root is `root`, or
- * undefined when it asks nothing: a file outside the root or outside a `mission_*` directory, a
- * file the watcher does not cover, or a change to a `requirements.md`, which moves nothing the
- * mission window or the side-bar view draws from the documents or the live list.
+ * undefined when it asks nothing: a file outside the root or outside a `mission_*` directory, or a
+ * file the watcher does not cover. A change to a `requirements.md` re-reads its mission's documents
+ * only, for the title and goal its page's introduction draws, and moves nothing in the live list.
  */
 export function eventEffect(root: string, file: string, kind: FileEventKind): EventEffect | undefined {
   const relative = path.relative(root, file);
@@ -51,7 +52,7 @@ export function eventEffect(root: string, file: string, kind: FileEventKind): Ev
   }
   const mission = `${parts.join('/')}/`;
   if (name === 'requirements.md') {
-    return kind === 'changed' ? undefined : { mission, documents: false, live: true };
+    return kind === 'changed' ? { mission, documents: true, live: false } : { mission, documents: false, live: true };
   }
   if (name === 'open_questions.xml') {
     return { mission, documents: true, live: false };

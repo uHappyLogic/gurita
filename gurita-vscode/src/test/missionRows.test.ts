@@ -14,7 +14,7 @@ function question(id: string): Question {
 
 /** A mission's documents out of its question part and its task part, with the facts that follow. */
 function documents(questions: MissionDocuments['questions'], tasks: MissionDocuments['tasks']): MissionDocuments {
-  return { questions, tasks, facts: documentFacts(questions, tasks) };
+  return { introduction: { state: 'read', title: 'Alpha mission', goal: 'A goal.' }, questions, tasks, facts: documentFacts(questions, tasks) };
 }
 
 const QUESTIONS_MISSING: MissionDocuments['questions'] = {

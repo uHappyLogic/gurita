@@ -150,12 +150,23 @@ control: those belong to the side-bar view (see The side-bar view above). Its ed
 carries **Settings**, a gear icon action that opens the Settings window, or brings it forward,
 exactly as the side-bar view's gear does (see The Settings window below); it stands there in
 every state of the window, on the mission's page, the failure state, and the notice alike, and
-the page itself draws no Settings control. Its page holds the workflow diagram, the recipe
+the page itself draws no Settings control. Its page opens on an introduction, then holds the
+workflow diagram under a heading of its own, **Workflow**, marking where it starts, the recipe
 buttons of the recipes that fit the step its diagram fills, each with a dropdown of its variants beside it (see The recipes a
 page lists), the **New task** button with its dropdown in a row of its own, and directly beneath
 that row two panes behind one row of two headers, **Open questions**, holding the question view
 parsed from `open_questions.xml`, and **Remaining tasks**, holding the remaining task headings of
-`TASKS_TODO.md`. **New task** stands above the headers rather than inside either pane, so it is
+`TASKS_TODO.md`. The introduction shows the mission's title alone, the first `# ` heading of its
+`requirements.md`, with one **Show goal** button beside it that shows the whole goal beneath the
+title, the `## Goal` section of `requirements.md` as it stands there, and turns into **Hide goal**,
+which hides it again. The button is there whatever the goal's length, and a goal however long is
+shown whole, with no cut-off and no scrolling area of its own. The goal is drawn by the same small
+text renderer as the question cards: paragraphs separated by a blank line show as paragraphs,
+consecutive `- ` lines as a bulleted list, and text between two backticks as code, while emphasis,
+links, headings, and numbered lists show as plain text. The goal is hidden every time the page
+loads: it stays shown through every redraw while the page stays shown, but whether it is shown is
+not saved, so opening the window again, showing it again after it was hidden, or the failure
+state or the notice below standing in between, hides it afresh. **New task** stands above the headers rather than inside either pane, so it is
 drawn on every mission page whichever pane is shown and whatever step the diagram fills. The two
 headers are of equal width and together fill the window's whole width, and only the selected
 pane's content is shown beneath them. A page opens on **Remaining tasks** when git holds at least
@@ -213,7 +224,7 @@ Every push button a mission window draws has one look: the theme's primary butto
 one the recipe buttons carry, with a clearly visible 1px outline in the theme's contrast border
 colour, or its foreground colour where the theme sets none, so each button stands out against the
 page and its own fill alike. That covers the recipe buttons, **Start run**, the question card's
-**Discuss** and **Answer**, every **Answer with this alternative**, **New task**, **First**, **Previous**, **Next**, and **Close preview**, and in the Settings
+**Discuss** and **Answer**, every **Answer with this alternative**, **New task**, **Show goal** and **Hide goal**, **First**, **Previous**, **Next**, and **Close preview**, and in the Settings
 window its edit controls (**Enable** and **Disable**, **Add model**, **Add effort**, and
 **Remove**, **Duplicate**, **Rename**, **Delete**, **Make default**, and **Reset**) and **Check
 again**. A disabled button is drawn faded. The two pane headers and the links of a card's
@@ -227,8 +238,8 @@ placeholders included, before you click. While a run started for a mission is go
 dismiss its terminal, that mission's page shows it: every action button on the page (the recipe
 buttons, the buttons on the question card and its alternatives, a preview's **Start run**, and
 **New task**) is disabled, and the workflow diagram's filled block pulses. The recipe dropdowns
-and the dropdowns beside the buttons that run a recipe by its fixed name, the **Open questions**
-and **Remaining tasks** headers, the question view's **First**, **Previous**, and **Next**, and every other
+and the dropdowns beside the buttons that run a recipe by its fixed name, **Show goal** and
+**Hide goal**, the **Open questions** and **Remaining tasks** headers, the question view's **First**, **Previous**, and **Next**, and every other
 mission's window stay enabled, and the page is drawn this way again whenever it is redrawn, after
 the window was hidden and shown included. Should a click still reach the extension for that
 mission, it starts nothing: a notification says a chain is already running and the run's terminal
