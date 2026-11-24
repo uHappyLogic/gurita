@@ -322,6 +322,46 @@
   </open-question>
   <open-question id="View notice form">
     <question>The Missions side-bar view of Gurita for VS Code is a native tree that shows `No mission is live.` through the tree view&apos;s message. It is to show two new things: a notice that the plugin is missing or outdated, linking to the Settings window, and an offer to run the workflow bootstrap. In what form does the view show them: as tree rows, as the view&apos;s welcome content, in the view&apos;s message, or as notifications?</question>
+    <alternative id="Rows for both">
+      Both are tree rows: a plugin notice row (warning icon, label saying the plugin is missing or outdated, its click opening the Settings window) and a bootstrap offer row (its click running `init-mission-base-workflow`), each present only while its condition holds and standing at the top of the tree, above New mission and Define mission. The view&apos;s message keeps only `No mission is live.` and the read-failure line, and no notification is shown.
+      <advantage>It fits the view as it is built: `missionTree.ts` already draws every action as a leaf row with a command, an icon, and a tooltip, so each new thing is one more row kind, persistent while its condition holds, clickable, and working in every state of the view, with or without live missions.</advantage>
+      <drawback>A warning drawn as a row looks like one more action among New mission and the mission rows and is easier to scroll past than a distinct banner, and two conditional rows grow the top of a tree that already opens with two fixed rows.</drawback>
+    </alternative>
+    <alternative id="Welcome content for both">
+      Both are the view&apos;s welcome content, contributed under `viewsWelcome` with Markdown text and command links (a link opening the Settings window, a button running the bootstrap), each entry keyed by a `when` context the extension sets. Because welcome content is drawn only while the tree holds no row, the tree returns no rows at all, the mission-starting rows and the mission rows included, while either condition holds, and draws them again once both clear. No notification is shown.
+      <advantage>Welcome content is VS Code&apos;s own form for an onboarding state: it renders real links and full-width buttons, and with the tree emptied the notice is the only thing in the view, impossible to miss on a fresh install.</advantage>
+      <drawback>Emptying the tree hides New mission, Define mission, and every live mission while the bootstrap is not yet run or while the check fails, so a project whose context file lacks the section, or whose check fails for a harness the user never runs, loses the view&apos;s whole use until the condition clears; the contributed text is fixed in the manifest, so the notice cannot name which harness or version failed.</drawback>
+    </alternative>
+    <alternative id="Welcome notice, bootstrap row">
+      The plugin notice is welcome content: while the check fails the tree returns no rows and the welcome content shows the notice with a link to the Settings window, plus the bootstrap button when the section is also missing. While the check passes, the bootstrap offer is a tree row at the top of the tree, present only while the section is missing, and the message keeps its two lines. No notification is shown.
+      <advantage>The view is emptied only in the state where its runs would fail anyway, a missing or outdated plugin, so the strongest form is spent on the blocking problem while the non-blocking bootstrap offer leaves the missions in view.</advantage>
+      <drawback>The view switches between two layouts, so the bootstrap offer moves from a welcome button to a row depending on the check, and two mechanisms (manifest `when` contexts and a row kind) must be kept in step; it also hides the starting rows on a check failure, whose scope is the sibling question on which harnesses count.</drawback>
+    </alternative>
+    <alternative id="Message notice, bootstrap row">
+      The plugin notice is plain text in the view&apos;s `message`, joined with or replacing `No mission is live.`, telling the user to open Settings through the view&apos;s existing Settings title-bar icon, since the message carries no link. The bootstrap offer is a tree row at the top of the tree, present only while the section is missing. No notification is shown.
+      <advantage>The message already stands above the tree as the view&apos;s one status line, so a notice there reads as a status rather than an action and costs no new row, no manifest contribution, and no change to the tree&apos;s rows.</advantage>
+      <drawback>`TreeView.message` is a plain string with no link or button, so the notice cannot link to the Settings window as the tracker asks and only points at the gear icon, and it must share the one message with `No mission is live.` and the read-failure line.</drawback>
+    </alternative>
+    <alternative id="Notifications for both">
+      Both are notifications: a warning notification saying the plugin is missing or outdated with an Open Settings button, and an information notification offering the bootstrap with a Run button, each shown once per session when its condition is found. The view itself gains no row, welcome content, or message.
+      <advantage>A notification reaches the user even while the side-bar view is closed or another view is focused, which is the case on a fresh install, and needs no change to the tree.</advantage>
+      <drawback>Notifications are transient and easily dismissed or silenced, so once closed the view still shows only `No mission is live.`, the state the tracker entry calls the problem; when the notification appears is bound to the sibling question on when the check first runs.</drawback>
+    </alternative>
+    <alternative id="Notification notice, bootstrap row">
+      The plugin notice is a warning notification with an Open Settings button, shown once per session when the check fails, and the bootstrap offer is a tree row at the top of the tree, present only while the section is missing. The view&apos;s message keeps its two lines.
+      <advantage>The urgent, blocking problem gets the form that interrupts and reaches the user outside the view, while the standing offer stays where the user starts work, in the view.</advantage>
+      <drawback>Once the notification is dismissed the view says nothing about the failed check, so the view itself does not show the failure as the tracker entry asks; its moment depends on the sibling question on when the check first runs.</drawback>
+    </alternative>
+    <alternative id="Row notice, bootstrap notification">
+      The plugin notice is a tree row at the top of the tree, present while the check fails, its click opening the Settings window. The bootstrap offer is an information notification with a Run button, shown once per session while the section is missing, and the view gains no bootstrap row.
+      <advantage>The failure stays visible in the view for as long as it holds, while the bootstrap, an optional one-time step, is offered without leaving a standing row in a project that chose not to run it.</advantage>
+      <drawback>The tracker entry asks the view to offer the bootstrap, and a dismissed notification leaves the view offering nothing, re-offering it in every new session for a project that keeps declining.</drawback>
+    </alternative>
+    <alternative id="Rows plus notice notification">
+      Both are tree rows at the top of the tree, as in Rows for both, and in addition a warning notification with an Open Settings button is shown once per session when the check fails, so the plugin notice stands in the view and also interrupts once.
+      <advantage>It pairs the persistence of a row with the reach of a notification, so a user who never looks at the side bar still learns of the failure and the view keeps showing it after the notification is dismissed.</advantage>
+      <drawback>The failure is reported twice through two mechanisms to keep consistent, and an unwanted notification on every session start is noise for a user who deliberately leaves a harness without the plugin; its moment depends on the sibling question on when the check first runs.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Bootstrap context file">
     <question>The Missions side-bar view of Gurita for VS Code is to offer the workflow bootstrap, `init-mission-base-workflow`, while the project&apos;s context file holds no `## Mission Workflow` section. The context file is `CLAUDE.md` under Claude Code and `AGENTS.md` under Antigravity and Codex. Which file does the view check for the section?</question>
