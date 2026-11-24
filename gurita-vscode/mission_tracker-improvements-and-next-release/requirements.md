@@ -72,6 +72,8 @@ Five missions under `gurita-vscode/` are finished, all between 2026-11-20 and 20
 
 - **Renamed chain lines.** Under its new name, "Approve all standing recommendations and review again", the shipped recipe keeps its `default` variant with every line unchanged (the answer sweep, a review pass, the alternatives pass, and the interactive recommendation pass), and that variant becomes the recipe's only one. The `Mixed-agent (Gemini reviews, Claude annotates)` variant is removed from `gurita-vscode/shipped_recipes.md` altogether, with no replacement: it is neither reordered to fit the name nor moved into a recipe of its own.
 
+- **Recipe word outside buttons.** The texts the user meets while working with missions say "action": the mission page's failure line, the error notifications, and the hover text of the side-bar view's two mission-starting rows (`The actions could not be read.`, `No action is named <name>.`, `Action: <name>`). The texts that describe configuration keep "recipe": the description of the `gurita.ownRecipesFile` setting and the README's prose, the README stating once that each recipe in a recipe file is shown as an action where it is fired and as an action recipe in the Settings window.
+
 ### Mission page
 
 - **Long goal display.** The mission page's introduction shows the mission's title alone by default, with one control beside it that shows and hides the whole goal beneath it. The goal is collapsed on every load of the page, so no shown or hidden state is saved, and the control is present whatever the goal's length, with no clamp and no overflow measurement.
