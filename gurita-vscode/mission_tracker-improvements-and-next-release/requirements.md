@@ -93,5 +93,9 @@ Five missions under `gurita-vscode/` are finished, all between 2026-11-20 and 20
 
 - **Release within the mission.** The task list holds no release task, and the mission is finished before 0.3.0 is published: `/finish-mission` removes the mission's directory in its `Mission-finish:` commit, and the maintainer then runs `/release-vscode-extension 0.3.0` by hand. The skill drafts its notes from this mission's finish summary, read as a mission finished since `gurita-vscode-0.2.0`, beside any other extension mission finished by then. The release is the step that follows the mission, not its last step, and the goal's closing clause is revised to say so.
 
+### Question card
+
+- **Recommendation button recipe fate.** The `### answer-open-question-with-recommendation` section leaves `gurita-vscode/shipped_recipes.md`, and its name leaves `BUTTON_RECIPES` with the button, so the Settings window no longer lists it among its fixed-name button recipes. Nothing is added for state a user stored under the name. Through the existing overlay rule, any stored variants in `~/.gurita/variants.json`, or a recipe of that name in the user's own recipe file, become an own recipe of that name, which the Settings window lists as an ordinary editable recipe with no fixed-name note, where the user can delete it. A mission page draws none of its variants, because each holds the `<Short Title>` placeholder the recipe list cannot fill. A picked default and remembered `workspaceState` selections stay where they are, read by nothing.
+
 ## Out of Scope
 
