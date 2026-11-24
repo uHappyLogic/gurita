@@ -16,7 +16,11 @@
 // carries once git holds two or more; the pane its page opens on beneath its two pane headers,
 // Open questions and Remaining tasks, chosen from the same count: Remaining tasks when git holds
 // at least one review commit for the mission and no question is open, and Open questions
-// otherwise, a failed git read included; and the recipe list its page shows, out of the recipes
+// otherwise, a failed git read included; what would stop a run of it before one is started, the
+// scope gate the bundled missions tool's `gate <path>` answers, which stops every run that derives,
+// adds, or completes tasks whenever it prints anything, and the `git status --porcelain` lines of
+// its `requirements.md` and `open_questions.xml`, which stop the answer sweep while any stands, each
+// drawn on its page as a notice only while it holds; and the recipe list its page shows, out of the recipes
 // read afresh from the shipped recipe file and the person's own recipe file: only those whose
 // declared stage is the step its diagram fills, beside them the additional review round's when
 // derive tasks is filled, or when first review round is while any question of the mission is open,
@@ -129,7 +133,7 @@
 // watchers' events are debounced so that a burst of writes causes one re-read, made whatever is
 // visible. A change to a mission's requirements file, question document, or task list re-reads
 // that mission's documents in process against the live list last read, its introduction's title
-// and goal among them, choosing its next step, and with it the recipes its page lists, and its
+// and goal among them, reading its scope gate and its mission files' changes afresh, choosing its next step, and with it the recipes its page lists, and its
 // default pane and counting its review commits afresh, and creating or deleting a
 // `requirements.md`, or changing a `TASKS_TODO.md`, also re-runs `missions.py live`.
 // A re-read posts to a window only while it is shown, a burst's only to the windows of the missions
@@ -184,6 +188,7 @@ import { FileEventKind, RefreshBatch, RefreshQueue, WATCHED_PATTERN, eventEffect
 import { OPTIONAL_PLACEHOLDERS } from './placeholders';
 import { refuseWhileRunning, runnerFile, runningMissions, showRunTerminal, startChain, startLoop } from './runs';
 import { MissionWorkflow, WorkflowStep, missionWorkflow, reviewCount } from './workflow';
+import { MissionStops, readMissionStops } from './stops';
 import { StartingButton, StartingOffer, variantValues } from './startingRows';
 
 /** The view type of every mission window. */
@@ -283,9 +288,12 @@ interface AlternativeButtonEntry {
   entry: FixedButtonEntry;
 }
 
-/** A mission as a window's page draws it: its documents, its diagram, its recipe list, and its fixed-name buttons. */
+/**
+ * A mission as a window's page draws it: its documents, its diagram, what would stop a run of it,
+ * its recipe list, and its fixed-name buttons.
+ */
 type PageMission = { path: string; state: string; title: string } & MissionDocuments &
-  MissionWorkflow & { recipes: RecipePart; buttons: FixedButtons; alternativeButtons: AlternativeButtonEntry[] };
+  MissionWorkflow & { stops: MissionStops; recipes: RecipePart; buttons: FixedButtons; alternativeButtons: AlternativeButtonEntry[] };
 
 /** A message the extension posts to a mission window's page. */
 type WindowMessage =
@@ -294,8 +302,9 @@ type WindowMessage =
       /**
        * The window's mission with its documents, the step its diagram fills, left out when none is
        * chosen, the count its additional review round carries, left out while there is none, the
-       * pane its page opens on, the recipe list its page shows, the recipes that fit that step, and
-       * what its fixed-name buttons run.
+       * pane its page opens on, what would stop a run of it, the scope gate's answer and its
+       * mission files' uncommitted changes, the recipe list its page shows, the recipes that fit
+       * that step, and what its fixed-name buttons run.
        */
       mission: PageMission;
       /** The paths of the missions with a running runner; the page is drawn as running while its mission's is among them. */
@@ -360,14 +369,15 @@ interface MissionWindow {
 
 /**
  * What the latest successful live read gave: the project root, the live
- * missions in the order printed, each one's documents as last read and what its diagram draws, and
- * the merged recipes, out of which each page's list is chosen for its step.
+ * missions in the order printed, each one's documents as last read, what its diagram draws, and what
+ * would stop a run of it, and the merged recipes, out of which each page's list is chosen for its step.
  */
 interface Current {
   root: string;
   live: LiveMission[];
   documents: Map<string, MissionDocuments>;
   workflows: Map<string, MissionWorkflow>;
+  stops: Map<string, MissionStops>;
   recipes: RecipeRead;
 }
 
@@ -801,11 +811,19 @@ function readWorkflow(root: string, mission: LiveMission, documents: MissionDocu
 }
 
 /**
+ * What would stop a run of the live mission `mission` in the project at `root`: the scope gate the
+ * bundled missions tool answers and the uncommitted changes git shows in its mission files.
+ */
+function readStops(context: vscode.ExtensionContext, root: string, mission: LiveMission): Promise<MissionStops> {
+  return readMissionStops(root, context.asAbsolutePath('bundled/missions.py'), mission.path);
+}
+
+/**
  * Acts on one debounced burst of the watcher's events, whatever is visible: a burst that moves the
  * live list re-reads everything; any other re-reads in process the documents of each live mission
  * it touched, chooses what its diagram draws, and with it the recipes its page lists, and its
- * default pane afresh, keeps it in the session's live read, and posts the fresh parse to the window
- * of each mission it touched while that window is shown.
+ * default pane afresh, reads what would stop a run of it afresh, keeps it in the session's live
+ * read, and posts the fresh parse to the window of each mission it touched while that window is shown.
  */
 async function flushEvents(context: vscode.ExtensionContext, batch: RefreshBatch): Promise<void> {
   if (queue === undefined) {
@@ -822,13 +840,17 @@ async function flushEvents(context: vscode.ExtensionContext, batch: RefreshBatch
     return;
   }
   const read = touched.map((mission) => ({ mission, documents: readMissionDocuments(shown.root, mission.path) }));
-  const workflows = await Promise.all(read.map(({ mission, documents }) => readWorkflow(shown.root, mission, documents)));
+  const [workflows, stops] = await Promise.all([
+    Promise.all(read.map(({ mission, documents }) => readWorkflow(shown.root, mission, documents))),
+    Promise.all(read.map(({ mission }) => readStops(context, shown.root, mission))),
+  ]);
   if (sequence !== reads || current !== shown) {
     return;
   }
   read.forEach(({ mission, documents }, index) => {
     shown.documents.set(mission.path, documents);
     shown.workflows.set(mission.path, workflows[index]);
+    shown.stops.set(mission.path, stops[index]);
   });
   readKept();
   const paths = new Set(touched.map((mission) => mission.path));
@@ -923,7 +945,7 @@ function liveSelections(context: vscode.ExtensionContext, live: readonly LiveMis
 
 /**
  * Re-reads everything the session's live read holds, the live missions, every mission's
- * documents, and the recipes, keeps the fresh parse, or the failure state the live read gives, and
+ * documents and what would stop a run of it, and the recipes, keeps the fresh parse, or the failure state the live read gives, and
  * posts it to every mission window while it is shown, each its own mission's page, the notice that
  * its mission is no longer live, or the failure state. Only the latest re-read started keeps and
  * posts its answer.
@@ -938,9 +960,10 @@ async function answer(context: vscode.ExtensionContext): Promise<void> {
     }
     if (read.state === 'read') {
       const documents = new Map(read.missions.map((mission) => [mission.path, readMissionDocuments(read.root, mission.path)]));
-      const workflows = await Promise.all(
-        read.missions.map((mission) => readWorkflow(read.root, mission, documents.get(mission.path) as MissionDocuments)),
-      );
+      const [workflows, stops] = await Promise.all([
+        Promise.all(read.missions.map((mission) => readWorkflow(read.root, mission, documents.get(mission.path) as MissionDocuments))),
+        Promise.all(read.missions.map((mission) => readStops(context, read.root, mission))),
+      ]);
       if (sequence !== reads || queue === undefined) {
         return;
       }
@@ -950,6 +973,7 @@ async function answer(context: vscode.ExtensionContext): Promise<void> {
         live: read.missions,
         documents,
         workflows: new Map(read.missions.map((mission, index) => [mission.path, workflows[index]])),
+        stops: new Map(read.missions.map((mission, index) => [mission.path, stops[index]])),
         recipes: readRecipeList(context),
       };
       failure = undefined;
@@ -1171,6 +1195,7 @@ function publish(context: vscode.ExtensionContext, shown: Current, win: MissionW
     ...mission,
     ...documents,
     ...workflow,
+    stops: shown.stops.get(mission.path) as MissionStops,
     recipes: missionRecipes(shown.recipes, workflow.step, documents.facts.questionsEmpty === false, remembered),
     buttons: fixed.entries,
     alternativeButtons: perAlternative.entries,
@@ -1765,7 +1790,9 @@ function nonce(): string {
  * a second line only when the window is narrower than the block itself; the dashed, solid, filled, and pulsing
  * block rules hold in both layouts. The run indicator beneath the diagram keeps its space while it
  * is out of sight, hidden under its `idle` class by `visibility` rather than taken out of the
- * layout, so its showing and hiding moves nothing on the page. It lays a mission page's two pane headers, Open questions and
+ * layout, so its showing and hiding moves nothing on the page. The notices of what would stop a
+ * run, beneath it, stand in one column, each with the notice's bordered left edge, the holders' paths
+ * in the editor's font. It lays a mission page's two pane headers, Open questions and
  * Remaining tasks, out as two columns of equal width that together fill the page's whole width,
  * the selected one underlined, with only the selected pane's content beneath them. It draws every
  * variant dropdown beside a button as its arrow alone, the selected name kept out of sight and
@@ -1822,6 +1849,9 @@ export function pageShell(webview: vscode.Webview, scripts: vscode.Uri[], title:
   .run-indicator { margin: 0 0 0.5em; text-align: center; font-style: italic; color: var(--vscode-descriptionForeground); }
   .run-indicator.idle { visibility: hidden; }
   .notice { border-left: 3px solid var(--vscode-inputValidation-warningBorder); padding: 0.2em 0.8em; }
+  .stops { display: flex; flex-direction: column; gap: 0.4em; margin: 0 0 0.5em; }
+  .stop-notice p, .stop-notice ul, .stop-notice pre { margin: 0.2em 0; }
+  .stop-notice ul { padding-left: 1.2em; font-family: var(--vscode-editor-font-family); }
   .controls { display: flex; gap: 0.5em; margin-bottom: 0.5em; }
   button.recipe, button.action, button.control { background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: 1px solid var(--vscode-contrastBorder, var(--vscode-foreground)); padding: 0.3em 0.9em; cursor: pointer; font: inherit; }
   button.recipe:hover:not(:disabled), button.action:hover:not(:disabled), button.control:hover:not(:disabled) { background: var(--vscode-button-hoverBackground); }

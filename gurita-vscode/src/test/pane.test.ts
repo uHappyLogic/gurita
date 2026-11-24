@@ -2719,3 +2719,59 @@ test("a commit made outside the extension's runs re-reads everything through the
     process.env.HOME = home;
   }
 });
+
+/** Two missions in one scope, whose notices of what would stop a run the stops test reads. */
+const STOP_HOLDER = 'pkg/mission_stop_holder/';
+const STOP_WAITER = 'pkg/mission_stop_waiter/';
+
+test("a mission's page is posted what would stop a run of it, read afresh with its other facts on every re-read: its mission files' changes on a document event, the scope gate on a commit", async () => {
+  const home = process.env.HOME;
+  process.env.HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-home-'));
+  try {
+    const root = project(STOP_HOLDER, STOP_WAITER);
+    const files = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-recipes-'));
+    fs.writeFileSync(path.join(files, 'shipped_recipes.md'), SHIPPED_TEXT);
+    packaged.set('bundled/missions.py', path.join(__dirname, '..', '..', '..', 'core', 'tools', 'missions.py'));
+    packaged.set('bundled/shipped_recipes.md', path.join(files, 'shipped_recipes.md'));
+    workspace.folders = [{ uri: { fsPath: root } }];
+    workspace.settings = { ownRecipesFile: path.join(files, 'recipes.md') };
+    type Page = { path: string; stops?: unknown };
+    const first = (await pageAfter({ type: 'refresh' }, STOP_WAITER)) as unknown as Page;
+    assert.deepStrictEqual(first.stops, { gate: { state: 'free' }, changes: [] }, 'nothing would stop a run of a fresh mission');
+
+    const gitDir = path.join(root, '.git');
+    const deadline = Date.now() + 5000;
+    while (!watchers.some((each) => each.base === gitDir && !each.disposed) && Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    const gitWatcher = watchers.filter((each) => each.base === gitDir && !each.disposed)[0];
+    assert.ok(gitWatcher !== undefined, 'the git state is watched');
+    const window = openWindow(STOP_WAITER);
+
+    // A hand edit of the waiting mission's requirements: the document event re-reads its changes.
+    fs.writeFileSync(path.join(root, STOP_WAITER, 'requirements.md'), '# A mission\n\n## Goal\n\nAn edited goal.\n');
+    let from = window.posts.length;
+    for (const listener of documentWatcher().listeners.change) {
+      listener({ fsPath: path.join(root, STOP_WAITER, 'requirements.md') });
+    }
+    const dirty = (await windowPosted(STOP_WAITER, 'page', from)).mission as Page;
+    assert.deepStrictEqual(dirty.stops, { gate: { state: 'free' }, changes: [` M ${STOP_WAITER}requirements.md`] }, 'the uncommitted change is read with the documents');
+
+    // The edit committed and the sibling started by hand: the commit's full re-read reads the gate held and the files clean.
+    git(root, 'add', `${STOP_WAITER}requirements.md`);
+    git(root, 'commit', '-q', '-m', 'Goal-revision: by hand');
+    fs.writeFileSync(path.join(root, STOP_HOLDER, 'TASKS_TODO.md'), '# TASKS TODO\n\n## A task\n\nA brief.\n\n---\n');
+    git(root, 'add', `${STOP_HOLDER}TASKS_TODO.md`);
+    git(root, 'commit', '-q', '-m', `Task-derivation: ${STOP_HOLDER}`);
+    from = window.posts.length;
+    for (const listener of gitWatcher.listeners.change) {
+      listener({ fsPath: path.join(gitDir, 'HEAD') });
+    }
+    const held = (await windowPosted(STOP_WAITER, 'page', from)).mission as Page;
+    assert.deepStrictEqual(held.stops, { gate: { state: 'held', holders: [STOP_HOLDER] }, changes: [] }, 'the started sibling holds the scope and the committed files hold no change');
+    const holder = (await pageAfter({ type: 'ready', mission: STOP_HOLDER }, STOP_HOLDER)) as unknown as Page;
+    assert.deepStrictEqual(holder.stops, { gate: { state: 'free' }, changes: [] }, 'the holder itself is not held by a defined sibling');
+  } finally {
+    process.env.HOME = home;
+  }
+});

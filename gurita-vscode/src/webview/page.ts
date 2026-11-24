@@ -101,7 +101,13 @@
 // workflow diagram's filled block pulses, and the run indicator beneath the diagram shows its one
 // line, that the mission is waiting for its run's terminal to close. The indicator is drawn on
 // every page, kept out of sight while no run is going, so its space is reserved whether or not it
-// shows and a run starting or ending moves none of the page's content; the recipe dropdowns and the fixed-name buttons' dropdowns, the question view's
+// shows and a run starting or ending moves none of the page's content. Beneath the indicator stand
+// the notices of what would stop a run before it is started, as the extension posts them with the
+// mission, each drawn only while its condition holds and nothing drawn while neither does: one while
+// the scope gate is not free, another started mission holding the scope or the gate not checked, the
+// holders' paths or the gate's error line beneath it, which stops every run that derives, adds, or
+// completes tasks, and one while `requirements.md` or `open_questions.xml` holds an uncommitted
+// change, the `git status --porcelain` lines beneath it, which stops the answer sweep. The recipe dropdowns and the fixed-name buttons' dropdowns, the question view's
 // first, previous, and next buttons and dependency links, the preview's close button, the
 // introduction's goal control, and the two pane headers stay enabled, and the left and right arrow keys move the question view only while its
 // pane is shown. The page draws no Settings control and nothing from the harness check: the
@@ -171,12 +177,23 @@ declare function acquireVsCodeApi(): VsCodeApi;
     additionalRounds?: number;
     /** The pane the page opens on; Open questions when absent. */
     defaultPane?: MissionPane;
+    /** What would stop a run of the mission, each condition drawn as a notice while it holds; nothing is drawn when absent. */
+    stops?: MissionStops;
     /** The recipe list its page shows, the recipes that fit its step, or the cause the recipes could not be read. */
     recipes: RecipePart;
     /** What the fixed-name buttons on its page run, which their dropdowns, labels, and hover text show. */
     buttons?: FixedButtons;
     /** What each alternative's answer-with-alternative button on its question cards runs, each with a dropdown of its own. */
     alternativeButtons?: AlternativeButtonEntry[];
+  }
+
+  /** The scope gate's answer: free, held by the missions it printed, or not checked, with what it printed instead. */
+  type GateRead = { state: 'free' } | { state: 'held'; holders: string[] } | { state: 'unchecked'; cause: string };
+
+  /** What would stop a run of the mission: the scope gate's answer and its mission files' uncommitted changes, absent when git did not read. */
+  interface MissionStops {
+    gate: GateRead;
+    changes?: string[];
   }
 
   type RecipeGroup = 'shipped' | 'own';
@@ -273,6 +290,12 @@ declare function acquireVsCodeApi(): VsCodeApi;
   const WORKFLOW_HEADING = 'Workflow';
   /** The run indicator's one line, shown beneath the workflow diagram while a run started for the mission blocks the page. */
   const RUN_INDICATOR_LINE = "This mission is waiting for its run's terminal to close.";
+  /** The heading of the notices of what would stop a run, drawn only while at least one holds. */
+  const STOPS_HEADING = 'What would stop a run';
+  /** The scope notice's line, the holders or the gate's error line beneath it. */
+  const GATE_NOTICE_LINE = 'The scope is held by another started mission or could not be checked, so a run that derives, adds, or completes tasks would stop.';
+  /** The changes notice's line, the `git status --porcelain` lines beneath it. */
+  const CHANGES_NOTICE_LINE = 'requirements.md or open_questions.xml holds an uncommitted change, so the answer sweep would stop.';
   /** The buttons on a question's card, each with its label and the hover text it shows while its recipe cannot be read. */
   const QUESTION_BUTTONS: [FixedButton, string, string][] = [
     ['discussQuestion', 'Discuss', 'Type an optional note and open an interactive discussion of this question'],
@@ -649,6 +672,42 @@ declare function acquireVsCodeApi(): VsCodeApi;
     indicator.setAttribute('role', 'status');
     indicator.setAttribute('aria-hidden', String(!busy));
     return indicator;
+  }
+
+  /**
+   * The notices of what would stop a run of the mission, beneath the run indicator, each drawn only
+   * while its condition holds: the scope notice while the scope gate is not free, the paths of the
+   * missions holding the scope or the gate's error line beneath its line, and the changes notice
+   * while `requirements.md` or `open_questions.xml` holds an uncommitted change, the
+   * `git status --porcelain` lines beneath its line; undefined while neither holds.
+   */
+  function drawStops(stops: MissionStops | undefined): HTMLElement | undefined {
+    const notices: HTMLElement[] = [];
+    if (stops !== undefined && stops.gate.state !== 'free') {
+      const notice = element('div', undefined, 'notice stop-notice gate-notice');
+      notice.append(element('p', GATE_NOTICE_LINE));
+      if (stops.gate.state === 'held') {
+        const holders = element('ul', undefined, 'stop-detail');
+        holders.append(...stops.gate.holders.map((holder) => element('li', holder)));
+        notice.append(holders);
+      } else {
+        notice.append(element('pre', stops.gate.cause, 'stop-detail'));
+      }
+      notices.push(notice);
+    }
+    if (stops?.changes !== undefined && stops.changes.length > 0) {
+      const notice = element('div', undefined, 'notice stop-notice changes-notice');
+      notice.append(element('p', CHANGES_NOTICE_LINE), element('pre', stops.changes.join('\n'), 'stop-detail'));
+      notices.push(notice);
+    }
+    if (notices.length === 0) {
+      return undefined;
+    }
+    const section = element('section', undefined, 'stops');
+    section.setAttribute('aria-label', STOPS_HEADING);
+    section.setAttribute('role', 'status');
+    section.append(...notices);
+    return section;
   }
 
   /**
@@ -1095,7 +1154,12 @@ declare function acquireVsCodeApi(): VsCodeApi;
     const page = element('section', undefined, 'page');
     page.setAttribute('aria-label', mission.title);
     const busy = running.has(mission.path);
-    page.append(drawIntroduction(mission), drawWorkflow(mission.step, mission.additionalRounds, busy), drawRunIndicator(busy), drawRecipes(mission, busy));
+    page.append(drawIntroduction(mission), drawWorkflow(mission.step, mission.additionalRounds, busy), drawRunIndicator(busy));
+    const stops = drawStops(mission.stops);
+    if (stops !== undefined) {
+      page.append(stops);
+    }
+    page.append(drawRecipes(mission, busy));
     const preview = previews.get(mission.path);
     if (preview !== undefined) {
       page.append(drawPreview(mission, preview, busy));

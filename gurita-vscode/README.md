@@ -252,6 +252,24 @@ the window was hidden and shown included. Should a click still reach the extensi
 mission, it starts nothing: a notification says a chain is already running and the run's terminal
 is shown.
 
+Beneath the run indicator, a mission's page shows what would stop a run before you start it, as up to two
+notices, each only while its condition holds and gone with the next re-read once it no longer
+does. The first stands while the mission's scope is held:
+`The scope is held by another started mission or could not be checked, so a run that derives, adds, or completes tasks would stop.`
+It is read with the bundled missions tool's `gate <path>`, the same check `derive-tasks`,
+`submit-task`, `complete-task`, and `complete-all-tasks` run before their work, and it shows
+whenever that call prints anything: beneath its line stand the paths of the other started missions
+holding the scope, or the tool's `Error:` line when the gate could not be checked, such as in a
+shallow clone. The second stands while the mission's `requirements.md` or `open_questions.xml`
+holds an uncommitted change, staged, unstaged, or untracked:
+`requirements.md or open_questions.xml holds an uncommitted change, so the answer sweep would stop.`
+Beneath it stand the `git status --porcelain` lines of those two files, the same lines the answer
+sweep's guard prints when it stops; commit or discard the changes and the notice goes. Both
+conditions are read with the mission's other facts on every re-read, after a run's terminal
+closes, on a change to a mission document, on a commit, pull, or branch switch, and on
+**Refresh**; a git read that fails shows no changes notice. The notices are display only and
+disable nothing: a run started while one shows stops as the plugin stops it.
+
 Each time a mission's window becomes the active editor while that mission's run is going, the
 run's terminal comes forward without taking the focus, so the window stays active: whether you
 reach the window by a click on its row in the side-bar view, a click on its editor tab, or

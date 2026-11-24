@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Notices of What Would Stop a Run
-
-Show on a mission page, each only while its condition holds, two notices of what would stop a run before it is started: one while another started mission holds the mission's scope, the bundled missions tool's `gate <path>` printing anything, which stops every run that derives, adds, or completes tasks, and one while `requirements.md` or `open_questions.xml` holds an uncommitted change, which stops the answer sweep. Both conditions are read with the mission's other facts on every re-read; verified by tests of the two reads against a git fixture and page tests of each notice shown and gone, with `gurita-vscode/README.md` describing them.
-
----
-
 ## Briefs Under the Remaining Task Headings
 
 Show each remaining task's brief beneath its heading in the page's task pane, read from the same `TASKS_TODO.md` as the headings and drawn by the text renderer. Verified by tests of the task read giving each heading with its brief and of the pane drawing them, with `gurita-vscode/README.md` describing the pane.

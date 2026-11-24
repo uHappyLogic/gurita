@@ -1147,6 +1147,90 @@ test("the stylesheet reserves the run indicator's space while it is out of sight
   }
 });
 
+const GATE_NOTICE_LINE = 'The scope is held by another started mission or could not be checked, so a run that derives, adds, or completes tasks would stop.';
+const CHANGES_NOTICE_LINE = 'requirements.md or open_questions.xml holds an uncommitted change, so the answer sweep would stop.';
+
+/** The message posting Alpha's window its page with `stops` as what would stop a run of it. */
+function stoppedPage(stops: unknown): unknown {
+  return pageOf({ ...(mission(ALPHA, 'Alpha') as Record<string, unknown>), stops });
+}
+
+/** The drawn notices of what would stop a run, by their kind, and the place of their section among the page's parts. */
+function stopNotices(page: Page): { gate?: FakeElement; changes?: FakeElement; sections: number; parts: string[]; place: number } {
+  const drawn = page.root.all().find((each) => each.has('page'));
+  assert.ok(drawn !== undefined);
+  const parts = drawn.children.filter((child): child is FakeElement => child instanceof FakeElement);
+  const sections = page.root.all().filter((each) => each.has('stops'));
+  return {
+    gate: page.root.all().find((each) => each.has('gate-notice')),
+    changes: page.root.all().find((each) => each.has('changes-notice')),
+    sections: sections.length,
+    parts: parts.map((each) => each.className),
+    place: sections.length > 0 ? parts.indexOf(sections[0]) : -1,
+  };
+}
+
+/** The texts of a notice's paragraph, list items, and preformatted lines, in order. */
+function noticeTexts(notice: FakeElement): string[] {
+  return notice.all().filter((each) => ['p', 'li', 'pre'].includes(each.tagName)).map((each) => each.textContent);
+}
+
+test('a page draws no notice of what would stop a run while neither condition holds, or when none is posted', () => {
+  const page = loadPage();
+  page.send(alphaPage([]));
+  assert.strictEqual(stopNotices(page).sections, 0, 'a page posted with no stops draws none');
+  page.send(stoppedPage({ gate: { state: 'free' }, changes: [] }));
+  assert.strictEqual(stopNotices(page).sections, 0, 'a free gate and clean mission files draw none');
+  page.send(stoppedPage({ gate: { state: 'free' } }));
+  assert.strictEqual(stopNotices(page).sections, 0, 'changes git could not read draw none');
+});
+
+test('the scope notice shows while another started mission holds the scope, naming the holders, and is gone once the scope is free', () => {
+  const page = loadPage();
+  page.send(stoppedPage({ gate: { state: 'held', holders: ['lib/mission_holder/', 'lib/sub/mission_other/'] }, changes: [] }));
+  const held = stopNotices(page);
+  assert.strictEqual(held.sections, 1);
+  assert.ok(held.gate !== undefined, 'the scope notice is drawn');
+  assert.strictEqual(held.changes, undefined, 'the changes notice is not');
+  assert.deepStrictEqual(noticeTexts(held.gate), [GATE_NOTICE_LINE, 'lib/mission_holder/', 'lib/sub/mission_other/']);
+  assert.ok(held.parts[held.place - 1].split(' ').includes('run-indicator'), 'the notices stand directly beneath the run indicator');
+  assert.ok(held.parts[held.place + 1].split(' ').includes('recipes'), 'and above the recipes');
+  page.send(stoppedPage({ gate: { state: 'free' }, changes: [] }));
+  assert.strictEqual(stopNotices(page).sections, 0, 'the notice is gone once the gate is free');
+});
+
+test("the scope notice shows the gate's error line while the gate could not be checked", () => {
+  const page = loadPage();
+  page.send(stoppedPage({ gate: { state: 'unchecked', cause: 'Error: shallow clone; run git fetch --unshallow' }, changes: [] }));
+  const notice = stopNotices(page).gate;
+  assert.ok(notice !== undefined);
+  assert.deepStrictEqual(noticeTexts(notice), [GATE_NOTICE_LINE, 'Error: shallow clone; run git fetch --unshallow']);
+});
+
+test('the changes notice shows while requirements.md or open_questions.xml holds an uncommitted change, its porcelain lines beneath, and is gone once committed', () => {
+  const page = loadPage();
+  page.send(stoppedPage({ gate: { state: 'free' }, changes: [` M ${ALPHA}requirements.md`, `M  ${ALPHA}open_questions.xml`] }));
+  const dirty = stopNotices(page);
+  assert.strictEqual(dirty.gate, undefined);
+  assert.ok(dirty.changes !== undefined, 'the changes notice is drawn');
+  assert.deepStrictEqual(noticeTexts(dirty.changes), [CHANGES_NOTICE_LINE, ` M ${ALPHA}requirements.md\nM  ${ALPHA}open_questions.xml`]);
+  page.send(stoppedPage({ gate: { state: 'held', holders: ['mission_holder/'] }, changes: [` M ${ALPHA}requirements.md`] }));
+  const both = stopNotices(page);
+  assert.strictEqual(both.sections, 1, 'both notices stand in one section');
+  assert.ok(both.gate !== undefined && both.changes !== undefined, 'both conditions draw their notice at once');
+  page.send(stoppedPage({ gate: { state: 'free' }, changes: [] }));
+  assert.strictEqual(stopNotices(page).sections, 0, 'both are gone once neither holds');
+});
+
+test('the notices are drawn as text, never as markup, and stay while a run is going', () => {
+  const page = loadPage();
+  page.send(pageOf({ ...(mission(ALPHA, 'Alpha') as Record<string, unknown>), stops: { gate: { state: 'held', holders: ['<b>x</b>/mission_y/'] }, changes: [] } }, [ALPHA]));
+  const notice = stopNotices(page).gate;
+  assert.ok(notice !== undefined, 'a running page keeps its notices');
+  assert.ok(noticeTexts(notice).includes('<b>x</b>/mission_y/'));
+  assert.ok(notice.all().every((each) => each.tagName !== 'b'));
+});
+
 test("a held preview's start button is disabled while its mission runs, its close button not", () => {
   const page = loadPage();
   page.send(alphaPage([]));
