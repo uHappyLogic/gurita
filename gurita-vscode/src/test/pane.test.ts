@@ -131,13 +131,31 @@ const workspace = {
 /** The files the stub's extension package holds, by the relative path `asAbsolutePath` is given. */
 const packaged = new Map<string, string>();
 
+/** A URI as the stub's editor builds it from its components. */
+interface StubUri {
+  scheme: string;
+  path: string;
+  query: string;
+}
+/** A text document the stub's editor opened, by its URI, with its language. */
+interface StubDocument {
+  uri: StubUri;
+  languageId: string;
+}
+/** Every text document the stub's editor showed in an editor tab, in order, with the options it was shown with. */
+const shownDocuments: { document: StubDocument; options: unknown }[] = [];
+
 const stub = {
   Uri: {
     joinPath: (...parts: unknown[]) => ({ parts }),
     file: (fsPath: string) => ({ fsPath }),
+    from: (components: StubUri): StubUri => ({ scheme: components.scheme, path: components.path, query: components.query }),
   },
   ViewColumn: { Active: -1 },
   ThemeIcon: StubThemeIcon,
+  languages: {
+    setTextDocumentLanguage: (document: StubDocument, languageId: string) => Promise.resolve({ ...document, languageId }),
+  },
   RelativePattern: class {
     constructor(
       readonly base: unknown,
@@ -149,6 +167,7 @@ const stub = {
       return workspace.folders;
     },
     getConfiguration: () => ({ get: (key: string) => workspace.settings[key] }),
+    openTextDocument: (uri: StubUri): Promise<StubDocument> => Promise.resolve({ uri, languageId: 'plaintext' }),
     createFileSystemWatcher: (glob: { base: { fsPath: string }; pattern: string }) => {
       const watcher: StubWatcher = { base: glob.base.fsPath, pattern: glob.pattern, listeners: { create: [], change: [], delete: [] }, disposed: false };
       watchers.push(watcher);
@@ -245,6 +264,10 @@ const stub = {
       return terminal;
     },
     onDidCloseTerminal: () => disposable,
+    showTextDocument: (document: StubDocument, options: unknown) => {
+      shownDocuments.push({ document, options });
+      return Promise.resolve(undefined);
+    },
     showInputBox: (options: InputBoxOptions) => {
       inputBoxes.push(options);
       return Promise.resolve(typedValues.shift());
@@ -2780,6 +2803,9 @@ test("a mission's page is posted what would stop a run of it, read afresh with i
 /** The mission whose completed tasks the completed-tasks test reads. */
 const DONE_MISSION = 'pkg/mission_done/';
 
+/** The mission whose completed task's commit link the commit-link test clicks. */
+const LINKED_MISSION = 'pkg/mission_linked/';
+
 test("a mission's page is posted its completed tasks, each with its verified bar, as the missions tool's tasks --with-body prints them, read afresh on a commit", async () => {
   const home = process.env.HOME;
   process.env.HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-home-'));
@@ -2822,6 +2848,57 @@ test("a mission's page is posted its completed tasks, each with its verified bar
       [{ mission: DONE_MISSION, title: 'A task', bar: '- The `first` criterion\n- Another criterion' }],
     );
     assert.match(done.completed?.tasks?.[0].hash ?? '', /^[0-9a-f]{7,}$/, "the commit's hash is posted with it");
+  } finally {
+    process.env.HOME = home;
+  }
+});
+
+test("a click on a completed task's commit link opens that commit, as the extension's commit documents serve it, with the diff language in an editor tab, while a hash the page was not posted opens nothing", async () => {
+  const home = process.env.HOME;
+  process.env.HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-home-'));
+  try {
+    const root = project(LINKED_MISSION);
+    const files = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-recipes-'));
+    fs.writeFileSync(path.join(files, 'shipped_recipes.md'), SHIPPED_TEXT);
+    packaged.set('bundled/missions.py', path.join(__dirname, '..', '..', '..', 'core', 'tools', 'missions.py'));
+    packaged.set('bundled/shipped_recipes.md', path.join(files, 'shipped_recipes.md'));
+    workspace.folders = [{ uri: { fsPath: root } }];
+    workspace.settings = { ownRecipesFile: path.join(files, 'recipes.md') };
+    fs.writeFileSync(path.join(root, LINKED_MISSION, 'TASKS_TODO.md'), '# TASKS TODO\n\n## A task\n\nA brief.\n\n---\n');
+    git(root, 'add', '.');
+    git(root, 'commit', '-q', '-m', `Task-derivation: ${LINKED_MISSION}`);
+    fs.writeFileSync(path.join(root, LINKED_MISSION, 'TASKS_TODO.md'), '# TASKS TODO\n');
+    git(root, 'add', '.');
+    git(root, 'commit', '-q', '-m', 'Task-completion: A task\n\n- The criterion');
+    type Page = { completed?: { state: string; tasks?: { hash: string }[] } };
+    const page = (await pageAfter({ type: 'refresh' }, LINKED_MISSION)) as unknown as Page;
+    const hash = page.completed?.tasks?.[0]?.hash;
+    assert.ok(hash !== undefined, 'the completed task is posted with its hash');
+
+    shownDocuments.length = 0;
+    sendFrom(LINKED_MISSION, { type: 'openCommit', mission: LINKED_MISSION, hash: 'abcdef0' });
+    sendFrom(LINKED_MISSION, { type: 'openCommit', mission: 'pkg/mission_other/', hash });
+    sendFrom(LINKED_MISSION, { type: 'openCommit', mission: LINKED_MISSION, hash: ['abc'] });
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    assert.strictEqual(shownDocuments.length, 0, 'a hash not posted, or another mission, opens nothing');
+
+    sendFrom(LINKED_MISSION, { type: 'openCommit', mission: LINKED_MISSION, hash });
+    for (let attempt = 0; attempt < 200 && shownDocuments.length === 0; attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    assert.strictEqual(shownDocuments.length, 1, 'the commit opens in one editor tab');
+    const [{ document, options }] = shownDocuments;
+    assert.deepStrictEqual(document, { uri: { scheme: 'gurita-commit', path: `/${hash}.diff`, query: root }, languageId: 'diff' });
+    assert.deepStrictEqual(options, { preview: false });
+    const commitDocuments = require('../commitDocuments') as typeof import('../commitDocuments');
+    const content = await commitDocuments.commitContent(document.uri);
+    assert.strictEqual(
+      content,
+      execFileSync('git', ['show', hash], { cwd: root, encoding: 'utf8' }),
+      "the document the link opens holds the commit as git show prints it",
+    );
+    assert.match(content, /^-## A task$/m, 'the brief among its removed lines');
+    assert.match(content, /^    - The criterion$/m, 'the verified bar as its body');
   } finally {
     process.env.HOME = home;
   }

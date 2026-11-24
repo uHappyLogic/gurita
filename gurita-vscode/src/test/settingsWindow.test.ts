@@ -141,6 +141,7 @@ const stub = {
       return workspace.folders;
     },
     getConfiguration: () => ({ get: () => undefined }),
+    registerTextDocumentContentProvider: () => disposable,
     createFileSystemWatcher: () => {
       const on = () => () => disposable;
       return { onDidCreate: on(), onDidChange: on(), onDidDelete: on(), dispose(): void {} };

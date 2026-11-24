@@ -37,7 +37,9 @@
 // brief drawn by the text renderer, all drawn from the parse the extension posts, and beneath them
 // the completed tasks behind one Show completed tasks control beside their heading, hidden by
 // default, which shows them, newest first as the missions tool's `tasks <path> --with-body` prints
-// them and the extension posts them, each its title with its verified bar beneath it, drawn by the
+// them and the extension posts them, each its title, beneath it a link to its commit, naming the
+// commit's hash, which posts the hash with the page's mission so the extension opens that commit in
+// an editor tab of its own, and its verified bar beneath that, drawn by the
 // text renderer, and turns into Hide completed tasks, which hides them again. Whether they are shown
 // is held in this script's memory only, as the goal's is, so every load of the page hides them
 // afresh. A page opens on the pane the extension posts as the
@@ -116,7 +118,7 @@
 // completes tasks, and one while `requirements.md` or `open_questions.xml` holds an uncommitted
 // change, the `git status --porcelain` lines beneath it, which stops the answer sweep. The recipe dropdowns and the fixed-name buttons' dropdowns, the question view's
 // first, previous, and next buttons and dependency links, the preview's close button, the
-// introduction's goal control, the completed tasks' control, and the two pane headers stay enabled, and the left and right arrow keys move the question view only while its
+// introduction's goal control, the completed tasks' control and their commit links, and the two pane headers stay enabled, and the left and right arrow keys move the question view only while its
 // pane is shown. The page draws no Settings control and nothing from the harness check: the
 // settings live in the Settings window of their own, drawn by its own script (`settings.ts`), and a
 // disabled harness reaches the page only as the recipe lists and fixed-name buttons the extension
@@ -350,6 +352,9 @@ declare function acquireVsCodeApi(): VsCodeApi;
   const HIDE_COMPLETED = 'Hide completed tasks';
   const NO_COMPLETED_LINE = 'No task is completed.';
   const COMPLETED_FAILURE_LINE = 'The completed tasks could not be read.';
+  /** The words before a completed task's commit hash on its commit link, and the link's hover text. */
+  const COMMIT_LINK_PREFIX = 'Open commit ';
+  const COMMIT_LINK_HOVER = "Open this task's commit, its verified bar and its whole patch, in an editor tab";
   /** The heading of the page's group of own recipes, drawn below the shipped recipes, which have none. */
   const OWN_GROUP_HEADING = 'Your actions';
 
@@ -940,8 +945,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
    * in file order, its heading and beneath it its brief, drawn by the text renderer, a task with an
    * empty brief its heading alone; then the completed tasks behind one control beside their
    * heading, hidden by default, which shows them, newest first as the missions tool prints them,
-   * each its title and beneath it its verified bar, drawn by the text renderer, and turns into the
-   * control that hides them again.
+   * each its title, beneath it the link to its commit, and beneath that its verified bar, drawn by
+   * the text renderer, and turns into the control that hides them again.
    */
   function drawTasks(mission: Mission): HTMLElement {
     const view = element('section', undefined, 'pane tasks');
@@ -997,7 +1002,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
       } else {
         const list = element('ol', undefined, 'task-list completed-list');
         for (const task of part.tasks) {
-          list.append(taskItem(task.title, task.bar, 'task completed-task', 'task-bar'));
+          list.append(taskItem(task.title, task.bar, 'task completed-task', 'task-bar', commitLink(mission.path, task.hash)));
         }
         section.append(list);
       }
@@ -1005,10 +1010,16 @@ declare function acquireVsCodeApi(): VsCodeApi;
     return section;
   }
 
-  /** One task of the Tasks pane: its title as a heading and beneath it `text` drawn by the text renderer, its title alone when `text` draws nothing. */
-  function taskItem(title: string, text: string, className: string, textClass: string): HTMLElement {
+  /**
+   * One task of the Tasks pane: its title as a heading, beneath it `below` when given, and beneath
+   * that `text` drawn by the text renderer, none of it when `text` draws nothing.
+   */
+  function taskItem(title: string, text: string, className: string, textClass: string, below?: HTMLElement): HTMLElement {
     const item = element('li', undefined, className);
     item.append(element('h4', title, 'task-title'));
+    if (below !== undefined) {
+      item.append(below);
+    }
     const blocks = renderText(text);
     if (blocks.length > 0) {
       const body = element('div', undefined, textClass);
@@ -1016,6 +1027,19 @@ declare function acquireVsCodeApi(): VsCodeApi;
       item.append(body);
     }
     return item;
+  }
+
+  /**
+   * A completed task's commit link, naming the commit's hash `hash`: a click posts the hash with the
+   * mission at `mission` to the extension, which opens the commit in an editor tab of its own. It
+   * stays enabled while a chain runs, since it starts nothing.
+   */
+  function commitLink(mission: string, hash: string): HTMLElement {
+    const line = element('p', undefined, 'task-commit');
+    const link = button(`${COMMIT_LINK_PREFIX}${hash}`, 'link commit-link', () => vscode.postMessage({ type: 'openCommit', mission, hash }));
+    link.title = COMMIT_LINK_HOVER;
+    line.append(link);
+    return line;
   }
 
   /** Shows the completed tasks of the mission at `mission` when they are hidden and hides them when they are shown. */

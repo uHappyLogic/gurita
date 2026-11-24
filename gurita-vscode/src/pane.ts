@@ -18,7 +18,10 @@
 // at least one review commit for the mission and no question is open, and Open questions
 // otherwise, a failed git read included; its completed tasks, each with its verified bar, as the
 // bundled missions tool's `tasks <path> --with-body` prints them, which its Tasks pane lists beneath
-// the remaining tasks; what would stop a run of it before one is started, the
+// the remaining tasks, each with a link to its commit, whose click opens that commit, as
+// `git show <hash>` prints it, as a read-only text document with the diff language in an editor tab
+// of its own through the extension's commit documents (`commitDocuments.ts`), a hash the latest
+// answer did not post for the window's mission opening nothing; what would stop a run of it before one is started, the
 // scope gate the bundled missions tool's `gate <path>` answers, which stops every run that derives,
 // adds, or completes tasks whenever it prints anything, and the `git status --porcelain` lines of
 // its `requirements.md` and `open_questions.xml`, which stop the answer sweep while any stands, each
@@ -192,6 +195,7 @@ import { refuseWhileRunning, runnerFile, runningMissions, showRunTerminal, start
 import { MissionWorkflow, WorkflowStep, missionWorkflow, reviewCount } from './workflow';
 import { MissionStops, readMissionStops } from './stops';
 import { CompletedRead, readCompletedTasks } from './completedTasks';
+import { openCommit } from './commitDocuments';
 import { StartingButton, StartingOffer, variantValues } from './startingRows';
 
 /** The view type of every mission window. */
@@ -224,6 +228,7 @@ type PageMessage =
   | { type: 'alternativeButton'; mission: string; question: string; alternative: string; variant: string }
   | { type: 'taskButton'; mission: string; variant: string }
   | { type: 'askButton'; mission: string; variant: string }
+  | { type: 'openCommit'; mission: string; hash: string }
   | { type: 'selectButtonVariant'; button: FixedButton; mission: string; variant: string }
   | { type: 'selectAlternativeVariant'; mission: string; question: string; alternative: string; variant: string }
   | { type: 'previewLoop'; mission: string; recipe: string; variant: string }
@@ -351,8 +356,9 @@ interface HeldPreview {
 /**
  * What the latest answer posted to one mission window, its mission's page: the project root, the
  * mission's path, the recipes its page listed, the fixed-name buttons it drew, the Short Titles its
- * question view showed, each with its alternatives' ids, and the answer-with-alternative button each
- * of those alternatives drew, by Short Title and Alternative Id.
+ * question view showed, each with its alternatives' ids, the answer-with-alternative button each
+ * of those alternatives drew, by Short Title and Alternative Id, and the hashes of the completed
+ * tasks' commits its Tasks pane listed.
  */
 interface Posted {
   root: string;
@@ -361,6 +367,7 @@ interface Posted {
   buttons: ButtonPosts;
   questions: Map<string, Set<string>>;
   alternatives: Map<string, Map<string, ButtonPost>>;
+  commits: Set<string>;
 }
 
 /** One open mission window: its mission's path, its panel, and what the latest answer posted to it, none while it shows no page. */
@@ -707,6 +714,8 @@ function hookMissionWindow(context: vscode.ExtensionContext, mission: string, cr
         void runMissionAction(context, win, 'discussTask', message.mission, message.variant);
       } else if (message?.type === 'askButton') {
         void runMissionAction(context, win, 'askMission', message.mission, message.variant);
+      } else if (message?.type === 'openCommit') {
+        openPostedCommit(win, message.mission, message.hash);
       } else if (message?.type === 'selectButtonVariant') {
         void selectButtonVariant(context, win, message.button, message.mission, message.variant);
       } else if (message?.type === 'selectAlternativeVariant') {
@@ -1231,8 +1240,23 @@ function publish(context: vscode.ExtensionContext, shown: Current, win: MissionW
     buttons: fixed.posts,
     questions,
     alternatives: perAlternative.posts,
+    commits: new Set(page.completed?.state === 'read' ? page.completed.tasks.map((task) => task.hash) : []),
   };
   return { type: 'page', mission: page, running: runningMissions() };
+}
+
+/**
+ * Opens the commit `hash` of a completed task the latest answer listed on the page of the mission
+ * window `win`, for the mission at `mission`, in an editor tab of its own, as `openCommit` opens it,
+ * whether or not a chain is running, since it starts nothing. A mission the window does not show, or
+ * a hash the latest answer did not list on its page, opens nothing.
+ */
+function openPostedCommit(win: MissionWindow, mission: string, hash: unknown): void {
+  const posted = postedFor(win, mission);
+  if (posted === undefined || typeof hash !== 'string' || !posted.commits.has(hash)) {
+    return;
+  }
+  void openCommit(posted.root, hash);
 }
 
 /**
@@ -1826,8 +1850,8 @@ function nonce(): string {
  * with its goal control beside it on one line and the goal's paragraphs and lists beneath them,
  * and the workflow diagram's heading stands above its blocks. The Tasks pane sets its two parts'
  * headings, the completed tasks' control beside the second on one line, with a gap between the
- * parts, and each task's heading in the body's size with its brief's or verified bar's paragraphs
- * and lists beneath it. On a question card, in the goal, and in a task's brief or bar a stretch of text the text renderer draws as code is set
+ * parts, and each task's heading in the body's size with a completed task's commit link and its
+ * brief's or verified bar's paragraphs and lists beneath it. On a question card, in the goal, and in a task's brief or bar a stretch of text the text renderer draws as code is set
  * in the editor's font on the theme's code-block background.
  */
 export function pageShell(webview: vscode.Webview, scripts: vscode.Uri[], title: string, mission?: string): string {
@@ -1937,6 +1961,7 @@ export function pageShell(webview: vscode.Webview, scripts: vscode.Uri[], title:
   .task-list { margin: 0; padding-left: 1.6em; }
   .task-list .task { margin: 0 0 0.8em; }
   .task-list .task-title { margin: 0; font-size: 1em; }
+  .task-list .task-commit { margin: 0.2em 0; }
   .task-list .task-brief p, .task-list .task-brief ul, .task-list .task-bar p, .task-list .task-bar ul { margin: 0.3em 0; }
   .task-part + .task-part { margin-top: 1em; }
   .task-part-heading { margin: 0 0 0.5em; font-size: 1.05em; }

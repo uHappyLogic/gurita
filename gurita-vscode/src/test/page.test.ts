@@ -1586,13 +1586,17 @@ test('the control shows each completed task, newest first, its title with its ve
     [
       [
         ['h4', 'task-title', 'Done Task'],
+        ['p', 'task-commit', ''],
         ['div', 'task-bar', ''],
       ],
-      [['h4', 'task-title', 'Bare Done Task']],
+      [
+        ['h4', 'task-title', 'Bare Done Task'],
+        ['p', 'task-commit', ''],
+      ],
     ],
-    'each completed task is its title, with its bar beneath it when it has one, in the order posted',
+    'each completed task is its title, its commit link beneath it, and its bar beneath that when it has one, in the order posted',
   );
-  const bar = (items[0].children[1] as FakeElement).children as FakeElement[];
+  const bar = (items[0].children[2] as FakeElement).children as FakeElement[];
   assert.deepStrictEqual(bar.map((each) => each.tagName), ['ul'], "the bar's bullets are one list");
   const [first, second] = bar[0].children as FakeElement[];
   assert.deepStrictEqual(
@@ -1609,6 +1613,38 @@ test('the control shows each completed task, newest first, its title with its ve
   assert.strictEqual(completedToggle(page).getAttribute('aria-expanded'), 'false');
   assert.strictEqual(completedPart(page).children.length, 1, 'hidden again');
   assert.deepStrictEqual(page.posted, [{ type: 'ready' }], 'the control posts nothing to the extension');
+});
+
+test("each completed task's commit link names its commit's hash, posts the hash with the page's mission when clicked, and stays enabled while a chain runs", () => {
+  const page = loadPage();
+  page.send(completedPage(COMPLETED, [ALPHA]));
+  named(page, 'Tasks').click();
+  completedToggle(page).click();
+  const links = page.root.all().filter((each) => each.has('commit-link'));
+  assert.deepStrictEqual(
+    links.map((each) => [each.tagName, each.className, each.textContent]),
+    [
+      ['button', 'link commit-link', 'Open commit abc1234'],
+      ['button', 'link commit-link', 'Open commit def5678'],
+    ],
+    'one link per completed task, a bar-less one included, in the order posted',
+  );
+  for (const link of links) {
+    assert.strictEqual(link.disabled, false, 'the link stays enabled while a chain runs');
+    assert.match(link.title, /editor tab/);
+  }
+  links[1].click();
+  links[0].click();
+  assert.deepStrictEqual(page.posted.slice(1), [
+    { type: 'openCommit', mission: ALPHA, hash: 'def5678' },
+    { type: 'openCommit', mission: ALPHA, hash: 'abc1234' },
+  ]);
+});
+
+test("the completed task's commit line carries its stylesheet rule", () => {
+  const selectors = stylesheetRules().flatMap((rule) => rule.selectors);
+  assert.ok(selectors.includes('.task-list .task-commit'));
+  assert.ok(selectors.includes('button.link'), "the link takes the page's link looks");
 });
 
 test('shown completed tasks draw the line saying none is completed, or the failure line with the cause, and none when nothing is posted', () => {

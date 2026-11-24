@@ -156,6 +156,7 @@ const stub = {
       return workspace.folders;
     },
     getConfiguration: () => ({ get: () => undefined }),
+    registerTextDocumentContentProvider: () => disposable,
     createFileSystemWatcher: (glob: { pattern: string }) => {
       if (glob.pattern === WATCHED_PATTERN) {
         watchers++;

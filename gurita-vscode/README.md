@@ -166,7 +166,15 @@ them again. They are read with the bundled missions tool's `tasks <path> --with-
 `Task-completion:` commit that changed the mission's directory, newest first as the tool prints
 them, each its title, the task's `##` heading as the commit's subject carries it, with its
 verified bar, the commit's body, beneath it, drawn by the same text renderer, so the bar's `- `
-bullets show as a bulleted list (a commit with no body shows its title alone); no task completed
+bullets show as a bulleted list (a commit with no body shows its title alone). Between the title
+and the bar stands a link to the task's commit, **Open commit** followed by its abbreviated hash,
+which opens that commit inside VS Code as one read-only text document in an editor tab of its own:
+the extension serves it through a content provider of its own `gurita-commit` scheme, whose content
+is `git show <hash>` run from the project root, and opens it with the diff language, so the tab
+holds the commit's subject, the verified bar as its body, and the whole patch, the task's brief
+among the removed lines of `TASKS_TODO.md`. No remote host is involved and no other extension is
+called, and a commit git cannot read shows "The commit could not be read." with git's message
+beneath it. No task completed
 yet shows "No task is completed.", and a read that fails shows "The completed tasks could not be
 read." with the tool's error line beneath it. They are read again with the mission's other facts,
 so a task completed while the window is open appears once its commit lands. Like the goal, they
@@ -246,8 +254,8 @@ page and its own fill alike. That covers the recipe buttons, **Start run**, the 
 **Discuss** and **Answer**, every **Answer with this alternative**, **New task**, **Ask in mission context**, **Show goal** and **Hide goal**, **Show completed tasks** and **Hide completed tasks**, **First**, **Previous**, **Next**, and **Close preview**, and in the Settings
 window its edit controls (**Enable** and **Disable**, **Add model**, **Add effort**, and
 **Remove**, **Duplicate**, **Rename**, **Delete**, **Make default**, and **Reset**) and **Check
-again**. A disabled button is drawn faded. The two pane headers and the links of a card's
-dependencies keep their own unfilled look.
+again**. A disabled button is drawn faded. The two pane headers, the links of a card's
+dependencies, and the completed tasks' **Open commit** links keep their own unfilled look.
 
 Every value a button needs (an answer, an issue description, a question, a discussion note, and for the
 side-bar view's rows a goal and a scope typed as a path from the project root) is typed into
@@ -261,7 +269,7 @@ indicator says that the mission is waiting for its run's terminal to close. The 
 is kept on the page whether or not a run is going, so its showing and hiding moves none of the
 page's content. The recipe dropdowns
 and the dropdowns beside the buttons that run a recipe by its fixed name, **Show goal** and
-**Hide goal**, **Show completed tasks** and **Hide completed tasks**, the **Open questions** and **Tasks** headers, the question view's **First**, **Previous**, and **Next**, and every other
+**Hide goal**, **Show completed tasks** and **Hide completed tasks**, each completed task's **Open commit** link, the **Open questions** and **Tasks** headers, the question view's **First**, **Previous**, and **Next**, and every other
 mission's window stay enabled, and the page is drawn this way again whenever it is redrawn, after
 the window was hidden and shown included. Should a click still reach the extension for that
 mission, it starts nothing: a notification says a chain is already running and the run's terminal

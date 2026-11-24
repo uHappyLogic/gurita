@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { registerCommitDocuments } from './commitDocuments';
 import { registerMissionTree } from './missionTree';
 import { postRunning, refreshMissions, registerMissionWindows } from './pane';
 import { registerRuns } from './runs';
@@ -23,6 +24,7 @@ export function activate(context: vscode.ExtensionContext): void {
   }
   const tree = registerMissionTree(context);
   registerMissionWindows(context);
+  registerCommitDocuments(context);
   registerSettingsWindow(context);
   registerRuns(context, {
     started: () => {

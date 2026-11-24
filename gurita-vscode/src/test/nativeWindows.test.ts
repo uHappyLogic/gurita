@@ -20,6 +20,8 @@ interface Activation {
   treeViews: string[];
   /** The webview panel serializers it registered, by view type. */
   serializers: string[];
+  /** The text-document content providers it registered, by scheme. */
+  contentProviders: string[];
   /** The number of terminal-close listeners it registered. */
   terminalListeners: number;
   /** The number of file system watchers it created. */
@@ -29,7 +31,7 @@ interface Activation {
 let activation: Activation = fresh();
 
 function fresh(): Activation {
-  return { messages: [], commands: [], treeViews: [], serializers: [], terminalListeners: 0, watchers: 0 };
+  return { messages: [], commands: [], treeViews: [], serializers: [], contentProviders: [], terminalListeners: 0, watchers: 0 };
 }
 
 class StubTreeItem {
@@ -90,6 +92,10 @@ const stub = {
       const on = () => () => disposable;
       return { onDidCreate: on(), onDidChange: on(), onDidDelete: on(), dispose(): void {} };
     },
+    registerTextDocumentContentProvider(scheme: string) {
+      activation.contentProviders.push(scheme);
+      return disposable;
+    },
   },
   window: {
     registerWebviewPanelSerializer(viewType: string) {
@@ -122,6 +128,7 @@ const extension = require('../extension') as typeof import('../extension');
 const pane = require('../pane') as typeof import('../pane');
 const settingsWindow = require('../settingsWindow') as typeof import('../settingsWindow');
 const missionTree = require('../missionTree') as typeof import('../missionTree');
+const commitDocuments = require('../commitDocuments') as typeof import('../commitDocuments');
 Module._load = load;
 
 const realPlatform = Object.getOwnPropertyDescriptor(process, 'platform');
@@ -158,6 +165,7 @@ function assertActive(run: { activation: Activation; subscriptions: unknown[] },
     [pane.MISSION_VIEW_TYPE, settingsWindow.SETTINGS_VIEW_TYPE].sort(),
     `${where}: both windows can be restored`,
   );
+  assert.deepStrictEqual(run.activation.contentProviders, [commitDocuments.COMMIT_SCHEME], `${where}: a completed task's commit can be opened`);
   assert.ok(run.activation.commands.includes(pane.OPEN_MISSION_COMMAND), `${where}: a row's click opens a mission window`);
   assert.ok(run.activation.commands.includes(missionTree.REFRESH_COMMAND), `${where}: the refresh command is registered`);
   assert.ok(run.activation.terminalListeners > 0, `${where}: the runner watches its terminals`);
@@ -170,6 +178,7 @@ test('on native Windows activation shows one message naming the supported platfo
   assert.match(extension.NATIVE_WINDOWS_MESSAGE, /macOS, Linux, or through Remote-WSL/);
   assert.deepStrictEqual(run.activation.treeViews, [], 'the side-bar view gets no tree');
   assert.deepStrictEqual(run.activation.serializers, [], 'no window is restored');
+  assert.deepStrictEqual(run.activation.contentProviders, [], 'no commit document is served');
   assert.deepStrictEqual(run.activation.commands, [], 'no command is registered, so no window opens and no run starts');
   assert.strictEqual(run.activation.terminalListeners, 0, 'the runner watches no terminal');
   assert.strictEqual(run.activation.watchers, 0, 'nothing is read or watched');

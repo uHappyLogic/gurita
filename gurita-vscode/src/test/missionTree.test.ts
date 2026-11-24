@@ -151,6 +151,7 @@ const stub = {
       };
       return { onDidCreate: on('create'), onDidChange: on('change'), onDidDelete: on('delete'), dispose(): void {} };
     },
+    registerTextDocumentContentProvider: () => disposable,
   },
   window: {
     createWebviewPanel(viewType: string, title: string): unknown {
