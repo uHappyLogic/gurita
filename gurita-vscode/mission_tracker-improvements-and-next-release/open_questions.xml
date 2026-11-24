@@ -1,1 +1,89 @@
-<open-questions/>
+<open-questions>
+  <open-question id="Recipe word outside buttons">
+    <question>Gurita for VS Code is to call a recipe an &quot;action&quot; where the user fires it and an &quot;action recipe&quot; in the Settings window, while the recipe files, their `## Recipes` heading, and the `gurita.ownRecipesFile` setting keep the name &quot;recipe&quot;. Which word do the user-read texts that are neither a firing point nor the Settings window use: the mission page&apos;s failure line `The recipes could not be read.`, error notifications such as `No recipe is named &lt;name&gt;.`, the hover text `Recipe: &lt;name&gt;` on the side-bar view&apos;s two mission-starting rows, the description of the `gurita.ownRecipesFile` setting, and the extension&apos;s README prose?</question>
+  </open-question>
+  <open-question id="Renamed chain lines">
+    <question>The shipped recipe `Requirements iteration` is to be renamed &quot;Approve all standing recommendations and review again&quot;, a name that describes the answer sweep followed by one review pass. Its `default` variant runs the answer sweep, a review pass, the alternatives pass, and an interactive recommendation pass, and its `Mixed-agent (Gemini reviews, Claude annotates)` variant runs a review pass, the alternatives pass, the recommendation pass, and then the answer sweep. Do both variants keep their lines unchanged under the new name, or are their lines changed to match what the name says?</question>
+  </open-question>
+  <open-question id="Stored state after rename">
+    <question>Gurita for VS Code keys a user&apos;s stored variants (`~/.gurita/variants.json`), picked defaults, and remembered variant selections by recipe name, and lists stored variants of a name no recipe file holds as an own recipe. Once the shipped recipe `Requirements iteration` carries its new name, &quot;Approve all standing recommendations and review again&quot;, what happens to the state a user stored under the old name?</question>
+  </open-question>
+  <open-question id="Recommendation button recipe fate">
+    <question>The question card&apos;s &quot;Answer with recommendation&quot; button is to be removed from Gurita for VS Code. Does its shipped button recipe, `answer-open-question-with-recommendation`, leave `gurita-vscode/shipped_recipes.md` and the Settings window with it, or stay there with no button running it? Stored variants of a name no recipe file holds are listed today as an own recipe.</question>
+  </open-question>
+  <open-question id="Alternative button layout">
+    <question>On a question card of Gurita for VS Code, each alternative&apos;s &quot;Answer with this alternative&quot; button and its arrow-only variant dropdown stand on one line with the alternative&apos;s id. The button is to stop being drawn as a one-line button, with the variant it will run stated after its title. What layout replaces that line: where do the button, the variant&apos;s name, and the dropdown stand relative to the alternative&apos;s id and text, and is the dropdown kept?</question>
+  </open-question>
+  <open-question id="Markdown in new texts">
+    <question>The question card of Gurita for VS Code is to draw text between backticks as code in the question, the pick&apos;s rationale, and each alternative&apos;s text, advantages, and drawbacks. The same mission starts drawing four more texts that are written as Markdown: the mission&apos;s goal in the mission page&apos;s introduction, each remaining task&apos;s brief, each completed task&apos;s verified bar, and a finished mission&apos;s summary. How much Markdown is rendered in those four texts: none, backtick spans as code only, or more of it, such as paragraphs, lists, and emphasis?</question>
+  </open-question>
+  <open-question id="Long goal display">
+    <question>A mission page of Gurita for VS Code is to open with an introduction showing the mission&apos;s title and its goal above the workflow diagram. A goal read from `requirements.md` can run to several paragraphs. How much of a long goal does the introduction show, and can the reader expand or collapse it?</question>
+  </open-question>
+  <open-question id="Ask action placement">
+    <question>A mission page of Gurita for VS Code is to offer &quot;Ask in mission context&quot; at every step of the workflow, and no shipped recipe runs the `ask-in-mission-context` skill today. Where does the action stand on the page: in the list of recipe buttons, as a shipped recipe that declares no `Stage:`, or as a fixed-name button outside that list, as New task is?</question>
+  </open-question>
+  <open-question id="Ask question input">
+    <question>The `ask-in-mission-context` skill takes the user&apos;s question as its argument. When &quot;Ask in mission context&quot; is fired from a mission page of Gurita for VS Code, is the question typed before the run starts or inside the session the run opens, and is the run headless or interactive?</question>
+  </open-question>
+  <open-question id="Completed tasks placement">
+    <question>A mission page of Gurita for VS Code is to list the mission&apos;s completed tasks, hidden by default behind one control that shows and hides them. Where does the list stand: inside the Remaining tasks pane, or in a pane of its own beside Open questions and Remaining tasks?</question>
+  </open-question>
+  <open-question id="Commit link target">
+    <question>Each completed task listed on a mission page of Gurita for VS Code is to carry a link to its `Task-completion:` commit. What does following the link open: the commit inside VS Code, and through which view or command, or the commit&apos;s page on the repository&apos;s remote host?</question>
+  </open-question>
+  <open-question id="Multi-line input mechanism">
+    <question>In Gurita for VS Code an answer, a mission&apos;s goal, and a new task&apos;s issue description are to be typed into a box with room for several lines. Today each is asked through `vscode.window.showInputBox`, which holds one line, and the goal is asked from the side-bar view&apos;s rows, where no page stands. An earlier mission recorded that nothing is typed on a page anywhere in the extension. What provides the multi-line box?</question>
+  </open-question>
+  <open-question id="Auto-close default">
+    <question>Gurita for VS Code is to gain a setting that closes a run&apos;s terminal by itself when its chain ran all its lines, while a chain that stopped keeps waiting for a keypress. Is the setting on or off by default?</question>
+  </open-question>
+  <open-question id="Auto-close looped runs">
+    <question>The runner of Gurita for VS Code waits for a keypress after every chain and after every looped task run. A new setting is to close the terminal by itself when a chain ran all its lines. Does the setting also close the terminal of a looped task run that completed every task?</question>
+  </open-question>
+  <open-question id="Git change detection">
+    <question>Gurita for VS Code is to re-read the missions when git state changes through a commit, a pull, or a branch switch made outside its own runs; today its one file watcher covers the mission documents only. How does the extension learn of such a change: by watching files inside the repository&apos;s `.git` directory, or through the API of VS Code&apos;s built-in Git extension?</question>
+  </open-question>
+  <open-question id="View check failure scope">
+    <question>The harness check of Gurita for VS Code covers Claude Code, Antigravity, and Codex, reporting for each whether its CLI is found, whether a Gurita copy is installed, and whether that copy is at least the packaged version. The Missions side-bar view is to say when the check fails. Which results make the view say so: a failure of any harness, of every harness, or only of the harnesses that are enabled or whose CLI is found?</question>
+  </open-question>
+  <open-question id="Harness check timing">
+    <question>The harness check of Gurita for VS Code first runs in a session when the Settings window opens, and its result is kept for the session. Once the Missions side-bar view is to show a missing or outdated plugin, when does the check first run?</question>
+  </open-question>
+  <open-question id="View notice form">
+    <question>The Missions side-bar view of Gurita for VS Code is a native tree that shows `No mission is live.` through the tree view&apos;s message. It is to show two new things: a notice that the plugin is missing or outdated, linking to the Settings window, and an offer to run the workflow bootstrap. In what form does the view show them: as tree rows, as the view&apos;s welcome content, in the view&apos;s message, or as notifications?</question>
+  </open-question>
+  <open-question id="Bootstrap context file">
+    <question>The Missions side-bar view of Gurita for VS Code is to offer the workflow bootstrap, `init-mission-base-workflow`, while the project&apos;s context file holds no `## Mission Workflow` section. The context file is `CLAUDE.md` under Claude Code and `AGENTS.md` under Antigravity and Codex. Which file does the view check for the section?</question>
+  </open-question>
+  <open-question id="Finished missions bound">
+    <question>The Missions side-bar view of Gurita for VS Code is to hold one row, collapsed by default, that expands to the project&apos;s finished missions as the bundled missions tool lists them. Does the row list every finished mission in the record or only the most recent ones, and if only those, how many?</question>
+  </open-question>
+  <open-question id="Project recipe file path">
+    <question>Gurita for VS Code is to read a recipe file tracked in the project, beside the shipped file and the user&apos;s own. Where does it look for the project&apos;s file: under a fixed name at the project root, as `task_line_rules.txt` has, or at a path a setting names, and what is that name or that setting&apos;s default?</question>
+  </open-question>
+  <open-question id="Project recipe name collisions">
+    <question>In Gurita for VS Code an own recipe carrying a shipped recipe&apos;s name joins that recipe as further variants. Once a recipe file tracked in the project is read as a third source, how does a project recipe combine with a shipped or own recipe of the same name?</question>
+  </open-question>
+  <open-question id="Project recipes heading">
+    <question>A mission page of Gurita for VS Code lists the user&apos;s own recipes that carry no shipped recipe&apos;s name under a heading of their own, apart from the shipped ones. Where does it list the recipes of a recipe file tracked in the project that carry no shipped recipe&apos;s name: together with the user&apos;s own, or under a separate heading?</question>
+  </open-question>
+  <open-question id="Shipped Codex lines">
+    <question>No recipe in `gurita-vscode/shipped_recipes.md`, the recipe file Gurita for VS Code ships, holds a `codex` line, and the file is to gain one. Which shipped recipes gain a Codex line: a single-task line, one variant of one chain, or a Codex variant of several chains?</question>
+  </open-question>
+  <open-question id="Codex line effort">
+    <question>In the Settings window of Gurita for VS Code a recipe line&apos;s harness dropdown is to offer Codex beside Claude Code and Antigravity. The window holds a model list for Codex and no effort list. Does a line switched to Codex carry an effort, with the Settings window gaining a Codex effort list, or does it carry none?</question>
+  </open-question>
+  <open-question id="Reference document location">
+    <question>`gurita-vscode/README.md`, the page the Visual Studio Marketplace and Open VSX listings show, is to be shortened to a showcase, with its reference prose moved to a document the listing links to. Where in the repository does that document stand?</question>
+  </open-question>
+  <open-question id="Screenshot capture method">
+    <question>The listing README of Gurita for VS Code is to lead with screenshots of the side-bar view, a mission page, and the Settings window. `gurita-vscode/scripts/capture_demo.js` captures the demo GIF from the packaged extension and writes no still frame. How are the screenshots produced: by that script, by a capture script of their own, or by hand?</question>
+  </open-question>
+  <open-question id="Release within the mission">
+    <question>The mission ends by publishing Gurita for VS Code 0.3.0 through `/release-vscode-extension`, a maintainer-only skill that requires a clean tree on `main`, pauses once for the maintainer&apos;s confirmation before it pushes, and drafts its notes from the finish summaries of the missions finished since the last extension tag, falling back to the commits in that range. Is the release run as a task in the mission&apos;s task list before `/finish-mission`, or by the maintainer after the mission is finished?</question>
+  </open-question>
+  <open-question id="Usage snippet rename">
+    <question>The recipe `Requirements iteration` that Gurita for VS Code ships is to be renamed &quot;Approve all standing recommendations and review again&quot;. The old name also heads a recipe in `snippets/GURITA_USAGE.md`, the hand-use document no tool reads. Is that recipe renamed there too?</question>
+  </open-question>
+</open-questions>
