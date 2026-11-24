@@ -175,6 +175,31 @@
   </open-question>
   <open-question id="Ask question input">
     <question>The `ask-in-mission-context` skill takes the user&apos;s question as its argument. When &quot;Ask in mission context&quot; is fired from a mission page of Gurita for VS Code, is the question typed before the run starts or inside the session the run opens, and is the run headless or interactive?</question>
+    <alternative id="Typed first, interactive">
+      The question is typed before the run starts, through the extension&apos;s input-box path (`askValues`) as a required value that refuses an empty entry, as the issue description of `discuss-new-task` is today, and the action&apos;s line is an interactive one (a bare `claude &quot;/gurita:ask-in-mission-context --mission &lt;path&gt; &lt;question&gt;&quot; … # interactive`), so the session opens on the answer and stays open for follow-up questions.
+      <advantage>Matches the skill as written: its first answer arrives without a further prompt, its step 3 expects follow-ups that re-ground in the files, and its step 4 hand-off offers (`/submit-task`, `/discuss-open-question`, `/complete-task`) can be taken up in the same session, while the runner reads no verdict from an interactive line, so the run ends without a false stop.</advantage>
+      <drawback>The mission page stays disabled for as long as the conversation stands, since a run blocks every action button until its terminal closes, so a quick look-up holds the page until the person exits the session; and the question goes through the one-line box unless the multi-line input sibling supplies a larger one.</drawback>
+    </alternative>
+    <alternative id="Optional typed first, interactive">
+      The question is typed before the run starts in an input box that accepts an empty value, as the optional discussion note of `discuss-open-question` is today: a typed question is passed as the skill&apos;s argument, and an empty box passes none, so the skill gives its brief orientation to the mission (goal, what is done, what is left) and invites a question. The line is interactive, and the conversation continues in the session either way.
+      <advantage>One action covers both uses the skill supports, a specific question answered at once and an orientation when the person has none ready, with follow-ups and hand-off offers available in the session in both cases.</advantage>
+      <drawback>An Enter pressed on an empty box by accident starts a full orientation run rather than nothing, and the page stays disabled while the session stands, as in every interactive form; it also adds `question` to the optional placeholders, a second exception beside `note`.</drawback>
+    </alternative>
+    <alternative id="Asked in session, interactive">
+      No value is asked before the run: firing the action starts an interactive session at once with the skill invoked on `--mission &lt;path&gt;` alone, so the skill opens with its orientation and invites a question, which the person types in the terminal, as many as they like.
+      <advantage>One click and no dialog, the question typed in the terminal with no length limit and no dependence on how the extension&apos;s input box is built, and the orientation gives the person a grounded starting point before they ask.</advantage>
+      <drawback>Every use pays for an orientation pass, the skill&apos;s grounding reads included, before the person&apos;s actual question is answered, and the page stays disabled while the session stands; a person who knew their question waits for an answer to one they did not ask.</drawback>
+    </alternative>
+    <alternative id="Typed first, headless">
+      The question is typed before the run starts as a required value, and the action&apos;s line is headless (`claude -p &quot;/gurita:ask-in-mission-context --mission &lt;path&gt; &lt;question&gt;&quot; …`): the answer prints in the run&apos;s terminal, which then waits for a keypress and closes, with no follow-up.
+      <advantage>The shortest hold on the page: one question, one printed answer, and the terminal closed by a keypress, which suits a quick look-up from any step and matches the headless form of every other button recipe that takes a typed value, such as `answer-open-question`.</advantage>
+      <drawback>The skill prints no fixed console line, so the runner&apos;s check finds no success or no-op line in the print and reports every run as a stopped chain, unless the runner or the action learns an exception; and the skill&apos;s follow-ups and hand-off offers are dead ends, since a second question means a second run and its own full grounding.</drawback>
+    </alternative>
+    <alternative id="Typed first, both variants">
+      The question is typed before the run starts as a required value, and the action carries two variants chosen through its variant dropdown: an interactive one, the default, which keeps the session open for follow-ups, and a headless one, which prints the answer and closes on a keypress.
+      <advantage>The person chooses per use between a quick printed answer and a conversation, while the default keeps the skill&apos;s follow-ups and hand-offs one click away.</advantage>
+      <drawback>The headless variant still carries the false stop report, since the skill prints no fixed line for the runner to read, and two variants are more to ship, test, and explain for an action whose two uses differ only in whether the person wants a follow-up; it depends on the action carrying a variant dropdown, which turns on the sibling question of where the action stands on the page.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Completed tasks placement">
     <question>A mission page of Gurita for VS Code is to list the mission&apos;s completed tasks, hidden by default behind one control that shows and hides them. Where does the list stand: inside the Remaining tasks pane, or in a pane of its own beside Open questions and Remaining tasks?</question>
