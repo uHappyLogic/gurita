@@ -107,6 +107,8 @@ Five missions under `gurita-vscode/` are finished, all between 2026-11-20 and 20
 
 - **Project recipes heading.** A mission page lists the project file's recipes that carry no shipped recipe's name under a heading of their own, a third list standing directly below the shipped recipes and above the own-recipes heading, drawn only when at least one such recipe fits the step the diagram fills, as the own group is drawn only when non-empty. The recipe reader gains a third group value beside `shipped` and `own`, the page script splits the list three ways, and the stored-only recipes stay last in the own group.
 
+- **Shipped Codex lines.** `gurita-vscode/shipped_recipes.md` gains exactly one Codex recipe, a single-task recipe standing beside the shipped single-task lines: one headless `codex exec '$gurita:complete-task …' --dangerously-bypass-approvals-and-sandbox` line that also carries `-m` with a named Codex model id, taken from the catalog `codex debug models` prints. The recipe's name says the model, as the Claude Code single-task names do. No chain and no button recipe gains a Codex line or variant.
+
 ### Release
 
 - **Release within the mission.** The task list holds no release task, and the mission is finished before 0.3.0 is published: `/finish-mission` removes the mission's directory in its `Mission-finish:` commit, and the maintainer then runs `/release-vscode-extension 0.3.0` by hand. The skill drafts its notes from this mission's finish summary, read as a mission finished since `gurita-vscode-0.2.0`, beside any other extension mission finished by then. The release is the step that follows the mission, not its last step, and the goal's closing clause is revised to say so.
