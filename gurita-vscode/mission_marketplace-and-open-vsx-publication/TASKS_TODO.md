@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Tag-Triggered Publish Workflow
-
-Add `.github/workflows/publish-vscode-extension.yml` to `uHappyLogic/gurita`, triggered only by a pushed tag matching `gurita-vscode-*`, with one job running in the GitHub environment `extension-release` and holding `permissions: id-token: write`: it checks out the tagged commit, sets up Node 22 with `actions/checkout` and `actions/setup-node` pinned to full SHAs as in the other workflows, runs `npm ci`, `npm test`, and `npm run package` in `gurita-vscode/`, and publishes the one VSIX it built to the Marketplace through the pinned `vsce publish --oidc` and to Open VSX through the local `ovsx publish`, each with `--skip-duplicate`, `ovsx` reading the token from the `OVSX_PAT` environment variable mapped from the environment's secret, so no token appears on any command line or in any log and no Marketplace token exists. It is verified without publishing: by the workflow file parsing, by its trigger matching only `gurita-vscode-*` tags and every action pinned to a full SHA, by each publish command's flags read against `vsce publish --help` and `ovsx publish --help` from the pinned local binaries, and by its build steps passing locally from a fresh `npm ci`.
-
----
-
 ## Release-Plugin Ignores Extension Tags and Missions
 
 Change `/release-plugin` so an extension release never reaches a plugin release: both of its lookups of the last plugin release gain the positive pattern only the bare plugin form matches, `git describe --tags --abbrev=0 --match '[0-9]*'`, with the same `--match` beside `--exclude=<VERSION>` on a resumption, and its step 5 drops every finished mission whose path lies under `gurita-vscode/`, by the path field `missions .` already prints, the extension missions already finished after `2.0.0` included, while a mission scoped elsewhere stays in the notes even when it changed the extension. It is verified by the lookup printing `2.0.0` in a scratch clone that also holds a `gurita-vscode-` tag nearer to `HEAD`, the 37 existing tags left as they are, and by reading step 5 against today's `missions .` print, from which it then keeps no mission under `gurita-vscode/`.
