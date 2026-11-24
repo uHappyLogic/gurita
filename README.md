@@ -51,6 +51,24 @@ flowchart LR
     class additionalReview,followUp optional;
 ```
 
+## Gurita for VS Code
+
+Gurita for VS Code, `BusyMinds.gurita-vscode`, puts your live missions in a side-bar view and a window per mission, and runs the plugin's skills from buttons in a terminal. Install it from the Extensions view, through its listing on the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=BusyMinds.gurita-vscode) or, in an editor that reads Open VSX, on [Open VSX](https://open-vsx.org/extension/BusyMinds/gurita-vscode). It drives the plugin and does not replace it, so it needs the plugin installed as [Installation](#installation) below describes; its Settings window can install or update the plugin for you.
+
+![The Gurita side-bar view: Bootstrap the workflow, New mission, and Define mission above a live mission's row and the Finished missions row](gurita-vscode/media/sidebar-view.png)
+
+The **Missions** view, behind the Gurita entry in the activity bar, lists every live mission with its next workflow step and its counts of open questions and remaining tasks, starts a new mission, and keeps the finished missions one row away.
+
+![A mission's page: its workflow diagram with derive tasks filled, the actions that fit that step, and the question view on its first open question with its pick and alternatives](gurita-vscode/media/mission-page.png)
+
+A mission's page fills the workflow step to run next, runs the actions that fit that step in a terminal with one click, and walks the open questions one card at a time, each with its pick, its alternatives, and the buttons that discuss or answer it, beside the mission's remaining and completed tasks.
+
+![The Gurita Settings window: the harness check for Claude Code, Antigravity, and Codex, each harness's models and efforts, and the variants of the First run recipe with their harness, model, and effort dropdowns](gurita-vscode/media/settings-window.png)
+
+The Settings window checks each harness's copy of the plugin, keeps each harness's models and efforts, and lets you re-point every variant of every recipe onto another harness, model, or effort.
+
+How to use it, with a recording of a run, is in [gurita-vscode/README.md](gurita-vscode/README.md).
+
 ## Installation
 
 Gurita has two runtime prerequisites: **git**, with your project root inside a git work tree that every skill commits into, and a **Python 3.9 or later** interpreter that answers as `python3` on your PATH. The skills drive the plugin's stdlib-only Python tools with it (no packages to install), and `/define-mission-goal` checks both each time it defines a mission, git first, stopping with the remedy before anything is written when either is missing.
@@ -118,10 +136,6 @@ Then, in your project root, add the mission workflow guidance to `CLAUDE.md` (`A
 ```
 
 Run `/init` to document your project — its domain context, working conventions, available tools, and how work is verified as done — in `CLAUDE.md`, so the skills can read that environment context.
-
-### Gurita for VS Code
-
-Gurita for VS Code, `BusyMinds.gurita-vscode`, adds a side-bar view and a window per mission over the plugin's missions, questions, and recipes; it needs the plugin installed to do anything. Install it from the Extensions view, through its listing on the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=BusyMinds.gurita-vscode) or, in an editor that reads Open VSX, on [Open VSX](https://open-vsx.org/extension/BusyMinds/gurita-vscode). How to use it is documented in [gurita-vscode/README.md](gurita-vscode/README.md).
 
 ## Why Gurita?
 
