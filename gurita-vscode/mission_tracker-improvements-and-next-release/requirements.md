@@ -68,5 +68,9 @@ Five missions under `gurita-vscode/` are finished, all between 2026-11-20 and 20
 
 ## Decisions
 
+### Naming
+
+- **Renamed chain lines.** Under its new name, "Approve all standing recommendations and review again", the shipped recipe keeps its `default` variant with every line unchanged (the answer sweep, a review pass, the alternatives pass, and the interactive recommendation pass), and that variant becomes the recipe's only one. The `Mixed-agent (Gemini reviews, Claude annotates)` variant is removed from `gurita-vscode/shipped_recipes.md` altogether, with no replacement: it is neither reordered to fit the name nor moved into a recipe of its own.
+
 ## Out of Scope
 
