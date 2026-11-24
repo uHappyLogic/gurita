@@ -55,7 +55,7 @@ hosts/<host>/                    — committed build output, never hand-edited; 
 mission_<slug>/                  — this repo's own root-scoped missions (self-dogfooding), each directly at the root; a finished mission's directory is removed by its `Mission-finish: <path>` commit
 answer_decision_principles.md    — project-wide principle store, at the project root, read by recommend-procedure.md, written only by capture-mission-principle-updates
 ideas/                           — design drafts that precede any mission, versioned so they can be revised in the open; holds the benchmark draft
-.github/workflows/drift-gate.yml — CI: --check then both pytest runs in one job; actions pinned to SHAs bumped by hand
+.github/workflows/drift-gate.yml — CI: --check then both pytest runs, then Node 22 with `npm ci`, `npm test`, and `npm run package` in gurita-vscode/ (the VSIX discarded), in one job publishing nothing; actions pinned to SHAs bumped by hand
 .github/workflows/traffic-badges.yml — daily traffic-badge workflow; its copies under scripts/hosts/ are kept in sync by hand (grep github-traffic-badge@)
 docs/                            — workflow.md (phase narrative, how skills commit, learning loop), skill-reference.md (one entry per skill), design-claims.md, ways-of-using.md (headless chains)
 README.md, CONTRIBUTING.md, SECURITY.md, CODE_OF_CONDUCT.md, CHANGELOG.md, LICENSE — landing page, contributor guide (## Development is the build loop), root-only policy files, release notes written by /release-plugin

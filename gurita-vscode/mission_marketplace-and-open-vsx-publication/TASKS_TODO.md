@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Extension Build and Tests in CI
-
-Extend the existing `drift-gate` job with a Node setup (`actions/setup-node`, pinned to a SHA, Node 22) and then `npm ci`, `npm test`, and `npm run package` in `gurita-vscode/`, the built VSIX discarded, so the extension's `node:test` tests and its package build run in CI; CI stays one job with no path filter and publishes nothing. It is verified by the workflow file parsing with the new action pinned to a full SHA, and by the same three commands passing locally from a fresh `npm ci`.
-
----
-
 ## Pin ovsx as a Dev Dependency
 
 Add `ovsx` to `devDependencies` in `gurita-vscode/package.json` at an exact version, beside `@vscode/vsce` 4.1.1, and record it in `package-lock.json`, so the publish workflow and the release skill's pre-flight get the Open VSX publishing tool from the extension's own Node project after `npm ci`. It is verified by `npm ci` under the nvm Node 22 wrapper installing it into `node_modules/` and the local binary answering there, with `npm test` and `npm run package` still passing.
