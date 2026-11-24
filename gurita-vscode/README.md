@@ -175,8 +175,10 @@ Command Palette.
   warning icon or colour.
 
 A click on a mission row does nothing beyond opening that mission's own window in the editor area
-(see The mission windows below), or bringing it forward when it is already open; the command
-behind the click (`gurita.openMission`) is hidden from the Command Palette. Showing the view for
+(see The mission windows below), or bringing it forward when it is already open. The command
+behind the click (`gurita.openMission`) is also offered by the Command Palette as
+**Gurita: Open Mission…**, which lists the live missions in a QuickPick, each by its title and
+path, and opens the picked one's window (see The mission windows below). Showing the view for
 the first time starts the
 extension's read of the live missions, as running a Gurita command does, and the tree is
 redrawn on every re-read (after each burst of file events, each refresh, and each run's end)
@@ -252,17 +254,23 @@ mission's page with no tab row, and you close one as you close any editor tab. E
 editor tab shows the mission's title alone and the rocket codicon (on an editor built on VS Code
 1.108.0 or later; on an older one the tab draws no icon); while another live mission
 carries the same title, each of those tabs adds its mission's scope after a dash, such as
-`Shared title — lib`, and the tabs are re-titled on every re-read. Besides the
-side-bar view there is no entry point: the Command Palette offers no command opening a window,
-there is no status bar item or keybinding, and the one window that opens by itself is the window
-of the mission a **Define mission** run defined, once its terminal closes. The windows survive a
+`Shared title — lib`, and the tabs are re-titled on every re-read. Beside the
+side-bar view, the Command Palette's **Gurita: Open Mission…** (`gurita.openMission`) opens a
+window too: it waits for the read of the live missions to settle, starting it when nothing has,
+lists the live missions in a QuickPick in the order `missions.py live` prints them, each labelled
+with its title and described by its path, and opens the picked one's window, or brings it forward
+when it is already open; dismissing the QuickPick opens nothing, and with no mission live, or
+while the live missions cannot be read, it opens no QuickPick and says so in a notification. There
+is no other entry point: there is no status bar item or keybinding, and the one window that opens
+by itself is the window of the mission a **Define mission** run defined, once its terminal closes. The windows survive a
 restart or a window reload: every mission window that was open comes back in the editor group
 and tab position it held, its page redrawn from a fresh read of the live missions and its
 question view where you left it, and a window that comes back for a mission whose window is
 already open, or whose saved state cannot be read, is closed.
 **Gurita: Refresh Missions** (`gurita.refreshMissions`) and the side-bar view's **Refresh**
 title-bar action re-read everything and redraw every open window; of the extension's own
-commands that refresh command is the only one the Command Palette offers.
+commands that refresh command and **Gurita: Open Mission…** are the only ones the Command
+Palette offers.
 
 The project root is the top level of the git work tree holding the first workspace folder;
 every other folder is ignored. The extension reads the live missions that `missions.py live`

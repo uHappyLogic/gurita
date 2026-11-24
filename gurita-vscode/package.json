@@ -96,7 +96,7 @@
       },
       {
         "command": "gurita.openMission",
-        "title": "Open Mission",
+        "title": "Open Mission…",
         "category": "Gurita"
       },
       {
@@ -156,10 +156,6 @@
         },
         {
           "command": "gurita.pickStartingVariant",
-          "when": "false"
-        },
-        {
-          "command": "gurita.openMission",
           "when": "false"
         },
         {

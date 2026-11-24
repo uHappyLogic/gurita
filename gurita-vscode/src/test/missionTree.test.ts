@@ -475,7 +475,7 @@ test("each row is a leaf labelled with the title, described by the step and both
   assert.strictEqual(item('Beta mission').description, 'Execute tasks · 0 questions · 1 task');
 });
 
-test("a click on a mission's row opens that mission's own window in the editor area, a second click revealing it, and several missions' windows open at once", () => {
+test("a click on a mission's row opens that mission's own window in the editor area, a second click revealing it, and several missions' windows open at once", async () => {
   const open = commands.get(missionTree.OPEN_MISSION_COMMAND);
   assert.ok(open !== undefined, 'activation registers the open-mission command');
   const count = webviewPanels.length;
@@ -502,10 +502,76 @@ test("a click on a mission's row opens that mission's own window in the editor a
   assert.strictEqual(webviewPanels[count + 1].reveals, 0);
   assert.deepStrictEqual(pane.openMissionWindows(), [ALPHA, BETA]);
   const before = terminals.length;
-  open?.();
-  open?.(42);
-  assert.strictEqual(webviewPanels.length, count + 2, 'the command opens nothing without a mission path');
+  nextPick = undefined;
+  await open?.();
+  await open?.(42);
+  assert.strictEqual(quickPicks.length, 2, 'the command run without a mission path opens a QuickPick instead');
+  assert.strictEqual(webviewPanels.length, count + 2, 'and a dismissed QuickPick opens nothing');
   assert.strictEqual(terminals.length, before, 'and a click starts no run');
+  quickPicks.length = 0;
+});
+
+test('the Command Palette\'s Open Mission… lists the live missions in a QuickPick and opens or reveals the picked one\'s window', async () => {
+  const open = commands.get(missionTree.OPEN_MISSION_COMMAND);
+  assert.ok(open !== undefined);
+  const count = webviewPanels.length;
+  const before = terminals.length;
+  nextPick = 'Gamma mission';
+  await open();
+  assert.strictEqual(quickPicks.length, 1, 'run with no mission path, as the Command Palette runs it, the command opens one QuickPick');
+  assert.deepStrictEqual(
+    quickPicks[0].items.map((each) => [each.label, each.description]),
+    [
+      ['Alpha mission', ALPHA],
+      ['Beta mission', BETA],
+      ['Gamma mission', GAMMA],
+      ['Delta mission', DELTA],
+    ],
+    'it lists every live mission in the order the live read prints them, labelled by title and described by path',
+  );
+  assert.strictEqual(quickPicks[0].options.title, missionTree.PICK_MISSION_TITLE);
+  assert.deepStrictEqual(
+    webviewPanels.slice(count).map((each) => [each.viewType, each.title]),
+    [[pane.MISSION_VIEW_TYPE, 'Gamma mission']],
+    "the pick opens the picked mission's own window",
+  );
+  assert.ok(pane.openMissionWindows().includes(GAMMA));
+  nextPick = 'Alpha mission';
+  const alpha = webviewPanels.find((each) => each.viewType === pane.MISSION_VIEW_TYPE && each.title === 'Alpha mission');
+  assert.ok(alpha !== undefined, "Alpha mission's window is open");
+  const reveals = alpha.reveals;
+  await open();
+  assert.strictEqual(webviewPanels.length, count + 1, 'picking a mission whose window is open creates no second window');
+  assert.strictEqual(alpha.reveals, reveals + 1, 'it reveals the open window');
+  assert.strictEqual(terminals.length, before, 'and the command starts no run');
+  nextPick = undefined;
+  quickPicks.length = 0;
+});
+
+test('with no mission live or while the live read fails, Open Mission… opens no QuickPick and says so in a notification', async () => {
+  const open = commands.get(missionTree.OPEN_MISSION_COMMAND);
+  const refresh = commands.get(missionTree.REFRESH_COMMAND);
+  assert.ok(open !== undefined && refresh !== undefined);
+  const count = webviewPanels.length;
+  workspace.folders = [{ uri: { fsPath: emptyProject() } }];
+  refresh();
+  await until(() => view.message === missionTree.NO_MISSION_MESSAGE, 'the read lists no mission');
+  notices.length = 0;
+  await open();
+  assert.deepStrictEqual(notices, [missionTree.NO_MISSION_MESSAGE], 'with no mission live it says so');
+  workspace.folders = undefined;
+  refresh();
+  await until(() => view.message !== missionTree.NO_MISSION_MESSAGE, 'the read fails');
+  errors.length = 0;
+  await open();
+  assert.deepStrictEqual(errors, [`${missionTree.FAILURE_MESSAGE} No folder is open in this window.`], 'while the read fails it says so with the cause');
+  assert.strictEqual(quickPicks.length, 0, 'no QuickPick opens in either state');
+  assert.strictEqual(webviewPanels.length, count, 'and no window opens');
+  workspace.folders = [{ uri: { fsPath: root } }];
+  refresh();
+  await until(() => view.message === undefined && items().some((each) => each.label === 'Alpha mission'), 'the read with missions is drawn again');
+  notices.length = 0;
+  errors.length = 0;
 });
 
 test('a step or count that could not be read shows the placeholder in its own slot, with the cause in the hover text and no other icon', () => {
@@ -680,7 +746,7 @@ test("the manifest contributes the activity-bar container with the tracked icon,
   assert.ok(fs.statSync(path.join(extensionRoot, 'media', 'activity-bar.svg')).isFile(), 'the container names a tracked icon file');
 });
 
-test('the manifest hides the command behind the mission rows, contributes no pane command, and offers the refresh command alone in the Command Palette', () => {
+test('the manifest contributes no pane command and offers the refresh command and Gurita: Open Mission… alone in the Command Palette', () => {
   const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8'));
   const contributed = manifest.contributes.commands.map((each: { command: string }) => each.command);
   assert.ok(contributed.includes(missionTree.OPEN_MISSION_COMMAND), 'the open-mission command is contributed');
@@ -691,9 +757,15 @@ test('the manifest hides the command behind the mission rows, contributes no pan
   );
   assert.deepStrictEqual(
     contributed.filter((command: string) => !hidden.has(command)),
-    [missionTree.REFRESH_COMMAND],
-    'every contributed command but the refresh command is hidden from the Command Palette',
+    [missionTree.REFRESH_COMMAND, missionTree.OPEN_MISSION_COMMAND],
+    'every contributed command but the refresh and open-mission commands is hidden from the Command Palette',
   );
+  assert.ok(
+    !manifest.contributes.menus.commandPalette.some((entry: { command: string }) => entry.command === missionTree.OPEN_MISSION_COMMAND),
+    'the open-mission command carries no Command Palette entry hiding it',
+  );
+  const open = manifest.contributes.commands.find((each: { command: string }) => each.command === missionTree.OPEN_MISSION_COMMAND);
+  assert.strictEqual(`${open.category}: ${open.title}`, 'Gurita: Open Mission…', 'the Command Palette offers it as Gurita: Open Mission…');
 });
 
 test('the manifest offers the variant action inline and in the context menu of the mission-starting rows, and hides the commands behind the rows from the Command Palette', () => {

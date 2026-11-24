@@ -212,7 +212,7 @@ export const MISSION_WINDOW_ICON = 'rocket';
 /** What stands between a colliding mission window's title and its mission's scope on its editor tab. */
 export const TAB_SCOPE_SEPARATOR = ' — ';
 
-/** The hidden command a click on a mission's row in the side-bar view runs, opening or revealing that mission's window. */
+/** The command a click on a mission's row in the side-bar view runs with its path, opening or revealing that mission's window, and which the Command Palette offers with no path. */
 export const OPEN_MISSION_COMMAND = 'gurita.openMission';
 
 /** The placeholders a mission page holds a value for: the mission's own path. */

@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Open Mission Command in the Palette
-
-Offer "Gurita: Open Mission…" in the Command Palette: the command lists the live missions and opens the picked one's window, the extension's other hidden commands staying hidden. This reverses the stated choice that the side-bar view is the only entry point, so `gurita-vscode/README.md` names the command beside the view; verified by a check of the manifest and a test against the `vscode` stub of the list and the opened window.
-
----
-
 ## Project Recipe File as a Third Source
 
 Read the project's recipes from one file under the fixed name `gurita_recipes.md`, directly in the project root that `projectRoot` in `src/live.ts` finds, beside the shipped file and the person's own, with no setting added and an absent file meaning the project has no recipes. A project recipe carrying a shipped recipe's name joins it as further variants and an own recipe carrying a project recipe's name joins it the same way, the variants ordered shipped, then project, then own, each source in its file's order, a variant carrying another source's variant name kept as a second entry beside it and the joined recipe keeping the name, group, and `Stage:` of the first source that holds it; project variants carry a third origin, `project` (`VariantOrigin`, `ReadVariantRef`, the variant store's copy, hide, and default records), and are marked as the project's on the mission page and in the Settings window. A mission page lists the project recipes that carry no shipped recipe's name under a heading of their own, directly below the shipped ones and above the own heading, drawn only when at least one fits the step the diagram fills, the stored-only recipes staying last in the own group; verified by reader, variant-store, page, and Settings tests of the three sources, with `gurita-vscode/README.md` documenting the file.

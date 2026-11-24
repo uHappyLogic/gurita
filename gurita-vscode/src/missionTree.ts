@@ -11,20 +11,26 @@
 // mission's title, its description the next workflow step's name and the two counts, its tooltip
 // the five facts spelled out in full beside the mission's path, and its icon a spinning
 // `ThemeIcon` while the mission's run is going and a steady mission icon otherwise. A click on a
-// mission row does nothing beyond running the open-mission command, hidden from the Command Palette,
-// which opens that mission's own window in the editor area (`pane.ts`), or reveals it when one is
-// already open. The view's first resolution, its first `getChildren` call, starts the
+// mission row does nothing beyond running the open-mission command with the mission's path, which
+// opens that mission's own window in the editor area (`pane.ts`), or reveals it when one is already
+// open. The Command Palette offers the same command as Gurita: Open Mission…, run there with no
+// path: it waits for the session's live read to settle, starting it when nothing has, lists the
+// live missions in a QuickPick in the order the read printed them, each labelled with its title and
+// described by its path, and opens or reveals the picked one's window, a dismissed QuickPick opening
+// nothing; with no mission live, or while the read fails, it opens no QuickPick and says so in a
+// notification instead. The view's first resolution, its first `getChildren` call, starts the
 // session's live read when no Gurita command has started it yet, and the tree is redrawn on every
 // re-read the session keeps and at every run's start and end. Until the read settles, and while it
 // fails, the tree holds no mission row. Each state in which it holds no mission row is shown through the
 // view's own `message`: `No mission is live.` with no mission live, and the failure line followed by
 // the cause as the read gave it while the read fails; a read with missions clears it. The two
 // mission-starting rows are redrawn too whenever the variant remembered for either changes. The
-// view's title bar carries Refresh as an icon action running the refresh command, the one command
-// of the extension's own the Command Palette offers beside the view's focus command, which re-reads
+// view's title bar carries Refresh as an icon action running the refresh command, which re-reads
 // the live missions and redraws the tree and every open window from the fresh read, the Settings
-// window included, and beside it Settings, an icon action running the Settings command, hidden from
-// the Command Palette, which opens the Settings window (`settingsWindow.ts`) or reveals it.
+// window included, and which the Command Palette offers too, the one other command of the
+// extension's own it offers beside Open Mission… and the view's focus command; and beside it
+// Settings, an icon action running the Settings command, hidden from the Command Palette, which
+// opens the Settings window (`settingsWindow.ts`) or reveals it.
 //
 // The view's first resolution in a session also starts the harness check in the background, through
 // the code path the Settings window runs (`startHarnessCheck`), unless it has already started; its
@@ -68,6 +74,7 @@ import { HarnessStates, readHarnessStates } from './harnessSettings';
 import { MissionRow, missionRow } from './missionRows';
 import {
   OPEN_MISSION_COMMAND,
+  SessionRead,
   onSessionRead,
   onStartingSelection,
   openMissionWindow,
@@ -88,8 +95,18 @@ import { variantStoreFile } from './variantStore';
 import { FinishedMission, readFinishedMissions } from './finishedMissions';
 import { OPEN_FINISHED_COMMAND, openFinishedWindow } from './finishedWindow';
 
-/** The hidden command a click on a mission row runs, opening or revealing that mission's window. */
+/**
+ * The open-mission command a click on a mission row runs with the mission's path, opening or
+ * revealing that mission's window, and which the Command Palette offers as Gurita: Open Mission…,
+ * run there with no path to pick a live mission first.
+ */
 export { OPEN_MISSION_COMMAND };
+
+/** The title of the QuickPick the open-mission command opens when run with no mission path. */
+export const PICK_MISSION_TITLE = 'Open Mission';
+
+/** The placeholder of the QuickPick the open-mission command opens when run with no mission path. */
+export const PICK_MISSION_PLACEHOLDER = 'The live mission whose window to open';
 
 /** The id of the side-bar view, as the manifest's `views` entry contributes it. */
 export const MISSIONS_VIEW = 'gurita.missions';
@@ -216,6 +233,54 @@ export function viewMessage(): string | undefined {
     return NO_MISSION_MESSAGE;
   }
   return undefined;
+}
+
+/**
+ * The session's live read once it has settled, starting it when nothing has started it yet and
+ * waiting for its first kept read while it is pending.
+ */
+async function settledRead(context: vscode.ExtensionContext): Promise<SessionRead> {
+  startLiveRead(context);
+  if (sessionRead().state === 'pending') {
+    await new Promise<void>((resolve) => {
+      const listening = onSessionRead(() => {
+        listening.dispose();
+        resolve();
+      });
+    });
+  }
+  return sessionRead();
+}
+
+/** A live mission as the open-mission QuickPick offers it: its title as the label, its path as the description. */
+export interface MissionPick extends vscode.QuickPickItem {
+  path: string;
+}
+
+/**
+ * The open-mission command run with no mission path, as the Command Palette runs it: once the
+ * session's live read has settled, a QuickPick of the live missions in the order the read printed
+ * them, the picked one's window opened or revealed and a dismissed QuickPick opening nothing; with
+ * no mission live, or while the read fails, a notification saying so in place of the QuickPick.
+ */
+export async function pickMission(context: vscode.ExtensionContext): Promise<void> {
+  const read = await settledRead(context);
+  if (read.state === 'failed') {
+    void vscode.window.showErrorMessage(`${FAILURE_MESSAGE} ${read.cause}`);
+    return;
+  }
+  if (read.state !== 'read') {
+    return;
+  }
+  if (read.missions.length === 0) {
+    void vscode.window.showInformationMessage(NO_MISSION_MESSAGE);
+    return;
+  }
+  const items: MissionPick[] = read.missions.map(({ mission }) => ({ label: mission.title, description: mission.path, path: mission.path }));
+  const picked = await vscode.window.showQuickPick(items, { title: PICK_MISSION_TITLE, placeHolder: PICK_MISSION_PLACEHOLDER });
+  if (picked !== undefined) {
+    openMissionWindow(context, picked.path);
+  }
 }
 
 /** The side-bar view's tree, which `redraw` asks the editor to draw afresh. */
@@ -410,9 +475,9 @@ export function registerMissionTree(context: vscode.ExtensionContext): MissionTr
     vscode.commands.registerCommand(OPEN_MISSION_COMMAND, (mission?: unknown) => {
       if (typeof mission === 'string') {
         openMissionWindow(context, mission);
-      } else {
-        startLiveRead(context);
+        return undefined;
       }
+      return pickMission(context);
     }),
     vscode.commands.registerCommand(OPEN_FINISHED_COMMAND, (mission?: unknown, title?: unknown) => {
       const root = sessionRoot();
