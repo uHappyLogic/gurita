@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Manifest Publisher Set to BusyMinds
-
-Change the manifest's `publisher` from `uhappylogic` to `BusyMinds`, the Marketplace publisher the maintainer already owns, and make every place under `gurita-vscode/` that names the extension's id, the README's install and uninstall lines among them, name `BusyMinds.gurita-vscode`, leaving the `uHappyLogic` GitHub account and the distribution repository names as they are. It is verified by `npm test` and `npm run package` passing, the packaged VSIX's manifest naming the publisher `BusyMinds`, and no `uhappylogic.gurita-vscode` remaining under `gurita-vscode/` outside the mission directory.
-
----
-
 ## Listing Icon Rendered as a PNG
 
 Give the package the icon a public listing needs: the activity-bar icon's three arms as filled outlines in the same geometry, filled white or the activity bar's near-white `#d7dae0`, on a filled square in the banner's darker violet `#9333ea`, rasterized from the tracked plain-text drawings by a stdlib-only Python script under `scripts/` that writes the PNG itself through `zlib` and `struct` with no external tool, committed under `gurita-vscode/media/`, named by the manifest's `icon` entry, and never edited by hand. It is verified by a pytest test beside `tests/test_icon.py` checking that the committed file is a well-formed PNG of the listing size and equals what the generator produces, and by `npm run package` building with the icon.

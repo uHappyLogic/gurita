@@ -2,7 +2,7 @@
   "name": "gurita-vscode",
   "displayName": "Gurita for VS Code",
   "description": "A side-bar view and mission windows for the Gurita plugin's missions, questions, and recipes.",
-  "publisher": "uhappylogic",
+  "publisher": "BusyMinds",
   "version": "0.1.0",
   "license": "MIT",
   "repository": {

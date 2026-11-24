@@ -86,11 +86,11 @@ Install it by hand, from the repository root:
 code --install-extension gurita-vscode/dist/gurita-vscode.vsix
 ```
 
-The installed extension's id is `uhappylogic.gurita-vscode`. Its version, `0.1.0` at first, is
+The installed extension's id is `BusyMinds.gurita-vscode`. Its version, `0.1.0` at first, is
 the extension's own, kept in `gurita-vscode/package.json` independent of the plugin's `VERSION`
 and bumped by hand whenever the extension changes. To install a rebuilt package of the same
 version over the installed one, add `--force`; to remove it, run
-`code --uninstall-extension uhappylogic.gurita-vscode`.
+`code --uninstall-extension BusyMinds.gurita-vscode`.
 
 ## The side-bar view
 
