@@ -93,8 +93,11 @@
 // a file that did not read is replaced by that file's notice alone. While a chain started for the
 // mission is running, as the extension posts when a run starts, when its terminal closes, and with
 // every redraw, the page draws every action button on it disabled, its recipe buttons,
-// its question card's buttons, its preview's start button, and its New task button, and its
-// workflow diagram's filled block pulses; the recipe dropdowns and the fixed-name buttons' dropdowns, the question view's
+// its question card's buttons, its preview's start button, and its New task button, its
+// workflow diagram's filled block pulses, and the run indicator beneath the diagram shows its one
+// line, that the mission is waiting for its run's terminal to close. The indicator is drawn on
+// every page, kept out of sight while no run is going, so its space is reserved whether or not it
+// shows and a run starting or ending moves none of the page's content; the recipe dropdowns and the fixed-name buttons' dropdowns, the question view's
 // first, previous, and next buttons and dependency links, the preview's close button, the
 // introduction's goal control, and the two pane headers stay enabled, and the left and right arrow keys move the question view only while its
 // pane is shown. The page draws no Settings control and nothing from the harness check: the
@@ -264,6 +267,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
   const HIDE_GOAL = 'Hide goal';
   /** The heading drawn above the workflow diagram. */
   const WORKFLOW_HEADING = 'Workflow';
+  /** The run indicator's one line, shown beneath the workflow diagram while a run started for the mission blocks the page. */
+  const RUN_INDICATOR_LINE = "This mission is waiting for its run's terminal to close.";
   /** The buttons on a question's card, each with its label and the hover text it shows while its recipe cannot be read. */
   const QUESTION_BUTTONS: [FixedButton, string, string][] = [
     ['discussQuestion', 'Discuss', 'Type an optional note and open an interactive discussion of this question'],
@@ -627,6 +632,19 @@ declare function acquireVsCodeApi(): VsCodeApi;
     section.append(flow);
     diagram = { section, flow };
     return section;
+  }
+
+  /**
+   * The run indicator beneath the workflow diagram: its one line, saying that the mission is
+   * waiting for its run's terminal to close, drawn on every page whether or not a run is going, so
+   * its space is always reserved, and kept out of sight and out of the accessibility tree under the
+   * `idle` class while `busy` is false, a run going or ending moving none of the page's content.
+   */
+  function drawRunIndicator(busy: boolean): HTMLElement {
+    const indicator = element('p', RUN_INDICATOR_LINE, busy ? 'run-indicator' : 'run-indicator idle');
+    indicator.setAttribute('role', 'status');
+    indicator.setAttribute('aria-hidden', String(!busy));
+    return indicator;
   }
 
   /**
@@ -1056,7 +1074,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
     const page = element('section', undefined, 'page');
     page.setAttribute('aria-label', mission.title);
     const busy = running.has(mission.path);
-    page.append(drawIntroduction(mission), drawWorkflow(mission.step, mission.additionalRounds, busy), drawRecipes(mission, busy));
+    page.append(drawIntroduction(mission), drawWorkflow(mission.step, mission.additionalRounds, busy), drawRunIndicator(busy), drawRecipes(mission, busy));
     const preview = previews.get(mission.path);
     if (preview !== undefined) {
       page.append(drawPreview(mission, preview, busy));

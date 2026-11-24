@@ -237,7 +237,10 @@ on a recipe button starts its run at once in a terminal; every recipe button sho
 placeholders included, before you click. While a run started for a mission is going, until you
 dismiss its terminal, that mission's page shows it: every action button on the page (the recipe
 buttons, the buttons on the question card and its alternatives, a preview's **Start run**, and
-**New task**) is disabled, and the workflow diagram's filled block pulses. The recipe dropdowns
+**New task**) is disabled, the workflow diagram's filled block pulses, and beneath the diagram an
+indicator says that the mission is waiting for its run's terminal to close. The indicator's space
+is kept on the page whether or not a run is going, so its showing and hiding moves none of the
+page's content. The recipe dropdowns
 and the dropdowns beside the buttons that run a recipe by its fixed name, **Show goal** and
 **Hide goal**, the **Open questions** and **Remaining tasks** headers, the question view's **First**, **Previous**, and **Next**, and every other
 mission's window stay enabled, and the page is drawn this way again whenever it is redrawn, after

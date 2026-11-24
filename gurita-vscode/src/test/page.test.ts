@@ -1027,6 +1027,53 @@ test('a run posted as started draws the page running, and its terminal closing d
   assertIdle(page);
 });
 
+const RUN_INDICATOR_LINE = "This mission is waiting for its run's terminal to close.";
+
+/** The page's run indicator, of which exactly one is drawn, and its place among the page's parts. */
+function runIndicator(page: Page): { indicator: FakeElement; place: number; parts: string[] } {
+  const found = page.root.all().filter((each) => each.has('run-indicator'));
+  assert.strictEqual(found.length, 1, 'the page draws one run indicator');
+  const drawn = page.root.all().find((each) => each.has('page'));
+  assert.ok(drawn !== undefined);
+  const parts = drawn.children.filter((child): child is FakeElement => child instanceof FakeElement);
+  return { indicator: found[0], place: parts.indexOf(found[0]), parts: parts.map((each) => each.className) };
+}
+
+test("a running mission's page shows the run indicator beneath the diagram, and an idle one keeps its place out of sight", () => {
+  const page = loadPage();
+  page.send(alphaPage([]));
+  const idle = runIndicator(page);
+  assert.strictEqual(idle.indicator.textContent, RUN_INDICATOR_LINE, 'the idle indicator keeps its line, so its space is the same');
+  assert.strictEqual(idle.indicator.has('idle'), true, 'the indicator is out of sight while no run is going');
+  assert.strictEqual(idle.indicator.getAttribute('aria-hidden'), 'true');
+  assert.ok(idle.parts[idle.place - 1].split(' ').includes('workflow'), 'the indicator stands directly beneath the diagram');
+  page.send({ type: 'running', missions: [ALPHA] });
+  const shown = runIndicator(page);
+  assert.strictEqual(shown.indicator.textContent, RUN_INDICATOR_LINE);
+  assert.strictEqual(shown.indicator.has('idle'), false, 'the indicator shows while the run is going');
+  assert.strictEqual(shown.indicator.getAttribute('aria-hidden'), 'false');
+  assert.strictEqual(shown.indicator.getAttribute('role'), 'status');
+  assert.strictEqual(shown.place, idle.place, 'the indicator stands at the same place in both states');
+  assert.deepStrictEqual(shown.parts.map((each) => each.replace(' idle', '')), idle.parts.map((each) => each.replace(' idle', '')), 'no part of the page moves');
+  page.send({ type: 'running', missions: [] });
+  assert.strictEqual(runIndicator(page).indicator.has('idle'), true, 'the terminal closing hides it again');
+  page.send(pageOf(mission(BETA, 'Beta'), [ALPHA]));
+  assert.strictEqual(runIndicator(page).indicator.has('idle'), true, "another mission's run shows nothing on this page");
+});
+
+test("the stylesheet reserves the run indicator's space while it is out of sight", () => {
+  const rules = stylesheetRules();
+  const hidden = rules.filter((rule) => rule.selectors.some((selector) => selector.includes('run-indicator')));
+  assert.ok(hidden.length > 0, 'the stylesheet holds rules for the indicator');
+  const idle = hidden.find((rule) => rule.selectors.includes('.run-indicator.idle'));
+  assert.ok(idle !== undefined, 'the stylesheet holds a rule for the idle indicator');
+  assert.strictEqual(idle.declarations.get('visibility'), 'hidden', 'the idle indicator is hidden by visibility, keeping its space');
+  for (const rule of hidden) {
+    assert.ok(!rule.declarations.has('display'), `${rule.selectors.join(', ')} takes the indicator out of no layout`);
+    assert.ok(!rule.declarations.has('height') && !rule.declarations.has('max-height'), `${rule.selectors.join(', ')} collapses no space`);
+  }
+});
+
 test("a held preview's start button is disabled while its mission runs, its close button not", () => {
   const page = loadPage();
   page.send(alphaPage([]));

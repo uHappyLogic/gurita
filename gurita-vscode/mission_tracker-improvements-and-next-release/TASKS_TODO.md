@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Indicator While a Run Blocks the Page
-
-Show on a mission page, while a run started for the mission is going and its action buttons are disabled, an indicator saying that the mission is waiting for the run's terminal to close. The indicator's space is reserved whether or not it shows, so switching it on or off moves none of the page's content; verified by page tests of the indicator in both states and of its reserved space in the page shell's stylesheet, with `gurita-vscode/README.md` describing it.
-
----
-
 ## Ask in Mission Context Button
 
 Add Ask in mission context as a fixed-name button in the same row as New task, which becomes the page's row of mission-wide actions above the two pane headers, drawn at every step, with an arrow-only variant dropdown of its own. It runs a shipped button recipe named by its skill, `ask-in-mission-context`, entered in `BUTTON_RECIPES`, kept out of the recipe list by name, and listed in the Settings window as a button recipe, its one line interactive (a bare `claude "/gurita:ask-in-mission-context --mission <path> <question>" … # interactive`), and the question is typed before the run starts through `askValues` as a required value that refuses an empty entry, as the issue description of `discuss-new-task` is today. Verified by reader, page, and pane tests of the button, its dropdown, the refused empty question, and the started run's line, with `gurita-vscode/README.md` describing the button.

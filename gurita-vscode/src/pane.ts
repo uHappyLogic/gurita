@@ -85,8 +85,10 @@
 // `<Short Title>. <note>`, an empty one leaves the line as if it held no note, and Escape starts
 // nothing. While a chain started for a mission is running, from its start until its terminal
 // closes, that mission's page draws every action button on it disabled, its recipe buttons, its
-// question card's buttons, its preview's start button, and its New task button, and pulses its
-// workflow diagram's filled block, while its two pane headers and every other mission's window stay
+// question card's buttons, its preview's start button, and its New task button, pulses its
+// workflow diagram's filled block, and shows beneath the diagram the run indicator, saying that the
+// mission is waiting for its run's terminal to close, whose space is reserved while no run is
+// going, so its showing moves nothing on the page, while its two pane headers and every other mission's window stay
 // enabled. The settings live in
 // the Settings window of their own (`settingsWindow.ts`), not on a mission's page: a variant with
 // at least one line on a harness the window disabled is left
@@ -1706,7 +1708,9 @@ function nonce(): string {
  * the page script sets when that row would overflow the window, it stacks the same blocks in a
  * centered column of equal width joined by the arrows turned downward, a block's name breaking onto
  * a second line only when the window is narrower than the block itself; the dashed, solid, filled, and pulsing
- * block rules hold in both layouts. It lays a mission page's two pane headers, Open questions and
+ * block rules hold in both layouts. The run indicator beneath the diagram keeps its space while it
+ * is out of sight, hidden under its `idle` class by `visibility` rather than taken out of the
+ * layout, so its showing and hiding moves nothing on the page. It lays a mission page's two pane headers, Open questions and
  * Remaining tasks, out as two columns of equal width that together fill the page's whole width,
  * the selected one underlined, with only the selected pane's content beneath them. It draws every
  * variant dropdown beside a button as its arrow alone, the selected name kept out of sight and
@@ -1760,6 +1764,8 @@ export function pageShell(webview: vscode.Webview, scripts: vscode.Uri[], title:
   .workflow.vertical .flow { flex-direction: column; align-items: stretch; gap: 0.2em; max-width: 100%; }
   .workflow.vertical .block { white-space: normal; text-align: center; }
   .workflow.vertical .arrow { align-self: center; transform: rotate(90deg); }
+  .run-indicator { margin: 0 0 0.5em; text-align: center; font-style: italic; color: var(--vscode-descriptionForeground); }
+  .run-indicator.idle { visibility: hidden; }
   .notice { border-left: 3px solid var(--vscode-inputValidation-warningBorder); padding: 0.2em 0.8em; }
   .controls { display: flex; gap: 0.5em; margin-bottom: 0.5em; }
   button.recipe, button.action, button.control { background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: 1px solid var(--vscode-contrastBorder, var(--vscode-foreground)); padding: 0.3em 0.9em; cursor: pointer; font: inherit; }
