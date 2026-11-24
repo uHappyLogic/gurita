@@ -115,5 +115,7 @@ Five missions under `gurita-vscode/` are finished, all between 2026-11-20 and 20
 
 - **View check failure scope.** The Missions view says the harness check failed whenever at least one harness that is Enabled in the Settings window and whose CLI is found fails its install or version check (not installed, listing unreadable, installed but disabled, or older than the packaged version). Disabled harnesses and harnesses whose CLI is not found never count, and a check that could not be run at all also makes the view say so.
 
+- **Harness check timing.** The harness check first runs in the background as soon as the Missions view first draws in a session (in practice at activation, which `onView:gurita.missions` triggers), through the same `checkHarnesses` path the Settings window uses. Its result stays kept for the rest of the session as today: only the Settings window's Check again and the end of an install or update run run it afresh, and the view's Refresh does not.
+
 ## Out of Scope
 

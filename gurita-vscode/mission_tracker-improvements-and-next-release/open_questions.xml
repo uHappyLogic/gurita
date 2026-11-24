@@ -17,30 +17,6 @@
       <drawback>Adds a second setting to the manifest, its description, and the README for a distinction few users are likely to want, and needs a default of its own, which depends on how the default of the chain setting is settled.</drawback>
     </alternative>
   </open-question>
-  <open-question id="Harness check timing">
-    <question>The harness check of Gurita for VS Code first runs in a session when the Settings window opens, and its result is kept for the session. Once the Missions side-bar view is to show a missing or outdated plugin, when does the check first run?</question>
-    <recommendation option="At the view&apos;s first draw">The newcomer the entry names is told before opening or firing anything, for one background check per session, while Refresh stays the fast re-read it is and Check again, in the Settings window the notice leads to, stays the way to renew the result.</recommendation>
-    <alternative id="At the view&apos;s first draw">
-      The check first runs in the background as soon as the Missions view first draws in a session (in practice at activation, which `onView:gurita.missions` triggers), through the same `checkHarnesses` path the Settings window uses, and its result stays kept for the rest of the session as today: only the Settings window&apos;s Check again and the end of an install or update run run it afresh, and the view&apos;s Refresh does not.
-      <advantage>A person who has just installed the extension is told the plugin is missing or outdated without opening anything or firing a run, which is exactly the case the tracker entry names, and the check still runs at most once per session unless asked, as the Settings window&apos;s design already holds.</advantage>
-      <drawback>Every session in which the view is shown spends one `harness_check.py` run, a login-shell session listing up to three CLIs with a 120-second limit, even when the plugin is fine and the person never looks at the result; and a plugin installed or updated outside the extension (from a terminal) leaves a stale notice standing until Check again in Settings or a window reload.</drawback>
-    </alternative>
-    <alternative id="At first draw, again on Refresh">
-      The check first runs in the background as soon as the Missions view first draws in a session, as in the previous option, and the premise that its result is kept for the whole session is relaxed: besides Check again and the end of an install or update run, the view&apos;s Refresh command (`gurita.refreshMissions`, which already re-reads everything else) also runs it afresh, the result replacing the kept one for the view and the Settings window alike.
-      <advantage>The notice is shown just as early, and a person who fixed the plugin outside the extension can clear or confirm it from the view itself with the Refresh they already use, so the view never holds a result the person has no way to renew from where it is shown.</advantage>
-      <drawback>Refresh gains a slow, shell-spawning side effect it does not have today, so a Refresh pressed to re-read the missions also starts a check of up to a couple of minutes, and the Settings window&apos;s stated rule that no refresh or re-read runs the check, recorded in `settingsWindow.ts`, has to be rewritten.</drawback>
-    </alternative>
-    <alternative id="Before the first run">
-      The check does not run at activation or view draw; it first runs when the person fires the session&apos;s first run of a recipe or button from a mission page or the side-bar view (or opens the Settings window, as today, whichever comes first), and its result is then kept for the session as today and shown in the view from then on.
-      <advantage>No check is spent in a session where nothing is run, and the result arrives at the one moment the tracker entry says a missing plugin hurts, the first run, so the view can say why that run is failing rather than leaving the terminal to say it.</advantage>
-      <drawback>A newcomer still sees only `No mission is live.` until they fire something, so the view gives no warning before the first failure, only an explanation beside it; and either the first run waits seconds for the check or both start together and the run fails anyway.</drawback>
-    </alternative>
-    <alternative id="On demand from the view">
-      The check runs automatically only where it does today, on the Settings window&apos;s first opening; the Missions view, until a check has run in the session, offers a control to check the plugin install, which runs the check through the same path, the result then kept for the session and shown in the view.
-      <advantage>No background process is ever started without the person asking, so startup cost and the CLIs&apos; login-shell sessions stay exactly as they are, while the view still gives a newcomer a visible first step towards the install state.</advantage>
-      <drawback>The person must notice and choose the control before learning anything, so the newcomer the entry describes can still skip it and meet the failure in the terminal first; it also needs a place in the view for the control, which depends on the form the View notice form question gives the view&apos;s notices.</drawback>
-    </alternative>
-  </open-question>
   <open-question id="View notice form">
     <question>The Missions side-bar view of Gurita for VS Code is a native tree that shows `No mission is live.` through the tree view&apos;s message. It is to show two new things: a notice that the plugin is missing or outdated, linking to the Settings window, and an offer to run the workflow bootstrap. In what form does the view show them: as tree rows, as the view&apos;s welcome content, in the view&apos;s message, or as notifications?</question>
     <recommendation option="Rows for both">The view already draws every action as a leaf row with a command, an icon, and a tooltip, so each of the two is one more row kind that stays while its condition holds, opens the Settings window or runs the bootstrap on a click, and hides neither the mission-starting rows nor the missions.</recommendation>
