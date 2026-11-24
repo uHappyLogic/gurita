@@ -166,7 +166,7 @@
     "compile": "tsc -p tsconfig.json && tsc -p tsconfig.webview.json",
     "test": "npm run compile && node --test \"out/test/**/*.test.js\"",
     "vscode:prepublish": "npm run compile && node scripts/bundle.js",
-    "package": "node -e \"require('fs').mkdirSync('dist',{recursive:true})\" && vsce package --out dist/gurita-vscode.vsix"
+    "package": "node -e \"require('fs').mkdirSync('dist',{recursive:true})\" && vsce package --out dist/gurita-vscode.vsix --baseImagesUrl https://github.com/uHappyLogic/gurita/raw/HEAD/gurita-vscode"
   },
   "devDependencies": {
     "@types/node": "22.20.5",

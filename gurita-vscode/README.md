@@ -6,6 +6,8 @@ run the plugin's skills as recipes in a terminal, and a looped task run that com
 mission's tasks one at a time. It drives the `claude` and `agy` command-line tools with the
 Gurita plugin installed in them; it does not replace the plugin.
 
+![A sample mission opened from the Gurita side-bar view, and its First run recipe running in a terminal while the mission's page follows it](media/demo.gif)
+
 The extension runs only on macOS, Linux, or through Remote-WSL. On native Windows it shows one
 message saying so and leaves its view, windows, and runner inert; in a Remote-WSL window it runs
 on the Linux side and works as it does on Linux.

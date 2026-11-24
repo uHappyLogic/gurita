@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Demo GIF From a Capture Script
-
-Write a tracked script under `gurita-vscode/scripts/` that seeds a sample project and mission from the host suite's fixture project, launches VS Code with a throwaway profile and the extension loaded, opens the mission from the side-bar view, starts a recipe run against a stand-in for the harness CLI placed first on `PATH`, so the run is deterministic and uses no model session, captures frames, and assembles them into one animated GIF tracked under `gurita-vscode/`; run it, and reference the GIF near the top of the listing README by a relative path the packager resolves against the repository's raw files, the README's only image, so the script, the GIF, and the reference land in one commit. It is verified by the script exiting cleanly, by the file standing at its path, opening with a GIF signature, and staying under the size bound the task's bar states, by that path being the one the listing README references, and by the captured frames showing the intended flow, a sample mission opened from the side-bar view and a recipe run progressing in a mission window. No test compares the committed GIF with the generator's output, because a capture is not reproducible byte for byte.
-
----
-
 ## Extension Build and Tests in CI
 
 Extend the existing `drift-gate` job with a Node setup (`actions/setup-node`, pinned to a SHA, Node 22) and then `npm ci`, `npm test`, and `npm run package` in `gurita-vscode/`, the built VSIX discarded, so the extension's `node:test` tests and its package build run in CI; CI stays one job with no path filter and publishes nothing. It is verified by the workflow file parsing with the new action pinned to a full SHA, and by the same three commands passing locally from a fresh `npm ci`.
