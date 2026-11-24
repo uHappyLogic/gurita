@@ -959,7 +959,7 @@ test('the own recipe file defaults to ~/.gurita/recipes.md and honours the setti
   assert.strictEqual(ownRecipesFile('$HOME/recipes.md', '/home/someone'), '$HOME/recipes.md');
 });
 
-test('the button recipes carry the eight fixed names, each the bare name of its skill', () => {
+test('the button recipes carry the nine fixed names, each the bare name of its skill', () => {
   assert.deepStrictEqual(Object.values(BUTTON_RECIPES), [
     'discuss-open-question',
     'answer-open-question',
@@ -969,6 +969,7 @@ test('the button recipes carry the eight fixed names, each the bare name of its 
     'discuss-new-task',
     'ask-in-mission-context',
     'init-mission-base-workflow',
+    'capture-mission-principle-updates',
   ]);
 });
 
@@ -1037,6 +1038,32 @@ test('the shipped ask-in-mission-context recipe is one interactive Claude Code l
   const found = buttonRecipe(recipes, BUTTON_RECIPES.askMission, ['path', 'question']);
   assert.ok(found.state === 'found');
   assert.ok(!pageRecipes(recipes, ['path']).some((entry) => entry.name === BUTTON_RECIPES.askMission));
+});
+
+test("the shipped capture-mission-principle-updates recipe is one interactive line taking the mission's path as its positional argument with no --mission, kept out of the recipe list at every step", () => {
+  const file = path.join(__dirname, '..', '..', 'shipped_recipes.md');
+  const recipes = parseShippedRecipes(fs.readFileSync(file, 'utf8'), file);
+  const recipe = runs(recipes, BUTTON_RECIPES.capturePrinciples);
+  assert.deepStrictEqual(recipe.lines, [
+    'claude "/gurita:capture-mission-principle-updates <path>" --dangerously-skip-permissions --model "fable" --effort high; # interactive',
+  ]);
+  assert.strictEqual(isHeadless(recipe.lines[0]), false, 'interactive, since capture asks for one confirmation before it commits');
+  assert.ok(!recipe.lines[0].includes('--mission'), 'the path is positional, with no --mission');
+  assert.deepStrictEqual(recipe.knownPlaceholders, ['path']);
+  assert.deepStrictEqual(recipe.unknownPlaceholders, []);
+  assert.strictEqual(recipe.singleTask, false);
+  assert.strictEqual(byName(recipes, BUTTON_RECIPES.capturePrinciples).stage, undefined, 'it declares no step');
+  const found = buttonRecipe(recipes, BUTTON_RECIPES.capturePrinciples, ['path']);
+  assert.ok(found.state === 'found', "the Capture principles button, holding the mission's path, can run it");
+  const none = buttonRecipe(recipes, BUTTON_RECIPES.capturePrinciples, []);
+  assert.ok(none.state === 'refused');
+  assert.match(none.cause, /has no value for: <path>\./);
+  for (const step of WORKFLOW_STEPS) {
+    assert.ok(
+      !pageRecipes(stageRecipes(recipes, step), ['path']).some((entry) => entry.name === BUTTON_RECIPES.capturePrinciples),
+      `kept out of the recipe list by its name on a page filling ${step}`,
+    );
+  }
 });
 
 test('the shipped init-mission-base-workflow recipe is one headless line taking no value, kept out of the recipe list at every step', () => {

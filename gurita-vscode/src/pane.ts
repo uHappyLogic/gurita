@@ -245,7 +245,7 @@ type RecipeRead = { state: 'read'; recipes: Recipe[]; disabled: Harness[] } | { 
 /** The recipe list one mission's page shows, or the cause the recipes could not be read. */
 type RecipePart = { state: 'read'; recipes: PageRecipe[] } | { state: 'failed'; cause: string };
 
-/** One of the eight buttons and rows outside the recipe list, each running the recipe of its fixed name. */
+/** One of the nine buttons and rows outside the recipe list, each running the recipe of its fixed name. */
 type FixedButton = keyof typeof BUTTON_RECIPES;
 
 /**
@@ -253,7 +253,7 @@ type FixedButton = keyof typeof BUTTON_RECIPES;
  * mission; the answer-with-alternative buttons, one per alternative, each with a dropdown and a
  * selection of its own, are posted apart.
  */
-type PageButton = Exclude<FixedButton, MissionButton | 'answerWithAlternative'>;
+type PageButton = Exclude<FixedButton, MissionButton | 'answerWithAlternative' | 'capturePrinciples'>;
 
 /** The fixed-name buttons on a mission's page posted once with its mission, by the button. */
 const PAGE_BUTTONS: readonly PageButton[] = ['discussQuestion', 'answerQuestion', 'discussTask', 'askMission'];
@@ -263,7 +263,7 @@ const PAGE_BUTTONS: readonly PageButton[] = ['discussQuestion', 'answerQuestion'
  * offers and the one selected, with that variant's lines; or no variant at all,
  * every one it could run having a line on a disabled harness, the button drawn disabled.
  */
-type FixedButtonEntry =
+export type FixedButtonEntry =
   | {
       state: 'offered';
       /** The selected variant's lines as written, placeholders included. */
@@ -279,7 +279,7 @@ type FixedButtonEntry =
 type FixedButtons = Partial<Record<FixedButton, FixedButtonEntry>>;
 
 /** What the latest answer posted for a fixed-name button, which its click and its dropdown's selection are checked against. */
-type ButtonPost =
+export type ButtonPost =
   | { state: 'offered'; recipe: string; lines: string[]; variants: string[]; selected: number }
   | { state: 'disabled' }
   | { state: 'refused'; cause: string };
@@ -475,10 +475,10 @@ export function onSessionRead(listener: () => void): vscode.Disposable {
 }
 
 /**
- * Calls `listener` after every change to the variant remembered for either mission-starting control,
- * made from the side-bar view's QuickPick, and after every edit in the
- * Settings window, which may change what either control runs, until the returned disposable is
- * disposed.
+ * Calls `listener` after every change to a variant remembered once per project, for either
+ * mission-starting control, made from the side-bar view's QuickPick, or for a finished mission's
+ * window's Capture principles button, made from its dropdown, and after every edit in the Settings
+ * window, which may change what any of them runs, until the returned disposable is disposed.
  */
 export function onStartingSelection(listener: () => void): vscode.Disposable {
   startingListeners.push(listener);
@@ -492,7 +492,7 @@ export function onStartingSelection(listener: () => void): vscode.Disposable {
   };
 }
 
-/** Tells every listener that what a mission-starting control runs may have changed. */
+/** Tells every listener that what a mission-starting control or the Capture principles button runs may have changed. */
 function startingChanged(): void {
   for (const listener of [...startingListeners]) {
     listener();
@@ -1518,6 +1518,7 @@ const BUTTON_PLACEHOLDERS: Record<FixedButton, readonly string[]> = {
   discussTask: ['path', ...MISSION_ACTIONS.discussTask.typed],
   askMission: ['path', ...MISSION_ACTIONS.askMission.typed],
   bootstrap: MISSION_BUTTONS.bootstrap.typed,
+  capturePrinciples: ['path'],
 };
 
 /** The input box's prompt for each typed value. */
@@ -1564,7 +1565,7 @@ function postedButton(posts: ButtonPosts | undefined, button: FixedButton, varia
  * variant. A button posted as refused is told in an error notification naming the cause, and
  * every other click yields nothing.
  */
-function postedRun(post: ButtonPost | undefined, variant: unknown): { name: string; lines: string[] } | undefined {
+export function postedRun(post: ButtonPost | undefined, variant: unknown): { name: string; lines: string[] } | undefined {
   if (post?.state === 'refused') {
     void vscode.window.showErrorMessage(post.cause);
     return undefined;
@@ -1840,6 +1841,33 @@ export async function pickStartingVariant(context: vscode.ExtensionContext, butt
   startingChanged();
 }
 
+/**
+ * What a finished mission's window's Capture principles button runs, its recipe, the one named
+ * `capture-mission-principle-updates`, read afresh, as `fixedButton` gives it, the variant its
+ * dropdown stands on remembered once per project, as the mission-starting rows' is: the entry
+ * posted to the page, none when the recipe cannot be read or run, and what the button's click and
+ * dropdown are checked against.
+ */
+export function captureButton(context: vscode.ExtensionContext): { entry?: FixedButtonEntry; post: ButtonPost } {
+  const read = readRecipeList(context);
+  return fixedButton(read, 'capturePrinciples', projectSelections(context, read)[BUTTON_RECIPES.capturePrinciples]);
+}
+
+/**
+ * Remembers the variant named `variant` once per project for the recipe of the button posted as
+ * `post`, when `post` offers it, and tells every listener; a variant it does not offer is not
+ * remembered. Returns whether it was remembered.
+ */
+export async function rememberProjectVariant(context: vscode.ExtensionContext, post: ButtonPost | undefined, variant: unknown): Promise<boolean> {
+  if (post?.state !== 'offered' || typeof variant !== 'string' || !post.variants.includes(variant)) {
+    return false;
+  }
+  const stored = readProjectSelections(context.workspaceState.get(PROJECT_SELECTIONS_KEY));
+  await context.workspaceState.update(PROJECT_SELECTIONS_KEY, { ...stored, [post.recipe]: variant });
+  startingChanged();
+  return true;
+}
+
 /** `value` escaped for a double-quoted HTML attribute. */
 function escapeAttribute(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -2006,6 +2034,7 @@ export function pageShell(webview: vscode.Webview, scripts: vscode.Uri[], title:
   .task-part + .task-part { margin-top: 1em; }
   .finished-head h2 { margin: 1em 0 0.2em; font-size: 1.3em; }
   .finished-facts { margin: 0 0 1em; opacity: 0.85; }
+  .finished-actions { margin-bottom: 1em; }
   .finished-part + .finished-part { margin-top: 1em; }
   .finished-summary .summary-text p, .finished-summary .summary-text ul { margin: 0.3em 0; }
   .task-part-heading { margin: 0 0 0.5em; font-size: 1.05em; }

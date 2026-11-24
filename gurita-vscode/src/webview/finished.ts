@@ -9,9 +9,16 @@
 // commit in an editor tab of its own, and its verified bar beneath that, drawn by the text renderer.
 // The completed tasks are shown at once, behind no control. A part that could not be read draws its
 // failure line with the cause beneath it in its place, and a mission with no completed task the line
-// saying so. Before the first answer the page draws one line saying it is being read. The page starts
-// no run and draws no action button. Every value is drawn as text, never as markup, since it comes
-// from the workspace.
+// saying so. Before the first answer the page draws one line saying it is being read. Between the
+// heading and the Summary the page draws its one action, the Capture principles button, in the form
+// a mission page's fixed-name buttons take: its name, then the name of the variant selected in the
+// arrow-only dropdown beside it, with that variant's lines as its hover text, a click posting the
+// mission and the variant so the extension runs it; its name alone when the extension posts nothing
+// for it, its recipe not read or not one it can run, a click then posting no variant, and drawn
+// disabled, with the cause in its hover text, when every variant it could run has a line on a
+// disabled harness. A pick in its dropdown posts the variant to the extension, which remembers it
+// and answers again. Every value is drawn as text, never as markup, since it comes from the
+// workspace.
 
 interface VsCodeApi {
   postMessage(message: unknown): void;
@@ -30,11 +37,21 @@ declare function acquireVsCodeApi(): VsCodeApi;
   type CompletedRead = { state: 'read'; tasks: CompletedTask[] } | { state: 'failed'; cause: string };
   type SummaryRead = { state: 'read'; summary: { date: string; title: string; summary: string } } | { state: 'failed'; cause: string };
 
+  interface VariantChoice {
+    name: string;
+    own: boolean;
+  }
+
+  type ButtonEntry =
+    | { state: 'offered'; lines: string[]; variants: VariantChoice[]; selected: number }
+    | { state: 'disabled'; cause: string };
+
   interface FinishedMission {
     path: string;
     title: string;
     summary: SummaryRead;
     completed: CompletedRead;
+    capture?: ButtonEntry;
   }
 
   /** The line the page draws until the extension's first answer. */
@@ -50,6 +67,9 @@ declare function acquireVsCodeApi(): VsCodeApi;
   /** The words before a completed task's commit hash on its commit link, and the link's hover text, as the Tasks pane draws them. */
   const COMMIT_LINK_PREFIX = 'Open commit ';
   const COMMIT_LINK_HOVER = "Open this task's commit, its verified bar and its whole patch, in an editor tab";
+  /** The label of the page's one action button, and its hover text while nothing is posted for it. */
+  const CAPTURE_LABEL = 'Capture principles';
+  const CAPTURE_HOVER = "Open an interactive session distilling this mission's recorded decisions into the project's principle store";
 
   const vscode = acquireVsCodeApi();
   const root = document.getElementById('root') as HTMLElement;
@@ -84,6 +104,54 @@ declare function acquireVsCodeApi(): VsCodeApi;
     }
     head.append(facts);
     return head;
+  }
+
+  /**
+   * The page's row of actions: the Capture principles button, its name and the selected variant's
+   * name, with the variant's lines as its hover text, and the arrow-only dropdown beside it while it
+   * offers a variant; its name alone while nothing is posted for it, and drawn disabled with the
+   * cause in its hover text while every variant it could run is left out for a disabled harness.
+   */
+  function drawActions(mission: FinishedMission): HTMLElement {
+    const row = element('div', undefined, 'controls finished-actions');
+    const entry = mission.capture;
+    const variant = entry?.state === 'offered' ? entry.variants[entry.selected]?.name : undefined;
+    const node = element('button', undefined, 'action captureButton');
+    node.type = 'button';
+    node.append(element('span', CAPTURE_LABEL, 'recipe-name'));
+    node.addEventListener('click', () => vscode.postMessage({ type: 'capturePrinciples', mission: mission.path, variant }));
+    const item = element('span', undefined, 'recipe-entry');
+    item.append(node);
+    if (entry?.state === 'offered') {
+      if (variant !== undefined) {
+        node.append(element('span', variant, 'recipe-variant-name'));
+      }
+      node.title = entry.lines.join('\n');
+      const choice = element('select', undefined, 'recipe-variant');
+      const label = `The variant of ${CAPTURE_LABEL}`;
+      choice.setAttribute('aria-label', label);
+      choice.title = label;
+      entry.variants.forEach((each, index) => {
+        const option = element('option', each.name);
+        option.value = String(index);
+        option.selected = index === entry.selected;
+        choice.append(option);
+      });
+      choice.addEventListener('change', () => {
+        const picked = entry.variants[Number(choice.value)];
+        if (picked !== undefined) {
+          vscode.postMessage({ type: 'selectCaptureVariant', mission: mission.path, variant: picked.name });
+        }
+      });
+      item.append(choice);
+    } else if (entry?.state === 'disabled') {
+      node.disabled = true;
+      node.title = `${CAPTURE_HOVER}\n${entry.cause}`;
+    } else {
+      node.title = CAPTURE_HOVER;
+    }
+    row.append(item);
+    return row;
   }
 
   /** The Summary part: the summary drawn by the text renderer, the line saying there is none, or the failure. */
@@ -150,7 +218,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
   function draw(mission: FinishedMission): void {
     const page = element('div', undefined, 'finished');
     page.setAttribute('aria-label', mission.title);
-    page.append(drawHead(mission), drawSummary(mission), drawCompleted(mission));
+    page.append(drawHead(mission), drawActions(mission), drawSummary(mission), drawCompleted(mission));
     root.replaceChildren(page);
   }
 

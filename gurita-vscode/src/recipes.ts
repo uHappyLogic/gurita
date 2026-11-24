@@ -787,9 +787,9 @@ export function selectedChoice(entry: PageRecipe): PageVariantChoice {
 /**
  * The fixed names of the recipes the buttons outside the chains run, each the bare name of the
  * skill its one line invokes: two on a question's card, one on each alternative on that card,
- * the two mission-starting rows and the bootstrap offer row of the side-bar view, and the new-task
+ * the two mission-starting rows and the bootstrap offer row of the side-bar view, the new-task
  * and ask-in-mission-context buttons in a mission page's row of mission-wide actions above its pane
- * headers.
+ * headers, and the Capture principles button on a finished mission's window.
  */
 export const BUTTON_RECIPES = {
   discussQuestion: 'discuss-open-question',
@@ -800,6 +800,7 @@ export const BUTTON_RECIPES = {
   discussTask: 'discuss-new-task',
   askMission: 'ask-in-mission-context',
   bootstrap: 'init-mission-base-workflow',
+  capturePrinciples: 'capture-mission-principle-updates',
 } as const;
 
 /**

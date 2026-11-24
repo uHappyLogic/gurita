@@ -146,3 +146,8 @@ claude -p "/gurita:define-mission-goal --at <scope> <goal>" --dangerously-skip-p
 ```
 claude -p "/gurita:init-mission-base-workflow" --dangerously-skip-permissions --model "sonnet" --effort medium;
 ```
+
+### capture-mission-principle-updates
+```
+claude "/gurita:capture-mission-principle-updates <path>" --dangerously-skip-permissions --model "fable" --effort high; # interactive
+```

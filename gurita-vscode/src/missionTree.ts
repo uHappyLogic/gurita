@@ -56,8 +56,8 @@
 // mission's row is a leaf labelled with the mission's title, its path when its finish commit names
 // none, described by the date it was finished,
 // with its title, path, and finish date as its hover text, and its click runs a hidden command of
-// its own that opens that mission's window, its summary and its completed tasks
-// (`finishedWindow.ts`), or reveals it when one is open. With no mission finished the row expands
+// its own that opens that mission's window, its summary, its completed tasks, and its Capture
+// principles action (`finishedWindow.ts`), or reveals it when one is open. With no mission finished the row expands
 // to one leaf saying so, and while the read fails to one leaf with the failure line, the cause as
 // its hover text.
 

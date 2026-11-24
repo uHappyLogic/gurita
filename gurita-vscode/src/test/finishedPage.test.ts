@@ -9,12 +9,13 @@ import { FakeElement, FakeText, Page, loadScript, stylesheetRules } from './fake
 const MISSION = 'pkg/mission_done/';
 
 /** The answer the extension posts for the finished mission, its parts as `parts` changes them. */
-function answer(parts: { summary?: unknown; completed?: unknown } = {}): unknown {
+function answer(parts: { summary?: unknown; completed?: unknown; capture?: unknown } = {}): unknown {
   return {
     type: 'finished',
     mission: {
       path: MISSION,
       title: 'The done mission',
+      ...('capture' in parts ? (parts.capture === undefined ? {} : { capture: parts.capture }) : { capture: CAPTURE }),
       summary: parts.summary ?? {
         state: 'read',
         summary: { date: '2026-11-05', title: 'The done mission', summary: '- It was `built`.\n- Nothing else.' },
@@ -29,6 +30,18 @@ function answer(parts: { summary?: unknown; completed?: unknown } = {}): unknown
     },
   };
 }
+
+/** The capture line the shipped recipe carries, and the entry the extension posts for the Capture principles button. */
+const CAPTURE_LINE = 'claude "/gurita:capture-mission-principle-updates <path>" --dangerously-skip-permissions --model "fable" --effort high; # interactive';
+const CAPTURE = {
+  state: 'offered',
+  lines: [CAPTURE_LINE],
+  variants: [
+    { name: 'default', own: false },
+    { name: 'Opus', own: true },
+  ],
+  selected: 0,
+};
 
 function load(): Page {
   return loadScript('finished.js');
@@ -99,7 +112,53 @@ test("the page draws the mission's title, its path and finish date, its summary 
   assert.strictEqual(links[0].type, 'button');
   links[1].click();
   assert.deepStrictEqual(page.posted.slice(1), [{ type: 'openCommit', mission: MISSION, hash: 'def5678' }], "a link posts its hash with the page's mission");
-  assert.ok(!page.root.all().some((each) => each.tagName === 'button' && !each.has('commit-link')), 'the page draws no action button');
+  assert.deepStrictEqual(
+    page.root.all().filter((each) => each.tagName === 'button' && !each.has('commit-link')).map(text),
+    ['Capture principlesdefault'],
+    'the one action button beside the commit links is Capture principles',
+  );
+});
+
+test('the Capture principles button stands between the heading and the Summary, showing its selected variant, its lines as hover text, and the arrow-only dropdown beside it', () => {
+  const page = load();
+  page.send(answer());
+  const finished = part(page, 'finished');
+  assert.deepStrictEqual(
+    finished.children.map((child) => (child as FakeElement).className),
+    ['finished-head', 'controls finished-actions', 'finished-part finished-summary', 'finished-part completed-tasks'],
+  );
+  const capture = part(page, 'captureButton');
+  assert.strictEqual(capture.tagName, 'button');
+  assert.strictEqual(capture.type, 'button');
+  assert.deepStrictEqual(capture.children.map(text), ['Capture principles', 'default'], 'its name, then the selected variant');
+  assert.strictEqual(capture.title, CAPTURE_LINE, "the selected variant's lines as its hover text");
+  assert.strictEqual(capture.disabled, false);
+  const choice = part(page, 'recipe-variant');
+  assert.strictEqual(choice.tagName, 'select');
+  assert.strictEqual(choice.getAttribute('aria-label'), 'The variant of Capture principles');
+  assert.deepStrictEqual(choice.children.map(text), ['default', 'Opus'], 'each variant by its bare name');
+  capture.click();
+  assert.deepStrictEqual(page.posted.slice(1), [{ type: 'capturePrinciples', mission: MISSION, variant: 'default' }], "a click posts the page's mission and the variant it stands on");
+  choice.change('1');
+  assert.deepStrictEqual(page.posted.slice(2), [{ type: 'selectCaptureVariant', mission: MISSION, variant: 'Opus' }], 'a pick posts the variant picked');
+  page.send(answer({ capture: { ...CAPTURE, selected: 1 } }));
+  assert.deepStrictEqual(part(page, 'captureButton').children.map(text), ['Capture principles', 'Opus'], 'the next answer redraws the button on the variant remembered');
+});
+
+test('the Capture principles button stands as its name alone while nothing is posted for it, and disabled with the cause while every variant is on a disabled harness', () => {
+  const page = load();
+  page.send(answer({ capture: undefined }));
+  let capture = part(page, 'captureButton');
+  assert.deepStrictEqual(capture.children.map(text), ['Capture principles']);
+  assert.strictEqual(capture.title, "Open an interactive session distilling this mission's recorded decisions into the project's principle store");
+  assert.strictEqual(parts(page, 'recipe-variant').length, 0, 'no dropdown is drawn');
+  capture.click();
+  assert.deepStrictEqual(page.posted.slice(1), [{ type: 'capturePrinciples', mission: MISSION }], 'a click posts no variant, so the extension tells why');
+  page.send(answer({ capture: { state: 'disabled', cause: 'Every variant is on a disabled harness.' } }));
+  capture = part(page, 'captureButton');
+  assert.strictEqual(capture.disabled, true);
+  assert.ok(capture.title.endsWith('\nEvery variant is on a disabled harness.'));
+  assert.strictEqual(parts(page, 'recipe-variant').length, 0);
 });
 
 test('a mission with no completed task, a summary-less finish, and a part that could not be read each draw their own line', () => {
@@ -127,6 +186,7 @@ test('the stylesheet sets the finished window: its heading, its parts apart, and
   const rule = (selector: string) => rules.find((each) => each.selectors.includes(selector));
   assert.ok(rule('.finished-head h2') !== undefined);
   assert.ok(rule('.finished-part + .finished-part')?.declarations.has('margin-top'));
+  assert.ok(rule('.finished-actions')?.declarations.has('margin-bottom'), 'the action row stands apart from the Summary');
   assert.strictEqual(rule('.finished code')?.declarations.get('font-family'), 'var(--vscode-editor-font-family)');
   assert.ok(rule('.task-list .task-commit') !== undefined, 'the completed tasks take the Tasks pane rules');
 });

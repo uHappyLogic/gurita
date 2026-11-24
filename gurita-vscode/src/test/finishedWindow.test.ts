@@ -6,7 +6,8 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 // A finished mission's window, against a stub of the `vscode` module standing in for the editor: the
 // webview panel it opens, the answer its page's ready message gets, read from a git fixture through
-// the plugin's own missions tool, and the commit documents a click on a commit link opens.
+// the plugin's own missions tool, the commit documents a click on a commit link opens, and the run its
+// Capture principles button starts from the shipped recipe file.
 const Module = require('node:module') as {
   _load: (request: string, parent: unknown, isMain: boolean) => unknown;
 };
@@ -37,6 +38,22 @@ interface StubUri {
 const opened: StubUri[] = [];
 const shown: unknown[] = [];
 
+/** A terminal the stub's editor created: its name, its runner arguments, its environment, and each time it was shown. */
+interface StubTerminal {
+  name: string;
+  cwd?: string;
+  args: string[];
+  env?: Record<string, string>;
+  shows: (boolean | undefined)[];
+  show(preserveFocus?: boolean): void;
+}
+const terminals: StubTerminal[] = [];
+const errors: string[] = [];
+const notices: string[] = [];
+
+// The person's own recipe file and variant store are read from a home of the test's own.
+process.env.HOME = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-finished-home-')));
+
 const stub = {
   Uri: {
     joinPath: (base: { path: string }, ...segments: string[]) => ({ path: [base.path, ...segments].join('/') }),
@@ -47,6 +64,7 @@ const stub = {
     constructor(readonly id: string) {}
   },
   workspace: {
+    getConfiguration: () => ({ get: (_key: string, fallback?: unknown) => fallback }),
     openTextDocument: (uri: StubUri) => {
       opened.push(uri);
       return Promise.resolve({ uri, languageId: 'diff' });
@@ -105,7 +123,28 @@ const stub = {
       shown.push(document);
       return Promise.resolve(undefined);
     },
-    showErrorMessage: () => Promise.resolve(undefined),
+    showErrorMessage: (message: string) => {
+      errors.push(message);
+      return Promise.resolve(undefined);
+    },
+    showInformationMessage: (message: string) => {
+      notices.push(message);
+      return Promise.resolve(undefined);
+    },
+    createTerminal(options: { name: string; cwd?: string; shellArgs?: string[]; env?: Record<string, string> }): StubTerminal {
+      const terminal: StubTerminal = {
+        name: options.name,
+        cwd: options.cwd,
+        args: [...(options.shellArgs ?? [])],
+        env: options.env === undefined ? undefined : { ...options.env },
+        shows: [],
+        show(preserveFocus?: boolean): void {
+          terminal.shows.push(preserveFocus);
+        },
+      };
+      terminals.push(terminal);
+      return terminal;
+    },
   },
 };
 
@@ -115,12 +154,27 @@ const finishedWindow = require('../finishedWindow') as typeof import('../finishe
 Module._load = load;
 
 const MISSIONS_TOOL = path.join(__dirname, '..', '..', '..', 'core', 'tools', 'missions.py');
+const SHIPPED_RECIPES = path.join(__dirname, '..', '..', 'shipped_recipes.md');
+
+/** The project's `workspaceState` as the stub's editor keeps it, by key. */
+const workspaceState = new Map<string, unknown>();
 
 const context = {
   subscriptions: [] as unknown[],
   extensionUri: { fsPath: '/extension', path: '/extension' },
-  asAbsolutePath: (file: string) => (file === 'bundled/missions.py' ? MISSIONS_TOOL : `/extension/${file}`),
+  workspaceState: {
+    get: (key: string) => workspaceState.get(key),
+    update: (key: string, value: unknown) => {
+      workspaceState.set(key, JSON.parse(JSON.stringify(value)));
+      return Promise.resolve();
+    },
+  },
+  asAbsolutePath: (file: string) =>
+    file === 'bundled/missions.py' ? MISSIONS_TOOL : file === 'bundled/shipped_recipes.md' ? SHIPPED_RECIPES : `/extension/${file}`,
 } as unknown as import('vscode').ExtensionContext;
+
+/** The line the shipped capture-mission-principle-updates recipe carries. */
+const CAPTURE_LINE = 'claude "/gurita:capture-mission-principle-updates <path>" --dangerously-skip-permissions --model "fable" --effort high; # interactive';
 
 function git(cwd: string, ...args: string[]): string {
   return execFileSync('git', ['-c', 'user.name=Test', '-c', 'user.email=test@example.com', ...args], { cwd, encoding: 'utf8' });
@@ -196,6 +250,11 @@ test("the page's ready message is answered with the mission's summary and its co
     posted.mission.completed.state === 'read' ? posted.mission.completed.tasks.map(({ hash: each, title, bar }) => ({ hash: each, title, bar })) : [],
     [{ hash, title: 'Build It', bar: '- It is `built`' }],
   );
+  assert.deepStrictEqual(
+    posted.mission.capture,
+    { state: 'offered', lines: [CAPTURE_LINE], variants: [{ name: 'default', own: false }], selected: 0 },
+    'the Capture principles button runs the shipped capture-mission-principle-updates recipe, standing on its default',
+  );
 });
 
 test('a click on a posted commit link opens that commit as a document of the commit scheme, and any other hash or mission opens nothing', async () => {
@@ -208,6 +267,71 @@ test('a click on a posted commit link opens that commit as a document of the com
   panel.receive?.({ type: 'openCommit', mission: MISSION, hash });
   await until(() => shown.length === 1, 'the commit is shown');
   assert.deepStrictEqual(opened, [{ scheme: 'gurita-commit', path: `/${hash}.diff`, query: root }]);
+});
+
+test("a click on Capture principles starts the posted variant's run at the project root, held under the finished mission's path, its path filling <path> with no --mission, and nothing else starts one", async () => {
+  const [panel] = panels;
+  panel.receive?.({ type: 'capturePrinciples', mission: 'pkg/mission_other/', variant: 'default' });
+  panel.receive?.({ type: 'capturePrinciples', mission: MISSION, variant: 'Opus' });
+  panel.receive?.({ type: 'capturePrinciples', mission: MISSION });
+  assert.strictEqual(terminals.length, 0, 'another mission, a variant not posted, or none starts nothing');
+
+  panel.receive?.({ type: 'capturePrinciples', mission: MISSION, variant: 'default' });
+  assert.strictEqual(terminals.length, 1);
+  const [run] = terminals;
+  assert.strictEqual(run.name, `Gurita: capture-mission-principle-updates (${MISSION})`, "the run is held under the finished mission's path");
+  assert.strictEqual(run.cwd, root, 'it starts at the project root');
+  assert.deepStrictEqual(run.args, [
+    '/extension/runner.py',
+    'chain',
+    '--close-when-finished',
+    '--',
+    'claude "/gurita:capture-mission-principle-updates ${GURITA_PATH}" --dangerously-skip-permissions --model "fable" --effort high; # interactive',
+  ]);
+  assert.ok(!run.args[4].includes('--mission'), 'the path is the positional argument, with no --mission');
+  assert.deepStrictEqual(run.env, { GURITA_PATH: MISSION }, "the mission's path is its one value, nothing typed");
+  assert.deepStrictEqual(run.shows, [undefined], 'its terminal is shown');
+
+  panel.receive?.({ type: 'capturePrinciples', mission: MISSION, variant: 'default' });
+  assert.strictEqual(terminals.length, 1, 'a second click while it is going starts nothing');
+  assert.deepStrictEqual(notices, ['A chain is already running for this mission.']);
+  assert.deepStrictEqual(run.shows, [undefined, undefined], 'and reveals its terminal');
+});
+
+test("an own recipe's variant of capture-mission-principle-updates is offered beside the shipped one, and a pick is remembered once per project and answered again", async () => {
+  const [panel] = panels;
+  const home = process.env.HOME as string;
+  fs.mkdirSync(path.join(home, '.gurita'), { recursive: true });
+  const opus = 'claude "/gurita:capture-mission-principle-updates <path>" --model "opus" --effort xhigh; # interactive';
+  fs.writeFileSync(path.join(home, '.gurita', 'recipes.md'), `## Recipes\n\n### capture-mission-principle-updates\n#### Opus\n\`\`\`\n${opus}\n\`\`\`\n`);
+  const before = panel.posted.length;
+  panel.receive?.({ type: 'ready' });
+  await until(() => panel.posted.length === before + 1, 'the answer is posted');
+  let posted = panel.posted[panel.posted.length - 1] as import('../finishedWindow').FinishedMessage;
+  assert.deepStrictEqual(posted.mission.capture, {
+    state: 'offered',
+    lines: [CAPTURE_LINE],
+    variants: [
+      { name: 'default', own: false },
+      { name: 'Opus', own: true },
+    ],
+    selected: 0,
+  });
+
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  panel.receive?.({ type: 'selectCaptureVariant', mission: 'pkg/mission_other/', variant: 'Opus' });
+  panel.receive?.({ type: 'selectCaptureVariant', mission: MISSION, variant: 'Sonnet' });
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  assert.strictEqual(workspaceState.get('gurita.projectVariantSelections'), undefined, 'another mission or a variant not offered is not remembered');
+  assert.strictEqual(panel.posted.length, before + 1);
+
+  panel.receive?.({ type: 'selectCaptureVariant', mission: MISSION, variant: 'Opus' });
+  await until(() => panel.posted.length === before + 2, 'the window is answered again');
+  assert.deepStrictEqual(workspaceState.get('gurita.projectVariantSelections'), { 'capture-mission-principle-updates': 'Opus' }, 'remembered once per project');
+  posted = panel.posted[panel.posted.length - 1] as import('../finishedWindow').FinishedMessage;
+  assert.ok(posted.mission.capture?.state === 'offered');
+  assert.strictEqual(posted.mission.capture.selected, 1, 'the button stands on the variant picked');
+  assert.deepStrictEqual(posted.mission.capture.lines, [opus]);
 });
 
 test('a closed window is forgotten, and opening it again creates a fresh one', () => {

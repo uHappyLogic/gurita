@@ -219,8 +219,25 @@ opens that commit as a read-only text document in an editor tab of its own, and 
 verified bar. They are shown at once, behind no button. A summary or task list that cannot be
 read shows its own failure line with the tool's error line beneath it, and a mission with no
 completed task shows `No task is completed.` Both are read each time the window's page loads. The
-window starts no run and holds no action button, and it is not restored after a restart or a
-window reload; open it again from its row.
+window is not restored after a restart or a window reload; open it again from its row.
+
+Between the window's heading and its **Summary** stands its one action, **Capture principles**,
+which runs the shipped button recipe named by its skill, `capture-mission-principle-updates`,
+whose one line is
+`claude "/gurita:capture-mission-principle-updates <path>" --dangerously-skip-permissions --model "fable" --effort high; # interactive`.
+The mission's path fills `<path>`, passed as the skill's positional argument with no `--mission`,
+since the skill takes a finished mission's path that way, so nothing is typed before the run
+starts. The line is an interactive one because the skill asks you for one confirmation before it
+commits: the session opens on the principles it distilled from the mission's recorded answers,
+and you confirm or decline the rewrite of the project's principle store there. The run starts at
+the project root in a terminal of its own, named for the recipe and the mission's path, and is
+held under that path, so a second click while it is going starts nothing and brings its terminal
+forward with a notification. The button is drawn as a mission page's fixed-name buttons are,
+its name and beneath it the name of the variant selected, that variant's lines as its hover text,
+with an arrow-only dropdown of the recipe's variants beside it (see The buttons that run a recipe
+by its fixed name below); the variant you select there is remembered once for the open
+workspace, as the rows that start a mission remember theirs, so every finished mission's window
+stands on it.
 
 ## The mission windows
 
@@ -649,7 +666,7 @@ lists cannot be read, the window says so with the cause beneath it.
 ### Variants
 
 Under **Variants** the window lists every recipe with its variants, read afresh every time the window
-opens: the chains, the eight recipes the buttons and rows outside the recipe list run by their fixed names,
+opens: the chains, the nine recipes the buttons and rows outside the recipe list run by their fixed names,
 and the recipes and variants of your own recipe file, in the order the mission pages list them,
 with the recipes only your stored variants make up last. The named single-task lines are not
 listed here but under **Single-task lines** below, and neither a recipe's stage nor a disabled harness leaves anything out. Each
@@ -947,7 +964,9 @@ and **Answer** on the question card, **Answer with this alternative** on each of
 alternatives, and **New task** and **Ask in mission context** in the row of mission-wide actions
 above the pane headers. The two rows that start a mission, **New mission** and **Define
 mission**, and the bootstrap offer row run theirs from the side-bar view (see The rows that
-start a mission and The bootstrap offer row above). The five pick a variant as the recipe buttons do. Beside each stands a dropdown of its
+start a mission and The bootstrap offer row above), and **Capture principles** on a finished
+mission's window runs its own (see The Finished missions row above). The five, and **Capture
+principles** too, pick a variant as the recipe buttons do. Beside each stands a dropdown of its
 recipe's variants, drawn as its arrow alone and listing, opened, the variants in the recipe's
 order, each by its bare name with no mark for your own. Every **Answer with this alternative**
 button has such a dropdown of its own beside it, one per alternative on the card, so each
@@ -978,7 +997,9 @@ other, where it stood, and a click runs the variant its own button stands on. A
 remembered selection always wins over the default picked in the Settings window, and picking a new
 default leaves it standing. With nothing remembered, or with the remembered variant left out of
 the dropdown, the button stands on the default when the dropdown offers it and otherwise on the
-first variant offered. When the remembered variant is gone from the recipe, deleted or renamed in
+first variant offered. For **Capture principles** it is remembered once for the workspace, in the
+same map as the rows that start a mission, since a finished mission is no longer live, so every
+finished mission's window stands on it. When the remembered variant is gone from the recipe, deleted or renamed in
 the Settings window or taken out of your own recipe file, the selection is dropped and the button
 falls back to the recipe's current default; a variant left out only because its harness is
 disabled keeps its selection, which comes back once the harness is enabled again.
@@ -1058,14 +1079,17 @@ of your own whose last line is the slot line `<single-task line>` (see the loope
 below), and no shipped recipe declares **follow up tasks**. Besides the chains, the file carries the following,
 none of which declares a step and each of which is one block:
 
-- The eight button recipes, each one `claude` line named by the skill it invokes:
+- The nine button recipes, each one `claude` line named by the skill it invokes:
   `discuss-open-question`, `discuss-mission-goal`, `discuss-new-task`, `ask-in-mission-context`,
-  `answer-open-question`, `answer-open-question-with-alternative`, `define-mission-goal`, and
-  `init-mission-base-workflow`. The buttons and the side-bar view's rows run the recipe of these
+  `answer-open-question`, `answer-open-question-with-alternative`, `define-mission-goal`,
+  `init-mission-base-workflow`, and `capture-mission-principle-updates`. The buttons, the
+  side-bar view's rows, and a finished mission's window run the recipe of these
   fixed names; `discuss-new-task`'s one line is
   `claude "/gurita:discuss-new-task --mission <path> <issue description>" --dangerously-skip-permissions --model "fable" --effort high; # interactive`,
   `ask-in-mission-context`'s is
   `claude "/gurita:ask-in-mission-context --mission <path> <question>" --dangerously-skip-permissions --model "fable" --effort high; # interactive`,
+  `capture-mission-principle-updates`'s is
+  `claude "/gurita:capture-mission-principle-updates <path>" --dangerously-skip-permissions --model "fable" --effort high; # interactive`,
   and `discuss-open-question`'s is
   `claude "/gurita:discuss-open-question --mission <path> <Short Title>. <note>" --dangerously-skip-permissions --model "fable" --effort xhigh; # interactive`.
 - The single-task lines, each one headless line holding `<Task Title>`:

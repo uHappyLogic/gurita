@@ -11,14 +11,29 @@
 // the mission window's Tasks pane draws, and posts both. A click on a completed task's commit link
 // opens that commit as a read-only text document with the diff language in an editor tab of its own
 // through the extension's commit documents (`commitDocuments.ts`), a hash the latest answer did not
-// post opening nothing. The window starts no run and offers no action. No serializer is registered
-// for its view type, so a window open before a restart or a window reload is not restored.
+// post opening nothing. The window offers one action, Capture principles, which runs the shipped
+// button recipe named by its skill, `capture-mission-principle-updates`, its variants those an own
+// recipe of the same name adds beside the shipped one, the variant store laid over them, picked as
+// the mission-starting rows' are (`captureButton` in `pane.ts`): each answer posts what the button
+// runs, read afresh, offering in an arrow-only dropdown beside it the variants it can run, a variant
+// with a line on a disabled harness left out, and standing on the variant remembered once per
+// project, else the recipe's default. A pick in the dropdown is remembered once per project and
+// every open finished mission's window answered again, as it is after every edit in the Settings
+// window. A click runs the variant the latest answer posted the button standing on, with the
+// mission's path filling `<path>`, the one value its line holds, passed as the skill's positional
+// argument with no `--mission`, so nothing is typed; the shipped line is an interactive one, since
+// the skill asks for one confirmation before it commits. The run starts at the project root and is
+// held under the finished mission's path, so a second click while it is going starts nothing and
+// reveals its terminal. A button whose recipe cannot be read or run is posted with no entry and its
+// click tells why in an error notification. No serializer is registered for its view type, so a
+// window open before a restart or a window reload is not restored.
 
 import * as vscode from 'vscode';
 import { CompletedRead, readCompletedTasks } from './completedTasks';
 import { openCommit } from './commitDocuments';
 import { SummaryRead, readFinishedSummary } from './finishedMissions';
-import { pageShell, webviewOptions } from './pane';
+import { ButtonPost, FixedButtonEntry, captureButton, onStartingSelection, pageShell, postedRun, rememberProjectVariant, webviewOptions } from './pane';
+import { startChain } from './runs';
 
 /** The view type of every finished mission's window. */
 export const FINISHED_VIEW_TYPE = 'gurita.finishedMission';
@@ -29,24 +44,40 @@ export const FINISHED_WINDOW_ICON = 'archive';
 /** The hidden command a click on a finished mission's row runs, opening or revealing its window. */
 export const OPEN_FINISHED_COMMAND = 'gurita.openFinishedMission';
 
+/** The label of the window's one action button, which runs `capture-mission-principle-updates`. */
+export const CAPTURE_LABEL = 'Capture principles';
+
 /** What a finished mission's window's page posts. */
-type FinishedPageMessage = { type?: 'ready' | 'openCommit'; mission?: unknown; hash?: unknown };
+type FinishedPageMessage = {
+  type?: 'ready' | 'openCommit' | 'capturePrinciples' | 'selectCaptureVariant';
+  mission?: unknown;
+  hash?: unknown;
+  variant?: unknown;
+};
 
 /** What the extension posts to a finished mission's window's page. */
 export interface FinishedMessage {
   type: 'finished';
-  mission: { path: string; title: string; summary: SummaryRead; completed: CompletedRead };
+  mission: { path: string; title: string; summary: SummaryRead; completed: CompletedRead; capture?: FixedButtonEntry };
 }
 
-/** One open finished mission's window: its panel, its project root, and the commit hashes its latest answer posted. */
+/**
+ * One open finished mission's window: its panel, its project root, its title, the commit hashes its
+ * latest answer posted, and what that answer posted for its Capture principles button.
+ */
 interface FinishedWindow {
   panel: vscode.WebviewPanel;
   root: string;
+  title: string;
   commits: Set<string>;
+  capture?: ButtonPost;
 }
 
 /** Every open finished mission's window, by its mission's path. */
 const windows = new Map<string, FinishedWindow>();
+
+/** Whether the listener answering every open window again after a change to the remembered variants is registered. */
+let listening = false;
 
 /** The paths of the finished missions whose window is open, in the order the windows were opened. */
 export function openFinishedWindows(): string[] {
@@ -64,6 +95,38 @@ export async function finishedAnswer(context: vscode.ExtensionContext, root: str
 }
 
 /**
+ * Answers the open window `win` of the finished mission at `mission`: its summary and completed
+ * tasks read afresh, and what its Capture principles button runs, its recipe read afresh, noting
+ * the commit hashes and the button posted as what the latest answer posted. An answer reaching a
+ * window closed or replaced meanwhile is dropped.
+ */
+async function answerWindow(context: vscode.ExtensionContext, mission: string, win: FinishedWindow): Promise<void> {
+  const answer = await finishedAnswer(context, win.root, mission, win.title);
+  if (windows.get(mission) !== win) {
+    return;
+  }
+  const { entry, post } = captureButton(context);
+  win.commits = new Set(answer.mission.completed.state === 'read' ? answer.mission.completed.tasks.map((task) => task.hash) : []);
+  win.capture = post;
+  const message: FinishedMessage = entry === undefined ? answer : { ...answer, mission: { ...answer.mission, capture: entry } };
+  void win.panel.webview.postMessage(message);
+}
+
+/**
+ * Runs the Capture principles button of the window `win` of the finished mission at `mission` on
+ * the variant named `variant`, only when the latest answer posted the button standing on it: its
+ * lines with the mission's path as `<path>`, started at the project root and held under the
+ * mission's path. A button posted as refused tells why in an error notification.
+ */
+function runCapture(context: vscode.ExtensionContext, mission: string, win: FinishedWindow, variant: unknown): void {
+  const run = postedRun(win.capture, variant);
+  if (run === undefined) {
+    return;
+  }
+  startChain(context, win.root, mission, run.name, run.lines, { path: mission });
+}
+
+/**
  * Opens the window of the finished mission at `mission`, its path as the missions tool prints it,
  * in the project at `root`, its editor tab titled `title`, or reveals it when one is already open.
  */
@@ -73,8 +136,18 @@ export function openFinishedWindow(context: vscode.ExtensionContext, root: strin
     open.panel.reveal();
     return;
   }
+  if (!listening) {
+    listening = true;
+    context.subscriptions.push(
+      onStartingSelection(() => {
+        for (const [path, each] of windows) {
+          void answerWindow(context, path, each);
+        }
+      }),
+    );
+  }
   const panel = vscode.window.createWebviewPanel(FINISHED_VIEW_TYPE, title, vscode.ViewColumn.Active, webviewOptions(context));
-  const win: FinishedWindow = { panel, root, commits: new Set() };
+  const win: FinishedWindow = { panel, root, title, commits: new Set() };
   windows.set(mission, win);
   // A codicon as a webview panel's icon is typed from VS Code 1.108 on, above the engine floor, as
   // the mission windows' is.
@@ -84,16 +157,18 @@ export function openFinishedWindow(context: vscode.ExtensionContext, root: strin
   panel.webview.onDidReceiveMessage(
     (message: FinishedPageMessage) => {
       if (message?.type === 'ready') {
-        void finishedAnswer(context, root, mission, title).then((answer) => {
-          if (windows.get(mission) !== win) {
-            return;
-          }
-          win.commits = new Set(answer.mission.completed.state === 'read' ? answer.mission.completed.tasks.map((task) => task.hash) : []);
-          void panel.webview.postMessage(answer);
-        });
+        void answerWindow(context, mission, win);
       } else if (message?.type === 'openCommit') {
         if (message.mission === mission && typeof message.hash === 'string' && win.commits.has(message.hash)) {
           void openCommit(win.root, message.hash);
+        }
+      } else if (message?.type === 'capturePrinciples') {
+        if (message.mission === mission) {
+          runCapture(context, mission, win, message.variant);
+        }
+      } else if (message?.type === 'selectCaptureVariant') {
+        if (message.mission === mission) {
+          void rememberProjectVariant(context, win.capture, message.variant);
         }
       }
     },

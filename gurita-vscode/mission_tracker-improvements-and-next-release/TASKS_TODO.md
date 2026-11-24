@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Capture Principles on Finished Missions
-
-Offer a Capture principles action on a finished mission's window that runs `capture-mission-principle-updates` with the mission's path as its positional argument and no `--mission`, from a shipped button recipe named by its skill whose one line is interactive, since capture asks for one confirmation before it commits. Verified by reader and pane tests of the action's recipe, the filled path, and the started run, with `gurita-vscode/README.md` describing the action.
-
----
-
 ## New Mission Window Opens After Define
 
 When a Define mission run's terminal closes and the re-read of the live missions lists a mission it did not list before the run, open that mission's window by itself, where today the mission appears as a new row to find and click by hand. Verified by a pane test against the `vscode` stub of the window opening for the one new path and of nothing opening when the run created none, with `gurita-vscode/README.md` saying so.
