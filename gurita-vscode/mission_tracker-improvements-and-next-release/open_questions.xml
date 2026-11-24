@@ -601,6 +601,41 @@
   </open-question>
   <open-question id="Project recipe file path">
     <question>Gurita for VS Code is to read a recipe file tracked in the project, beside the shipped file and the user&apos;s own. Where does it look for the project&apos;s file: under a fixed name at the project root, as `task_line_rules.txt` has, or at a path a setting names, and what is that name or that setting&apos;s default?</question>
+    <alternative id="Fixed root gurita_recipes.md">
+      The extension reads one file under a fixed name, `gurita_recipes.md`, directly in the project root, the git top-level that `projectRoot` in `src/live.ts` already finds and in which `ruleFile` in `src/loop.ts` finds `task_line_rules.txt`. No setting is added. An absent file means the project has no recipes.
+      <advantage>It follows the one precedent the project already has: a fixed, snake_case name at the root, found with no configuration, so everyone who clones the repository gets the same recipes. The `gurita_` prefix makes the file&apos;s owner plain among the other root files.</advantage>
+      <drawback>A project cannot move or rename the file, for example to keep its root uncluttered or to put it beside the tooling it belongs with. The name becomes a fixed contract the extension&apos;s docs and tests must keep for good.</drawback>
+    </alternative>
+    <alternative id="Fixed .gurita/recipes.md">
+      The extension reads one file under a fixed path, `.gurita/recipes.md`, in a hidden `.gurita/` directory at the project root. No setting is added. An absent file means the project has no recipes.
+      <advantage>The project path is the same relative path as the per-user default `~/.gurita/recipes.md`, so the two sources read as one convention at two levels, project and home. The root gets no visible new file, and the directory leaves room for later project-level Gurita files.</advantage>
+      <drawback>It adds a directory that nothing else in the project uses, while `task_line_rules.txt` stays a bare root file, so the project&apos;s Gurita files are split across two conventions unless the rule file moves too (not part of this question). A hidden directory is also easy to miss when someone wonders where a page&apos;s recipes come from.</drawback>
+    </alternative>
+    <alternative id="Fixed .vscode/gurita_recipes.md">
+      The extension reads one file under a fixed path, `.vscode/gurita_recipes.md`, inside the project&apos;s `.vscode/` directory. No setting is added. An absent file means the project has no recipes.
+      <advantage>Only Gurita for VS Code reads the file, and it would sit in the place VS Code users already look for a project&apos;s editor configuration that is shared with the team.</advantage>
+      <drawback>Many projects git-ignore `.vscode/` in whole or in part, which defeats the reason the file exists, to share chains through the repository. Recipes are also chains of plugin CLI calls that a hand-use document such as `snippets/GURITA_USAGE.md` describes apart from the editor, so tying their location to VS Code suits that content poorly.</drawback>
+    </alternative>
+    <alternative id="Setting defaulting to root file">
+      A new setting, for example `gurita.projectRecipesFile`, is added beside `gurita.ownRecipesFile`. Its scope is workspace-level (`window` or `resource`, not `application`) so a project&apos;s `.vscode/settings.json` can set it. It holds a path relative to the project root, and when it is left empty `gurita_recipes.md` at the root is read. An absent file at the default path means the project has no recipes.
+      <advantage>A project that sets nothing gets the same zero-configuration behaviour as the fixed root name, and a project that wants the file elsewhere can point to it. This mirrors how `gurita.ownRecipesFile` already defaults to `~/.gurita/recipes.md`.</advantage>
+      <drawback>It adds a second setting to the manifest and to the docs. A per-user or workspace override can quietly make one teammate&apos;s page read a different project file from everyone else&apos;s, which works against sharing. A path naming a file that does not exist needs its own handling, unlike an absent default.</drawback>
+    </alternative>
+    <alternative id="Setting defaulting to .gurita/recipes.md">
+      A new workspace-scoped setting, for example `gurita.projectRecipesFile`, holds a path relative to the project root. When it is left empty `.gurita/recipes.md` is read, the same relative path as the per-user default. An absent file at the default path means the project has no recipes.
+      <advantage>It pairs the configurable path with a default that matches the per-user file&apos;s layout, so the two recipe sources share one shape by default while either can still be moved.</advantage>
+      <drawback>It carries the cost of a second setting and the risk of per-user overrides, as the root-default variant does, and adds a hidden directory that no other project file uses, apart from the root-file convention `task_line_rules.txt` follows.</drawback>
+    </alternative>
+    <alternative id="Setting defaulting to .vscode file">
+      A new workspace-scoped setting, for example `gurita.projectRecipesFile`, holds a path relative to the project root. When it is left empty `.vscode/gurita_recipes.md` is read. An absent file at the default path means the project has no recipes.
+      <advantage>The default sits beside the `.vscode/settings.json` that would hold the setting itself, so all of a project&apos;s VS Code-facing Gurita configuration stands in one directory, and a project that ignores `.vscode/` can move the file out.</advantage>
+      <drawback>The default is inside a directory that many projects git-ignore, so the zero-configuration case often shares nothing until someone notices and changes the setting. It also costs a second setting, with the same override risk as the other setting options.</drawback>
+    </alternative>
+    <alternative id="Setting with no default">
+      A new workspace-scoped setting, for example `gurita.projectRecipesFile`, holds a path relative to the project root. When it is left empty no project recipe file is read at all, so a project opts in by naming its file, typically in a committed `.vscode/settings.json`.
+      <advantage>A repository&apos;s recipes never become buttons on a page unless someone has chosen a file. Recipe lines can run CLI calls with `--dangerously-skip-permissions`, so this keeps a cloned project from quietly adding runnable chains, and the extension never has to reserve a name in every project.</advantage>
+      <drawback>Sharing needs a second tracked file, the settings entry, before the first, and it fails silently for anyone whose `.vscode/` is ignored or whose own settings override it. There is no default for the docs to state, unlike the fixed `task_line_rules.txt` the tracker entry gives as its model.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Project recipe name collisions">
     <question>In Gurita for VS Code an own recipe carrying a shipped recipe&apos;s name joins that recipe as further variants. Once a recipe file tracked in the project is read as a third source, how does a project recipe combine with a shipped or own recipe of the same name?</question>
