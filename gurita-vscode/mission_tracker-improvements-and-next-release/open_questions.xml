@@ -108,6 +108,36 @@
   </open-question>
   <open-question id="Finished missions bound">
     <question>The Missions side-bar view of Gurita for VS Code is to hold one row, collapsed by default, that expands to the project&apos;s finished missions as the bundled missions tool lists them. Does the row list every finished mission in the record or only the most recent ones, and if only those, how many?</question>
+    <alternative id="Every finished mission">
+      The row expands to every finished mission the record holds. The extension calls the bundled tool&apos;s `missions .` with no `--last` and keeps every `finished` line, newest first as the tool sorts them. No count, setting, or further row limits the list.
+      <advantage>It is the simplest and most complete. One fixed call, no count to choose or tune, and no finished mission is ever out of reach in the view, so its summary, its completed tasks, and its &quot;Capture principles&quot; action can be reached however old the mission is. In this repository the record holds 8 path-form finishes today (5 under `gurita-vscode/`).</advantage>
+      <drawback>The list grows with every mission forever. A project that finishes several missions a day, as this one has, soon has a list of dozens or hundreds of rows that the user scrolls past to reach the few recent ones, and the view gives no way to keep it short.</drawback>
+    </alternative>
+    <alternative id="Newest ten, fixed">
+      The row expands to the 10 newest finished missions only, read through `missions . --last 10`, the same bound the review pass&apos;s overview call uses. Older ones are not shown in the view, and no setting changes the count.
+      <advantage>The list stays a fixed, glanceable length however long the record gets. The bound follows a precedent the plugin already set and is applied by the tool itself, so the extension does no filtering of its own and the count is one literal in one call.</advantage>
+      <drawback>An older finished mission cannot be reached from the view at all, so its summary and its &quot;Capture principles&quot; action are lost there. Capture is most likely to be run late, over a batch of missions finished earlier, and a busy project pushes a mission past ten within a day or two.</drawback>
+    </alternative>
+    <alternative id="Newest five, fixed">
+      The row expands to the 5 newest finished missions only, read through `missions . --last 5`. No setting changes the count and older ones are not shown in the view.
+      <advantage>The expanded row fits the side bar beside the live missions and the other rows with no scrolling, so the view stays a short dashboard of what was just finished rather than an archive.</advantage>
+      <drawback>Its reach is the shortest of all: on this project five finishes span about one day, so almost every finished mission falls out of the view before its principles are likely to be captured, and the row shows little more than the latest release notes would.</drawback>
+    </alternative>
+    <alternative id="Newest ten, then show all">
+      The row expands to the 10 newest finished missions, read through `missions . --last 10`, followed, when the record holds more, by one last row such as &quot;Show all finished missions&quot; that re-reads `missions .` without `--last` and replaces the list with every finished mission.
+      <advantage>It keeps the default list short while leaving every finished mission reachable, so neither the glance nor the late capture of an old mission is given up, and no setting is added.</advantage>
+      <drawback>It adds a second kind of row with its own state (expanded to all or not, and whether that is remembered) and a second call shape, plus a test of whether more than ten exist, which the tool&apos;s print does not state and the extension must find by a second read or by asking for eleven.</drawback>
+    </alternative>
+    <alternative id="Count setting, default ten">
+      A new user setting, such as `gurita.finishedMissionsShown`, holds the number of finished missions the row lists, default 10, with 0 meaning every one. The extension passes it as `--last N`, or omits `--last` for 0.
+      <advantage>Each user picks the trade between a short list and full reach for their own project, and the default keeps the plugin&apos;s `--last 10` precedent, so a busy project and a quiet one are both served by one row with no extra row kind.</advantage>
+      <drawback>It adds a second contributed setting beside `gurita.ownRecipesFile`, with its own description, validation, and change handling, for a choice most users never make, and a user who wants one old mission must go to the settings, change the number, and change it back.</drawback>
+    </alternative>
+    <alternative id="Finished in recent days">
+      The row expands to the finished missions whose finish date, the tool&apos;s second field, falls within a fixed recent window, such as the last 30 days, read from one `missions .` call and filtered by date in the extension.
+      <advantage>The bound follows how recent the work is rather than how much of it there was, so the list matches what a user is likely still to capture or refer back to, whatever the project&apos;s pace.</advantage>
+      <drawback>The length is unbounded on a busy project and can be empty on a quiet one, the filtering is done in the extension rather than by the tool&apos;s `--last`, and a mission older than the window cannot be reached from the view.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Project recipe file path">
     <question>Gurita for VS Code is to read a recipe file tracked in the project, beside the shipped file and the user&apos;s own. Where does it look for the project&apos;s file: under a fixed name at the project root, as `task_line_rules.txt` has, or at a path a setting names, and what is that name or that setting&apos;s default?</question>
