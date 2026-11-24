@@ -68,7 +68,8 @@
 // start button starts the run with every override picked, whether or not a task is unresolved.
 // The question view shows one fully opened card per question, one card at a time, under a
 // position counter such as "3 / 12", moved between by the previous and next buttons and by the
-// left and right arrow keys, and a dependency link on a card jumps to the named question's card.
+// left and right arrow keys, the first button before them jumping straight back to the first
+// card, and a dependency link on a card jumps to the named question's card.
 // Each card stacks flat, non-indented slots: its Short Title with the discuss and answer
 // buttons, the question text in an area of fixed height, so the pick
 // starts at the same height on every card, then the pick and its rationale, then the
@@ -86,7 +87,7 @@
 // every redraw, the page draws every action button on it disabled, its recipe buttons,
 // its question card's buttons, its preview's start button, and its New task button, and its
 // workflow diagram's filled block pulses; the recipe dropdowns and the fixed-name buttons' dropdowns, the question view's
-// previous and next buttons and dependency links, the preview's close button, and the two pane
+// first, previous, and next buttons and dependency links, the preview's close button, and the two pane
 // headers stay enabled, and the left and right arrow keys move the question view only while its
 // pane is shown. The page draws no Settings control and nothing from the harness check: the
 // settings live in the Settings window of their own, drawn by its own script (`settings.ts`), and a
@@ -685,7 +686,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
     return body;
   }
 
-  /** The Open questions pane: the position counter and its previous and next buttons above the one card shown. */
+  /** The Open questions pane: the position counter and its first, previous, and next buttons above the one card shown. */
   function drawQuestions(mission: Mission, busy: boolean): HTMLElement {
     const view = element('section', undefined, 'pane questions');
     view.setAttribute('role', 'tabpanel');
@@ -707,6 +708,10 @@ declare function acquireVsCodeApi(): VsCodeApi;
       save();
     }
     const pager = element('div', undefined, 'pager');
+    const first = button('First', 'control', () => moveTo(mission.path, questions, 0));
+    first.title = 'Show the first question';
+    first.disabled = index === 0;
+    first.dataset.focus = 'first';
     const previous = button('Previous', 'control', () => moveTo(mission.path, questions, index - 1));
     previous.title = 'Show the previous question (Left Arrow)';
     previous.disabled = index === 0;
@@ -717,7 +722,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
     next.dataset.focus = 'next';
     const counter = element('span', `${index + 1} / ${questions.length}`, 'counter');
     counter.setAttribute('aria-live', 'polite');
-    pager.append(previous, counter, next);
+    pager.append(first, previous, counter, next);
     card = drawCard(mission, questions[index], questions, busy);
     view.append(pager, card);
     return view;
@@ -1001,8 +1006,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
 
   /**
    * Redraws the window's page in place from the latest parse of its mission, laying the workflow
-   * diagram out to the window's width and keeping the scroll position and the focus on the previous
-   * or next button or a pane header when it held it.
+   * diagram out to the window's width and keeping the scroll position and the focus on the first,
+   * previous, or next button or a pane header when it held it.
    */
   function draw(): void {
     if (drawn !== 'page' || shownMission === undefined) {

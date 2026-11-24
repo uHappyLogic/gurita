@@ -190,7 +190,8 @@ type the issue, and an interactive conversation clarifies it into tasks and adds
 mission's task list through `submit-task` inside that same conversation, so there is no separate
 submit button. The question view shows one fully opened card per question, one at a time under a
 position counter such as `3 / 12`: **Previous** and **Next**, or the left and right arrow keys,
-move between the cards, and a dependency on a card links to the named question's card. Each card
+move between the cards, **First**, before **Previous**, jumps straight back to the first card,
+and a dependency on a card links to the named question's card. Each card
 stacks the question text in an area of fixed height, so the pick starts at the same height on
 every card, then the pick and its rationale, the alternatives, the dependencies, and the
 principles, and carries **Discuss** and **Answer** buttons and an **Answer with this
@@ -212,7 +213,7 @@ Every push button a mission window draws has one look: the theme's primary butto
 one the recipe buttons carry, with a clearly visible 1px outline in the theme's contrast border
 colour, or its foreground colour where the theme sets none, so each button stands out against the
 page and its own fill alike. That covers the recipe buttons, **Start run**, the question card's
-**Discuss** and **Answer**, every **Answer with this alternative**, **New task**, **Previous**, **Next**, and **Close preview**, and in the Settings
+**Discuss** and **Answer**, every **Answer with this alternative**, **New task**, **First**, **Previous**, **Next**, and **Close preview**, and in the Settings
 window its edit controls (**Enable** and **Disable**, **Add model**, **Add effort**, and
 **Remove**, **Duplicate**, **Rename**, **Delete**, **Make default**, and **Reset**) and **Check
 again**. A disabled button is drawn faded. The two pane headers and the links of a card's
@@ -227,7 +228,7 @@ dismiss its terminal, that mission's page shows it: every action button on the p
 buttons, the buttons on the question card and its alternatives, a preview's **Start run**, and
 **New task**) is disabled, and the workflow diagram's filled block pulses. The recipe dropdowns
 and the dropdowns beside the buttons that run a recipe by its fixed name, the **Open questions**
-and **Remaining tasks** headers, the question view's **Previous** and **Next**, and every other
+and **Remaining tasks** headers, the question view's **First**, **Previous**, and **Next**, and every other
 mission's window stay enabled, and the page is drawn this way again whenever it is redrawn, after
 the window was hidden and shown included. Should a click still reach the extension for that
 mission, it starts nothing: a notification says a chain is already running and the run's terminal

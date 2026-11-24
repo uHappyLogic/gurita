@@ -1394,6 +1394,77 @@ test('the arrow keys move the question view only while the Open questions pane i
   assert.ok(texts(page).includes('1 / 2'));
 });
 
+/** Alpha's page with three open questions, `running` the paths of the missions with a running runner. */
+function threeQuestions(running: string[] = []): unknown {
+  const built = mission(ALPHA, 'Alpha') as Record<string, unknown>;
+  const questions = ['Pane Layout', 'Tab Order', 'Key Map'].map((id) => ({
+    id,
+    question: `What should ${id} be?`,
+    principles: [],
+    dependsOn: [],
+    recommendation: { option: 'keep', rationale: 'It works.' },
+    alternatives: [{ id: 'keep', text: 'Keep it.', advantages: [], drawbacks: [] }],
+  }));
+  return pageOf({ ...built, questions: { state: 'read', questions } }, running);
+}
+
+/** The pager's buttons and counter, in the order drawn. */
+function pagerParts(page: Page): string[] {
+  const pager = page.root.all().find((each) => each.has('pager'));
+  assert.ok(pager !== undefined, 'the pager is drawn');
+  return pager.children.filter((child): child is FakeElement => child instanceof FakeElement).map((child) => child.textContent);
+}
+
+test('the pager draws First before Previous, disabled on the first card and enabled on every other', () => {
+  const page = loadPage();
+  page.send(threeQuestions());
+  assert.deepStrictEqual(pagerParts(page), ['First', 'Previous', '1 / 3', 'Next']);
+  assert.strictEqual(named(page, 'First').disabled, true, 'First is disabled on the first card');
+  assert.ok(named(page, 'First').has('control'), 'First is a push button like Previous and Next');
+  named(page, 'Next').click();
+  assert.strictEqual(named(page, 'First').disabled, false, 'First is enabled on the second card');
+  named(page, 'Next').click();
+  assert.deepStrictEqual(pagerParts(page), ['First', 'Previous', '3 / 3', 'Next']);
+  assert.strictEqual(named(page, 'First').disabled, false, 'First is enabled on the last card');
+});
+
+test('First jumps straight back to the first card from any card in one click, saving the position it shows', () => {
+  const page = loadPage();
+  page.send(threeQuestions());
+  named(page, 'Next').click();
+  named(page, 'Next').click();
+  assert.ok(texts(page).includes('3 / 3'));
+  assert.ok(texts(page).includes('Key Map'));
+  const before = page.saved.length;
+  named(page, 'First').click();
+  assert.ok(texts(page).includes('1 / 3'), 'one click shows the first card');
+  assert.ok(texts(page).includes('Pane Layout'));
+  assert.ok(!texts(page).includes('Key Map'));
+  assert.strictEqual(page.saved.length, before + 1, 'the jump saves the position once, with no step through the second card');
+  assert.deepStrictEqual((page.saved[page.saved.length - 1] as { positions: unknown }).positions, {
+    [ALPHA]: { title: 'Pane Layout', index: 0 },
+  });
+  named(page, 'Next').click();
+  named(page, 'First').click();
+  assert.ok(texts(page).includes('1 / 3'), 'it jumps back from the second card too');
+});
+
+test('a page reopened on the position First saved shows the first card, and First stays enabled while a run is going', () => {
+  const page = loadPage();
+  page.send(threeQuestions());
+  named(page, 'Next').click();
+  named(page, 'Next').click();
+  named(page, 'First').click();
+  const reopened = loadScript('page.js', undefined, { dataset: { mission: ALPHA }, state: page.saved[page.saved.length - 1] });
+  reopened.send(threeQuestions());
+  assert.ok(texts(reopened).includes('1 / 3'), 'the saved position comes back on the first card');
+  named(reopened, 'Next').click();
+  reopened.send(threeQuestions([ALPHA]));
+  assert.strictEqual(named(reopened, 'First').disabled, false, 'First stays enabled while a run is going');
+  named(reopened, 'First').click();
+  assert.ok(texts(reopened).includes('1 / 3'));
+});
+
 test('the page draws no Settings or Close settings control and no settings view, in the failure state and the notice neither', () => {
   const page = loadPage();
   page.send(alphaPage([]));
@@ -1546,6 +1617,7 @@ test('every push button a mission window draws carries one class of the one shar
     'Answer',
     'Answer with this alternative',
     'New task',
+    'First',
     'Previous',
     'Next',
     'Close preview',

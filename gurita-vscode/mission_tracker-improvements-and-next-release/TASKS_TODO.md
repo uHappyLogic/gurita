@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## First Button on the Question Pager
-
-Add a First button before Previous in the Open questions pane's pager that jumps straight back to the first question's card without stepping back one at a time. Verified by the page tests of the jump and the position it saves, with `gurita-vscode/README.md` naming the button.
-
----
-
 ## Mission Introduction Above a Headed Diagram
 
 Open a mission page with an introduction section above the workflow diagram that shows the mission's title alone by default, with one control beside it that shows and hides the whole goal beneath it, the goal as the mission's `requirements.md` holds it, drawn by the text renderer, and give the workflow diagram a heading of its own to mark where it starts. The goal is collapsed on every load of the page with no shown or hidden state saved, and the control is present whatever the goal's length, with no clamp and no overflow measurement. Verified by tests of the title and goal read and of the introduction, its toggle, and the diagram's heading against the stand-in DOM, with `gurita-vscode/README.md` describing both.
