@@ -77,5 +77,9 @@ Five missions under `gurita-vscode/` are finished, all between 2026-11-20 and 20
 - **Long goal display.** The mission page's introduction shows the mission's title alone by default, with one control beside it that shows and hides the whole goal beneath it. The goal is collapsed on every load of the page, so no shown or hidden state is saved, and the control is present whatever the goal's length, with no clamp and no overflow measurement.
 - **Completed tasks placement.** The completed tasks stand inside the page's second pane, beneath the remaining task list, behind one show/hide toggle that is collapsed by default. That pane's header is renamed from "Remaining tasks" to "Tasks", a name covering both lists, and the remaining tasks head their own part of the pane. The page keeps its two pane headers and the default-pane rule, and gains no third pane.
 
+### Runs
+
+- **Auto-close default.** The new setting that closes a run's terminal by itself ships on. A chain that ran all its lines closes its terminal without waiting for a keypress and unblocks the mission's page, while a chain that stopped keeps waiting for a keypress. A user who wants every terminal to stay open turns the setting off.
+
 ## Out of Scope
 

@@ -246,33 +246,8 @@
       <drawback>Confirming a value by a title-bar action or CodeLens and cancelling by closing a document is a convention the user must learn, an untitled document prompts to save on close unless the extension discards it itself, and the flow is driven through editor and document events that the `node:test` suite&apos;s stand-ins do not cover.</drawback>
     </alternative>
   </open-question>
-  <open-question id="Auto-close default">
-    <question>Gurita for VS Code is to gain a setting that closes a run&apos;s terminal by itself when its chain ran all its lines, while a chain that stopped keeps waiting for a keypress. Is the setting on or off by default?</question>
-    <recommendation option="Off by default">A finished chain&apos;s terminal is the only place its report, the review&apos;s convergence verdict, and any advisory show, so discarding it should be the user&apos;s own choice, as the entry&apos;s wording of the setting implies, and the demo capture, which waits for the keypress line in a profile on defaults, keeps working unchanged.</recommendation>
-    <alternative id="Off by default">
-      The new setting ships off: every chain keeps printing its report and `Press any key to close this terminal.` and waiting for a keypress, as `runner.py`&apos;s `wait_for_key` does today, until a user turns the setting on.
-      <advantage>Nothing changes for anyone who does not opt in: the end-of-run report a user has not yet read is never taken away without their choosing it, the behaviour the first-version mission built on purpose stays the default, and `scripts/capture_demo.js`, which waits for `Press any key to close this terminal.` in a throwaway profile running on defaults, keeps working as it is.</advantage>
-      <drawback>The pain the tracker entry names stays the default experience: a successful chain still leaves the mission&apos;s page disabled until someone presses a key, so a user who never finds the setting gains nothing from it, and most users never open settings for an extension.</drawback>
-    </alternative>
-    <alternative id="On by default">
-      The new setting ships on: a chain that ran all its lines closes its terminal by itself and unblocks the mission&apos;s page, while a chain that stopped keeps waiting for a keypress; a user who wants every terminal to stay open turns the setting off.
-      <advantage>Every user gets the fix the tracker entry asks for without looking for it: a successful run unblocks its page at once, the common case costs no keypress, and the terminal stays open exactly when there is something to read, a stop.</advantage>
-      <drawback>A successful chain&apos;s report and the transcript above it vanish the moment it ends, which changes the extension&apos;s established behaviour for every existing user in 0.3.0 and loses output that a user who looked away never saw; `scripts/capture_demo.js` must write the setting off into its profile&apos;s `settings.json` (or wait on something other than the keypress line) before the demo can be re-captured.</drawback>
-    </alternative>
-    <alternative id="Default by chain kind">
-      The setting&apos;s default is not one value for every chain: with the setting left untouched, a chain whose lines are all headless closes its terminal when it ran all its lines, and a chain holding an interactive line keeps waiting for a keypress (the runner already tells the two kinds apart through `line_kind`); the setting takes explicit values that override this for every chain, so it becomes a choice of more than on and off.
-      <advantage>Closes by itself where no one is at the terminal to press a key, the long unattended headless chains that block a page longest, while leaving unchanged the interactive chains, where the user is at the terminal anyway and the keypress costs nothing.</advantage>
-      <drawback>A default that depends on what a chain holds is harder to describe in the setting&apos;s description and harder to predict from a button, the setting stops being a plain boolean, and the output it discards by default is exactly that of the unattended chains, whose report the absent user has not read.</drawback>
-    </alternative>
-    <alternative id="Ask on first success">
-      The setting ships with no value chosen: the first time a chain runs all its lines with the setting unset, the terminal waits for a keypress as today and the extension asks once, through a notification, whether such terminals should close by themselves from now on, storing the answer as the setting&apos;s value; until answered, it behaves as off.
-      <advantage>Every user meets the choice at the moment it matters and decides it knowingly, so the fix is discovered without anyone&apos;s established behaviour being changed silently.</advantage>
-      <drawback>Adds a prompt and a third, unset state to code and tests for a one-bit preference, interrupts the very first successful run with a notification, and leaves the setting&apos;s documented default ambiguous; dismissing the notification without answering leaves the blocking behaviour in place.</drawback>
-    </alternative>
-  </open-question>
   <open-question id="Auto-close looped runs">
     <question>The runner of Gurita for VS Code waits for a keypress after every chain and after every looped task run. A new setting is to close the terminal by itself when a chain ran all its lines. Does the setting also close the terminal of a looped task run that completed every task?</question>
-    <recommendation option="Same setting covers loops">Chains and looped runs end the same way, and the looped run is the long unattended one whose blocked page the setting exists to free, so a user who turned it on would read a loop&apos;s lingering terminal as the setting not working; a stopped loop still waits, as a stopped chain does.</recommendation>
     <alternative id="Same setting covers loops">
       The one new setting governs both kinds of run. With it on, a looped task run that ends on `Loop finished: no task remains` (the runner&apos;s `finished` outcome, reached once no `##` heading is left in `TASKS_TODO.md`) prints its report and exits without waiting for a keypress, so its terminal closes and the page unblocks. A loop that stopped (an unresolved assignment, a task that did not end on `Task completed.`, or an unreadable task list) still waits for a keypress, as a stopped chain does.
       <advantage>One rule for every run: `run_chain` and `run_loop` already end the same way (report, `wait_for_key`, exit 0 when finished), so the setting skips the same wait at both, and the looped run, which is the long unattended run where an unblocked page on success matters most, gets the benefit too.</advantage>
