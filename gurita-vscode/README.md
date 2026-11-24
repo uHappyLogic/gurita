@@ -6,100 +6,41 @@ run the plugin's skills as recipes in a terminal, and a looped task run that com
 mission's tasks one at a time. It drives the `claude` and `agy` command-line tools with the
 Gurita plugin installed in them; it does not replace the plugin.
 
-This file covers building, packaging, installing, and using the extension. The extension is
-not published to any marketplace: it is built from this repository and installed by hand.
+The extension runs only on macOS, Linux, or through Remote-WSL. On native Windows it shows one
+message saying so and leaves its view, windows, and runner inert; in a Remote-WSL window it runs
+on the Linux side and works as it does on Linux.
 
-## Requirements
+To build the extension from a checkout of the Gurita repository instead, see
+[BUILDING.md](https://github.com/uHappyLogic/gurita/blob/main/gurita-vscode/BUILDING.md).
 
-- VS Code 1.107.0 or later (the manifest declares `engines.vscode` `^1.107.0`), or an editor
-  built on VS Code 1.107.0 or later, with its `code` command on `PATH` for the command-line
-  install.
-- Node 22 through nvm under `$HOME/.nvm`, to build and package. Node is needed only for the
-  build; the installed extension needs no Node install of its own.
+## What the extension needs
+
+- VS Code 1.107.0 or later, or an editor built on VS Code 1.107.0 or later.
 - `python3`, 3.9 or later, on `PATH`: the extension runs the bundled missions tool and its own
-  runner with it.
+  runner with it. No Node install is needed.
 - `git`: the project root is the top level of a git work tree.
 - `claude` and, for the `agy` lines, `agy`, each with the Gurita plugin installed, on the
-  `PATH` of the shell the runner starts.
+  `PATH` of the shell the runner starts. The Settings window can install or update the plugin
+  for you (see Installing and updating the plugin below).
 - macOS or Linux. On Windows only through Remote-WSL, where the extension runs on the Linux side.
-
-## Building and packaging
-
-Every Node command runs under Node 22 through nvm, in a subshell, from the repository root:
-
-```
-(source "$HOME/.nvm/nvm.sh" && nvm use 22 && cd gurita-vscode && npm ci)
-(source "$HOME/.nvm/nvm.sh" && nvm use 22 && cd gurita-vscode && npm run compile)
-(source "$HOME/.nvm/nvm.sh" && nvm use 22 && cd gurita-vscode && npm test)
-(source "$HOME/.nvm/nvm.sh" && nvm use 22 && cd gurita-vscode && npm run package)
-```
-
-- `npm ci` installs the pinned build dependencies from `package-lock.json` into
-  `node_modules/`: TypeScript, `@types/vscode` 1.107.0 (the typings of the engine floor),
-  `@types/node`, and `@vscode/vsce`.
-- `npm run compile` compiles the extension host code (`tsconfig.json`, CommonJS) and the
-  webview page's script (`tsconfig.webview.json`, with the DOM library) from `src/` into `out/`,
-  one emitted file per source file, with no bundler.
-- `npm test` compiles, then runs the unit tests of the recipe reader and the stage filter of a
-  page's recipe list, the `open_questions.xml` parser, and the `TASKS_TODO.md` heading read,
-  among others, with Node's built-in `node:test` over the compiled files under `out/test/`; the
-  run path, the mission windows a row's click opens, each posted its own mission's page, the
-  failure state, or the notice that its mission is no longer live, the recipe list and the
-  fixed-name buttons each page is posted, with the variant selections it remembers, the harness check it runs, with the check script's print stubbed, and
-  the harnesses it enables and disables, with their model and effort lists, and the variant
-  edits it makes, the line editor's harness, model, and effort picks, with the `custom N` variants they
-  add and the resets of stored variants, among them, and its single-task line
-  edits, with the looped run's names and the variant a line's **Make default** picks following them, and the side-bar view's
-  mission rows and their redraws and its two mission-starting rows with their runs and variant
-  QuickPick, against a tree stand-in, the mission windows and the Settings window restored
-  after a reload, and the check at activation that leaves everything inert on native Windows,
-  are tested against a stub of the `vscode`
-  module,
-  and the page script against a small stand-in for the DOM. Nothing runs inside an editor.
-- `npm run package` runs `vsce package`, which first runs the `vscode:prepublish` script: the
-  compile, then `scripts/bundle.js`, the extension's own build step, which copies
-  `core/tools/missions.py` and the extension's shipped recipe file, `gurita-vscode/shipped_recipes.md`,
-  verbatim into a freshly emptied `bundled/` and writes `bundled/fixed_lines.tsv` from the `## Fixed console lines` table of
-  `docs/skill-reference.md`, one `kind<TAB>line` row per table line, and
-  `bundled/plugin_version.txt`, the repository's `VERSION` as one line. Every package therefore
-  carries the missions tool, the recipes, the fixed lines, and the plugin version of the
-  checkout it was built from.
-
-The runner's own tests are pytest tests under `gurita-vscode/runner_tests/`, collected by the
-repository's ordinary pytest runs, run from the repository root:
-
-```
-uv run pytest gurita-vscode/runner_tests
-```
-
-`node_modules/`, `out/`, `bundled/`, and `dist/` are build output, ignored by git; nothing the
-build writes is committed.
 
 ## Installing
 
-The package lands at one fixed path, overwritten by every build:
+Install the extension from the Extensions view by searching for **Gurita for VS Code**, or from
+the command line:
 
 ```
-gurita-vscode/dist/gurita-vscode.vsix
+code --install-extension BusyMinds.gurita-vscode
 ```
 
-Install it by hand, from the repository root:
-
-```
-code --install-extension gurita-vscode/dist/gurita-vscode.vsix
-```
-
-The installed extension's id is `BusyMinds.gurita-vscode`. Its version, `0.1.0` at first, is
-the extension's own, kept in `gurita-vscode/package.json` independent of the plugin's `VERSION`
-and bumped by hand whenever the extension changes. To install a rebuilt package of the same
-version over the installed one, add `--force`; to remove it, run
+The installed extension's id is `BusyMinds.gurita-vscode`, and its version is the extension's
+own, independent of the Gurita plugin's. To remove it, run
 `code --uninstall-extension BusyMinds.gurita-vscode`.
 
 ## The side-bar view
 
-The extension contributes an activity-bar entry, **Gurita**, its icon the tracked
-`gurita-vscode/media/activity-bar.svg`, generated by hand from the repository root with
-`uv run scripts/render_icon.py` and carried in the VSIX, holding one side-bar view, **Missions**: a native tree of rows
+The extension contributes an activity-bar entry, **Gurita**, its icon three octopus arms,
+holding one side-bar view, **Missions**: a native tree of rows
 with no child rows, the two rows that start a mission, **New mission** and **Define mission**,
 standing above one row per live mission, in the order `missions.py live` prints them.
 
@@ -341,7 +282,7 @@ starts its chains in, it looks up each harness's CLI (`claude`, `agy`, `codex`) 
 reads which Gurita copy that harness has installed (`claude plugin list --json`,
 `agy plugin list --json`, `codex plugin list -m gurita --json`). The extension then compares each
 installed copy's version with the plugin version the package was built from, the one
-`scripts/bundle.js` recorded in `bundled/plugin_version.txt`, as a minimum: a copy equal to or
+recorded in the package's `bundled/plugin_version.txt`, as a minimum: a copy equal to or
 newer than it passes and an older one fails, the versions ordered as bare MAJOR.MINOR.PATCH, and a
 version in any other form failing. The check compares with that packaged version alone and reads
 nothing over the network. Beside each harness the window either says that every check passes,
@@ -820,12 +761,10 @@ in an error notification.
 
 ### The shipped recipe file
 
-The shipped recipes are the extension's own file, `gurita-vscode/shipped_recipes.md`, which the
-package ships as `bundled/shipped_recipes.md`, read at run time. The extension does not read
-`snippets/GURITA_USAGE.md`: that file stays in the repository as a document for running the
-chains by hand, holding the same recipes beside its `## Manual use` blocks with nothing checking
-one copy against the other, and a change to the shipped recipes is made in
-`gurita-vscode/shipped_recipes.md`. Only the `###` blocks under the shipped file's one recipe
+The shipped recipes are the extension's own file, which the package carries as
+`bundled/shipped_recipes.md`, read at run time. The extension does not read the Gurita
+repository's `snippets/GURITA_USAGE.md`: that file is a document for running the chains by hand,
+holding the same recipes beside its `## Manual use` blocks. Only the `###` blocks under the shipped file's one recipe
 section, the `## Recipes` heading, are recipes, listed in the file's order with no heading of
 their own on the page, and the notes on running the `agy` lines stand as prose at the top of the
 recipe section. Each chain is shipped once, not once per harness: a line is moved onto the other
@@ -986,7 +925,8 @@ whole: the preview shows each unreadable line's number and reason and lists ever
 unresolved. Either way you can override tasks by hand and start the run, which stops at the first
 task carrying no override.
 
-This repository tracks its own rule file, `task_line_rules.txt` at its root: tasks whose title or
+The Gurita repository tracks its own rule file, `task_line_rules.txt` at its root, which shows
+the form at work: tasks whose title or
 brief names `core/tools/`, a `.py` file, a test, a parser, or the runner go to
 `Single task with Opus xHigh (Claude Code)`, and every other task to the default,
 `Single task with Opus High (Claude Code)`.
@@ -1006,6 +946,7 @@ is never part of the output a headless line's check reads. When the chain ends i
 prints the line the run ended on and the recipe line it stopped at, then waits for a keypress;
 the terminal closes, and the live missions are re-read, once you dismiss it.
 
-The runner can also be run by hand outside the editor, from `gurita-vscode/` once a build has
-written `bundled/`; `python3 runner.py --help` lists its `chain`, `preview`, and `loop` commands
+The runner can also be run by hand outside the editor, from the installed extension's own
+directory, which holds it beside `bundled/` (for VS Code,
+`~/.vscode/extensions/busyminds.gurita-vscode-<version>/`); `python3 runner.py --help` lists its `chain`, `preview`, and `loop` commands
 and their arguments.
