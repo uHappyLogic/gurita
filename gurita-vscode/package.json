@@ -1,7 +1,7 @@
 {
   "name": "gurita-vscode",
   "displayName": "Gurita for VS Code",
-  "description": "A side-bar view and mission windows for the Gurita plugin's missions, questions, and recipes.",
+  "description": "Gurita is a plugin for Claude Code, Codex, and Antigravity that settles a mission's questions before handing its work to agents, and this extension adds a side-bar view and windows over the plugin's missions, questions, and recipes, doing nothing unless the plugin is installed.",
   "publisher": "BusyMinds",
   "version": "0.1.0",
   "license": "MIT",
@@ -20,8 +20,22 @@
     "vscode": "^1.143.0"
   },
   "categories": [
-    "Other"
+    "AI"
   ],
+  "keywords": [
+    "gurita",
+    "missions",
+    "claude code",
+    "codex",
+    "antigravity",
+    "ai agents",
+    "planning",
+    "requirements"
+  ],
+  "galleryBanner": {
+    "color": "#9333ea",
+    "theme": "dark"
+  },
   "main": "./out/extension.js",
   "activationEvents": [
     "onView:gurita.missions",

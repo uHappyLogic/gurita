@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Listing Description, Category, Keywords, and Banner
-
-Rewrite the manifest's listing metadata for a reader new to the plugin: `description` becomes one sentence saying what Gurita is (a plugin for Claude Code, Codex, and Antigravity that settles a mission's questions before handing its work to agents), what the extension adds (a side-bar view and windows over the plugin's missions, questions, and recipes), and that the plugin must be installed for it to do anything; `categories` becomes `AI` as its only entry; a `keywords` list of about six to ten entries is added, holding `gurita`, `missions`, `claude code`, `codex`, `antigravity`, and a few domain terms such as `ai agents`, `planning`, and `requirements`; and `"galleryBanner": { "color": "#9333ea", "theme": "dark" }` is added. `displayName` stays `Gurita for VS Code`, no `preview` entry is added, and no wording advertises the install and update feature, verified by reading the manifest against those values and by `npm run package` building with it.
-
----
-
 ## Engine Floor for the Target Forks
 
 Lower `engines.vscode` to the oldest VS Code base among the four Open VSX editors the extension means to reach, VSCodium, Cursor, Windsurf, and Antigravity, looked up when the change is made, and re-pin `@types/vscode` exactly to the newest published typings not above that floor, so the published package installs in those forks. It is verified by the extension compiling and `npm test` passing against the re-pinned typings, by `npm run package` building, and by every statement of the floor and the pin in the extension's documents matching the manifest.
