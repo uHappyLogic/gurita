@@ -30,12 +30,18 @@
 // it stand the recipe buttons, then the page's row of mission-wide actions, the New task and Ask in
 // mission context buttons, each posting the page's mission, drawn on every mission page whichever
 // pane is shown and at every step, and then two
-// panes behind one row of two headers directly beneath it, Open questions and Remaining tasks, of
+// panes behind one row of two headers directly beneath it, Open questions and Tasks, of
 // equal width and together filling the window's whole width, with only the selected pane's content
-// beneath them: the question view in Open questions, and in Remaining tasks each remaining task's
-// heading with its brief beneath it, the brief drawn by the text renderer, all drawn from the parse
-// the extension posts. A page opens on the pane the extension posts as the
-// mission's default, Remaining tasks when git holds at least one review commit for it and no
+// beneath them: the question view in Open questions, and in Tasks two parts, each under a heading of
+// its own, first the remaining tasks, each remaining task's heading with its brief beneath it, the
+// brief drawn by the text renderer, all drawn from the parse the extension posts, and beneath them
+// the completed tasks behind one Show completed tasks control beside their heading, hidden by
+// default, which shows them, newest first as the missions tool's `tasks <path> --with-body` prints
+// them and the extension posts them, each its title with its verified bar beneath it, drawn by the
+// text renderer, and turns into Hide completed tasks, which hides them again. Whether they are shown
+// is held in this script's memory only, as the goal's is, so every load of the page hides them
+// afresh. A page opens on the pane the extension posts as the
+// mission's default, Tasks when git holds at least one review commit for it and no
 // question is open and Open questions otherwise, Open questions too when none is posted. A pane
 // header the person clicks stays selected through every redraw while the page stays shown; it
 // is held in this script's memory only, never saved with `setState`, so the failure state, the
@@ -110,7 +116,7 @@
 // completes tasks, and one while `requirements.md` or `open_questions.xml` holds an uncommitted
 // change, the `git status --porcelain` lines beneath it, which stops the answer sweep. The recipe dropdowns and the fixed-name buttons' dropdowns, the question view's
 // first, previous, and next buttons and dependency links, the preview's close button, the
-// introduction's goal control, and the two pane headers stay enabled, and the left and right arrow keys move the question view only while its
+// introduction's goal control, the completed tasks' control, and the two pane headers stay enabled, and the left and right arrow keys move the question view only while its
 // pane is shown. The page draws no Settings control and nothing from the harness check: the
 // settings live in the Settings window of their own, drawn by its own script (`settings.ts`), and a
 // disabled harness reaches the page only as the recipe lists and fixed-name buttons the extension
@@ -120,7 +126,7 @@
 // every load before anything is posted, so a window that is restored after a restart or a window
 // reload hands the extension its mission's path, and its positions come back with it.
 // Every value is drawn as text, never as markup, since it comes from the workspace; the mission's
-// goal and the card's question, rationale, and alternative texts go through the text renderer
+// goal, each task's brief and verified bar, and the card's question, rationale, and alternative texts go through the text renderer
 // (`text.ts`), which the page shell loads before this script, so a stretch between backticks in
 // them shows as code, and the goal's paragraphs and `- ` lists show as such.
 
@@ -164,6 +170,18 @@ declare function acquireVsCodeApi(): VsCodeApi;
 
   type TaskPart = { state: 'read'; remaining: RemainingTask[] } | { state: 'failed'; notice: Notice };
 
+  /** One completed task as the missions tool's `tasks <path> --with-body` prints it: its commit's hash and date, its title, and its verified bar. */
+  interface CompletedTask {
+    hash: string;
+    date: string;
+    mission: string;
+    title: string;
+    bar: string;
+  }
+
+  /** The mission's completed tasks, newest first, or the cause they could not be read. */
+  type CompletedRead = { state: 'read'; tasks: CompletedTask[] } | { state: 'failed'; cause: string };
+
   type WorkflowStep = 'define' | 'first-review' | 'additional-review' | 'derive' | 'execute' | 'follow-up' | 'finish';
 
   /** One of the two panes beneath a mission page's pane headers. */
@@ -177,6 +195,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
     introduction?: IntroductionPart;
     questions: QuestionPart;
     tasks: TaskPart;
+    /** Its completed tasks, which the Tasks pane lists beneath the remaining ones; drawn as none when absent. */
+    completed?: CompletedRead;
     /** The step to run next, which the diagram fills; absent when none could be chosen. */
     step?: WorkflowStep;
     /** The review commits beyond the first, which the additional review round carries; absent while git holds at most one. */
@@ -320,8 +340,16 @@ declare function acquireVsCodeApi(): VsCodeApi;
   /** The two panes beneath a mission page's pane headers, in the order drawn, each with its header. */
   const PANES: [MissionPane, string][] = [
     ['questions', 'Open questions'],
-    ['tasks', 'Remaining tasks'],
+    ['tasks', 'Tasks'],
   ];
+  /** The headings of the Tasks pane's two parts, the remaining tasks first. */
+  const REMAINING_HEADING = 'Remaining tasks';
+  const COMPLETED_HEADING = 'Completed tasks';
+  /** The labels of the completed tasks' control while they are hidden and while they are shown. */
+  const SHOW_COMPLETED = 'Show completed tasks';
+  const HIDE_COMPLETED = 'Hide completed tasks';
+  const NO_COMPLETED_LINE = 'No task is completed.';
+  const COMPLETED_FAILURE_LINE = 'The completed tasks could not be read.';
   /** The heading of the page's group of own recipes, drawn below the shipped recipes, which have none. */
   const OWN_GROUP_HEADING = 'Your actions';
 
@@ -353,6 +381,11 @@ declare function acquireVsCodeApi(): VsCodeApi;
    * saved, so the failure state, the notice, or a fresh page hides the goal again.
    */
   let goalShown: string | undefined;
+  /**
+   * The mission whose completed tasks the Tasks pane shows, held while the page stays shown and
+   * never saved, so the failure state, the notice, or a fresh page hides them again.
+   */
+  let completedShown: string | undefined;
 
   function element<K extends keyof HTMLElementTagNameMap>(tag: K, text?: string, className?: string): HTMLElementTagNameMap[K] {
     const node = document.createElement(tag);
@@ -903,34 +936,92 @@ declare function acquireVsCodeApi(): VsCodeApi;
   }
 
   /**
-   * The Remaining tasks pane: each remaining task in file order, its heading and beneath it its
-   * brief, drawn by the text renderer, a task with an empty brief its heading alone.
+   * The Tasks pane, in two parts, each under a heading of its own: first the remaining tasks, each
+   * in file order, its heading and beneath it its brief, drawn by the text renderer, a task with an
+   * empty brief its heading alone; then the completed tasks behind one control beside their
+   * heading, hidden by default, which shows them, newest first as the missions tool prints them,
+   * each its title and beneath it its verified bar, drawn by the text renderer, and turns into the
+   * control that hides them again.
    */
   function drawTasks(mission: Mission): HTMLElement {
     const view = element('section', undefined, 'pane tasks');
     view.setAttribute('role', 'tabpanel');
-    view.setAttribute('aria-label', 'Remaining tasks');
+    view.setAttribute('aria-label', 'Tasks');
+    view.append(drawRemainingTasks(mission), drawCompletedTasks(mission));
+    return view;
+  }
+
+  /** The Tasks pane's first part: the remaining tasks under their heading, or the task list's notice. */
+  function drawRemainingTasks(mission: Mission): HTMLElement {
+    const section = element('section', undefined, 'task-part remaining-tasks');
+    section.setAttribute('aria-label', REMAINING_HEADING);
+    section.append(element('h3', REMAINING_HEADING, 'task-part-heading'));
     const part = mission.tasks;
     if (part.state === 'failed') {
-      view.append(drawNotice(part.notice));
+      section.append(drawNotice(part.notice));
     } else if (part.remaining.length === 0) {
-      view.append(element('p', 'No task remains.'));
+      section.append(element('p', 'No task remains.'));
     } else {
       const list = element('ol', undefined, 'task-list');
       for (const task of part.remaining) {
-        const item = element('li', undefined, 'task');
-        item.append(element('h4', task.title, 'task-title'));
-        const blocks = renderText(task.brief);
-        if (blocks.length > 0) {
-          const brief = element('div', undefined, 'task-brief');
-          brief.append(...blocks);
-          item.append(brief);
-        }
-        list.append(item);
+        list.append(taskItem(task.title, task.brief, 'task', 'task-brief'));
       }
-      view.append(list);
+      section.append(list);
     }
-    return view;
+    return section;
+  }
+
+  /**
+   * The Tasks pane's second part: the completed tasks' heading with its control beside it and,
+   * while they are shown, the completed tasks, the line saying none is completed, or the failure
+   * line with the cause beneath it.
+   */
+  function drawCompletedTasks(mission: Mission): HTMLElement {
+    const section = element('section', undefined, 'task-part completed-tasks');
+    section.setAttribute('aria-label', COMPLETED_HEADING);
+    const shown = completedShown === mission.path;
+    const head = element('div', undefined, 'task-part-head');
+    const toggle = button(shown ? HIDE_COMPLETED : SHOW_COMPLETED, 'control completed-toggle', () => toggleCompleted(mission.path));
+    toggle.setAttribute('aria-expanded', String(shown));
+    toggle.dataset.focus = 'completed-toggle';
+    head.append(element('h3', COMPLETED_HEADING, 'task-part-heading'), toggle);
+    section.append(head);
+    if (shown) {
+      const part = mission.completed ?? { state: 'read', tasks: [] };
+      if (part.state === 'failed') {
+        const failure = element('div', undefined, 'notice');
+        failure.append(element('p', COMPLETED_FAILURE_LINE), element('pre', part.cause));
+        section.append(failure);
+      } else if (part.tasks.length === 0) {
+        section.append(element('p', NO_COMPLETED_LINE));
+      } else {
+        const list = element('ol', undefined, 'task-list completed-list');
+        for (const task of part.tasks) {
+          list.append(taskItem(task.title, task.bar, 'task completed-task', 'task-bar'));
+        }
+        section.append(list);
+      }
+    }
+    return section;
+  }
+
+  /** One task of the Tasks pane: its title as a heading and beneath it `text` drawn by the text renderer, its title alone when `text` draws nothing. */
+  function taskItem(title: string, text: string, className: string, textClass: string): HTMLElement {
+    const item = element('li', undefined, className);
+    item.append(element('h4', title, 'task-title'));
+    const blocks = renderText(text);
+    if (blocks.length > 0) {
+      const body = element('div', undefined, textClass);
+      body.append(...blocks);
+      item.append(body);
+    }
+    return item;
+  }
+
+  /** Shows the completed tasks of the mission at `mission` when they are hidden and hides them when they are shown. */
+  function toggleCompleted(mission: string): void {
+    completedShown = completedShown === mission ? undefined : mission;
+    draw();
   }
 
   /** The recipe buttons of the mission's page, drawn from the recipe list posted with the mission. */
@@ -1147,7 +1238,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
 
   /**
    * The two panes: the row of mission-wide actions, then one row of two headers of equal width, Open
-   * questions and Remaining tasks, directly beneath it, and beneath them the selected pane's
+   * questions and Tasks, directly beneath it, and beneath them the selected pane's
    * content alone. The headers stay enabled while a chain runs.
    */
   function drawPanes(mission: Mission, busy: boolean): HTMLElement {
@@ -1202,6 +1293,9 @@ declare function acquireVsCodeApi(): VsCodeApi;
     if (goalShown !== undefined && goalShown !== shownMission.path) {
       goalShown = undefined;
     }
+    if (completedShown !== undefined && completedShown !== shownMission.path) {
+      completedShown = undefined;
+    }
     card = undefined;
     diagram = undefined;
     root.replaceChildren(drawPage(shownMission));
@@ -1244,6 +1338,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
       if (drawn !== 'page') {
         picked = undefined;
         goalShown = undefined;
+        completedShown = undefined;
       }
       shownMission = message.mission;
       running = new Set(message.running ?? []);
@@ -1253,11 +1348,13 @@ declare function acquireVsCodeApi(): VsCodeApi;
       drawn = 'failure';
       picked = undefined;
       goalShown = undefined;
+      completedShown = undefined;
       drawFailure(message.cause);
     } else if (message.type === 'notLive') {
       drawn = 'notLive';
       picked = undefined;
       goalShown = undefined;
+      completedShown = undefined;
       previews.clear();
       drawNotLive();
     } else if (message.type === 'running') {

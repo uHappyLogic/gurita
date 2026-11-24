@@ -2776,3 +2776,53 @@ test("a mission's page is posted what would stop a run of it, read afresh with i
     process.env.HOME = home;
   }
 });
+
+/** The mission whose completed tasks the completed-tasks test reads. */
+const DONE_MISSION = 'pkg/mission_done/';
+
+test("a mission's page is posted its completed tasks, each with its verified bar, as the missions tool's tasks --with-body prints them, read afresh on a commit", async () => {
+  const home = process.env.HOME;
+  process.env.HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-home-'));
+  try {
+    const root = project(DONE_MISSION);
+    const files = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-recipes-'));
+    fs.writeFileSync(path.join(files, 'shipped_recipes.md'), SHIPPED_TEXT);
+    packaged.set('bundled/missions.py', path.join(__dirname, '..', '..', '..', 'core', 'tools', 'missions.py'));
+    packaged.set('bundled/shipped_recipes.md', path.join(files, 'shipped_recipes.md'));
+    workspace.folders = [{ uri: { fsPath: root } }];
+    workspace.settings = { ownRecipesFile: path.join(files, 'recipes.md') };
+    fs.writeFileSync(path.join(root, DONE_MISSION, 'TASKS_TODO.md'), '# TASKS TODO\n\n## A task\n\nA brief.\n\n---\n');
+    git(root, 'add', '.');
+    git(root, 'commit', '-q', '-m', `Task-derivation: ${DONE_MISSION}`);
+    type Page = { path: string; completed?: { state: string; tasks?: { hash: string; date: string; mission: string; title: string; bar: string }[] } };
+    const first = (await pageAfter({ type: 'refresh' }, DONE_MISSION)) as unknown as Page;
+    assert.deepStrictEqual(first.completed, { state: 'read', tasks: [] }, 'no task of a fresh mission is completed');
+
+    const gitDir = path.join(root, '.git');
+    const deadline = Date.now() + 5000;
+    while (!watchers.some((each) => each.base === gitDir && !each.disposed) && Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    const gitWatcher = watchers.filter((each) => each.base === gitDir && !each.disposed)[0];
+    assert.ok(gitWatcher !== undefined, 'the git state is watched');
+    const window = openWindow(DONE_MISSION);
+
+    // The task completed and committed with its bar as the body: the commit's re-read posts it completed.
+    fs.writeFileSync(path.join(root, DONE_MISSION, 'TASKS_TODO.md'), '# TASKS TODO\n');
+    git(root, 'add', `${DONE_MISSION}TASKS_TODO.md`);
+    git(root, 'commit', '-q', '-m', 'Task-completion: A task\n\n- The `first` criterion\n- Another criterion');
+    const from = window.posts.length;
+    for (const listener of gitWatcher.listeners.change) {
+      listener({ fsPath: path.join(gitDir, 'HEAD') });
+    }
+    const done = (await windowPosted(DONE_MISSION, 'page', from)).mission as Page;
+    assert.strictEqual(done.completed?.state, 'read');
+    assert.deepStrictEqual(
+      done.completed?.tasks?.map(({ mission, title, bar }) => ({ mission, title, bar })),
+      [{ mission: DONE_MISSION, title: 'A task', bar: '- The `first` criterion\n- Another criterion' }],
+    );
+    assert.match(done.completed?.tasks?.[0].hash ?? '', /^[0-9a-f]{7,}$/, "the commit's hash is posted with it");
+  } finally {
+    process.env.HOME = home;
+  }
+});

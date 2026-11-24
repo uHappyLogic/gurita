@@ -104,13 +104,13 @@ const ACTIONS: Record<PaneName, string[]> = {
 
 /** The buttons that stay enabled whatever runs, with each pane shown. */
 const STAYING: Record<PaneName, string[]> = {
-  questions: ['Open questions', 'Remaining tasks', 'Next'],
-  tasks: ['Open questions', 'Remaining tasks'],
+  questions: ['Open questions', 'Tasks', 'Next'],
+  tasks: ['Open questions', 'Tasks', 'Show completed tasks'],
 };
 
-/** Shows the Remaining tasks pane, then the Open questions pane, running `check` with each shown. */
+/** Shows the Tasks pane, then the Open questions pane, running `check` with each shown. */
 function eachPane(page: Page, check: (pane: PaneName) => void): void {
-  named(page, 'Remaining tasks').click();
+  named(page, 'Tasks').click();
   check('tasks');
   named(page, 'Open questions').click();
   check('questions');
@@ -177,7 +177,7 @@ test("another mission's window is unaffected by a run it does not hold", () => {
 test('the failure state replaces the whole page with the failure line and the cause, and the next page posted draws the page again', () => {
   const page = loadPage();
   page.send(alphaPage([]));
-  named(page, 'Remaining tasks').click();
+  named(page, 'Tasks').click();
   page.send({ type: 'liveFailure', cause: 'Error: not a git repository' });
   assert.deepStrictEqual(
     page.root.children.map((each) => (each as FakeElement).className),
@@ -208,7 +208,7 @@ test('a window whose mission is no longer live draws one fixed notice alone, and
     names: ['complete-task'],
     result: { state: 'read', tasks: [] },
   });
-  named(page, 'Remaining tasks').click();
+  named(page, 'Tasks').click();
   page.send({ type: 'notLive', path: ALPHA });
   assert.deepStrictEqual(page.root.children.map((each) => (each as FakeElement).className), ['not-live']);
   assert.deepStrictEqual(texts(page).filter((text) => text !== ''), ['This mission is no longer live.'], 'the one fixed notice is all that is drawn');
@@ -669,7 +669,7 @@ function fixedButtons(model: string, effort: string): Record<string, unknown> {
   );
 }
 
-/** Each fixed-name button drawn with the Remaining tasks pane and then the Open questions pane shown, by its label: its spans and its hover text. */
+/** Each fixed-name button drawn with the Tasks pane and then the Open questions pane shown, by its label: its spans and its hover text. */
 function fixedShown(page: Page): Record<string, [string[], string]> {
   const shown: Record<string, [string[], string]> = {};
   eachPane(page, () => {
@@ -934,7 +934,7 @@ test('a dropdown beside each fixed-name button offers its variants and stands on
   let count = page.posted.length;
   (dropdownBeside(page, 'Discuss') as FakeElement).change('0');
   own[1].change('0');
-  named(page, 'Remaining tasks').click();
+  named(page, 'Tasks').click();
   (dropdownBeside(page, 'New task') as FakeElement).change('0');
   (dropdownBeside(page, 'Ask in mission context') as FakeElement).change('0');
   assert.deepStrictEqual(page.posted.slice(count), [
@@ -1425,7 +1425,7 @@ function shownPane(page: Page): PaneName {
   const drawn = page.root.all().filter((each) => each.has('pane'));
   assert.strictEqual(drawn.length, 1, 'one pane drawn at a time');
   const pane: PaneName = drawn[0].has('tasks') ? 'tasks' : 'questions';
-  assert.strictEqual(selected[0].textContent, pane === 'tasks' ? 'Remaining tasks' : 'Open questions');
+  assert.strictEqual(selected[0].textContent, pane === 'tasks' ? 'Tasks' : 'Open questions');
   return pane;
 }
 
@@ -1446,22 +1446,22 @@ test('a mission page draws one row of two pane headers with only the selected pa
     paneHeaders(page).map((each) => [each.tagName, each.textContent, each.getAttribute('role')]),
     [
       ['button', 'Open questions', 'tab'],
-      ['button', 'Remaining tasks', 'tab'],
+      ['button', 'Tasks', 'tab'],
     ],
   );
   assert.strictEqual(shownPane(page), 'questions');
   assert.ok(texts(page).includes('1 / 2'));
   assert.ok(texts(page).includes('Discuss'));
   assert.ok(!texts(page).includes('First Task'));
-  named(page, 'Remaining tasks').click();
+  named(page, 'Tasks').click();
   assert.strictEqual(shownPane(page), 'tasks');
   assert.ok(texts(page).includes('First Task'));
   assert.ok(!texts(page).includes('1 / 2'));
   assert.ok(!texts(page).includes('Discuss'));
-  assert.strictEqual(page.root.all().filter((each) => each.tagName === 'h3' && ['Open questions', 'Remaining tasks'].includes(each.textContent)).length, 0);
+  assert.strictEqual(page.root.all().filter((each) => each.tagName === 'h3' && ['Open questions', 'Tasks'].includes(each.textContent)).length, 0);
 });
 
-test('the Remaining tasks pane draws each heading with its brief beneath it, the brief drawn by the text renderer', () => {
+test("the Tasks pane draws each remaining task's heading with its brief beneath it, the brief drawn by the text renderer", () => {
   const page = loadPage();
   const tasks = {
     state: 'read',
@@ -1472,10 +1472,10 @@ test('the Remaining tasks pane draws each heading with its brief beneath it, the
     ],
   };
   page.send(pageOf({ ...(mission(ALPHA, 'Alpha') as Record<string, unknown>), tasks }));
-  named(page, 'Remaining tasks').click();
+  named(page, 'Tasks').click();
   assert.strictEqual(shownPane(page), 'tasks');
   const pane = page.root.all().find((each) => each.has('pane') && each.has('tasks')) as FakeElement;
-  const list = pane.children[0] as FakeElement;
+  const list = (pane.children[0] as FakeElement).children[1] as FakeElement;
   assert.strictEqual(list.tagName, 'ol');
   const items = list.children as FakeElement[];
   assert.deepStrictEqual(
@@ -1502,6 +1502,185 @@ test('the Remaining tasks pane draws each heading with its brief beneath it, the
   assert.deepStrictEqual(bullets.children.map(renderedText), ['One point', 'Another']);
   const third = (items[2].children[1] as FakeElement).children as FakeElement[];
   assert.deepStrictEqual(third.map((each) => [each.tagName, renderedText(each)]), [['p', 'Plain *emphasis* and [a link](x) stay text.']]);
+});
+
+/** Two completed tasks as the extension posts them, newest first, the second with no verified bar. */
+const COMPLETED = {
+  state: 'read',
+  tasks: [
+    { hash: 'abc1234', date: '2026-11-24', mission: ALPHA, title: 'Done Task', bar: '- The `done` criterion\n- Another criterion' },
+    { hash: 'def5678', date: '2026-11-23', mission: ALPHA, title: 'Bare Done Task', bar: '' },
+  ],
+};
+
+/** Alpha's page with its completed tasks `completed`, left out when undefined. */
+function completedPage(completed: unknown, running: string[] = []): unknown {
+  return pageOf({ ...(mission(ALPHA, 'Alpha') as Record<string, unknown>), ...(completed === undefined ? {} : { completed }) }, running);
+}
+
+/** The Tasks pane drawn on the page. */
+function tasksPane(page: Page): FakeElement {
+  const found = page.root.all().find((each) => each.has('pane') && each.has('tasks'));
+  assert.ok(found !== undefined, 'the Tasks pane is drawn');
+  return found;
+}
+
+/** The completed tasks' control. */
+function completedToggle(page: Page): FakeElement {
+  const found = page.root.all().filter((each) => each.has('completed-toggle'));
+  assert.strictEqual(found.length, 1);
+  return found[0];
+}
+
+/** The completed tasks' part of the Tasks pane. */
+function completedPart(page: Page): FakeElement {
+  return tasksPane(page).children[1] as FakeElement;
+}
+
+test('the Tasks pane holds two parts, the remaining tasks under their heading and beneath them the completed tasks behind one control, hidden by default, and no third pane', () => {
+  const page = loadPage();
+  page.send(completedPage(COMPLETED));
+  assert.deepStrictEqual(paneHeaders(page).map((each) => each.textContent), ['Open questions', 'Tasks'], 'the page keeps its two pane headers');
+  named(page, 'Tasks').click();
+  const pane = tasksPane(page);
+  assert.strictEqual(pane.getAttribute('aria-label'), 'Tasks');
+  const parts = pane.children as FakeElement[];
+  assert.deepStrictEqual(
+    parts.map((each) => each.className),
+    ['task-part remaining-tasks', 'task-part completed-tasks'],
+    'the remaining tasks head the pane, the completed tasks beneath them',
+  );
+  const remainingHeading = parts[0].children[0] as FakeElement;
+  assert.deepStrictEqual([remainingHeading.tagName, remainingHeading.textContent], ['h3', 'Remaining tasks']);
+  assert.ok(parts[0].all().some((each) => each.textContent === 'First Task'), 'the remaining tasks stand in their own part');
+  const head = parts[1].children[0] as FakeElement;
+  assert.deepStrictEqual(
+    head.children.map((each) => [(each as FakeElement).tagName, each.textContent]),
+    [
+      ['h3', 'Completed tasks'],
+      ['button', 'Show completed tasks'],
+    ],
+    'the completed heading with its control beside it',
+  );
+  assert.strictEqual(completedToggle(page).getAttribute('aria-expanded'), 'false');
+  assert.strictEqual(parts[1].children.length, 1, 'collapsed by default: nothing beneath the heading');
+  assert.ok(!texts(page).includes('Done Task'), 'no completed task is drawn while they are hidden');
+  assert.strictEqual(page.root.all().filter((each) => each.has('pane')).length, 1, 'one pane drawn at a time');
+  named(page, 'Open questions').click();
+  assert.ok(!page.root.all().some((each) => each.has('completed-toggle')), 'the Open questions pane draws no completed tasks');
+});
+
+test('the control shows each completed task, newest first, its title with its verified bar drawn by the text renderer beneath it, and hides them again', () => {
+  const page = loadPage();
+  page.send(completedPage(COMPLETED));
+  named(page, 'Tasks').click();
+  completedToggle(page).click();
+  assert.strictEqual(completedToggle(page).textContent, 'Hide completed tasks');
+  assert.strictEqual(completedToggle(page).getAttribute('aria-expanded'), 'true');
+  const list = completedPart(page).children[1] as FakeElement;
+  assert.strictEqual(list.tagName, 'ol');
+  assert.strictEqual(list.className, 'task-list completed-list');
+  const items = list.children as FakeElement[];
+  assert.deepStrictEqual(
+    items.map((item) => (item.children as FakeElement[]).map((each) => [each.tagName, each.className, each.tagName === 'h4' ? each.textContent : ''])),
+    [
+      [
+        ['h4', 'task-title', 'Done Task'],
+        ['div', 'task-bar', ''],
+      ],
+      [['h4', 'task-title', 'Bare Done Task']],
+    ],
+    'each completed task is its title, with its bar beneath it when it has one, in the order posted',
+  );
+  const bar = (items[0].children[1] as FakeElement).children as FakeElement[];
+  assert.deepStrictEqual(bar.map((each) => each.tagName), ['ul'], "the bar's bullets are one list");
+  const [first, second] = bar[0].children as FakeElement[];
+  assert.deepStrictEqual(
+    first.children.map((child) => (child instanceof FakeElement ? [child.tagName, child.textContent] : ['text', child.textContent])),
+    [
+      ['text', 'The '],
+      ['code', 'done'],
+      ['text', ' criterion'],
+    ],
+  );
+  assert.strictEqual(renderedText(second), 'Another criterion');
+  completedToggle(page).click();
+  assert.strictEqual(completedToggle(page).textContent, 'Show completed tasks');
+  assert.strictEqual(completedToggle(page).getAttribute('aria-expanded'), 'false');
+  assert.strictEqual(completedPart(page).children.length, 1, 'hidden again');
+  assert.deepStrictEqual(page.posted, [{ type: 'ready' }], 'the control posts nothing to the extension');
+});
+
+test('shown completed tasks draw the line saying none is completed, or the failure line with the cause, and none when nothing is posted', () => {
+  for (const [completed, expected] of [
+    [{ state: 'read', tasks: [] }, [['p', 'No task is completed.']]],
+    [undefined, [['p', 'No task is completed.']]],
+  ] as [unknown, string[][]][]) {
+    const page = loadPage();
+    page.send(completedPage(completed));
+    named(page, 'Tasks').click();
+    completedToggle(page).click();
+    assert.deepStrictEqual(
+      (completedPart(page).children.slice(1) as FakeElement[]).map((each) => [each.tagName, each.textContent]),
+      expected,
+    );
+  }
+  const page = loadPage();
+  page.send(completedPage({ state: 'failed', cause: 'Error: no such path: lib/mission_alpha/' }));
+  named(page, 'Tasks').click();
+  completedToggle(page).click();
+  const notice = completedPart(page).children[1] as FakeElement;
+  assert.ok(notice.has('notice'));
+  assert.deepStrictEqual(
+    (notice.children as FakeElement[]).map((each) => [each.tagName, each.textContent]),
+    [
+      ['p', 'The completed tasks could not be read.'],
+      ['pre', 'Error: no such path: lib/mission_alpha/'],
+    ],
+  );
+});
+
+test('shown completed tasks stay shown through every redraw and while a chain runs, are saved nowhere, and are hidden on every load and after the failure state or the notice', () => {
+  const page = loadPage();
+  page.send(completedPage(COMPLETED));
+  named(page, 'Tasks').click();
+  completedToggle(page).click();
+  page.send(completedPage({ state: 'read', tasks: [COMPLETED.tasks[1]] }));
+  assert.strictEqual(completedToggle(page).textContent, 'Hide completed tasks');
+  assert.deepStrictEqual(
+    (completedPart(page).children[1] as FakeElement).children.map((item) => ((item as FakeElement).children[0] as FakeElement).textContent),
+    ['Bare Done Task'],
+    'the redrawn list is the one posted last',
+  );
+  page.send({ type: 'running', missions: [ALPHA] });
+  assert.strictEqual(completedToggle(page).textContent, 'Hide completed tasks');
+  assert.strictEqual(completedToggle(page).disabled, false, 'the control stays enabled while a chain runs');
+  assert.ok(page.saved.length > 0);
+  for (const state of page.saved) {
+    assert.ok(!JSON.stringify(state).toLowerCase().includes('completed'), 'no shown or hidden state is saved');
+  }
+
+  const again = loadPage();
+  again.send(completedPage(COMPLETED));
+  named(again, 'Tasks').click();
+  assert.strictEqual(completedToggle(again).textContent, 'Show completed tasks', 'a page loaded afresh opens with them hidden');
+  for (const between of [{ type: 'liveFailure', cause: 'Error: no' }, { type: 'notLive', path: ALPHA }]) {
+    const each = loadPage();
+    each.send(completedPage(COMPLETED));
+    named(each, 'Tasks').click();
+    completedToggle(each).click();
+    each.send(between);
+    each.send(completedPage(COMPLETED));
+    named(each, 'Tasks').click();
+    assert.strictEqual(completedToggle(each).textContent, 'Show completed tasks', `hidden again after ${between.type}`);
+  }
+});
+
+test("the Tasks pane's two part headings and the completed tasks' head line carry their stylesheet rules", () => {
+  const selectors = stylesheetRules().flatMap((rule) => rule.selectors);
+  for (const selector of ['.task-part + .task-part', '.task-part-heading', '.task-part-head', '.task-list .task-bar p']) {
+    assert.ok(selectors.includes(selector), `the stylesheet holds ${selector}`);
+  }
 });
 
 /** The buttons of the page's row of mission-wide actions, in order. */
@@ -1543,7 +1722,7 @@ test('the row of mission-wide actions, New task and Ask in mission context, stan
     for (const label of MISSION_ACTIONS) {
       assert.strictEqual(named(page, label).disabled, false);
     }
-    named(page, 'Remaining tasks').click();
+    named(page, 'Tasks').click();
     assert.strictEqual(shownPane(page), 'tasks');
     assertMissionActionsAbovePanes(page);
     assert.ok(texts(page).includes('First Task'));
@@ -1595,7 +1774,7 @@ test('with no pane clicked the page follows the default the extension posts with
 test('a clicked pane stays selected through redraws and file-event refreshes while the page stays shown', () => {
   const page = loadPage();
   page.send(liveWith('questions'));
-  named(page, 'Remaining tasks').click();
+  named(page, 'Tasks').click();
   assert.strictEqual(shownPane(page), 'tasks');
   page.send(liveWith('questions'));
   assert.strictEqual(shownPane(page), 'tasks');
@@ -1621,15 +1800,15 @@ test('a clicked pane stays selected through redraws and file-event refreshes whi
 test('the failure state, the no-longer-live notice, and a fresh page give way to the default, and the pane is never saved', () => {
   const page = loadPage();
   page.send(liveWith('questions'));
-  named(page, 'Remaining tasks').click();
+  named(page, 'Tasks').click();
   page.send({ type: 'liveFailure', cause: 'Error: no git' });
   page.send(liveWith('questions'));
   assert.strictEqual(shownPane(page), 'questions', 'the failure state gives way to the default');
-  named(page, 'Remaining tasks').click();
+  named(page, 'Tasks').click();
   page.send({ type: 'notLive', path: ALPHA });
   page.send(liveWith('questions'));
   assert.strictEqual(shownPane(page), 'questions', 'the no-longer-live notice gives way to the default');
-  named(page, 'Remaining tasks').click();
+  named(page, 'Tasks').click();
   page.key('ArrowRight');
   named(page, 'Open questions').click();
   page.key('ArrowRight');
@@ -1650,7 +1829,7 @@ test('the arrow keys move the question view only while the Open questions pane i
   assert.ok(texts(page).includes('2 / 2'));
   page.key('ArrowLeft');
   assert.ok(texts(page).includes('1 / 2'));
-  named(page, 'Remaining tasks').click();
+  named(page, 'Tasks').click();
   page.key('ArrowRight');
   assert.strictEqual(shownPane(page), 'tasks');
   named(page, 'Open questions').click();
@@ -1756,7 +1935,7 @@ test('a harness check or settings message posted to a mission window changes not
   posted.send({ type: 'harnessCheck', check: { state: 'checked', harnesses } });
   posted.send({ type: 'harnessSettings', settings: { state: 'read', enabled: { claude: true, antigravity: false, codex: true } } });
   for (const page of [plain, posted]) {
-    named(page, 'Remaining tasks').click();
+    named(page, 'Tasks').click();
   }
   assert.deepStrictEqual(pageShape(posted), pageShape(plain), 'the mission page draws every recipe, button, and the looped run alike');
   assert.ok(!texts(posted).some((text) => text.includes('not found') || text.includes('Checking the harnesses')), 'nothing of the check is named on the page');
@@ -1862,7 +2041,7 @@ test('every push button a mission window draws carries one class of the one shar
   collect();
   named(page, 'Next').click();
   collect();
-  named(page, 'Remaining tasks').click();
+  named(page, 'Tasks').click();
   page.send({
     type: 'preview',
     mission: ALPHA,
@@ -1881,6 +2060,7 @@ test('every push button a mission window draws carries one class of the one shar
     'Answer with this alternative',
     'New task',
     'Ask in mission context',
+    'Show completed tasks',
     'First',
     'Previous',
     'Next',

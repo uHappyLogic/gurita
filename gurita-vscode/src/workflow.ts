@@ -13,7 +13,7 @@
 // document the choice needs did not read, or when the git read the choice needs failed. The
 // additional review round's block carries the count of the review commits beyond the first once
 // git holds two or more, read for every mission whatever its step. The same count chooses the pane
-// a mission's page opens on beneath its two pane headers: Remaining tasks when git holds at least
+// a mission's page opens on beneath its two pane headers: Tasks when git holds at least
 // one review commit for the mission and no question is open, and Open questions otherwise, a
 // failed git read or a question document that did not read included. This module imports nothing
 // from `vscode`.
@@ -106,7 +106,7 @@ export function reviewCount(root: string, missionPath: string, git = 'git'): Pro
   });
 }
 
-/** One of the two panes beneath a mission page's pane headers: Open questions or Remaining tasks. */
+/** One of the two panes beneath a mission page's pane headers: Open questions or Tasks. */
 export type MissionPane = 'questions' | 'tasks';
 
 /**

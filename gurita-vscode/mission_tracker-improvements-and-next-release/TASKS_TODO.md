@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Completed Tasks in the Tasks Pane
-
-List the mission's completed tasks, as the bundled missions tool's `tasks <path> --with-body` prints them, inside the page's second pane beneath the remaining task list, behind one show/hide toggle that is collapsed by default, each with its title and its verified bar drawn by the text renderer. The pane's header is renamed from "Remaining tasks" to "Tasks" and the remaining tasks head their own part of the pane, the page keeping its two pane headers and its default-pane rule and gaining no third pane. Verified by tests of the `tasks` read and of the pane's two parts and toggle, with `gurita-vscode/README.md` describing the pane.
-
----
-
 ## Completed Task Commits Open in an Editor Tab
 
 Give each completed task in the Tasks pane a link that opens its commit inside VS Code only, as one read-only text document in an editor tab: the extension registers a content provider of its own scheme whose content is `git show <hash>` run through `execFile` from the project root, opened with the diff language, so the tab holds the subject, the verified bar as the body, and the whole patch. No remote host is involved and no other extension is called; verified by tests against the `vscode` stub of the provider's content for a fixture commit and of a link's click opening it, with `gurita-vscode/README.md` describing the link.

@@ -155,10 +155,23 @@ workflow diagram under a heading of its own, **Workflow**, marking where it star
 buttons of the recipes that fit the step its diagram fills, each on a row of its own with a dropdown of its variants beside it
 and the recipe's one line of description to its right (see The recipes a page lists), the row of mission-wide actions, **New task** and **Ask in mission context**, each
 with its dropdown, and directly beneath that row two panes behind one row of two headers, **Open questions**, holding the question view
-parsed from `open_questions.xml`, and **Remaining tasks**, holding the remaining tasks of
-`TASKS_TODO.md` in the list's order, each task's `##` heading with its brief, the section's text
-down to its `---` separator, beneath it, drawn by the text renderer the goal uses, described below (a task
-whose brief is empty shows its heading alone). The introduction shows the mission's title alone, the first `# ` heading of its
+parsed from `open_questions.xml`, and **Tasks**, holding the mission's tasks in two parts, each
+under a heading of its own. The first, **Remaining tasks**, heads the pane and holds the remaining
+tasks of `TASKS_TODO.md` in the list's order, each task's `##` heading with its brief, the
+section's text down to its `---` separator, beneath it, drawn by the text renderer the goal uses,
+described below (a task whose brief is empty shows its heading alone). Beneath it, **Completed
+tasks** holds the mission's completed tasks behind one **Show completed tasks** button beside its
+heading, hidden by default, which shows them and turns into **Hide completed tasks**, which hides
+them again. They are read with the bundled missions tool's `tasks <path> --with-body`, one per
+`Task-completion:` commit that changed the mission's directory, newest first as the tool prints
+them, each its title, the task's `##` heading as the commit's subject carries it, with its
+verified bar, the commit's body, beneath it, drawn by the same text renderer, so the bar's `- `
+bullets show as a bulleted list (a commit with no body shows its title alone); no task completed
+yet shows "No task is completed.", and a read that fails shows "The completed tasks could not be
+read." with the tool's error line beneath it. They are read again with the mission's other facts,
+so a task completed while the window is open appears once its commit lands. Like the goal, they
+are hidden every time the page loads: they stay shown through every redraw while the page stays
+shown, but whether they are shown is not saved. The introduction shows the mission's title alone, the first `# ` heading of its
 `requirements.md`, with one **Show goal** button beside it that shows the whole goal beneath the
 title, the `## Goal` section of `requirements.md` as it stands there, and turns into **Hide goal**,
 which hides it again. The button is there whatever the goal's length, and a goal however long is
@@ -172,7 +185,7 @@ state or the notice below standing in between, hides it afresh. The row of missi
 **New task** and **Ask in mission context** are drawn on every mission page whichever pane is
 shown and whatever step the diagram fills. The two
 headers are of equal width and together fill the window's whole width, and only the selected
-pane's content is shown beneath them. A page opens on **Remaining tasks** when git holds at least
+pane's content is shown beneath them. A page opens on **Tasks** when git holds at least
 one `Requirements-review:` commit for the mission (the count the workflow diagram reads) and no
 question is open, and on **Open questions** otherwise, a failed git read included. A header you
 click stays selected through every redraw and every refresh from file events while the page
@@ -230,7 +243,7 @@ Every push button a mission window draws has one look: the theme's primary butto
 one the recipe buttons carry, with a clearly visible 1px outline in the theme's contrast border
 colour, or its foreground colour where the theme sets none, so each button stands out against the
 page and its own fill alike. That covers the recipe buttons, **Start run**, the question card's
-**Discuss** and **Answer**, every **Answer with this alternative**, **New task**, **Ask in mission context**, **Show goal** and **Hide goal**, **First**, **Previous**, **Next**, and **Close preview**, and in the Settings
+**Discuss** and **Answer**, every **Answer with this alternative**, **New task**, **Ask in mission context**, **Show goal** and **Hide goal**, **Show completed tasks** and **Hide completed tasks**, **First**, **Previous**, **Next**, and **Close preview**, and in the Settings
 window its edit controls (**Enable** and **Disable**, **Add model**, **Add effort**, and
 **Remove**, **Duplicate**, **Rename**, **Delete**, **Make default**, and **Reset**) and **Check
 again**. A disabled button is drawn faded. The two pane headers and the links of a card's
@@ -248,7 +261,7 @@ indicator says that the mission is waiting for its run's terminal to close. The 
 is kept on the page whether or not a run is going, so its showing and hiding moves none of the
 page's content. The recipe dropdowns
 and the dropdowns beside the buttons that run a recipe by its fixed name, **Show goal** and
-**Hide goal**, the **Open questions** and **Remaining tasks** headers, the question view's **First**, **Previous**, and **Next**, and every other
+**Hide goal**, **Show completed tasks** and **Hide completed tasks**, the **Open questions** and **Tasks** headers, the question view's **First**, **Previous**, and **Next**, and every other
 mission's window stay enabled, and the page is drawn this way again whenever it is redrawn, after
 the window was hidden and shown included. Should a click still reach the extension for that
 mission, it starts nothing: a notification says a chain is already running and the run's terminal
