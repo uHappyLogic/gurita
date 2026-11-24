@@ -83,6 +83,8 @@ Five missions under `gurita-vscode/` are finished, all between 2026-11-20 and 20
 
 - **Markdown in new texts.** The mission's goal, each remaining task's brief, each completed task's verified bar, and a finished mission's summary are drawn by a hand-written renderer built through DOM calls, with no `innerHTML` and no dependency, that reads the block shapes those four texts' formats actually hold: blank-line-separated paragraphs become paragraphs, consecutive `- ` lines become a bulleted list, and text between backticks becomes code inside either. Emphasis, links, headings, numbered lists, and every other construct stay plain text. The question card keeps its backtick-only drawing, which the same renderer gives for its single-paragraph texts.
 
+- **Ask action placement.** "Ask in mission context" is a fixed-name button outside the recipe list, standing in the same row as New task, which becomes the page's row of mission-wide actions above the two pane headers. It runs a shipped button recipe named by its skill, `ask-in-mission-context`, entered in `BUTTON_RECIPES`, kept out of the recipe list by name, and listed in the Settings window as a button recipe under the "Run by a button outside the recipe list" note. Like New task, it has an arrow-only variant dropdown of its own and a host handler that fills whatever values its line holds.
+
 ### Runs
 
 - **Auto-close default.** The new setting that closes a run's terminal by itself ships on. A chain that ran all its lines closes its terminal without waiting for a keypress and unblocks the mission's page, while a chain that stopped keeps waiting for a keypress. A user who wants every terminal to stay open turns the setting off.
