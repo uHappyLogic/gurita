@@ -164,50 +164,6 @@
       <drawback>It ends the extension&apos;s dependency-free runtime. It adds packaging work for a project built with no bundler (shipping `node_modules` or copying the library into `bundled/`), a third-party package to audit and keep updated, and the HTML-insertion and webview link-handling concerns of any full renderer, all for constructs the four texts&apos; formats barely use.</drawback>
     </alternative>
   </open-question>
-  <open-question id="Long goal display">
-    <question>A mission page of Gurita for VS Code is to open with an introduction showing the mission&apos;s title and its goal above the workflow diagram. A goal read from `requirements.md` can run to several paragraphs. How much of a long goal does the introduction show, and can the reader expand or collapse it?</question>
-    <recommendation option="Whole goal always">The goals recorded in this scope run from about 90 to 170 words, mostly one paragraph, so the introduction stays a few lines tall with no clamp, toggle, saved state, or overflow measurement the page tests cannot make, and the reader never misses part of the goal.</recommendation>
-    <alternative id="Whole goal always">
-      The introduction shows the whole `## Goal` body, every paragraph, beneath the title, at its full height, with no expand or collapse control and no limit on its length.
-      <advantage>The simplest form to build and test against the stand-in DOM: no toggle, no clamp, and no saved state, and the reader never misses part of the goal; the goals recorded so far in this scope run from about 90 to 170 words, mostly one paragraph, so in practice the introduction stays a few lines tall.</advantage>
-      <drawback>A goal that does run to several paragraphs pushes the workflow diagram, the action buttons, and the panes below the fold on every opening of the page, and nothing lets the reader shrink it.</drawback>
-    </alternative>
-    <alternative id="Fixed-height scroll box">
-      The introduction shows the goal inside a box of fixed maximum height, a few lines tall; a goal longer than the box scrolls inside it, and there is no expand or collapse control.
-      <advantage>The page below the introduction stands at the same place whatever the goal&apos;s length, and the whole goal stays readable on the page without any control or saved state.</advantage>
-      <drawback>A nested scroll area inside a scrolling webview is awkward to read and to scroll past with the mouse wheel or keyboard, and nothing but a cut-off line shows the reader that more of the goal is hidden.</drawback>
-    </alternative>
-    <alternative id="Clamped with file link">
-      The introduction shows the goal clamped to its first few lines, with an ellipsis where it is cut, and no expand control on the page; a link beside it opens the mission&apos;s `requirements.md` in the editor, where the whole goal is read.
-      <advantage>The introduction keeps a fixed small height, the page gains no toggle or saved state, and the link gives the reader the goal in its full context, beside the decisions it led to.</advantage>
-      <drawback>Reading the rest of the goal takes the reader off the page into an editor tab, and the extension gains a new command path that opens a mission file, which it has none of today.</drawback>
-    </alternative>
-    <alternative id="Line clamp toggle, reset">
-      The introduction shows the goal clamped to its first few lines, with a Show more control that expands it to the whole goal and a Show less control that clamps it again; the control appears only when the goal is longer than the clamp, and the goal is clamped again on every load of the page.
-      <advantage>A short goal shows whole with no control, a long one never pushes the page down unasked, and the whole goal is one click away on the page itself; with no saved state the page script&apos;s `setState` record gains nothing.</advantage>
-      <drawback>Whether the goal overflows the clamp must be measured after layout, which the stand-in DOM the page tests run against cannot measure, so the control&apos;s presence is hard to test; and a reader who always wants the whole goal expands it again on every opening.</drawback>
-    </alternative>
-    <alternative id="Line clamp toggle, remembered">
-      The introduction shows the goal clamped to its first few lines, with a Show more / Show less control appearing only when the goal overflows the clamp, collapsed by default, and the expanded or collapsed state saved with the page&apos;s `setState` beside its mission path and question positions, so it comes back when the window is reopened or restored.
-      <advantage>A reader&apos;s choice holds per mission window across hides, reloads, and restarts, so the goal is expanded once by someone who wants it and stays out of the way for someone who does not.</advantage>
-      <drawback>It adds a field to the page&apos;s saved state and its restore path on top of the overflow measurement the reset form already needs, more to build and test for a goal that is in practice a single paragraph.</drawback>
-    </alternative>
-    <alternative id="First paragraph toggle">
-      The introduction shows the goal&apos;s first paragraph whole, and when the goal holds more paragraphs a Show more / Show less control reveals and hides the rest; the cut falls at the first blank line of the `## Goal` body rather than at a line count, and it is collapsed on every load.
-      <advantage>Whether the control appears is decided from the text alone, with no layout measurement, so it is fully testable against the stand-in DOM, and the cut never falls mid-sentence.</advantage>
-      <drawback>The recorded goals are mostly one paragraph of up to about 170 words, so the cut rarely shortens anything and a long single-paragraph goal still shows at full height; where paragraphs are drawn as such depends on how much Markdown the goal is rendered with, which the Markdown-in-new-texts question owns.</drawback>
-    </alternative>
-    <alternative id="Whole goal, collapsible">
-      The introduction shows the whole goal by default, with a Show less control that clamps it to its first few lines and a Show more control that restores it; the control appears only when the goal overflows the clamp, and the goal is shown whole again on every load.
-      <advantage>A first-time reader of a mission sees the whole goal with nothing hidden, while a reader working on the page can still shrink it out of the way.</advantage>
-      <drawback>A long goal still pushes the diagram and actions down on every opening, which is the case the control exists for, and it carries the same post-layout overflow measurement as the clamped forms.</drawback>
-    </alternative>
-    <alternative id="Goal hidden behind toggle">
-      The introduction shows the mission&apos;s title alone by default, with one control beside it that shows and hides the whole goal beneath it, collapsed on every load.
-      <advantage>The introduction is one line tall whatever the goal&apos;s length, and the control is always present, so it needs no overflow measurement and is decided and tested from the text alone.</advantage>
-      <drawback>The page no longer says what the mission is for before anything else, which is what the tracker entry adding the introduction asks of it, unless the reader opens the goal every time.</drawback>
-    </alternative>
-  </open-question>
   <open-question id="Ask action placement">
     <question>A mission page of Gurita for VS Code is to offer &quot;Ask in mission context&quot; at every step of the workflow, and no shipped recipe runs the `ask-in-mission-context` skill today. Where does the action stand on the page: in the list of recipe buttons, as a shipped recipe that declares no `Stage:`, or as a fixed-name button outside that list, as New task is?</question>
     <recommendation option="Fixed button beside New task">Ask and New task are the page&apos;s two actions that depend on no step and start from text the user brings, and the button-recipe path New task already proves lets the button fill a value of its own, which a button in the list, filling the mission&apos;s path alone, cannot.</recommendation>
