@@ -81,5 +81,9 @@ Five missions under `gurita-vscode/` are finished, all between 2026-11-20 and 20
 
 - **Auto-close default.** The new setting that closes a run's terminal by itself ships on. A chain that ran all its lines closes its terminal without waiting for a keypress and unblocks the mission's page, while a chain that stopped keeps waiting for a keypress. A user who wants every terminal to stay open turns the setting off.
 
+### Recipes and harnesses
+
+- **Codex line effort.** A Codex line carries its effort as the config override `-c model_reasoning_effort=<level>`, the `--config` spelling read as well, and `lineValues.ts` reads and replaces that value as it does `--effort`. The Settings window gains a Codex effort list under Models and efforts, built like the other two: taken from the values the shipped recipes, own recipes, and stored variants carry, with the person's `addedEfforts`/`removedEfforts` overlay on top. A Codex line gets both a model dropdown and an effort dropdown. A line switched to Codex keeps its effort when Codex's list offers it and takes the list's first effort otherwise, written as the override, and a Codex line switched back to Claude Code or Antigravity keeps or maps its effort the same way.
+
 ## Out of Scope
 
