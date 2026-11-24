@@ -24,6 +24,8 @@ interface StubTerminal {
 }
 
 const created: StubTerminal[] = [];
+/** The listeners of terminal closes registered with the stub's editor, which a test calls as the editor does when a terminal closes. */
+const closeListeners: ((terminal: unknown) => void)[] = [];
 const notifications: string[] = [];
 /** The values the stub's input boxes answer with, one per box in order; an empty queue dismisses the box. */
 const typedValues: string[] = [];
@@ -290,7 +292,10 @@ const stub = {
       created.push(terminal);
       return terminal;
     },
-    onDidCloseTerminal: () => disposable,
+    onDidCloseTerminal(listener: (terminal: unknown) => void) {
+      closeListeners.push(listener);
+      return disposable;
+    },
     showTextDocument: (document: StubDocument, options: unknown) => {
       shownDocuments.push({ document, options });
       return Promise.resolve(undefined);
@@ -3097,6 +3102,80 @@ test('the answer text, the goal, and the issue description are asked for in one 
     assert.strictEqual(execFileSync('git', ['status', '--porcelain', '--ignored'], { cwd: root, encoding: 'utf8' }), '', "nothing is written into the project's tree");
   } finally {
     answerPanels = true;
+    process.env.HOME = home;
+  }
+});
+
+/** Missions no earlier test holds: one live before any Define mission run, and the one such a run defines. */
+const BEFORE_DEFINE = 'pkg/mission_before_define/';
+const DEFINED = 'pkg/mission_defined/';
+
+test("a Define mission run's terminal closing opens the window of the one mission the re-read lists beyond those live when the run started, and nothing when the run defined none", async () => {
+  const home = process.env.HOME;
+  process.env.HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-home-'));
+  try {
+    const root = project(BEFORE_DEFINE);
+    const files = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-recipes-'));
+    fs.writeFileSync(path.join(files, 'shipped_recipes.md'), BUTTON_SHIPPED_TEXT);
+    packaged.set('bundled/missions.py', path.join(__dirname, '..', '..', '..', 'core', 'tools', 'missions.py'));
+    packaged.set('bundled/shipped_recipes.md', path.join(files, 'shipped_recipes.md'));
+    packaged.set('runner.py', path.join(__dirname, '..', '..', 'runner.py'));
+    workspace.folders = [{ uri: { fsPath: root } }];
+    workspace.settings = { ownRecipesFile: path.join(files, 'recipes.md') };
+    workspaceState.clear();
+    // The run listeners as activation registers them: a closed run's terminal re-reads the live missions.
+    runs.registerRuns(context, { started: () => {}, ended: () => pane.refreshMissions(context) });
+    await pageAfter({ type: 'refresh' }, BEFORE_DEFINE);
+    pane.startingOffers(context);
+
+    /** The mission windows the extension created beyond its first `from`. */
+    const missionPanelsFrom = (from: number) => panels.slice(from).filter((each) => each.viewType === pane.MISSION_VIEW_TYPE);
+    /** Starts a Define mission run, with a goal and a scope typed, and returns its terminal. */
+    const define = async (): Promise<StubTerminal> => {
+      const count = created.length;
+      typedValues.length = 0;
+      typedValues.push('Define one more.', 'pkg');
+      void pane.runStartingRow(context, 'defineMission');
+      for (let attempt = 0; attempt < 200 && created.length === count; attempt++) {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      typedValues.length = 0;
+      assert.strictEqual(created.length, count + 1, 'the Define mission row starts one run');
+      return created[created.length - 1];
+    };
+    /** Closes `terminal` as the editor does, and waits until the re-read it starts has posted the window of `BEFORE_DEFINE` its page. */
+    const closeAndReread = async (terminal: StubTerminal): Promise<void> => {
+      const from = windowOf.get(BEFORE_DEFINE)?.posts.length ?? 0;
+      for (const listener of [...closeListeners]) {
+        listener(terminal);
+      }
+      await windowPosted(BEFORE_DEFINE, 'page', from);
+    };
+
+    // A run that defines a mission: its window opens by itself once the terminal closes, and not before.
+    let terminal = await define();
+    fs.mkdirSync(path.join(root, DEFINED), { recursive: true });
+    fs.writeFileSync(path.join(root, DEFINED, 'requirements.md'), '# Defined mission\n\n## Goal\n\nDefine one more.\n');
+    fs.writeFileSync(path.join(root, DEFINED, 'open_questions.xml'), '<open-questions/>\n');
+    fs.writeFileSync(path.join(root, DEFINED, 'TASKS_TODO.md'), '# TASKS TODO\n');
+    git(root, 'add', '.');
+    git(root, 'commit', '-q', '-m', `Mission-definition: ${DEFINED}`);
+    await pageAfter({ type: 'refresh' }, BEFORE_DEFINE);
+    assert.ok(!pane.openMissionWindows().includes(DEFINED), 'a re-read while the run is going opens nothing');
+    let panelCount = panels.length;
+    await closeAndReread(terminal);
+    const opened = missionPanelsFrom(panelCount);
+    assert.strictEqual(opened.length, 1, 'one mission window opens');
+    assert.strictEqual(opened[0].title, 'Defined mission', "titled with the new mission's title");
+    assert.ok(pane.openMissionWindows().includes(DEFINED), 'and it is the window of the mission the run defined');
+    assert.ok(opened[0].active, 'as the active editor');
+
+    // A run that defines no mission opens nothing.
+    terminal = await define();
+    panelCount = panels.length;
+    await closeAndReread(terminal);
+    assert.deepStrictEqual(missionPanelsFrom(panelCount), [], 'a run that created no mission opens no window');
+  } finally {
     process.env.HOME = home;
   }
 });

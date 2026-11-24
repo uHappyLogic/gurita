@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## New Mission Window Opens After Define
-
-When a Define mission run's terminal closes and the re-read of the live missions lists a mission it did not list before the run, open that mission's window by itself, where today the mission appears as a new row to find and click by hand. Verified by a pane test against the `vscode` stub of the window opening for the one new path and of nothing opening when the run created none, with `gurita-vscode/README.md` saying so.
-
----
-
 ## Open Mission Command in the Palette
 
 Offer "Gurita: Open Mission…" in the Command Palette: the command lists the live missions and opens the picked one's window, the extension's other hidden commands staying hidden. This reverses the stated choice that the side-bar view is the only entry point, so `gurita-vscode/README.md` names the command beside the view; verified by a check of the manifest and a test against the `vscode` stub of the list and the opened window.

@@ -123,7 +123,10 @@
 // between editors, read from the panel's view-state change, that run's terminal is brought
 // forward without taking the focus; nothing on the page or in the side-bar view draws a control
 // for it. When a run's terminal
-// closes the live missions are re-read and the fresh parse posted to every shown window. A click on a looped recipe's button shows that recipe's preview on the
+// closes the live missions are re-read and the fresh parse posted to every shown window; when the
+// run was a Define mission run and that re-read lists a mission the live read did not list when the
+// run started, the window of that mission opens by itself, as a click on its row would open it.
+// A click on a looped recipe's button shows that recipe's preview on the
 // page before anything runs: the extension gathers the named single-task lines from the recipes,
 // read afresh, runs the runner's `preview` with them, the mission, and the rule file at the
 // project root as a short-lived child process, and posts what it printed. The person may override
@@ -426,6 +429,12 @@ const readListeners: (() => void)[] = [];
 
 /** What is called after every change to the variants remembered for the two mission-starting controls. */
 const startingListeners: (() => void)[] = [];
+
+/**
+ * The paths each Define mission run whose terminal has closed found live when it started, waiting
+ * for the next full re-read to keep, which opens the window of every mission it lists beyond them.
+ */
+const closedDefines: ReadonlySet<string>[] = [];
 
 /** What the side-bar view's mission-starting rows and bootstrap offer row last drew, which a row's click runs. */
 let drawnOffers: Record<MissionButton, StartingOffer> | undefined;
@@ -983,6 +992,7 @@ function liveSelections(context: vscode.ExtensionContext, live: readonly LiveMis
  */
 async function answer(context: vscode.ExtensionContext): Promise<void> {
   const sequence = ++reads;
+  let defined: string[] = [];
   try {
     const folder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
     const read: LiveRead = await readLive(folder, context.asAbsolutePath('bundled/missions.py'));
@@ -999,6 +1009,7 @@ async function answer(context: vscode.ExtensionContext): Promise<void> {
       if (sequence !== reads || queue === undefined) {
         return;
       }
+      defined = definedMissions(read.missions, closedDefines.splice(0));
       watch(read.root);
       current = {
         root: read.root,
@@ -1012,17 +1023,30 @@ async function answer(context: vscode.ExtensionContext): Promise<void> {
       failure = undefined;
       retitleWindows(read.missions);
     } else {
+      closedDefines.length = 0;
       current = undefined;
       failure = read.cause;
     }
     settled = sequence;
     readKept();
+    for (const mission of defined) {
+      openMissionWindow(context, mission);
+    }
     await Promise.all(shownWindows().map((each) => postAnswer(context, each)));
   } finally {
     if (sequence === reads) {
       settled = sequence;
     }
   }
+}
+
+/**
+ * The paths of the live missions `live` that a Define mission run whose terminal closed did not find
+ * live when it started, each listed once in the order printed, out of what each such run found,
+ * `before`: none when no such run is waiting or none of them defined a mission.
+ */
+function definedMissions(live: readonly LiveMission[], before: readonly ReadonlySet<string>[]): string[] {
+  return live.map((mission) => mission.path).filter((path) => before.some((found) => !found.has(path)));
 }
 
 /**
@@ -1787,7 +1811,10 @@ export function startingOffers(context: vscode.ExtensionContext): Record<Mission
  * typed into the input panel, and for Define mission then the scope, typed into an input box, and
  * for the bootstrap offer row nothing typed, the run belonging to no mission. A row drawn with no variant, or whose recipe cannot be read or run,
  * tells why in an error notification, and a panel cancelled or closed or a box dismissed with
- * Escape starts nothing.
+ * Escape starts nothing. A Define mission run started while a successful live read stands notes the
+ * missions that read lists, and once its terminal closes, the next full re-read the session keeps
+ * opens the window of each live mission it lists beyond them, the one the run defined; a run that
+ * defined none, or a re-read that fails, opens nothing.
  */
 export async function runStartingRow(context: vscode.ExtensionContext, button: MissionButton): Promise<void> {
   const spec = MISSION_BUTTONS[button];
@@ -1804,7 +1831,9 @@ export async function runStartingRow(context: vscode.ExtensionContext, button: M
   if (typed === undefined) {
     return;
   }
-  startChain(context, await startingRoot(), undefined, offer.recipe, variant.lines, typed);
+  const root = await startingRoot();
+  const before = button === 'defineMission' && current !== undefined ? new Set(current.live.map((mission) => mission.path)) : undefined;
+  startChain(context, root, undefined, offer.recipe, variant.lines, typed, before === undefined ? undefined : () => void closedDefines.push(before));
 }
 
 /**

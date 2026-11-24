@@ -12,7 +12,9 @@
 // forward without taking the focus. A run a mission-starting row
 // starts belongs to no mission and is refused for none. A looped run is started the same way, its
 // arguments the runner's `loop` command line, the runner filling the loop's values itself. The
-// extension learns that a run ended when its terminal closes, and then re-reads the live missions.
+// extension learns that a run ended when its terminal closes, and then re-reads the live missions;
+// a Define mission run's starter is told of that close first, so the re-read can open the window of
+// the mission the run defined.
 // The runner delays that close until the person dismisses it, except that while the setting
 // `gurita.autoCloseFinishedRuns` is on, read when each run starts, every run is started with the
 // runner's `--close-when-finished`, so a chain that ran all its lines and a loop that ends with no
@@ -52,6 +54,9 @@ function autoCloseFinishedRuns(): boolean {
 /** The terminal of each mission's running runner and of each run a mission-starting row started. */
 const running = new RunningRuns<vscode.Terminal>();
 
+/** What each run's starter asked to be called once that run's terminal closes, by the terminal. */
+const closers = new Map<vscode.Terminal, () => void>();
+
 /** What the extension does when a run starts and when one's terminal closes. */
 export interface RunListeners {
   /** Called once a run's terminal is created, its note already held. */
@@ -63,14 +68,18 @@ export interface RunListeners {
 let listeners: RunListeners | undefined;
 
 /**
- * Registers the listener that clears a run's note when its terminal closes and then calls
- * `ended`; `started` is called after every run starts.
+ * Registers the listener that clears a run's note when its terminal closes, then calls what that
+ * run's starter asked to be called on its close, and then `ended`; `started` is called after every
+ * run starts.
  */
 export function registerRuns(context: vscode.ExtensionContext, on: RunListeners): void {
   listeners = on;
   context.subscriptions.push(
     vscode.window.onDidCloseTerminal((terminal) => {
+      const closed = closers.get(terminal);
+      closers.delete(terminal);
       if (running.close(terminal)) {
+        closed?.();
         listeners?.ended();
       }
     }),
@@ -114,6 +123,7 @@ export function showRunTerminal(mission: string): void {
  * placeholder is written as a reference to its session variable, and `values`, keyed by
  * placeholder name, are set only in the terminal's environment. The run
  * starts at `root`, the project root, or where the terminal starts by default when undefined.
+ * `closed`, when given, is called once the run's terminal closes, ahead of the `ended` listener.
  */
 export function startChain(
   context: vscode.ExtensionContext,
@@ -122,12 +132,16 @@ export function startChain(
   recipe: string,
   lines: readonly string[],
   values: Readonly<Record<string, string>>,
+  closed?: () => void,
 ): void {
   if (mission !== undefined && refuseWhileRunning(mission)) {
     return;
   }
   const filled = lines.map((line) => buildLine(line, values));
-  launch(root, mission, recipe, [runnerFile(context), 'chain', '--', ...filled], sessionEnvironment(values));
+  const terminal = launch(root, mission, recipe, [runnerFile(context), 'chain', '--', ...filled], sessionEnvironment(values));
+  if (closed !== undefined) {
+    closers.set(terminal, closed);
+  }
 }
 
 /** The bundled runner's path. */
@@ -155,7 +169,7 @@ function launch(
   recipe: string,
   args: string[],
   env: Record<string, string>,
-): void {
+): vscode.Terminal {
   const terminal = vscode.window.createTerminal({
     name: mission === undefined ? `Gurita: ${recipe}` : `Gurita: ${recipe} (${mission})`,
     shellPath: PYTHON,
@@ -167,4 +181,5 @@ function launch(
   running.hold(mission, terminal);
   terminal.show();
   listeners?.started();
+  return terminal;
 }

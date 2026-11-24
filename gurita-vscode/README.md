@@ -135,6 +135,10 @@ above the mission rows.
   **Define mission**, then the scope in VS Code's own input box, as a mission page's buttons ask
   for theirs, and starts the run, which belongs to no mission, at the project root. **Cancel** or
   closing the panel's tab, like Escape in the box, starts nothing.
+- When a **Define mission** run's terminal closes, the live missions are re-read, and the window
+  of the mission the run defined, the one that re-read lists beyond the missions live when the run
+  started, opens by itself, as a click on its new row would open it. A run that defined no mission
+  opens nothing, and so does a re-read that fails.
 - An inline icon action on the row, **Choose Variant**, also offered in the row's context menu,
   opens a QuickPick of the recipe's variants, each by its name with its harness, model, and effort
   beside it and the one selected marked. Picking one changes the remembered selection, kept once
@@ -250,7 +254,8 @@ editor tab shows the mission's title alone and the rocket codicon (on an editor 
 carries the same title, each of those tabs adds its mission's scope after a dash, such as
 `Shared title — lib`, and the tabs are re-titled on every re-read. Besides the
 side-bar view there is no entry point: the Command Palette offers no command opening a window,
-there is no status bar item or keybinding, and no window opens by itself. The windows survive a
+there is no status bar item or keybinding, and the one window that opens by itself is the window
+of the mission a **Define mission** run defined, once its terminal closes. The windows survive a
 restart or a window reload: every mission window that was open comes back in the editor group
 and tab position it held, its page redrawn from a fresh read of the live missions and its
 question view where you left it, and a window that comes back for a mission whose window is
