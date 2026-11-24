@@ -74,6 +74,11 @@
         "icon": "$(gear)"
       },
       {
+        "command": "gurita.bootstrapWorkflow",
+        "title": "Bootstrap the Mission Workflow",
+        "category": "Gurita"
+      },
+      {
         "command": "gurita.newMission",
         "title": "New Mission",
         "category": "Gurita"
@@ -130,6 +135,10 @@
       "commandPalette": [
         {
           "command": "gurita.openSettings",
+          "when": "false"
+        },
+        {
+          "command": "gurita.bootstrapWorkflow",
           "when": "false"
         },
         {

@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Bootstrap Offer Row in the Missions View
-
-Offer the workflow bootstrap as a tree row at the top of the Missions view, above New mission and Define mission, present only while neither `CLAUDE.md` nor `AGENTS.md` at the project root holds a `## Mission Workflow` heading, whatever harnesses are enabled. A click runs `init-mission-base-workflow`, which takes no argument, from a shipped button recipe named by its skill, as the two mission-starting rows run theirs, and the offer is gone once either file holds the heading. Verified by tree tests of the row in each file state and of the click's run, with `gurita-vscode/README.md` describing the row.
-
----
-
 ## Finished Missions Under One Expandable Row
 
 Add one row to the Missions view, collapsed by default, that expands to every finished mission the record holds: the extension calls the bundled missions tool's `missions .` with no `--last` and keeps every `finished` line, newest first as the tool sorts them, with no count, setting, or further row limiting the list. A click on a finished mission opens a window showing that mission's summary, drawn by the text renderer, and its completed tasks, each with its verified bar and commit link as the Tasks pane draws them. Verified by tests of the finished-mission reads against a git fixture, tree tests of the row and its children, and page tests of the window, with `gurita-vscode/README.md` describing both.

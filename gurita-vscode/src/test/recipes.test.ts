@@ -959,7 +959,7 @@ test('the own recipe file defaults to ~/.gurita/recipes.md and honours the setti
   assert.strictEqual(ownRecipesFile('$HOME/recipes.md', '/home/someone'), '$HOME/recipes.md');
 });
 
-test('the button recipes carry the seven fixed names, each the bare name of its skill', () => {
+test('the button recipes carry the eight fixed names, each the bare name of its skill', () => {
   assert.deepStrictEqual(Object.values(BUTTON_RECIPES), [
     'discuss-open-question',
     'answer-open-question',
@@ -968,6 +968,7 @@ test('the button recipes carry the seven fixed names, each the bare name of its 
     'define-mission-goal',
     'discuss-new-task',
     'ask-in-mission-context',
+    'init-mission-base-workflow',
   ]);
 });
 
@@ -1036,6 +1037,22 @@ test('the shipped ask-in-mission-context recipe is one interactive Claude Code l
   const found = buttonRecipe(recipes, BUTTON_RECIPES.askMission, ['path', 'question']);
   assert.ok(found.state === 'found');
   assert.ok(!pageRecipes(recipes, ['path']).some((entry) => entry.name === BUTTON_RECIPES.askMission));
+});
+
+test('the shipped init-mission-base-workflow recipe is one headless line taking no value, kept out of the recipe list at every step', () => {
+  const file = path.join(__dirname, '..', '..', 'shipped_recipes.md');
+  const recipes = parseShippedRecipes(fs.readFileSync(file, 'utf8'), file);
+  const recipe = runs(recipes, BUTTON_RECIPES.bootstrap);
+  assert.deepStrictEqual(recipe.lines, [
+    'claude -p "/gurita:init-mission-base-workflow" --dangerously-skip-permissions --model "sonnet" --effort medium;',
+  ]);
+  assert.strictEqual(isHeadless(recipe.lines[0]), true);
+  assert.deepStrictEqual(recipe.knownPlaceholders, []);
+  assert.deepStrictEqual(recipe.unknownPlaceholders, []);
+  assert.strictEqual(byName(recipes, BUTTON_RECIPES.bootstrap).stage, undefined, 'it declares no step');
+  const found = buttonRecipe(recipes, BUTTON_RECIPES.bootstrap, []);
+  assert.ok(found.state === 'found', 'the bootstrap offer row, holding no value, can run it');
+  assert.ok(!pageRecipes(recipes, ['path']).some((entry) => entry.name === BUTTON_RECIPES.bootstrap));
 });
 
 test('the shipped discuss-open-question recipe carries the optional note directly after the Short Title', () => {

@@ -71,7 +71,7 @@
 // text show: the variant remembered for the recipe on the mission, a remembered selection always
 // winning over the default, where the default or the remembered one is left out the default when
 // still offered and otherwise the first offered, and a remembered variant its recipe no longer
-// carries is dropped at the next answer. The two mission-starting controls are the side-bar view's
+// carries is dropped at the next answer. The two mission-starting controls and the bootstrap offer are the side-bar view's
 // rows, which this module serves (`startingOffers`, `runStartingRow`, `pickStartingVariant`), their
 // selection remembered once per project in `workspaceState` under a key of its own. The
 // answer-with-alternative button is posted once per alternative of each question the mission's
@@ -218,7 +218,7 @@ const PAGE_PLACEHOLDERS = ['path'];
 /** A button on a question's card. */
 type QuestionButton = 'discussQuestion' | 'answerQuestion';
 
-/** A mission-starting row of the side-bar view. */
+/** A mission-starting row of the side-bar view, or its bootstrap offer row. */
 type MissionButton = StartingButton;
 
 /** A message a mission window's page posts to the extension, every one but ready naming the window's mission. */
@@ -245,7 +245,7 @@ type RecipeRead = { state: 'read'; recipes: Recipe[]; disabled: Harness[] } | { 
 /** The recipe list one mission's page shows, or the cause the recipes could not be read. */
 type RecipePart = { state: 'read'; recipes: PageRecipe[] } | { state: 'failed'; cause: string };
 
-/** One of the seven buttons outside the recipe list, each running the recipe of its fixed name. */
+/** One of the eight buttons and rows outside the recipe list, each running the recipe of its fixed name. */
 type FixedButton = keyof typeof BUTTON_RECIPES;
 
 /**
@@ -427,7 +427,7 @@ const readListeners: (() => void)[] = [];
 /** What is called after every change to the variants remembered for the two mission-starting controls. */
 const startingListeners: (() => void)[] = [];
 
-/** What the side-bar view's two mission-starting rows last drew, which a row's click runs. */
+/** What the side-bar view's mission-starting rows and bootstrap offer row last drew, which a row's click runs. */
 let drawnOffers: Record<MissionButton, StartingOffer> | undefined;
 
 /** One live mission as the session's live read holds it: its documents and what its workflow draws. */
@@ -439,6 +439,11 @@ export interface SessionMission {
 
 /** The session's live read: not yet settled, the live missions in the order printed, or the failure's cause. */
 export type SessionRead = { state: 'pending' } | { state: 'read'; missions: SessionMission[] } | { state: 'failed'; cause: string };
+
+/** The project root the session's live read last read, undefined while the read is pending or fails. */
+export function sessionRoot(): string | undefined {
+  return current?.root;
+}
 
 /** The session's live read as it stands. */
 export function sessionRead(): SessionRead {
@@ -1496,8 +1501,9 @@ const MISSION_ACTIONS: Record<MissionAction, { typed: string[] }> = {
   askMission: { typed: ['question'] },
 };
 
-/** The placeholder values each mission-starting row has typed, in the order it asks for them. */
+/** The placeholder values each mission-starting row and the bootstrap offer row has typed, in the order it asks for them. */
 const MISSION_BUTTONS: Record<MissionButton, { typed: string[] }> = {
+  bootstrap: { typed: [] },
   discussGoal: { typed: ['goal'] },
   defineMission: { typed: ['goal', 'scope'] },
 };
@@ -1511,6 +1517,7 @@ const BUTTON_PLACEHOLDERS: Record<FixedButton, readonly string[]> = {
   defineMission: MISSION_BUTTONS.defineMission.typed,
   discussTask: ['path', ...MISSION_ACTIONS.discussTask.typed],
   askMission: ['path', ...MISSION_ACTIONS.askMission.typed],
+  bootstrap: MISSION_BUTTONS.bootstrap.typed,
 };
 
 /** The input box's prompt for each typed value. */
@@ -1754,18 +1761,19 @@ function startingOffer(read: RecipeRead, button: MissionButton, remembered: Proj
   return { state: 'refused', cause: found.cause };
 }
 
-/** What the two mission-starting controls run, their recipes read afresh, each on the variant the project remembers. */
+/** What the two mission-starting controls and the bootstrap offer run, their recipes read afresh, each on the variant the project remembers. */
 function readStartingOffers(context: vscode.ExtensionContext): Record<MissionButton, StartingOffer> {
   const read = readRecipeList(context);
   const remembered = projectSelections(context, read);
   return {
+    bootstrap: startingOffer(read, 'bootstrap', remembered),
     discussGoal: startingOffer(read, 'discussGoal', remembered),
     defineMission: startingOffer(read, 'defineMission', remembered),
   };
 }
 
 /**
- * What the side-bar view's two mission-starting rows draw, their recipes read afresh, noted as what
+ * What the side-bar view's mission-starting rows and bootstrap offer row draw, their recipes read afresh, noted as what
  * a row's click runs.
  */
 export function startingOffers(context: vscode.ExtensionContext): Record<MissionButton, StartingOffer> {
@@ -1775,8 +1783,8 @@ export function startingOffers(context: vscode.ExtensionContext): Record<Mission
 
 /**
  * Runs the side-bar view's mission-starting row `button` on the variant it last drew: the goal,
- * typed into the input panel, and for Define mission then the scope, typed into an input box, the
- * run belonging to no mission. A row drawn with no variant, or whose recipe cannot be read or run,
+ * typed into the input panel, and for Define mission then the scope, typed into an input box, and
+ * for the bootstrap offer row nothing typed, the run belonging to no mission. A row drawn with no variant, or whose recipe cannot be read or run,
  * tells why in an error notification, and a panel cancelled or closed or a box dismissed with
  * Escape starts nothing.
  */

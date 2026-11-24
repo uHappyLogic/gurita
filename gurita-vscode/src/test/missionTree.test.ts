@@ -258,6 +258,7 @@ const startingRows = require('../startingRows') as typeof import('../startingRow
 const selections = require('../selections') as typeof import('../selections');
 const settingsWindow = require('../settingsWindow') as typeof import('../settingsWindow');
 const pluginNotice = require('../pluginNotice') as typeof import('../pluginNotice');
+const bootstrapOffer = require('../bootstrapOffer') as typeof import('../bootstrapOffer');
 Module._load = load;
 
 /** The project's `workspaceState`, by key. */
@@ -302,14 +303,26 @@ function commit(root: string, subject: string, files: Record<string, string>): v
   git(root, 'commit', '-q', '-m', subject);
 }
 
+/** A context file holding the workflow section, which keeps the bootstrap offer row away. */
+const BOOTSTRAPPED = '# Project\n\nNotes.\n\n## Mission Workflow\n\nThis project uses the mission-driven workflow.\n';
+
+/** A fresh empty git project whose `CLAUDE.md` holds the workflow section, so no bootstrap offer row stands. */
+function emptyProject(): string {
+  const empty = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-tree-empty-')));
+  git(empty, 'init', '-q');
+  fs.writeFileSync(path.join(empty, 'CLAUDE.md'), BOOTSTRAPPED);
+  return empty;
+}
+
 /**
- * A fresh git project of four live missions: alpha with two questions lacking alternatives and no
- * task, beta with no question and one task, gamma with no question document, and delta with no
- * question and a task list holding a conflict marker.
+ * A fresh git project of four live missions, its `CLAUDE.md` holding the workflow section: alpha
+ * with two questions lacking alternatives and no task, beta with no question and one task, gamma
+ * with no question document, and delta with no question and a task list holding a conflict marker.
  */
 function project(): string {
   const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-tree-')));
   git(root, 'init', '-q');
+  commit(root, 'Workflow-bootstrap: missions', { 'CLAUDE.md': BOOTSTRAPPED });
   commit(root, `Mission-definition: ${ALPHA}`, {
     [`${ALPHA}requirements.md`]: '# Alpha mission\n\n## Goal\n\nA goal.\n',
     [`${ALPHA}open_questions.xml`]: TWO_QUESTIONS,
@@ -535,8 +548,7 @@ test('a burst of file events and the refresh command each re-read and redraw the
 
 test('the view shows no mission live and a failed read through its message with no row, and a read with missions clears it', async () => {
   assert.strictEqual(view.message, undefined, 'a read with missions shows no message');
-  const empty = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-tree-empty-')));
-  git(empty, 'init', '-q');
+  const empty = emptyProject();
   const refresh = commands.get(missionTree.REFRESH_COMMAND);
   assert.ok(refresh !== undefined);
   workspace.folders = [{ uri: { fsPath: empty } }];
@@ -681,7 +693,12 @@ test('the manifest hides the command behind the mission rows, contributes no pan
 
 test('the manifest offers the variant action inline and in the context menu of the mission-starting rows, and hides the commands behind the rows from the Command Palette', () => {
   const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'package.json'), 'utf8'));
-  const hidden = [missionTree.STARTING_COMMANDS.discussGoal, missionTree.STARTING_COMMANDS.defineMission, missionTree.PICK_VARIANT_COMMAND];
+  const hidden = [
+    missionTree.STARTING_COMMANDS.bootstrap,
+    missionTree.STARTING_COMMANDS.discussGoal,
+    missionTree.STARTING_COMMANDS.defineMission,
+    missionTree.PICK_VARIANT_COMMAND,
+  ];
   const contributed = manifest.contributes.commands.map((each: { command: string }) => each.command);
   for (const command of hidden) {
     assert.ok(contributed.includes(command), `${command} is contributed`);
@@ -853,8 +870,7 @@ test("a check that could not be run at all stands the notice row with its cause,
     noticeRow()?.tooltip,
     [pluginNotice.PLUGIN_NOTICE_LABEL, `${pluginNotice.CHECK_NOT_RUN} Error: the check broke`, pluginNotice.PLUGIN_NOTICE_CLICK].join('\n'),
   );
-  const empty = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-tree-empty-')));
-  git(empty, 'init', '-q');
+  const empty = emptyProject();
   const refresh = commands.get(missionTree.REFRESH_COMMAND);
   assert.ok(refresh !== undefined);
   workspace.folders = [{ uri: { fsPath: empty } }];
@@ -874,4 +890,138 @@ test("a check that could not be run at all stands the notice row with its cause,
   await until(() => noticeRow() === undefined, 'a passing check takes the row away');
   assert.strictEqual(notices.length, noticesBefore, 'no notification is shown');
   assert.strictEqual(errors.length, errorsBefore, 'no error notification is shown');
+});
+
+/** The bootstrap offer row's label. */
+const BOOTSTRAP_LABEL = 'Bootstrap the workflow';
+
+/** The bootstrap offer row's tree item when the tree holds it, else undefined. */
+function bootstrapRow(): StubTreeItem | undefined {
+  return items().find((each) => each.label === BOOTSTRAP_LABEL);
+}
+
+/** Writes the project's two context files as `files` gives them, an undefined entry removing that file, and refreshes the view. */
+async function contextFiles(files: { claude?: string; agents?: string }): Promise<void> {
+  for (const [name, text] of [['CLAUDE.md', files.claude], ['AGENTS.md', files.agents]] as const) {
+    const file = path.join(root, name);
+    if (text === undefined) {
+      fs.rmSync(file, { force: true });
+    } else {
+      fs.writeFileSync(file, text);
+    }
+  }
+  const before = redraws;
+  commands.get(missionTree.REFRESH_COMMAND)?.();
+  await until(() => redraws > before, 'the refresh redraws the tree');
+}
+
+/** A context file holding no workflow section, the older section's heading included. */
+const UNBOOTSTRAPPED = '# Project\n\n## Milestone Workflow\n\nOlder guidance.\n\n### Mission Workflow\n\nNot the heading.\n';
+
+test('the bootstrap offer row stands at the top, above New mission and Define mission, only while neither CLAUDE.md nor AGENTS.md holds the workflow heading', async () => {
+  assert.strictEqual(bootstrapRow(), undefined, "a CLAUDE.md holding the heading stands no row");
+  const states: [{ claude?: string; agents?: string }, boolean, string][] = [
+    [{ claude: UNBOOTSTRAPPED }, true, 'a CLAUDE.md without the heading and no AGENTS.md'],
+    [{}, true, 'neither file'],
+    [{ agents: UNBOOTSTRAPPED }, true, 'an AGENTS.md without the heading and no CLAUDE.md'],
+    [{ claude: UNBOOTSTRAPPED, agents: UNBOOTSTRAPPED }, true, 'both files without the heading'],
+    [{ agents: BOOTSTRAPPED }, false, 'an AGENTS.md holding the heading and no CLAUDE.md'],
+    [{ claude: UNBOOTSTRAPPED, agents: BOOTSTRAPPED }, false, 'an AGENTS.md holding the heading beside a CLAUDE.md without it'],
+    [{ claude: BOOTSTRAPPED, agents: UNBOOTSTRAPPED }, false, 'a CLAUDE.md holding the heading beside an AGENTS.md without it'],
+    [{ claude: BOOTSTRAPPED, agents: BOOTSTRAPPED }, false, 'both files holding the heading'],
+    [{ claude: BOOTSTRAPPED }, false, 'a CLAUDE.md holding the heading and no AGENTS.md'],
+  ];
+  for (const [files, stands, what] of states) {
+    await contextFiles(files);
+    assert.deepStrictEqual(
+      items().map((each) => each.label),
+      stands ? [BOOTSTRAP_LABEL, ...STARTING_LABELS, ...MISSION_LABELS] : [...STARTING_LABELS, ...MISSION_LABELS],
+      `${what}: ${stands ? 'the row stands above the mission-starting rows' : 'no row stands'}`,
+    );
+  }
+  assert.strictEqual(view.message, undefined, "the view's message is left to the live read");
+});
+
+test("the bootstrap offer row is drawn as the mission-starting rows are, from the shipped init-mission-base-workflow recipe, its hover text saying why it stands", async () => {
+  await contextFiles({});
+  const row = bootstrapRow();
+  assert.ok(row !== undefined);
+  assert.strictEqual(row.collapsibleState, stub.TreeItemCollapsibleState.None);
+  assert.strictEqual(row.description, 'Claude Code · sonnet · medium');
+  assert.strictEqual(
+    row.tooltip,
+    [
+      BOOTSTRAP_LABEL,
+      bootstrapOffer.BOOTSTRAP_REASON,
+      'Action: init-mission-base-workflow',
+      'Variant: default',
+      'claude -p "/gurita:init-mission-base-workflow" --dangerously-skip-permissions --model "sonnet" --effort medium;',
+    ].join('\n'),
+  );
+  assert.strictEqual(row.iconPath?.id, missionTree.STARTING_ICONS.bootstrap);
+  assert.strictEqual(row.contextValue, missionTree.STARTING_ROW_CONTEXT, 'it offers the variant action as the mission-starting rows do');
+  assert.deepStrictEqual(row.command, { command: missionTree.STARTING_COMMANDS.bootstrap, title: BOOTSTRAP_LABEL });
+  assert.strictEqual(missionTree.STARTING_COMMANDS.bootstrap, 'gurita.bootstrapWorkflow');
+});
+
+test('a click on the bootstrap offer row runs init-mission-base-workflow at the project root, asking for nothing, and the row is gone once the run has written the heading', async () => {
+  await contextFiles({ claude: UNBOOTSTRAPPED });
+  assert.ok(bootstrapRow() !== undefined);
+  const before = terminals.length;
+  const panels = webviewPanels.length;
+  inputPrompts.length = 0;
+  const errorsBefore = errors.length;
+  await commands.get(missionTree.STARTING_COMMANDS.bootstrap)?.();
+  assert.strictEqual(inputPrompts.length, 0, 'no value is asked for');
+  assert.strictEqual(webviewPanels.length, panels, 'no input panel opens');
+  assert.strictEqual(errors.length, errorsBefore, 'no error notification is shown');
+  assert.strictEqual(terminals.length, before + 1, 'one run starts');
+  const run = terminals[terminals.length - 1];
+  assert.strictEqual(run.name, 'Gurita: init-mission-base-workflow', 'the run belongs to no mission');
+  assert.strictEqual(run.options.cwd, root, 'the run starts at the project root');
+  assert.ok(
+    run.options.shellArgs?.some((arg) => arg.startsWith('claude -p "/gurita:init-mission-base-workflow"') && arg.includes('"sonnet"')),
+    String(run.options.shellArgs),
+  );
+  fs.writeFileSync(path.join(root, 'CLAUDE.md'), `${UNBOOTSTRAPPED}\n## Mission Workflow\n\nThis project uses the mission-driven workflow.\n`);
+  git(root, 'add', 'CLAUDE.md');
+  git(root, 'commit', '-q', '-m', 'Workflow-bootstrap: missions');
+  const redrawn = redraws;
+  closeTerminal?.(run);
+  assert.ok(redraws > redrawn, "the run's end redraws the tree");
+  assert.strictEqual(bootstrapRow(), undefined, 'the offer is gone once CLAUDE.md holds the heading');
+  assert.deepStrictEqual(items().map((each) => each.label), [...STARTING_LABELS, ...MISSION_LABELS]);
+  await contextFiles({ claude: BOOTSTRAPPED });
+});
+
+test('the bootstrap offer row stands beneath the plugin notice row, whatever harnesses are enabled', async () => {
+  await contextFiles({ claude: UNBOOTSTRAPPED });
+  checkPrints({ claude: { found: true, installed: false, version: null } });
+  await checkAgain();
+  await until(() => noticeRow() !== undefined, 'the notice row stands');
+  assert.deepStrictEqual(
+    items().map((each) => each.label),
+    [pluginNotice.PLUGIN_NOTICE_LABEL, BOOTSTRAP_LABEL, ...STARTING_LABELS, ...MISSION_LABELS],
+    'the notice row first, then the bootstrap offer row, then the mission-starting rows',
+  );
+  checkPrints();
+  await checkAgain();
+  await until(() => noticeRow() === undefined, 'a passing check takes the notice row away');
+  const window = settingsPanel();
+  for (const harness of ['claude', 'antigravity', 'codex']) {
+    const before = redraws;
+    window.receive?.({ type: 'setHarnessEnabled', harness, enabled: false });
+    await until(() => redraws > before, `disabling ${harness} redraws the tree`);
+  }
+  const row = bootstrapRow();
+  assert.ok(row !== undefined, 'every harness disabled, the row still stands');
+  assert.strictEqual(row.description, 'no variant enabled', 'saying it has no variant to run');
+  for (const harness of ['claude', 'antigravity', 'codex']) {
+    const before = redraws;
+    window.receive?.({ type: 'setHarnessEnabled', harness, enabled: true });
+    await until(() => redraws > before, `enabling ${harness} redraws the tree`);
+  }
+  assert.strictEqual(bootstrapRow()?.description, 'Claude Code · sonnet · medium');
+  await contextFiles({ claude: BOOTSTRAPPED });
+  assert.strictEqual(bootstrapRow(), undefined);
 });

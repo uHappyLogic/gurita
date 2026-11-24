@@ -141,3 +141,8 @@ claude -p "/gurita:answer-open-question-with-alternative --mission <path> <Short
 ```
 claude -p "/gurita:define-mission-goal --at <scope> <goal>" --dangerously-skip-permissions --model "sonnet" --effort medium;
 ```
+
+### init-mission-base-workflow
+```
+claude -p "/gurita:init-mission-base-workflow" --dangerously-skip-permissions --model "sonnet" --effort medium;
+```

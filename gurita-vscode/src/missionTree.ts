@@ -35,6 +35,16 @@
 // check and each enabling or disabling of a harness in the Settings window redraws the tree when the
 // notice changes. The notice is a row alone: the view's message and the notifications are left to
 // what the live read gives.
+//
+// While the session's live read has read the project root and neither `CLAUDE.md` nor `AGENTS.md`
+// there holds a `## Mission Workflow` heading, as `bootstrapOffer.ts` reads them afresh at each
+// resolution, whatever harnesses are enabled, the tree holds the bootstrap offer row directly
+// beneath the plugin notice row and above the two mission-starting rows. It is drawn and run as
+// those two are (`startingRows.ts`), from the shipped button recipe named by its skill,
+// `init-mission-base-workflow`, with its own hidden command and the same variant action: a click
+// runs the remembered variant, which asks for no value, at the project root, the run belonging to
+// no mission. Once either file holds the heading the row is gone at the next redraw, which the
+// bootstrap's commit, the run's end, and Refresh each bring.
 
 import * as os from 'node:os';
 import * as vscode from 'vscode';
@@ -50,13 +60,15 @@ import {
   refreshMissions,
   runStartingRow,
   sessionRead,
+  sessionRoot,
   startLiveRead,
   startingOffers,
 } from './pane';
 import { runningMissions } from './runs';
 import { PLUGIN_NOTICE_LABEL, pluginNotice } from './pluginNotice';
 import { SETTINGS_COMMAND, onHarnessCheck, refreshSettings, sessionHarnessCheck, startHarnessCheck } from './settingsWindow';
-import { STARTING_ROWS, StartingButton, StartingRow, startingRow } from './startingRows';
+import { BOOTSTRAP_ROW, STARTING_ROWS, StartingButton, StartingRow, startingRow } from './startingRows';
+import { BOOTSTRAP_REASON, bootstrapOffered } from './bootstrapOffer';
 import { variantStoreFile } from './variantStore';
 
 /** The hidden command a click on a mission row runs, opening or revealing that mission's window. */
@@ -78,8 +90,9 @@ export const MISSION_ICON = 'rocket';
  */
 export const REFRESH_COMMAND = 'gurita.refreshMissions';
 
-/** The command a click on each mission-starting row runs, hidden from the Command Palette. */
+/** The command a click on each mission-starting row and on the bootstrap offer row runs, hidden from the Command Palette. */
 export const STARTING_COMMANDS: Readonly<Record<StartingButton, string>> = {
+  bootstrap: 'gurita.bootstrapWorkflow',
   discussGoal: 'gurita.newMission',
   defineMission: 'gurita.defineMission',
 };
@@ -87,11 +100,12 @@ export const STARTING_COMMANDS: Readonly<Record<StartingButton, string>> = {
 /** The command of the mission-starting rows' inline icon action and context-menu entry, hidden from the Command Palette. */
 export const PICK_VARIANT_COMMAND = 'gurita.pickStartingVariant';
 
-/** The `contextValue` of a mission-starting row, which the manifest's `view/item/context` entries match. */
+/** The `contextValue` of a mission-starting row and of the bootstrap offer row, which the manifest's `view/item/context` entries match. */
 export const STARTING_ROW_CONTEXT = 'gurita.startingRow';
 
-/** The icon of each mission-starting row. */
+/** The icon of each mission-starting row and of the bootstrap offer row. */
 export const STARTING_ICONS: Readonly<Record<StartingButton, string>> = {
+  bootstrap: 'tools',
   discussGoal: 'comment-discussion',
   defineMission: 'new-folder',
 };
@@ -102,7 +116,7 @@ export const PLUGIN_NOTICE_ICON = 'warning';
 /** The id of the plugin notice row's tree item. */
 export const PLUGIN_NOTICE_ID = 'gurita.pluginNotice';
 
-/** A row of the side-bar view: the plugin notice row with its hover text, a mission-starting row, or a live mission's row. */
+/** A row of the side-bar view: the plugin notice row with its hover text, the bootstrap offer row or a mission-starting row, or a live mission's row. */
 export type TreeRow = { kind: 'notice'; tooltip: string } | { kind: 'starting'; row: StartingRow } | { kind: 'mission'; row: MissionRow };
 
 /**
@@ -171,10 +185,23 @@ export function missionRows(): MissionRow[] {
   return read.missions.map(({ mission, documents, workflow }) => missionRow(mission, documents, workflow, running.has(mission.path)));
 }
 
-/** The two mission-starting rows, their recipes read afresh, each on the variant the project remembers. */
-export function startingRows(context: vscode.ExtensionContext): StartingRow[] {
+/**
+ * Whether the bootstrap offer row stands: the session's live read has read the project root and
+ * neither context file there, read afresh, holds the workflow heading.
+ */
+export function bootstrapStands(): boolean {
+  const root = sessionRoot();
+  return root !== undefined && bootstrapOffered(root);
+}
+
+/**
+ * The two mission-starting rows, beneath the bootstrap offer row when `bootstrap` holds, their
+ * recipes read afresh, each on the variant the project remembers.
+ */
+export function startingRows(context: vscode.ExtensionContext, bootstrap = false): StartingRow[] {
   const offers = startingOffers(context);
-  return STARTING_ROWS.map(({ button, label }) => startingRow(button, label, offers[button]));
+  const rows = STARTING_ROWS.map(({ button, label }) => startingRow(button, label, offers[button]));
+  return bootstrap ? [startingRow(BOOTSTRAP_ROW.button, BOOTSTRAP_ROW.label, offers[BOOTSTRAP_ROW.button], BOOTSTRAP_REASON), ...rows] : rows;
 }
 
 /**
@@ -227,7 +254,7 @@ export function registerMissionTree(context: vscode.ExtensionContext): MissionTr
       drawnNotice = noticeTooltip();
       return [
         ...(drawnNotice === undefined ? [] : [{ kind: 'notice', tooltip: drawnNotice } as TreeRow]),
-        ...startingRows(context).map((row): TreeRow => ({ kind: 'starting', row })),
+        ...startingRows(context, bootstrapStands()).map((row): TreeRow => ({ kind: 'starting', row })),
         ...missionRows().map((row): TreeRow => ({ kind: 'mission', row })),
       ];
     },
@@ -251,7 +278,7 @@ export function registerMissionTree(context: vscode.ExtensionContext): MissionTr
       refreshMissions(context);
       void refreshSettings(context);
     }),
-    ...STARTING_ROWS.map(({ button }) =>
+    ...[BOOTSTRAP_ROW, ...STARTING_ROWS].map(({ button }) =>
       vscode.commands.registerCommand(STARTING_COMMANDS[button], () => {
         startLiveRead(context);
         return runStartingRow(context, button);

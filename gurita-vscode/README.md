@@ -46,7 +46,9 @@ holding one side-bar view, **Missions**: a native tree of rows
 with no child rows, the two rows that start a mission, **New mission** and **Define mission**,
 standing above one row per live mission, in the order `missions.py live` prints them. While the
 Gurita plugin is missing or outdated on a harness you use, a plugin notice row stands above them
-all (see The plugin notice row below).
+all (see The plugin notice row below), and while the project has not been bootstrapped for the
+mission workflow, a bootstrap offer row stands above the two rows that start a mission (see The
+bootstrap offer row below).
 
 The view's title bar carries **Refresh** as an icon action. It runs the command
 **Gurita: Refresh Missions** (`gurita.refreshMissions`), which the Command Palette also offers:
@@ -83,6 +85,35 @@ harnesses that counted are disabled in the Settings window. While a check run af
 row stands on the last result. The notice is the row alone: the view's message keeps only the
 two lines described under The mission rows below, and no notification is shown.
 
+### The bootstrap offer row
+
+While neither `CLAUDE.md` nor `AGENTS.md` at the project root holds a `## Mission Workflow`
+heading, the section `init-mission-base-workflow` writes, the tree offers the workflow bootstrap as
+a row, **Bootstrap the workflow**, at its top: above **New mission** and **Define mission**, and
+beneath the plugin notice row while that stands. Both files are read, whatever harnesses are
+enabled in the Settings window, since `CLAUDE.md` is the context file of Claude Code and
+`AGENTS.md` that of Antigravity and Codex; a file that is absent holds no heading, and the heading
+counts only as a line of its own, so the older `## Milestone Workflow` section an earlier copy of
+the plugin wrote leaves the row standing. The row needs a project root, so it stands only once the
+live missions have been read.
+
+- The row is drawn as the two rows that start a mission are (see The rows that start a mission
+  below): its description shows the harness, model, and effort of the variant remembered for its
+  recipe, for example `Claude Code · sonnet · medium` for the shipped one, and its hover text says
+  why the row stands, then names the recipe, as `Action: init-mission-base-workflow`, and the
+  variant, with its lines beneath them.
+- A click on the row runs that variant of the shipped button recipe named by its skill,
+  `init-mission-base-workflow`, whose one line is
+  `claude -p "/gurita:init-mission-base-workflow" --dangerously-skip-permissions --model "sonnet" --effort medium;`.
+  The skill takes no argument, so nothing is asked for: the run starts at once at the project
+  root and belongs to no mission.
+- The same **Choose Variant** action as on the two rows below, inline and in the row's context
+  menu, changes the variant remembered for the recipe once per project.
+
+The offer is gone once either file holds the heading: the bootstrap's commit, the run's end, and
+**Refresh** each redraw the tree, which reads both files afresh. Its command
+(`gurita.bootstrapWorkflow`) is hidden from the Command Palette.
+
 ### The rows that start a mission
 
 **New mission** runs the `discuss-mission-goal` recipe and **Define mission** the
@@ -114,7 +145,8 @@ above the mission rows.
   text and told in an error notification on a click or on the action.
 
 The commands behind the two rows and the action (`gurita.newMission`, `gurita.defineMission`,
-and `gurita.pickStartingVariant`) are hidden from the Command Palette.
+and `gurita.pickStartingVariant`, which the bootstrap offer row also offers) are hidden from the
+Command Palette.
 
 ### The mission rows
 
@@ -578,7 +610,7 @@ lists cannot be read, the window says so with the cause beneath it.
 ### Variants
 
 Under **Variants** the window lists every recipe with its variants, read afresh every time the window
-opens: the chains, the seven recipes the buttons outside the recipe list run by their fixed names,
+opens: the chains, the eight recipes the buttons and rows outside the recipe list run by their fixed names,
 and the recipes and variants of your own recipe file, in the order the mission pages list them,
 with the recipes only your stored variants make up last. The named single-task lines are not
 listed here but under **Single-task lines** below, and neither a recipe's stage nor a disabled harness leaves anything out. Each
@@ -829,7 +861,7 @@ know is shown as a non-runnable entry when selected. The list follows the step, 
 whenever a run or a change to a mission document moves the diagram's filled block. The buttons
 that run a recipe by its fixed name (on the question card and its alternatives, **New task**, and
 **Ask in mission context**) are offered whatever the step, as are the side-bar view's **New mission** and **Define mission**
-rows.
+rows and its bootstrap offer row.
 
 Under the page's **Actions** heading the list is drawn in two parts, one recipe to a row: each
 row holds the recipe's button with its dropdown beside it and, to their right, the recipe's one
@@ -875,7 +907,8 @@ Five buttons on a mission's page run a recipe by its fixed name, whatever the st
 and **Answer** on the question card, **Answer with this alternative** on each of its
 alternatives, and **New task** and **Ask in mission context** in the row of mission-wide actions
 above the pane headers. The two rows that start a mission, **New mission** and **Define
-mission**, run theirs from the side-bar view (see The rows that start a mission above). The five pick a variant as the recipe buttons do. Beside each stands a dropdown of its
+mission**, and the bootstrap offer row run theirs from the side-bar view (see The rows that
+start a mission and The bootstrap offer row above). The five pick a variant as the recipe buttons do. Beside each stands a dropdown of its
 recipe's variants, drawn as its arrow alone and listing, opened, the variants in the recipe's
 order, each by its bare name with no mark for your own. Every **Answer with this alternative**
 button has such a dropdown of its own beside it, one per alternative on the card, so each
@@ -986,10 +1019,11 @@ of your own whose last line is the slot line `<single-task line>` (see the loope
 below), and no shipped recipe declares **follow up tasks**. Besides the chains, the file carries the following,
 none of which declares a step and each of which is one block:
 
-- The seven button recipes, each one `claude` line named by the skill it invokes:
+- The eight button recipes, each one `claude` line named by the skill it invokes:
   `discuss-open-question`, `discuss-mission-goal`, `discuss-new-task`, `ask-in-mission-context`,
-  `answer-open-question`, `answer-open-question-with-alternative`, and `define-mission-goal`. The
-  buttons run the recipe of these fixed names; `discuss-new-task`'s one line is
+  `answer-open-question`, `answer-open-question-with-alternative`, `define-mission-goal`, and
+  `init-mission-base-workflow`. The buttons and the side-bar view's rows run the recipe of these
+  fixed names; `discuss-new-task`'s one line is
   `claude "/gurita:discuss-new-task --mission <path> <issue description>" --dangerously-skip-permissions --model "fable" --effort high; # interactive`,
   `ask-in-mission-context`'s is
   `claude "/gurita:ask-in-mission-context --mission <path> <question>" --dangerously-skip-permissions --model "fable" --effort high; # interactive`,
