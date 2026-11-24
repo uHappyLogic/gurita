@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Codex in the Harness Dropdown
-
-Offer Codex in a headless line's harness dropdown in the Settings window, beside Claude Code and Antigravity: a switch to Codex writes `codex exec '$gurita:<skill> …'` with `--dangerously-bypass-approvals-and-sandbox` as the counterpart of `--dangerously-skip-permissions`, the model as `-m`, and the effort as `-c model_reasoning_effort=<level>`, kept when Codex's effort list offers it and the list's first otherwise, and a Codex line switched back to Claude Code or Antigravity keeps or maps its effort the same way. An empty Codex model list still refuses the switch with today's error notification, so every line the switch writes carries `-m`, while an empty Codex effort list lets the switch go ahead with no effort override written. Verified by line-value tests of each switch and its round trip and Settings tests of the dropdown and both empty-list cases, with `gurita-vscode/README.md` describing the switch.
-
----
-
 ## Interactive Lines Switched to Codex
 
 Extend the harness dropdown's Codex switch to interactive lines, after one hands-on check on the installed `codex` (0.159.3 today) that a `$gurita:` skill named in the initial prompt of a bare `codex` runs and that the session stays open on its result. The switch keeps the line interactive: the command word becomes a bare `codex` with no `exec`, the prompt is rewritten from `"/gurita:…"` to `'$gurita:…'`, `--dangerously-skip-permissions` becomes `--dangerously-bypass-approvals-and-sandbox`, the model and effort are written as `-m` and `-c model_reasoning_effort=…` under the headless switch's empty-list rules, any `-i` an `agy` line carried is dropped, and the trailing `# interactive` mark is kept, a switch back giving `claude "…"` or `agy -i "…"`. Verified by line-value tests of the switch and its round trip from both harnesses, with the extension's documentation giving the interactive Codex form beside the headless one as checked.

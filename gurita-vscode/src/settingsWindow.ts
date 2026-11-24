@@ -58,11 +58,12 @@
 // asked for in VS Code's own input box, a rename's box opening on the current name, and the box's
 // validation refusing an empty name and one the recipe's other variants carry. Each variant is
 // posted with its lines and the line editor each gets: a `claude` or `agy` line carrying both
-// `--model` and `--effort` gets model and effort dropdowns and a harness dropdown offering Claude
-// Code and Antigravity, a Codex line carrying `-m` its model dropdown and, when it also carries the
-// override, its effort dropdown, keeping its harness as text, and every other line
-// is shown as its text, read-only. A model or effort pick replaces the value the line carries
-// through the store's edit (`replaceLineValue`), a harness pick rewrites the line onto the other
+// `--model` and `--effort` gets model and effort dropdowns, a Codex line carrying `-m` its model
+// dropdown and, when it also carries the override, its effort dropdown, and every other line is
+// shown as its text, read-only; a headless one of these lines, a Codex one opening `codex exec`,
+// gets a harness dropdown offering Claude Code, Antigravity, and Codex, an interactive `claude` or
+// `agy` line one offering the first two, and any other Codex line keeps its harness as text. A model or effort pick replaces the value the line carries
+// through the store's edit (`replaceLineValue`), a harness pick rewrites the line onto the picked
 // harness (`replaceLineHarness`), a shipped, project, or own variant left untouched and a `custom N` holding
 // the changed line added beside it, a stored variant changed in place. The window also edits the
 // named single-task lines, each under its name with its single-task variants beneath it, through
@@ -942,20 +943,22 @@ function listedEditor(
 const SWITCHABLE: readonly { key: HarnessKey; cli: SwitchableHarness }[] = [
   { key: 'claude', cli: 'claude' },
   { key: 'antigravity', cli: 'agy' },
+  { key: 'codex', cli: 'codex' },
 ];
 
 /**
  * Rewrites line `line` of the variant `variant` of the recipe `recipe` onto the harness `harness`,
- * Claude Code or Antigravity, picked in the line's harness dropdown in the Settings window, through
- * the store's edit (`replaceLineHarness`): the line's prompt and its headless or interactive form
- * kept, its model the picked harness's first listed model, and its effort kept where that
- * harness's effort list offers it and otherwise the first listed, stored as a model or effort pick
- * is, a shipped or own variant getting a `custom N` beside it; then posts
- * the variant list, the harness lists, and the pages again. Only a line the variant list read
- * afresh gives model and effort controls on Claude Code or Antigravity is rewritten, and only onto
- * the other of the two: anything else writes nothing. An edit the store refuses, a picked harness
- * listing no model or no effort among them, or lists or a store that cannot be read or written, is
- * told in an error notification.
+ * Claude Code, Antigravity, or Codex, picked in the line's harness dropdown in the Settings window,
+ * through the store's edit (`replaceLineHarness`): the line's prompt and its headless or
+ * interactive form kept, its model the picked harness's first listed model, and its effort kept
+ * where that harness's effort list offers it and otherwise the first listed, a line switched onto
+ * Codex while Codex's effort list is empty written with no effort override, stored as a model or
+ * effort pick is, a shipped or own variant getting a `custom N` beside it; then posts the variant
+ * list, the harness lists, and the pages again. Only a line the variant list read afresh gives a
+ * harness control is rewritten, and only onto another harness that control offers: anything else
+ * writes nothing. An edit the store refuses, a picked harness listing no model, or no effort for
+ * Claude Code or Antigravity, or lists or a store that cannot be read or written, is told in an
+ * error notification.
  */
 async function editLineHarness(
   context: vscode.ExtensionContext,
@@ -987,8 +990,8 @@ async function editLineHarness(
   if (
     editor === undefined ||
     editor === null ||
-    editor.effort === undefined ||
-    !SWITCHABLE.some((each) => each.key === editor.harness) ||
+    editor.harnesses === undefined ||
+    !editor.harnesses.includes(picked.key) ||
     editor.harness === picked.key
   ) {
     return;

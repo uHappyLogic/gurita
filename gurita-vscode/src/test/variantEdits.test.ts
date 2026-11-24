@@ -322,8 +322,8 @@ test('a harness pick on a shipped or own variant adds a custom N holding the lin
     const before = fs.readFileSync(file, 'utf8');
     replaceLineHarness(file, base(), 'Variants', variantTarget(listed[5]), 0, 'claude', { models: ['fable'], efforts: ['xhigh'] });
     assert.strictEqual(fs.readFileSync(file, 'utf8'), before, 'a line already on the picked harness writes nothing');
-    refused(() => replaceLineHarness(file, base(), 'Variants', OWN_VARIANT, 0, 'claude', agy), /no claude or agy line carrying both/);
-    refused(() => replaceLineHarness(file, base(), 'Chain', { name: 'default', origin: 'shipped' }, 0, 'agy', agy), /no claude or agy line carrying both/);
+    refused(() => replaceLineHarness(file, base(), 'Variants', OWN_VARIANT, 0, 'claude', agy), /cannot be switched onto claude/);
+    refused(() => replaceLineHarness(file, base(), 'Chain', { name: 'default', origin: 'shipped' }, 0, 'agy', agy), /cannot be switched onto agy/);
     refused(() => replaceLineHarness(file, base(), 'Variants', OWN_CC, 1, 'agy', agy), /has no line 2/);
     refused(() => replaceLineHarness(file, base(), 'Variants', OWN_CC, 0, 'agy', { models: [], efforts: ['high'] }), /offers no model/);
     refused(() => replaceLineHarness(file, base(), 'Variants', OWN_CC, 0, 'agy', { models: ['x'], efforts: [] }), /offers no effort/);
@@ -334,6 +334,24 @@ test('a harness pick on a shipped or own variant adds a custom N holding the lin
     const line = taskVariants[1];
     assert.deepStrictEqual(line.lines, ['agy -p "/gurita:complete-task --mission <path> <Task Title>" --model "claude-opus-5-5" --effort high;']);
     assert.ok(line.singleTask, 'a rewritten single-task line stays a single-task variant');
+  });
+});
+
+test('a harness pick onto Codex adds a custom N holding the codex exec line, with no effort override for an empty effort list, and a pick back restores the line', () => {
+  withStore((file) => {
+    replaceLineHarness(file, base(), 'Variants', SHIPPED_CC, 0, 'codex', { models: ['gpt-5.5'], efforts: ['high', 'medium'] });
+    replaceLineHarness(file, base(), 'Variants', SHIPPED_AGY, 0, 'codex', { models: ['gpt-5.5'], efforts: [] });
+    let listed = byName(readBack(file), 'Variants').variants;
+    assert.deepStrictEqual(listed[5].lines, ["codex exec '$gurita:complete-all-tasks --mission <path>' -m \"gpt-5.5\" -c model_reasoning_effort=high;"]);
+    assert.deepStrictEqual(listed[6].lines, ["codex exec '$gurita:complete-all-tasks --mission <path>' -m \"gpt-5.5\";"], 'an empty effort list writes no override');
+    replaceLineHarness(file, base(), 'Variants', variantTarget(listed[5]), 0, 'claude', { models: ['opus'], efforts: ['high'] });
+    replaceLineHarness(file, base(), 'Variants', variantTarget(listed[6]), 0, 'agy', { models: ['claude-opus-5-5'], efforts: ['high'] });
+    listed = byName(readBack(file), 'Variants').variants;
+    assert.deepStrictEqual(listed[5].lines, ['claude -p "/gurita:complete-all-tasks --mission <path>" --model "opus" --effort high;'], 'the round trip gives the shipped line');
+    assert.deepStrictEqual(listed[6].lines, ['agy -p "/gurita:complete-all-tasks --mission <path>" --model "claude-opus-5-5" --effort high;'], 'a line without the override takes the first listed effort');
+    const before = fs.readFileSync(file, 'utf8');
+    refused(() => replaceLineHarness(file, base(), 'Variants', OWN_CC, 0, 'codex', { models: [], efforts: ['high'] }), /codex model list offers no model/);
+    assert.strictEqual(fs.readFileSync(file, 'utf8'), before, 'a refused pick writes nothing');
   });
 });
 
@@ -487,19 +505,28 @@ test('the settings list holds every recipe but the single-task lines, a recipe w
 });
 
 test('only a claude or agy line carrying both --model and --effort gets model and effort controls, a codex line with -m its model control and, with the effort override, its effort control', () => {
+  const all = ['claude', 'antigravity', 'codex'];
   assert.deepStrictEqual(lineEditor('claude -p "/gurita:finish-mission --mission <path>" --model "opus" --effort high;'), {
     harness: 'claude',
     model: 'opus',
     effort: 'high',
+    harnesses: all,
   });
-  assert.deepStrictEqual(lineEditor('agy -p "x" --model=gemini-4-argon --effort medium;'), { harness: 'antigravity', model: 'gemini-4-argon', effort: 'medium' });
-  assert.deepStrictEqual(lineEditor('codex exec "/gurita:finish-mission --mission <path>" -m gpt-5.5;'), { harness: 'codex', model: 'gpt-5.5' });
+  assert.deepStrictEqual(lineEditor('agy -p "x" --model=gemini-4-argon --effort medium;'), { harness: 'antigravity', model: 'gemini-4-argon', effort: 'medium', harnesses: all });
+  assert.deepStrictEqual(
+    lineEditor('claude "/gurita:complete-all-tasks --mission <path>" --model "opus" --effort high; # interactive'),
+    { harness: 'claude', model: 'opus', effort: 'high', harnesses: ['claude', 'antigravity'] },
+    'an interactive line is not offered Codex',
+  );
+  assert.deepStrictEqual(lineEditor('codex exec "/gurita:finish-mission --mission <path>" -m gpt-5.5;'), { harness: 'codex', model: 'gpt-5.5', harnesses: all });
   assert.deepStrictEqual(lineEditor("codex exec '$gurita:finish-mission --mission <path>' -m gpt-5.5 -c model_reasoning_effort=high;"), {
     harness: 'codex',
     model: 'gpt-5.5',
     effort: 'high',
+    harnesses: all,
   });
-  assert.deepStrictEqual(lineEditor('codex exec "x" -m gpt-5.5 --effort high;'), { harness: 'codex', model: 'gpt-5.5' }, "a Codex line's --effort gives no effort control");
+  assert.deepStrictEqual(lineEditor('codex exec "x" -m gpt-5.5 --effort high;'), { harness: 'codex', model: 'gpt-5.5', harnesses: all }, "a Codex line's --effort gives no effort control");
+  assert.deepStrictEqual(lineEditor('codex "x" -m gpt-5.5;'), { harness: 'codex', model: 'gpt-5.5' }, 'a Codex line not opening codex exec gets no harness control');
   for (const line of [
     'claude -p "x" --model "opus";',
     'agy -p "x" --effort high;',

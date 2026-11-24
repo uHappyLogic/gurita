@@ -739,14 +739,16 @@ mark), and the line as written in its hover text; on the right of the row stand 
 (Claude Code, Antigravity, or Codex) and then its dropdowns. Every other line, a shell step,
 the slot line `<single-task line>`, or a command the extension does not know, is drawn as its
 text. A `claude` or `agy` line carrying both `--model` and `--effort` gets a model dropdown and an
-effort dropdown, and its harness is a dropdown too, offering Claude Code and Antigravity and
-standing on the one the line runs on (on a line drawn as its text, it stands before the model
-dropdown). A `codex` line carrying `-m` gets its model dropdown and, when it also carries the
-override `-c model_reasoning_effort=<level>`, an effort dropdown beside it; a `codex` line written
+effort dropdown, and its harness is a dropdown too, standing on the one the line runs on (on a
+line drawn as its text, it stands before the model dropdown): on a headless line it offers Claude
+Code, Antigravity, and Codex, and on an interactive line Claude Code and Antigravity alone. A
+`codex` line carrying `-m` gets its model dropdown and, when it also carries the override
+`-c model_reasoning_effort=<level>`, an effort dropdown beside it; a `codex` line written
 without the override has no effort dropdown, since a pick inserts no text, until you write the
-override into the line yourself. A `codex` line keeps its harness as text, Codex not being offered
-in the harness dropdown. Every other line, a `claude` or `agy` line without both flags included,
-gets no dropdown and stays read-only, its harness shown as text. Drawing the rows changes no line,
+override into the line yourself. A headless `codex exec` line carrying `-m` gets the harness
+dropdown offering all three harnesses, with or without the override, while any other `codex`
+line keeps its harness as text. Every other line, a `claude` or `agy` line without both flags
+included, gets no dropdown and stays read-only, its harness shown as text. Drawing the rows changes no line,
 stored value, or mission page. The model dropdown offers the harness's model list and the
 effort dropdown its whole effort list, as **Models and efforts** holds them, whatever the line's
 model; each stands on the value the line carries, offered too when the list lacks it. A line
@@ -762,7 +764,26 @@ the line keeps its prompt, its other flags, and its headless or interactive form
 it takes the picked harness's first listed model, and it keeps its effort when that harness's
 effort list offers it, taking its first listed effort otherwise (a `claude` line at `xhigh` lands
 on `agy` at the first effort Antigravity's list holds, `medium` with the shipped lists). Both
-lists are those **Models and efforts** holds. A pick, of any of the three, is written to
+lists are those **Models and efforts** holds.
+
+A headless line switched to Codex is written in the form Codex runs a skill in, `codex exec`
+with the skill named as `$gurita:` in a single-quoted prompt:
+`claude -p "/gurita:complete-task --mission <path> <Task Title>" --dangerously-skip-permissions --model "opus" --effort high;`
+becomes
+`codex exec '$gurita:complete-task --mission <path> <Task Title>' --dangerously-bypass-approvals-and-sandbox -m "gpt-5.5" -c model_reasoning_effort=high;`
+with Codex's lists holding `gpt-5.5` first and `high`. The `-p` goes,
+`--dangerously-bypass-approvals-and-sandbox` takes the place of `--dangerously-skip-permissions`,
+the model is written as `-m` with Codex's first listed model, and the effort as the override
+`-c model_reasoning_effort=<level>`, kept when Codex's effort list offers it and Codex's first
+listed effort otherwise. While Codex's model list is empty the switch is refused in an error
+notification and nothing is written, so every line the switch writes carries `-m`; while its
+effort list is empty the switch goes ahead with no override written, and the line runs at your
+account's default effort, with no effort dropdown until you write the override yourself. A
+`codex exec` line switched back to Claude Code or Antigravity becomes `claude -p "/gurita:…"` or
+`agy -p "/gurita:…"` with `--dangerously-skip-permissions`, `--model`, and `--effort`, its effort
+kept or mapped the same way, a line written without the override taking the harness's first
+listed effort; with the lists the line was switched from, the line comes back as it was written.
+An interactive line is not switched to Codex. A pick, of any of the three, is written to
 `~/.gurita/variants.json`. On a shipped variant or one of the project's or your own recipe file,
 `default` included, the variant is left untouched and listed, and a stored variant named `custom N` is
 added beside it, after the recipe's other variants, holding the changed lines, N the lowest number

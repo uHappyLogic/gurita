@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import * as assert from 'node:assert';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { readLine, readSkill, replaceEffort, replaceModel, rewriteHarness } from '../lineValues';
+import { harnessChoices, readLine, readSkill, replaceEffort, replaceModel, rewriteHarness } from '../lineValues';
 import { Recipe, SLOT_LINE, isHeadless, parseShippedRecipes } from '../recipes';
 
 const SHIPPED_RECIPES = path.join(__dirname, '..', '..', 'shipped_recipes.md');
@@ -160,6 +160,8 @@ test("the skill a line runs is read from its first command's arguments, a line o
 /** The Antigravity and Claude Code lists a harness pick rewrites with, as the shipped lines give them. */
 const AGY_OFFER = { models: ['gemini-4-argon', 'claude-opus-5-5'], efforts: ['medium', 'high'] };
 const CLAUDE_OFFER = { models: ['fable', 'opus', 'sonnet'], efforts: ['xhigh', 'high', 'medium'] };
+/** The Codex lists a harness pick onto Codex rewrites with. */
+const CODEX_OFFER = { models: ['gpt-5.5', 'gpt-5.4'], efforts: ['high', 'medium', 'low'] };
 
 test('a harness pick rewrites a shipped claude line onto agy in both forms, keeping its prompt, taking the first model, and keeping an offered effort', () => {
   const headless = shippedRecipe('First run').variants[0].lines[0];
@@ -201,6 +203,7 @@ test('every shipped claude or agy line with both flags rewrites onto the other h
     const read = readLine(line);
     if (read === undefined || read.harness === 'codex' || read.model === undefined || read.effort === undefined) {
       assert.strictEqual(rewriteHarness(line, 'agy', AGY_OFFER), undefined, line);
+      assert.strictEqual(rewriteHarness(line, 'codex', CODEX_OFFER), undefined, line);
       continue;
     }
     const other = read.harness === 'claude' ? 'agy' : 'claude';
@@ -224,8 +227,9 @@ test('every shipped claude or agy line with both flags rewrites onto the other h
 
 test('a harness pick leaves a line on the picked harness as it is, rewrites no other line, and refuses an empty offer', () => {
   assert.strictEqual(rewriteHarness(CLAUDE_LINE, 'claude', CLAUDE_OFFER), CLAUDE_LINE);
-  assert.strictEqual(rewriteHarness(CODEX_LINE, 'claude', CLAUDE_OFFER), undefined, 'a Codex line keeps its harness');
-  assert.strictEqual(rewriteHarness(CODEX_EFFORT_LINE, 'agy', AGY_OFFER), undefined, 'a Codex line carrying a model and an effort keeps its harness too');
+  assert.strictEqual(rewriteHarness(CODEX_EFFORT_LINE, 'codex', CODEX_OFFER), CODEX_EFFORT_LINE);
+  assert.strictEqual(rewriteHarness('codex "/gurita:finish-mission" -m gpt-5.5;', 'claude', CLAUDE_OFFER), undefined, 'a Codex line not opening codex exec keeps its harness');
+  assert.strictEqual(rewriteHarness("codex exec '$gurita:finish-mission' -c model_reasoning_effort=high;", 'claude', CLAUDE_OFFER), undefined, 'and so does one without -m');
   assert.strictEqual(rewriteHarness('claude -p "/gurita:finish-mission" --model opus;', 'agy', AGY_OFFER), undefined, 'a line without both flags');
   assert.strictEqual(rewriteHarness('git pull --model x --effort y;', 'agy', AGY_OFFER), undefined);
   assert.strictEqual(rewriteHarness(SLOT_LINE, 'agy', AGY_OFFER), undefined);
@@ -236,4 +240,109 @@ test('a harness pick leaves a line on the picked harness as it is, rewrites no o
   );
   assert.throws(() => rewriteHarness(CLAUDE_LINE, 'agy', { models: [], efforts: ['high'] }), /offers no model/);
   assert.throws(() => rewriteHarness(CLAUDE_LINE, 'agy', { models: ['gemini-4-argon'], efforts: [] }), /offers no effort/);
+});
+
+test('a harness pick onto Codex is offered on a headless line alone, and a codex exec line is offered every harness', () => {
+  assert.deepStrictEqual(harnessChoices(CLAUDE_LINE), ['claude', 'agy', 'codex']);
+  assert.deepStrictEqual(harnessChoices(AGY_LINE), ['claude', 'agy', 'codex']);
+  assert.deepStrictEqual(harnessChoices(CODEX_LINE), ['claude', 'agy', 'codex'], 'a codex exec line without the effort override');
+  assert.deepStrictEqual(harnessChoices(CODEX_EFFORT_LINE), ['claude', 'agy', 'codex']);
+  const interactive = shippedRecipe('Execute tasks').variants[0].lines[0];
+  assert.deepStrictEqual(harnessChoices(interactive), ['claude', 'agy'], 'an interactive line is not offered Codex');
+  assert.strictEqual(rewriteHarness(interactive, 'codex', CODEX_OFFER), undefined);
+  assert.strictEqual(harnessChoices('codex "/gurita:finish-mission" -m gpt-5.5;'), undefined, 'a Codex line not opening codex exec');
+  assert.strictEqual(harnessChoices('claude -p "/gurita:finish-mission" --model opus;'), undefined, 'a line without both flags');
+  assert.strictEqual(harnessChoices('git pull'), undefined);
+  assert.strictEqual(harnessChoices(SLOT_LINE), undefined);
+});
+
+test('a headless claude or agy line switched to Codex becomes a codex exec line with the bypass flag, -m, and the effort override', () => {
+  assert.strictEqual(
+    rewriteHarness(CLAUDE_LINE, 'codex', CODEX_OFFER),
+    "codex exec '$gurita:review-mission-requirements --mission <path>' --dangerously-bypass-approvals-and-sandbox -m \"gpt-5.5\" -c model_reasoning_effort=high;",
+    'an effort Codex does not offer becomes its first listed effort',
+  );
+  assert.strictEqual(
+    rewriteHarness(AGY_LINE, 'codex', CODEX_OFFER),
+    "codex exec '$gurita:review-mission-requirements --mission <path>' --dangerously-bypass-approvals-and-sandbox -m \"gpt-5.5\" -c model_reasoning_effort=medium;",
+    'an effort Codex offers is kept',
+  );
+  const single = shippedRecipe('Single task with Opus High (Antigravity)').variants[0].lines[0];
+  const changed = rewriteHarness(single, 'codex', CODEX_OFFER) as string;
+  assert.strictEqual(
+    changed,
+    "codex exec '$gurita:complete-task --mission <path> <Task Title>' --dangerously-bypass-approvals-and-sandbox -m \"gpt-5.5\" -c model_reasoning_effort=high;",
+  );
+  assert.deepStrictEqual(readLine(changed), { harness: 'codex', model: 'gpt-5.5', effort: 'high' });
+  assert.strictEqual(readSkill(changed), 'complete-task');
+  assert.ok(isHeadless(changed), 'the switched line stays headless');
+  assert.strictEqual(
+    rewriteHarness('claude --print "/gurita:finish-mission --mission <path>" --model=opus --effort=high;', 'codex', CODEX_OFFER),
+    "codex exec '$gurita:finish-mission --mission <path>' -m gpt-5.5 -c model_reasoning_effort=high;",
+    '--print is dropped too, and a flag written with = is written as its own words',
+  );
+  assert.strictEqual(
+    rewriteHarness('claude -p "/gurita:ask-in-mission-context --mission <path> it\'s" --model opus --effort high;', 'codex', CODEX_OFFER),
+    'codex exec "\\$gurita:ask-in-mission-context --mission <path> it\'s" -m gpt-5.5 -c model_reasoning_effort=high;',
+    'a prompt holding a single quote is double-quoted, its $ escaped',
+  );
+});
+
+test('a codex exec line switched back to Claude Code or Antigravity keeps or maps its effort, and every headless shipped line survives the round trip', () => {
+  assert.strictEqual(
+    rewriteHarness(CODEX_EFFORT_LINE, 'claude', CLAUDE_OFFER),
+    'claude -p "/gurita:review-mission-requirements --mission <path>" --dangerously-skip-permissions --model fable --effort high;',
+    'an effort Claude Code offers is kept',
+  );
+  assert.strictEqual(
+    rewriteHarness(CODEX_EFFORT_LINE, 'agy', { models: ['gemini-4-argon'], efforts: ['medium'] }),
+    'agy -p "/gurita:review-mission-requirements --mission <path>" --dangerously-skip-permissions --model gemini-4-argon --effort medium;',
+    'an effort Antigravity does not offer becomes its first listed',
+  );
+  assert.strictEqual(
+    rewriteHarness(CODEX_LINE, 'agy', AGY_OFFER),
+    'agy -p "/gurita:review-mission-requirements --mission <path>" --model gemini-4-argon --effort medium;',
+    'a Codex line written without the override takes the first listed effort',
+  );
+  assert.throws(() => rewriteHarness(CODEX_EFFORT_LINE, 'claude', { models: ['fable'], efforts: [] }), /claude effort list offers no effort/);
+  assert.throws(() => rewriteHarness(CODEX_EFFORT_LINE, 'agy', { models: [], efforts: ['high'] }), /agy model list offers no model/);
+  const recipes = parseShippedRecipes(fs.readFileSync(SHIPPED_RECIPES, 'utf8'), SHIPPED_RECIPES);
+  const lines = recipes.flatMap((recipe) => recipe.variants.flatMap((variant) => variant.lines));
+  let rewritten = 0;
+  for (const line of lines) {
+    const read = readLine(line);
+    if (read === undefined || read.harness === 'codex' || read.model === undefined || read.effort === undefined || !isHeadless(line)) {
+      continue;
+    }
+    const codex = rewriteHarness(line, 'codex', CODEX_OFFER);
+    assert.ok(codex !== undefined, line);
+    assert.ok(codex.startsWith("codex exec '$gurita:"), codex);
+    assert.ok(codex.includes(' --dangerously-bypass-approvals-and-sandbox ') && !codex.includes('--dangerously-skip-permissions'), codex);
+    assert.deepStrictEqual(readLine(codex), {
+      harness: 'codex',
+      model: CODEX_OFFER.models[0],
+      effort: CODEX_OFFER.efforts.includes(read.effort) ? read.effort : CODEX_OFFER.efforts[0],
+    }, codex);
+    assert.strictEqual(readSkill(codex), readSkill(line));
+    assert.ok(isHeadless(codex), codex);
+    const back = rewriteHarness(codex, read.harness, { models: [read.model], efforts: [read.effort] });
+    assert.strictEqual(back, line, 'the way back gives the line as written');
+    rewritten++;
+  }
+  assert.ok(rewritten >= 10, `only ${rewritten} shipped lines were rewritten`);
+});
+
+test('a switch to Codex refuses an empty model list and writes no effort override for an empty effort list', () => {
+  assert.throws(() => rewriteHarness(CLAUDE_LINE, 'codex', { models: [], efforts: ['high'] }), /codex model list offers no model/);
+  const bare = rewriteHarness(CLAUDE_LINE, 'codex', { models: ['gpt-5.5'], efforts: [] }) as string;
+  assert.strictEqual(
+    bare,
+    "codex exec '$gurita:review-mission-requirements --mission <path>' --dangerously-bypass-approvals-and-sandbox -m \"gpt-5.5\";",
+  );
+  assert.deepStrictEqual(readLine(bare), { harness: 'codex', model: 'gpt-5.5' }, 'the line runs at the default effort');
+  assert.strictEqual(
+    rewriteHarness(bare, 'claude', { models: ['fable'], efforts: ['xhigh', 'high'] }),
+    CLAUDE_LINE,
+    'switched back, the line takes the first listed effort',
+  );
 });

@@ -65,9 +65,9 @@ test('the settings view lists every named single-task line, shipped and own alik
   assert.deepStrictEqual(
     listed.lines.map((each) => [each.name, each.group, each.variants.map((variant) => [variant.name, variant.origin, variant.isDefault, variant.editors])]),
     [
-      [CC, 'shipped', [['default', 'shipped', true, [{ harness: 'claude', model: 'opus', effort: 'high' }]]]],
+      [CC, 'shipped', [['default', 'shipped', true, [{ harness: 'claude', model: 'opus', effort: 'high', harnesses: ['claude', 'antigravity', 'codex'] }]]]],
       [AGY, 'shipped', [['default', 'shipped', true, [null]], ['default', 'own', false, [null]]]],
-      ['My own line', 'own', [['default', 'own', true, [{ harness: 'claude', model: 'sonnet', effort: 'medium' }]]]],
+      ['My own line', 'own', [['default', 'own', true, [{ harness: 'claude', model: 'sonnet', effort: 'medium', harnesses: ['claude', 'antigravity', 'codex'] }]]]],
     ],
     'each line lists its variants beneath its name, the own variant joining a shipped line as an own item, not the one the run takes',
   );

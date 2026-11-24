@@ -29,10 +29,12 @@
 // variants, its default marked, each stored one with the variant a reset returns it to, and the
 // variants a hiding record hides, and each variant's lines
 // with the line editor each one gets (`lineEditor`): only a `claude` or `agy` line carrying both
-// `--model` and `--effort` gets model and effort controls, and a harness control picking between
-// Claude Code and Antigravity, and a `codex` line carrying `-m` its model control and, when it also
-// carries the override `-c model_reasoning_effort=<level>`, its effort control, keeping its
-// harness, every other line shown as its text, read-only. A harness pick (`replaceLineHarness`) rewrites the
+// `--model` and `--effort` gets model and effort controls, and a `codex` line carrying `-m` its
+// model control and, when it also carries the override `-c model_reasoning_effort=<level>`, its
+// effort control, every other line shown as its text, read-only; a headless one of these lines, a
+// Codex one opening `codex exec`, gets a harness control picking between Claude Code, Antigravity,
+// and Codex, an interactive `claude` or `agy` line one picking between the first two, and any other
+// Codex line keeps its harness. A harness pick (`replaceLineHarness`) rewrites the
 // line onto the picked harness as `rewriteHarness` in `lineValues.ts` does, with that harness's
 // lists as the settings view offers them, and stores the changed line as a model or effort pick
 // is stored. Each line is also posted
@@ -50,7 +52,7 @@
 // list name a line by it alone. This module imports nothing from `vscode`.
 
 import { HARNESSES, Harness as CheckedHarness } from './harnessCheck';
-import { HarnessOffer, LineValues, SwitchableHarness, readLine, readSkill, replaceEffort, replaceModel, rewriteHarness } from './lineValues';
+import { HarnessOffer, LineValues, SwitchableHarness, harnessChoices, readLine, readSkill, replaceEffort, replaceModel, rewriteHarness } from './lineValues';
 import {
   Recipe,
   Variant,
@@ -175,14 +177,15 @@ export function resettableVariants(store: VariantStore, recipe: string): ReadVar
 /**
  * The line editor one line of a variant gets in the settings view: the key of the harness whose
  * lists its dropdowns offer, the model the line carries, and the effort it carries, left out for a
- * Codex line written without the effort override, which gets its model control alone. A line
- * posted with an effort, on Claude Code or Antigravity, also gets a harness control picking
- * between those two.
+ * Codex line written without the effort override, which gets its model control alone, and the
+ * keys of the harnesses its harness control picks between, its own among them, left out for a line
+ * that gets no harness control.
  */
 export interface LineEditor {
   harness: CheckedHarness['key'];
   model: string;
   effort?: string;
+  harnesses?: CheckedHarness['key'][];
 }
 
 /**
@@ -190,7 +193,9 @@ export interface LineEditor {
  * both `--model` and `--effort`, a model control for a `codex` line carrying `-m` and an effort
  * control beside it when the line also carries `-c model_reasoning_effort=<level>`, and none,
  * the line shown as its text, read-only, for every other line, a line of a known harness without
- * both flags included.
+ * both flags included. Its harness control picks between the harnesses `harnessChoices` gives the
+ * line: Claude Code, Antigravity, and Codex for a headless line, Claude Code and Antigravity for
+ * an interactive `claude` or `agy` line, and none for a Codex line not opening `codex exec`.
  */
 export function lineEditor(line: string): LineEditor | undefined {
   const read = readLine(line);
@@ -201,10 +206,15 @@ export function lineEditor(line: string): LineEditor | undefined {
   if (harness === undefined) {
     return undefined;
   }
-  if (read.harness === 'codex') {
-    return read.effort === undefined ? { harness, model: read.model } : { harness, model: read.model, effort: read.effort };
+  if (read.harness !== 'codex' && read.effort === undefined) {
+    return undefined;
   }
-  return read.effort === undefined ? undefined : { harness, model: read.model, effort: read.effort };
+  const editor: LineEditor = read.effort === undefined ? { harness, model: read.model } : { harness, model: read.model, effort: read.effort };
+  const choices = harnessChoices(line);
+  if (choices !== undefined) {
+    editor.harnesses = HARNESSES.filter((each) => (choices as readonly string[]).includes(each.cli)).map((each) => each.key);
+  }
+  return editor;
 }
 
 /**
@@ -527,13 +537,16 @@ export function replaceLineValue(
 }
 
 /**
- * Rewrites line `index` of the variant `target` onto the harness `harness`, `claude` or `agy`, as
- * `rewriteHarness` does with `offer`, that harness's model and effort lists: the line's prompt and
- * its headless or interactive form kept, its model the first listed, and its effort kept where the
- * list offers it and otherwise the first listed. The changed line is stored as a model or effort
- * pick is stored. A line without a harness control (a Codex line, a line without both `--model`
- * and `--effort`, a shell step), a line the variant lacks, and an offer listing no model or no
- * effort are refused, nothing written; a line already on `harness` writes nothing.
+ * Rewrites line `index` of the variant `target` onto the harness `harness`, `claude`, `agy`, or
+ * `codex`, as `rewriteHarness` does with `offer`, that harness's model and effort lists: the line's
+ * prompt and its headless or interactive form kept, its model the first listed, and its effort kept
+ * where the list offers it and otherwise the first listed, a line switched onto Codex while the
+ * list offers no effort carrying no effort override. The changed line is stored as a model or
+ * effort pick is stored. A line whose harness control does not offer `harness` (an interactive line
+ * picked onto Codex, a Codex line not opening `codex exec`, a line without both `--model` and
+ * `--effort`, a shell step), a line the variant lacks, and an offer listing no model, or no effort
+ * for Claude Code or Antigravity, are refused, nothing written; a line already on `harness` writes
+ * nothing.
  */
 export function replaceLineHarness(
   storeFile: string,
@@ -558,7 +571,7 @@ export function replaceLineHarness(
   }
   if (changed === undefined) {
     throw new VariantEditError(
-      `Line ${index + 1} of the ${describe(target)} of the action recipe ${recipe.name} is no claude or agy line carrying both a model and an effort.`,
+      `Line ${index + 1} of the ${describe(target)} of the action recipe ${recipe.name} cannot be switched onto ${harness}.`,
     );
   }
   if (changed === line) {

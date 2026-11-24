@@ -1,14 +1,21 @@
 // The line-value module. It reads from a recipe line's text the harness the line runs on, the
 // line's model, and its effort, it replaces a model or effort value a line already carries, and
-// it rewrites a `claude` or `agy` line carrying both `--model` and `--effort` onto the other of
-// the two harnesses (`rewriteHarness`); a model or effort pick inserts no text into a line. A
-// harness rewrite keeps the line's prompt and every other word as written and its headless or
-// interactive form: a headless line, its first command carrying `-p` or `--print`, only changes
+// it rewrites a line onto another harness (`rewriteHarness`) among those `harnessChoices` gives
+// it; a model or effort pick inserts no text into a line. A `claude` or `agy` line carrying both
+// `--model` and `--effort` is rewritten onto the other of the two and, when headless, onto Codex
+// too, and a headless `codex exec` line carrying `-m` onto either of them. A harness rewrite keeps
+// the line's prompt and every other word as written and its headless or interactive form: between
+// `claude` and `agy` a headless line, its first command carrying `-p` or `--print`, only changes
 // its command word (`claude -p "…"` to `agy -p "…"` and back), an interactive `claude` line gains
 // `-i` directly after `agy` (`claude "…"` to `agy -i "…"`), and an `agy` line loses its `-i`
-// going back (`agy -i "…"` to `claude "…"`). The rewritten line takes the picked harness's first
-// listed model, and it keeps its effort when that harness's effort list offers it, taking the
-// list's first effort otherwise. A line's harness is its first word when that word is
+// going back (`agy -i "…"` to `claude "…"`). A headless line switched onto Codex becomes
+// `codex exec '$gurita:<skill> …'`, its `-p` dropped, `--dangerously-skip-permissions` becoming
+// `--dangerously-bypass-approvals-and-sandbox`, its model written as `-m` and its effort as
+// `-c model_reasoning_effort=<level>`, and a `codex exec` line switched back becomes
+// `claude -p "/gurita:<skill> …"` or `agy -p "…"` with `--model` and `--effort`. The rewritten
+// line takes the picked harness's first listed model, and it keeps its effort when that harness's
+// effort list offers it, taking the list's first effort otherwise; a line switched onto Codex while
+// Codex's effort list is empty carries no effort override. A line's harness is its first word when that word is
 // `claude`, `agy`, or `codex`; any other line (a shell step, the slot line `<single-task line>`,
 // a command the extension does not know) has no harness and carries no value. On `claude` and
 // `agy` the model is the value of `--model` and the effort that of `--effort`; on `codex` the
@@ -291,8 +298,8 @@ export function replaceEffort(line: string, effort: string): string | undefined 
   return replaceValue(line, 'effort', effort);
 }
 
-/** The two harnesses a line's harness can be picked between: a Codex line keeps its harness. */
-export const SWITCHABLE_HARNESSES = ['claude', 'agy'] as const;
+/** The harnesses a line's harness can be picked between, each named by the command a line opens with. */
+export const SWITCHABLE_HARNESSES = HARNESSES;
 
 export type SwitchableHarness = (typeof SWITCHABLE_HARNESSES)[number];
 
@@ -302,14 +309,50 @@ export interface HarnessOffer {
   efforts: readonly string[];
 }
 
-/** The line with its first command's command word, and the form flag it needs, rewritten for `harness`. */
-function switchCommand(line: string, harness: SwitchableHarness): string {
+/** The two harnesses an interactive line's harness is picked between. */
+const INTERACTIVE_CHOICES: readonly Harness[] = ['claude', 'agy'];
+
+/** Whether a `claude` or `agy` command is headless, carrying `-p` or `--print`. */
+function printForm(command: Word[]): boolean {
+  return command.slice(1).some((word) => word.text === '-p' || word.text === '--print');
+}
+
+/** The `exec` word of a headless `codex exec` command, or undefined for any other command. */
+function execWord(command: Word[]): Word | undefined {
+  return command[1]?.text === 'exec' ? command[1] : undefined;
+}
+
+/**
+ * The harnesses the harness of `line` can be picked between, its own among them, or undefined for
+ * a line whose harness cannot be picked: a headless `claude` or `agy` line carrying both
+ * `--model` and `--effort` and a headless `codex exec` line carrying `-m`, with or without its
+ * effort override, are given all three harnesses, an interactive `claude` or `agy` line carrying
+ * both flags Claude Code and Antigravity alone, and every other line (a Codex line not opening
+ * `codex exec` or carrying no `-m`, a line without both flags, a shell step, a command the
+ * extension does not know) none.
+ */
+export function harnessChoices(line: string): readonly Harness[] | undefined {
+  const read = readLine(line);
+  if (read === undefined || read.model === undefined) {
+    return undefined;
+  }
+  const command = words(line);
+  if (read.harness === 'codex') {
+    return execWord(command) === undefined ? undefined : HARNESSES;
+  }
+  if (read.effort === undefined) {
+    return undefined;
+  }
+  return printForm(command) ? HARNESSES : INTERACTIVE_CHOICES;
+}
+
+/** The line with its first command's command word, and the form flag it needs, rewritten for `claude` or `agy`. */
+function switchCommand(line: string, harness: 'claude' | 'agy'): string {
   const command = words(line);
   const first = command[0];
   const rest = command.slice(1);
   if (harness === 'agy') {
-    const headless = rest.some((word) => word.text === '-p' || word.text === '--print');
-    return line.slice(0, first.start) + (headless ? 'agy' : 'agy -i') + line.slice(first.end);
+    return line.slice(0, first.start) + (printForm(command) ? 'agy' : 'agy -i') + line.slice(first.end);
   }
   const interactive = rest.find((word) => word.text === '-i' && line.slice(word.start, word.end) === '-i');
   if (interactive === undefined) {
@@ -322,17 +365,182 @@ function switchCommand(line: string, harness: SwitchableHarness): string {
   return line.slice(0, first.start) + 'claude' + line.slice(first.end, interactive.start) + line.slice(after);
 }
 
+/** One replacement of a span of a line by other text. */
+interface Edit {
+  start: number;
+  end: number;
+  text: string;
+}
+
+/** The line with every edit made, the edits standing apart from one another. */
+function applyEdits(line: string, edits: readonly Edit[]): string {
+  let changed = line;
+  for (const edit of [...edits].sort((a, b) => b.start - a.start)) {
+    changed = changed.slice(0, edit.start) + edit.text + changed.slice(edit.end);
+  }
+  return changed;
+}
+
+/** The edit removing the word `word` of `command` with the blanks standing before it. */
+function removal(command: Word[], word: Word): Edit {
+  const index = command.indexOf(word);
+  return { start: command[index - 1].end, end: word.end, text: '' };
+}
+
+/** Where a flag and the value it is given stand together, and the value as it is written. */
+interface FlagSpan {
+  start: number;
+  end: number;
+  raw: string;
+}
+
+/** Every place `flag` stands in the command with a value after it or after its `=`. */
+function flagSpans(line: string, command: Word[], flag: string): FlagSpan[] {
+  const spans: FlagSpan[] = [];
+  for (let index = 1; index < command.length; index++) {
+    const word = command[index];
+    const raw = line.slice(word.start, word.end);
+    if (word.text === flag && command[index + 1] !== undefined) {
+      const next = command[index + 1];
+      spans.push({ start: word.start, end: next.end, raw: line.slice(next.start, next.end) });
+      index++;
+    } else if (raw.startsWith(`${flag}=`)) {
+      spans.push({ start: word.start, end: word.end, raw: raw.slice(flag.length + 1) });
+    }
+  }
+  return spans;
+}
+
+/** Every place a config override of `key` stands in the command, given as the value of one of `flags`. */
+function overrideSpans(line: string, command: Word[], flags: readonly string[], key: string): FlagSpan[] {
+  const named = (text: string): boolean => text.indexOf('=') >= 0 && text.slice(0, text.indexOf('=')).trim() === key;
+  const spans: FlagSpan[] = [];
+  for (let index = 1; index < command.length; index++) {
+    const word = command[index];
+    const raw = line.slice(word.start, word.end);
+    if (flags.includes(word.text) && command[index + 1] !== undefined) {
+      const next = command[index + 1];
+      if (named(next.text)) {
+        spans.push({ start: word.start, end: next.end, raw: line.slice(next.start, next.end) });
+      }
+      index++;
+    } else {
+      const flag = flags.find((each) => raw.startsWith(`${each}=`));
+      if (flag !== undefined && named(word.text.slice(flag.length + 1))) {
+        spans.push({ start: word.start, end: word.end, raw: raw.slice(flag.length + 1) });
+      }
+    }
+  }
+  return spans;
+}
+
+/** A skill invocation's `/gurita:` or `$gurita:` opening the text or following a blank in it. */
+const INVOKED = /(^|\s)[/$]gurita:/;
+
+/** The first word of the command's arguments invoking a `gurita:` skill, the quoted prompt being one word. */
+function promptWord(command: Word[]): Word | undefined {
+  return command.slice(1).find((word) => SKILL.test(word.text));
+}
+
+/** `text` as one double-quoted shell word. */
+function doubleQuoted(text: string): string {
+  return `"${text.replace(/[\\"$`]/g, (char) => `\\${char}`)}"`;
+}
+
 /**
- * The `claude` or `agy` line `line`, carrying both `--model` and `--effort`, rewritten onto
- * `harness`: its prompt, its other words, and its headless or interactive form kept, its model the
- * first `offer` lists, and its effort kept when `offer` lists it and otherwise the first listed.
- * A line already on `harness` is given back unchanged, and undefined is given for every other line
- * (a Codex line, a line without both flags, a shell step, a command the extension does not know).
- * An offer listing no model or no effort is refused.
+ * A prompt read as the shell reads it, rewritten for `harness`: its skill invoked as `$gurita:` and
+ * the prompt single-quoted, double-quoted where it holds a single quote, for `codex`, and invoked
+ * as `/gurita:` and double-quoted for `claude` and `agy`.
+ */
+function prompt(text: string, harness: Harness): string {
+  const sign = harness === 'codex' ? '$' : '/';
+  const invoked = text.replace(INVOKED, (_match, before: string) => `${before}${sign}gurita:`);
+  return harness === 'codex' && !invoked.includes("'") ? `'${invoked}'` : doubleQuoted(invoked);
+}
+
+/** The bypass flag of each harness's headless line. */
+const BYPASS: Readonly<Record<Harness, string>> = {
+  claude: '--dangerously-skip-permissions',
+  agy: '--dangerously-skip-permissions',
+  codex: '--dangerously-bypass-approvals-and-sandbox',
+};
+
+/** The flag and value a line's effort is written as on `harness`. */
+function effortWords(harness: Harness, effort: string): string {
+  return harness === 'codex' ? `-c ${quoted(`model_reasoning_effort=${effort}`, '')}` : `--effort ${quoted(effort, '')}`;
+}
+
+/**
+ * The headless line `line`, on `from`, rewritten onto `to`, one of them `codex`: its command word
+ * and form words (`-p` or `--print` on `claude` and `agy`, `exec` on `codex`), its prompt's skill
+ * invocation and quoting, its bypass flag, every model flag, written as `to`'s flag with `model`,
+ * and every effort, written as `to`'s effort with `effort`, or left out when `effort` is undefined,
+ * rewritten in place; a Codex line carrying no effort override gains `effort` after its last model
+ * flag. Every other word is kept as written.
+ */
+function rewriteAcross(line: string, from: Harness, to: Harness, model: string, effort: string | undefined): string {
+  const command = words(line);
+  const first = command[0];
+  const edits: Edit[] = [];
+  if (from === 'codex') {
+    const exec = execWord(command) as Word;
+    edits.push({ start: first.start, end: exec.end, text: `${to} -p` });
+  } else {
+    edits.push({ start: first.start, end: first.end, text: 'codex exec' });
+    for (const word of command.slice(1)) {
+      if (word.text === '-p' || word.text === '--print') {
+        edits.push(removal(command, word));
+      }
+    }
+  }
+  const asked = promptWord(command);
+  if (asked !== undefined) {
+    edits.push({ start: asked.start, end: asked.end, text: prompt(asked.text, to) });
+  }
+  for (const word of command.slice(1)) {
+    if (word.text === BYPASS[from]) {
+      edits.push({ start: word.start, end: word.end, text: BYPASS[to] });
+    }
+  }
+  const models = flagSpans(line, command, FLAGS[from].model);
+  for (const span of models) {
+    edits.push({ ...span, text: `${FLAGS[to].model} ${quoted(model, span.raw)}` });
+  }
+  const spec = FLAGS[from].effort;
+  const efforts = 'flag' in spec ? flagSpans(line, command, spec.flag) : overrideSpans(line, command, spec.flags, spec.key);
+  for (const span of efforts) {
+    if (effort === undefined) {
+      const index = command.findIndex((word) => word.start === span.start);
+      edits.push({ start: command[index - 1].end, end: span.end, text: '' });
+    } else {
+      edits.push({ ...span, text: effortWords(to, effort) });
+    }
+  }
+  if (efforts.length === 0 && effort !== undefined && models.length > 0) {
+    const last = models[models.length - 1];
+    edits.push({ start: last.end, end: last.end, text: ` ${effortWords(to, effort)}` });
+  }
+  return applyEdits(line, edits);
+}
+
+/**
+ * The line `line` rewritten onto `harness`, one of the harnesses `harnessChoices` gives it: its
+ * prompt, its other words, and its headless or interactive form kept, its model the first `offer`
+ * lists, and its effort kept when `offer` lists it and otherwise the first listed. A switch between
+ * `claude` and `agy` changes only the command word and the interactive `-i`. A headless line
+ * switched onto Codex becomes `codex exec '$gurita:<skill> …'`, `-p` or `--print` dropped,
+ * `--dangerously-skip-permissions` becoming `--dangerously-bypass-approvals-and-sandbox`, its model
+ * written as `-m` and its effort as `-c model_reasoning_effort=<level>`, with no effort override at
+ * all when `offer` lists no effort; a `codex exec` line switched back becomes `claude -p` or
+ * `agy -p` with its prompt double-quoted and invoked as `/gurita:`, `--model`, and `--effort`, a
+ * line written without the override taking the first effort listed. A line already on `harness` is
+ * given back unchanged, and undefined is given for a harness `harnessChoices` does not offer the
+ * line. An offer listing no model is refused, and so is one listing no effort for `claude` or `agy`.
  */
 export function rewriteHarness(line: string, harness: SwitchableHarness, offer: HarnessOffer): string | undefined {
+  const choices = harnessChoices(line);
   const read = readLine(line);
-  if (read === undefined || read.harness === 'codex' || read.model === undefined || read.effort === undefined) {
+  if (choices === undefined || read === undefined || !choices.includes(harness)) {
     return undefined;
   }
   if (read.harness === harness) {
@@ -342,8 +550,15 @@ export function rewriteHarness(line: string, harness: SwitchableHarness, offer: 
   if (model === undefined || model === '') {
     throw new Error(`The ${harness} model list offers no model to rewrite a line with.`);
   }
-  const effort = offer.efforts.includes(read.effort) ? read.effort : offer.efforts[0];
-  if (effort === undefined || effort === '') {
+  const listed = read.effort !== undefined && offer.efforts.includes(read.effort) ? read.effort : offer.efforts[0];
+  const effort = listed === '' ? undefined : listed;
+  if (harness === 'codex' || read.harness === 'codex') {
+    if (effort === undefined && harness !== 'codex') {
+      throw new Error(`The ${harness} effort list offers no effort to rewrite a line with.`);
+    }
+    return rewriteAcross(line, read.harness, harness, model, effort);
+  }
+  if (effort === undefined) {
     throw new Error(`The ${harness} effort list offers no effort to rewrite a line with.`);
   }
   const valued = replaceEffort(replaceModel(line, model) as string, effort) as string;
