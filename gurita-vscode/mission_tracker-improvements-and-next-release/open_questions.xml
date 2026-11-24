@@ -426,6 +426,46 @@
   </open-question>
   <open-question id="View check failure scope">
     <question>The harness check of Gurita for VS Code covers Claude Code, Antigravity, and Codex, reporting for each whether its CLI is found, whether a Gurita copy is installed, and whether that copy is at least the packaged version. The Missions side-bar view is to say when the check fails. Which results make the view say so: a failure of any harness, of every harness, or only of the harnesses that are enabled or whose CLI is found?</question>
+    <alternative id="Any harness">
+      The view says the check failed whenever at least one of Claude Code, Antigravity, and Codex fails any of its three checks, CLI not found included, exactly as the Settings window would show a failure beside it; the Enabled or Disabled state kept in `~/.gurita/variants.json` is not read; a check that could not be run at all (the `failed` result with its cause) also makes the view say so.
+      <advantage>The simplest rule, read from the check result alone: the view says something exactly when the Settings window shows any failure, so the two surfaces can never disagree.</advantage>
+      <drawback>Anyone without all three CLIs on their PATH, a Claude Code-only user for instance, sees the notice permanently, and neither Install, Update, nor Disable can clear it. The notice turns into noise and stops telling anyone the plugin is missing.</drawback>
+    </alternative>
+    <alternative id="Any found harness">
+      The view says the check failed whenever at least one harness whose CLI is found fails its install or version check: no Gurita copy listed, a listing that could not be read, a copy installed but disabled, or a copy older than the packaged version. A harness whose CLI is not found never counts; the Enabled or Disabled state is not read; a check that could not be run at all also makes the view say so.
+      <advantage>Covers every harness actually present on the machine whose copy is missing or outdated, so the notice always leads to something Install or Update in the Settings window can fix, and it is still read from the check result alone, with no read of the variant store.</advantage>
+      <drawback>A harness the user has disabled in the Settings window, perhaps on purpose because they never run Gurita on it, keeps the notice up for as long as its CLI stays on the PATH, and the only way to clear it is to install a plugin they do not want.</drawback>
+    </alternative>
+    <alternative id="Any enabled, found harness">
+      The view says the check failed whenever at least one harness that is Enabled in the Settings window and whose CLI is found fails its install or version check (not installed, listing unreadable, installed but disabled, or older than the packaged version). Disabled harnesses and harnesses whose CLI is not found never count; a check that could not be run at all also makes the view say so.
+      <advantage>The notice speaks only about harnesses the user can run and has not switched off, so it always points at an Install or Update that applies, and Disable gives the user a way to clear it. This matches how disabling already narrows what the mission pages offer.</advantage>
+      <drawback>The view has to read the variant store&apos;s `harnesses` object as well as the check, and re-evaluate when a harness is enabled or disabled. An enabled harness whose CLI is missing, but which a recipe line still runs on, gets no notice, so that run still fails only in its terminal, as today.</drawback>
+    </alternative>
+    <alternative id="Any enabled harness">
+      The view says the check failed whenever at least one Enabled harness fails any of its three checks, CLI not found included; disabled harnesses never count; a check that could not be run at all also makes the view say so. Every harness starts enabled, so a harness the machine lacks keeps the notice up until the user disables it.
+      <advantage>Also catches an enabled harness whose CLI is missing, which is exactly the case where a recipe line on it would fail in its terminal. Disable is the way to clear the notice, and it also removes that harness&apos;s variants from the pages and the side-bar rows.</advantage>
+      <drawback>A fresh install shows the notice for every harness that is not on the machine. The first-run user the tracker entry is written for is then sent to disable harnesses rather than install the plugin, and the Settings window&apos;s Install and Update cannot fix a missing CLI.</drawback>
+    </alternative>
+    <alternative id="Harnesses recipes run on">
+      The view says the check failed whenever at least one Enabled harness fails any of its three checks, CLI not found included, and that harness also carries a line in some variant that the mission pages, their fixed-name buttons, or the side-bar view&apos;s New mission and Define mission rows offer. A harness that no offered variant runs on never counts, nor does a disabled one; a check that could not be run at all also makes the view say so.
+      <advantage>The notice fires exactly when something the user can click would fail because of a missing CLI or a missing or outdated plugin, and stays quiet about harnesses no recipe uses.</advantage>
+      <drawback>The notice depends on the recipe reads as well as the check and the variant store, and has to be re-evaluated on every recipe, variant, or enable edit. The shipped file already holds `agy` lines (the Mixed-agent variant), so a Claude Code-only user still sees the notice until they disable Antigravity. Which harnesses the shipped file runs on also depends on the sibling question about shipped Codex lines.</drawback>
+    </alternative>
+    <alternative id="Every enabled harness">
+      The view says the check failed only when no Enabled harness passes all three checks, that is, when every enabled harness fails at least one of them, CLI not found included. While any enabled harness passes, the view says nothing; a check that could not be run at all makes the view say so.
+      <advantage>One quiet notice, shown exactly when Gurita can run on none of the harnesses the user keeps on. That is the just-installed case the tracker entry describes, and the notice is never noise for harnesses the machine simply lacks.</advantage>
+      <drawback>An outdated or missing copy on one harness goes unflagged in the view for as long as another enabled harness passes, so for multi-harness users the &quot;outdated&quot; half of the entry is shown only in the Settings window, and runs on the failing harness still fail in their terminal.</drawback>
+    </alternative>
+    <alternative id="Every harness">
+      The view says the check failed only when none of the three harnesses passes all three checks, whether it is enabled or not. While any harness passes, the view says nothing; the Enabled or Disabled state is not read; a check that could not be run at all makes the view say so.
+      <advantage>The simplest every-harness rule, read from the check result alone with no variant-store read, and silent about harnesses a machine lacks.</advantage>
+      <drawback>It has the same gap as the enabled form: one harness&apos;s missing or outdated copy stays unflagged while another passes. It also says nothing when the only passing harness is one the user disabled, although every action the pages still offer would then fail.</drawback>
+    </alternative>
+    <alternative id="Enabled found, run failure silent">
+      The view says the check failed whenever at least one Enabled harness whose CLI is found fails its install or version check, as in the enabled-and-found rule, but a check that could not be run at all (the `failed` result with its cause) leaves the view silent and is shown in the Settings window alone.
+      <advantage>A broken `python3` or session shell already shows in the view&apos;s message through the failed live read, so the view does not stack a second notice on the same cause, and the notice stays limited to missing or outdated plugins, the two things the tracker entry names.</advantage>
+      <drawback>A check that failed for its own reason, such as the session time limit or a print of the wrong form, while the live read succeeded, goes unshown in the view, and the user learns of it only by opening the Settings window or from a run failing in its terminal.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Harness check timing">
     <question>The harness check of Gurita for VS Code first runs in a session when the Settings window opens, and its result is kept for the session. Once the Missions side-bar view is to show a missing or outdated plugin, when does the check first run?</question>
