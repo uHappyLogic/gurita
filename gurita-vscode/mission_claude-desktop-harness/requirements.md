@@ -48,5 +48,9 @@ Six finished missions built this scope between 2026-11-20 and 2026-11-25, and th
 
 Before sending an action to Claude Desktop, the extension builds the prompt with the typed values written in and measures it as Desktop measures it against the limit Desktop accepts from outside, the `claude://code/new` link cutting its prompt at 14,336 characters. A prompt within the limit is sent to Desktop as usual. A prompt past the limit is not sent to Desktop: the extension runs the action in a VS Code terminal instead, without asking, as an ordinary tracked run with the value typed, and tells the person in one notice that the prompt was too long for Claude Desktop.
 
+### Hands-on check record
+
+The findings of the hands-on check of Claude Desktop are recorded in one of two places, by the check's outcome. Where the mission goes on, they are kept as a dated comment block in the extension's source beside the Claude Desktop harness entry, in `src/harnessCheck.ts` next to `HARNESSES`, naming the day, the Claude Desktop version checked, what was passed, and what arrived; a later re-check updates that block in place, as the dated hands-on block in the header comment of each host's `scripts/hosts/<host>/settings.toml` is updated. Where the mission stops because no prompt can be passed, no harness code is written, so the findings go into the mission's own record and the summary body of its `Mission-finish:` commit.
+
 ## Out of Scope
 
