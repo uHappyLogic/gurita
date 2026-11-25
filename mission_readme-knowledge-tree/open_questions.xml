@@ -37,4 +37,13 @@
       <drawback>Turns a documentation mission into a plugin-behaviour mission of unbounded size across all of core/ and the host trees, overlapping the defined mission_project-defined-knowledge-placement/ that changes the context-reading runners and finish, and mixes behaviour changes into a diff that is otherwise reviewable as moves and compression.</drawback>
     </alternative>
   </open-question>
+  <open-question id="Core node build checks">
+    <question>The four `README.md` nodes under `core/tools/`, `core/shared/`, `core/skills/`, and `core/agents/` are kept out of the host trees by each host&apos;s `exclude` list, with no change to the build&apos;s Python. The build&apos;s `host-name-in-core` and `old-word-in-core` checks, however, scan every file under `core/` whether or not a host excludes it, so a node there fails the build when it names a host or holds the word &quot;milestone&quot;, and several of today&apos;s invariants do both in their rule or their retired forms. Do those four nodes obey the two checks as they stand, with any rule text that must name a host or a milestone reworded or stated in a node outside `core/`, or do the checks change to skip the nodes, setting aside the no-build-change clause?</question>
+  </open-question>
+  <open-question id="Root heading set">
+    <question>Every node holds only the fixed, ordered parts (purpose, rules, commands, pointers), and the mission&apos;s pytest check verifies a node&apos;s headings against that set. The root `CLAUDE.md` is a node as well, yet it must also hold the bootstrap&apos;s `## Mission Workflow` section, the rules on where knowledge lives and how nodes are read, the entries for the root files that cannot carry a header, and the descriptions of `core/`, `hosts/`, `gurita-vscode/`, and `.github/`, each a description with the same parts of its own. Which headings, in which order, does the check allow in the root `CLAUDE.md`, or is the root left out of the heading check?</question>
+  </open-question>
+  <open-question id="Docs folder coverage">
+    <question>`docs/` serves the plugin&apos;s users alone, each of its pages rewritten to user content, while every tracked top-level folder whose `README.md` name is free must be covered by a `README.md` node of its own, a maintainer-facing file of purpose, rules, commands, and pointers that GitHub also shows to anyone browsing the folder. Is `docs/` covered by a `docs/README.md` node standing among the user pages, or by a description in the root `CLAUDE.md`, as the folders whose `README.md` name is taken or rendered are?</question>
+  </open-question>
 </open-questions>
