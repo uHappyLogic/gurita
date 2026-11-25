@@ -112,5 +112,9 @@ The open-question tool's `add` refuses a new Short Title whose folded form opens
 
 The clause telling the runner to pick a delimiter line the text does not contain is added, in the wording the other sites already carry, at the three sites that lack it (the review pass's `add`, `derive-tasks`' `initialize`, and `submit-task`'s `insert`) and at the one other heredoc without it, the second heredoc of the `complete-task` agent's step-5 call that writes the path file, whose existing clause covers only the bar heredoc. Every heredoc the plugin shows then states the rule. The fences stay unchanged, so no fixed-call test is added, and CLAUDE.md records the entry as fixed by the clause at every heredoc site.
 
+### Concurrent dispatch limit
+
+The Claude Code value of `ALTERNATIVES_CONCURRENCY` keeps its one uncapped message and gains a stated step: a dispatch the host refuses for its concurrent-subagent limit is held as pending, despite the refusal message's "Do not retry", and each time the run wakes with an ended agent it sends one held question again per agent that ended, the resent agent's file landing like any other for the next batch call. No number is written into the slot value, so the step keeps working if the host changes its limit. The Antigravity and Codex values and `core/` stay unchanged.
+
 ## Out of Scope
 
