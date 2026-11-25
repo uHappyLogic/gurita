@@ -108,5 +108,9 @@ The fold tool refuses a `fold` or `replace` body holding a column-0 `## ` or `##
 
 The open-question tool's `add` refuses a new Short Title whose folded form opens with `-`, and the task-list tool refuses a new task title opening with `-` at both points where a title enters the list: `insert`'s title argument and every heading `initialize` reads from standard input. Each refusal is one `Error:` line with the document unchanged, pinned by a test per creation point. No fixed call changes: titles stay positional with no `--` written ahead of them, and option values (`--before`, `--after`, `--option`, `--undermined`, `--alternative`) stay as they are written now.
 
+### Heredoc delimiter clause
+
+The clause telling the runner to pick a delimiter line the text does not contain is added, in the wording the other sites already carry, at the three sites that lack it (the review pass's `add`, `derive-tasks`' `initialize`, and `submit-task`'s `insert`) and at the one other heredoc without it, the second heredoc of the `complete-task` agent's step-5 call that writes the path file, whose existing clause covers only the bar heredoc. Every heredoc the plugin shows then states the rule. The fences stay unchanged, so no fixed-call test is added, and CLAUDE.md records the entry as fixed by the clause at every heredoc site.
+
 ## Out of Scope
 
