@@ -92,5 +92,9 @@ A Claude Desktop line opens with the plain product-qualified word `claude-deskto
 
 No stop list beyond the goal's is fixed ahead of the hands-on check: a finding that no prompt can be passed is the only one that stops the mission outright. A finding that the session cannot be opened on the project's folder, that the `/gurita:` skills are not available in a Desktop session, or of something nobody foresaw is weighed when it is found, as a goal revision or a new open question, deciding then whether the mission stops, narrows, or goes on with a hand step.
 
+### Uncarried line values
+
+A line set to go to Claude Desktop does not go on carrying values Desktop does not take. When a line is set to go to Claude Desktop, the stored line is rewritten without whichever of `--model`, `--effort`, and the bypass-permission flag Desktop does not take, so the line text shows exactly what the session gets and nothing is uncarried. No indicator of dropped values is built in the Settings window, on the action's button, or at the send.
+
 ## Out of Scope
 
