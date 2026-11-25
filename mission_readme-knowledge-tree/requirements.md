@@ -96,5 +96,9 @@ One run of the update skill brings the nodes up to date with the commits made si
 
 The three limits are fixed numbers, each applying uniformly: the root `CLAUDE.md` at most 20,000 bytes, every `README.md` node at most 12,000 bytes, and every pointer's when-to-follow note at most 400 bytes, two or three short sentences. A note counts inside the size of the file holding it, so the root's thirteen pointers take at most about 5,200 bytes of its budget.
 
+### Rule retirement scope
+
+A re-evaluation may end in a rule being dropped, never in one being changed. A rule is dropped only when its subject no longer exists in the tree or the history it guards is closed, for example the pre-split missions and the pre-flip `TASKS_DONE.md` note; every other rule, the accepted-limitation entries included, keeps binding exactly as it does today. Each drop is decided in this mission before tasks are derived: a review pass authors one open question per candidate, so the recorded decisions list every rule that leaves, every rule they do not list survives, and no runner completing a task chooses a drop. A drop changes no runtime file, tool, or test.
+
 ## Out of Scope
 
