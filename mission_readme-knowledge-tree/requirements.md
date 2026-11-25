@@ -76,5 +76,9 @@ Each file at the repository root that can carry prose describes itself in its ow
 
 `.github/` is treated as a folder whose `README.md` name is taken, on GitHub's documentation and with no check made against this repository, and is described by the root `CLAUDE.md` as `core/`, `hosts/`, and `gurita-vscode/` are. The mission's pytest check additionally fails when a tracked `.github/README.md` exists, its message naming GitHub's front-page precedence as the reason.
 
+### Role of docs pages
+
+`docs/` serves the plugin's users alone, and each page is rewritten to user content. The maintainer-facing material is cut outright rather than moved to the nodes: where a mechanic is already stated by a runtime file, a tool's `--help` or docstring, a test, or the build's docstring, the page drops it and nothing restates it, a node pointing at those sources instead. The fixed console lines table follows its own decision.
+
 ## Out of Scope
 
