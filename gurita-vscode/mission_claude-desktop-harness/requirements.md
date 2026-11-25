@@ -44,5 +44,9 @@ Six finished missions built this scope between 2026-11-20 and 2026-11-25, and th
 
 ## Decisions
 
+### Over-long Desktop prompt
+
+Before sending an action to Claude Desktop, the extension builds the prompt with the typed values written in and measures it as Desktop measures it against the limit Desktop accepts from outside, the `claude://code/new` link cutting its prompt at 14,336 characters. A prompt within the limit is sent to Desktop as usual. A prompt past the limit is not sent to Desktop: the extension runs the action in a VS Code terminal instead, without asking, as an ordinary tracked run with the value typed, and tells the person in one notice that the prompt was too long for Claude Desktop.
+
 ## Out of Scope
 

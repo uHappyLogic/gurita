@@ -1,8 +1,6 @@
 <open-questions>
   <open-question id="Hands-on check timing">
     <question>The mission&apos;s goal opens with a hands-on check of what Claude Desktop accepts from outside (a prompt, a folder, a model, an effort, a permission mode), and most of the feature&apos;s design hinges on what that check finds. Is the check run before the mission&apos;s remaining open questions are answered, with its findings written into the relevant starting state, or as the mission&apos;s first task after task derivation, with the decisions made beforehand written to hold for whichever outcome it finds?</question>
-    <applied-principle>Check tier claims against the live environment</applied-principle>
-    <recommendation option="Check before any answer">Most of the other questions turn on what Claude Desktop does with a prompt, a folder, and the Gurita plugin, none of it observed yet, and one sitting at the machine settles that before any decision has to be written conditionally and before a stop can waste decision work; the picks already standing on the other questions were formed against the static reading, so this question is answered alone, ahead of the sweep, and those picks are re-formed wherever the findings undermine them.</recommendation>
     <alternative id="Check before any answer">
       The whole hands-on check (the `claude://code/new` link and the `claude --desktop` option, each tried for a prefilled or already-sent prompt, the folder the session opens on, and any model, effort, or permission mode it takes) is run now, by the person at the machine, outside any task, before the recommendation pass and the answer sweep run over the mission&apos;s questions; its findings are written into `## Relevant starting state` beside the static reading of Claude Desktop 5.11492.5 already there, and every open question is then recommended and answered against observed behaviour. If no prompt can be passed, the mission stops at that point, before any decision is recorded.
       <advantage>Every decision that hinges on Desktop&apos;s behaviour (which opening mechanism, what happens to uncarried values, the over-long prompt, the stop conditions) is made against what Desktop was seen to do rather than against a guess, so no decision has to be written conditionally and the stop, if it comes, costs no decision work at all.</advantage>
@@ -158,9 +156,6 @@
   </open-question>
   <open-question id="Check stop conditions">
     <question>The goal stops the mission when the hands-on check finds that no prompt can be passed to Claude Desktop. Which other findings, if any, stop it the same way: a session that cannot be opened on the project&apos;s folder, a Desktop session in which the Gurita plugin&apos;s `/gurita:` skills are not available, or none?</question>
-    <applied-principle>Check tier claims against the live environment</applied-principle>
-    <depends-on question="Hands-on check timing" option="Check before any answer"/>
-    <recommendation option="Weigh when found">Nothing about how a folder or the Gurita plugin reaches a Desktop session has been observed, so a stop list fixed now would rank hand steps nobody has seen; a finding on either is weighed against what Desktop was seen to do, while a question can still be asked, and a finding nobody foresaw gets the same treatment.</recommendation>
     <alternative id="Weigh when found">
       No stop list beyond the goal&apos;s is fixed now. The check runs, and a finding that the session cannot be opened on the project&apos;s folder or that the `/gurita:` skills are not available is weighed when it is found, as a goal revision or a new open question, deciding then whether the mission stops, narrows, or goes on with a hand step.
       <advantage>The decision is made against what Desktop actually does rather than against guesses, since nothing about how a folder or the plugin reaches a Desktop session has been observed, and a finding nobody foresaw (the session opening but reading another plugin copy, for instance) gets the same treatment as the two named ones.</advantage>
@@ -225,9 +220,6 @@
   </open-question>
   <open-question id="Uncarried line values">
     <question>When an action is sent to Claude Desktop and Desktop takes no model, effort, or permission mode from outside, what becomes of the `--model`, `--effort`, and bypass-permission values the action&apos;s line carries: are they dropped without sign, or is the person shown, in the Settings window or on the action&apos;s button, that the Desktop session will not carry them?</question>
-    <applied-principle>Report only unrecoverable signals</applied-principle>
-    <depends-on question="Desktop selection mechanism" option="Desktop line word, edited variants only"/>
-    <recommendation option="Stripped at selection">A line rewritten without the values Claude Desktop does not take shows in the line editor exactly what the session gets, so the line itself is the sign and no indicator has to be built or kept in step in the Settings window, on a button, or at the send; a harness pick already rewrites a line&apos;s model, and the shipped or own variant the Desktop one was made from stands beside it with its values for a terminal run.</recommendation>
     <alternative id="Stripped at selection">
       The premise that the line goes on carrying values Desktop does not take is rejected: when a line is set to go to Claude Desktop, the stored line is rewritten without whichever of `--model`, `--effort`, and the bypass flag Desktop does not take, so nothing is uncarried and no indicator is needed; what the line text shows is what the session gets.
       <advantage>The line is truthful by construction, so the Settings window&apos;s line editor already shows exactly what the Desktop session carries, with no separate indicator to build or keep in step.</advantage>
@@ -284,51 +276,6 @@
       The row keeps the Enabled or Disabled state and its switch, makes the presence check of Claude Desktop (the application bundle or the `claude` URL scheme handler, never a shell command), shows the plugin and version outcome of Claude Code&apos;s check as the copy Desktop sessions load, and carries Install and Update controls of its own that run `install_plugin.py` for the `claude` key in a terminal, the same run Claude Code&apos;s controls start, drawn on the Desktop row so the person fixes a failing outcome where it is shown; the side-bar view&apos;s plugin notice still counts the copy once.
       <advantage>Every row under Harnesses keeps one shape, an outcome and the controls that act on it, so a person who looks only at the Desktop row can bring it to passing without knowing that it shares Claude Code&apos;s copy.</advantage>
       <drawback>Two rows then carry controls that change one and the same copy, so an install from the Desktop row also changes Claude Code&apos;s outcome, which the window must explain, and the whole row stands on the same unobserved premise that Desktop&apos;s sessions load the copy the `claude` CLI lists.</drawback>
-    </alternative>
-  </open-question>
-  <open-question id="Over-long Desktop prompt">
-    <question>What does Gurita for VS Code do when an action&apos;s prompt, with the values the person typed written into it (a goal, an issue description, a question), is longer than Claude Desktop accepts from outside, the `claude://code/new` link cutting its prompt at 14,336 characters?</question>
-    <depends-on question="Session opening mechanism" option="Link through the OS opener"/>
-    <recommendation option="Clipboard handoff">Past the link&apos;s 14,336-character cut the whole prompt still reaches the Desktop session, by one paste, with nothing cut, nothing typed lost, and no terminal run standing in for the Desktop one the person chose; the folder-only link it opens is the form the `claude` CLI&apos;s own `--desktop` sends, and the rule stays one length comparison at the one place the send is made.</recommendation>
-    <alternative id="Clipboard handoff">
-      The same check before sending, and on a prompt past the limit the extension puts the whole prompt on the clipboard and opens the Desktop session on the project&apos;s folder with no prompt, telling the person to paste it there; a prompt within the limit is sent prefilled as usual.
-      <advantage>The whole value reaches the Desktop session with its artifacts, with no length cap at all and no file written.</advantage>
-      <drawback>It adds a manual paste the ordinary send does not need and overwrites whatever the person had on the clipboard, and it rests on Desktop opening a session on a folder alone, which the Finder service form suggests but the hands-on check has not observed.</drawback>
-    </alternative>
-    <alternative id="Send as is">
-      No length check in the extension, now or later in this mission: the prompt, with the typed values written in, is sent to Claude Desktop whatever its length, and Desktop&apos;s own handler cuts it at its limit (14,336 characters for the `claude://code/new` link). Nothing is shown about the length, and USAGE.md at most states the limit.
-      <advantage>No code, no test, and no message for a case the shipped actions hardly reach: each single-interactive-line action&apos;s prompt is a short skill invocation (`/gurita:discuss-mission-goal`, `discuss-new-task`, `ask-in-mission-context`, `discuss-open-question`, and the rest) followed by one typed value, so only a value of some two thousand words or more, such as an issue description with a pasted log, comes near the limit.</advantage>
-      <drawback>When the limit is passed the cut is silent and falls in the typed value, which stands last in every shipped prompt, so the Desktop session starts on a goal, issue description, or question missing its tail without the person or the model knowing; and the limit depends on the mechanism chosen under the session-opening sibling, so the documented figure may not be the one that applies.</drawback>
-    </alternative>
-    <alternative id="Refuse the send">
-      Before sending, the extension builds the prompt with the typed values written in, measures it as Desktop measures it, and when it passes the limit sends nothing, telling the person the prompt&apos;s length and the limit so they can shorten the value or pick a terminal variant of the action themselves.
-      <advantage>No prompt ever reaches Desktop cut, and the rule is one comparison against one constant at the one place the Desktop send is made, easy to pin in a unit test.</advantage>
-      <drawback>The value the person typed is lost with the refused click unless it is kept for the next try, the input panel resolving and closing on Run, so a long description has to be typed or pasted again; and the limit&apos;s figure rests on the session-opening mechanism a sibling question chooses.</drawback>
-    </alternative>
-    <alternative id="Refuse and offer terminal">
-      The same check before sending, and on a prompt past the limit nothing is sent to Desktop; the message offers, beside cancelling, to run the same action in a VS Code terminal as an ordinary tracked run of its interactive `claude` line, with the value already typed, where no such limit applies.
-      <advantage>The person&apos;s typed value is never lost and the action still runs in one more click, while nothing is cut and nothing switches harness without their say.</advantage>
-      <drawback>The terminal session gives up exactly the visual and sound artifacts Desktop was selected for, and the offer needs a terminal line for the action, which an action whose selected variant was rewritten for Desktop must still yield, a dependency on how the Desktop-selection sibling settles.</drawback>
-    </alternative>
-    <alternative id="Fall back to terminal">
-      The same check before sending, and on a prompt past the limit the extension runs the action in a VS Code terminal instead, without asking, as an ordinary tracked run with the value typed, telling the person in one notice that the prompt was too long for Claude Desktop.
-      <advantage>The click always runs the action with the whole value and costs the person no extra decision.</advantage>
-      <drawback>The person who chose Desktop silently loses its artifacts on the one action they gave the most text to, and one click then sometimes starts a tracked terminal run and sometimes an untracked Desktop send, so the page&apos;s disabled buttons and refusal of a second click behave differently by input length.</drawback>
-    </alternative>
-    <alternative id="Send and warn">
-      The same check before sending, and on a prompt past the limit the prompt is still sent, cut at the limit by Desktop or by the extension at the same point, and the person is told that the session received only the first part of what was typed, the rest left out.
-      <advantage>Desktop is always opened as selected, so a person who mostly needs the session and its artifacts can paste the rest into it by hand, and the cut is no longer silent.</advantage>
-      <drawback>The model may already be acting on the cut prompt before the person reads the warning, if Desktop sends a prefilled prompt rather than leaving it to be sent, which the hands-on check has not yet observed; and the session then rests on a partial goal or description.</drawback>
-    </alternative>
-    <alternative id="Cap at input">
-      Where an action&apos;s selected variant goes to Desktop, the input panel shows the room left for the value (the limit less the rest of the prompt) and refuses Run past it on the page, keeping the text, and the same check before sending refuses any prompt still past the limit through a value typed outside the panel, such as a question or a discussion note asked in an input box.
-      <advantage>The person learns of the limit while typing, with the text still in front of them to shorten, so no value is lost and no click is refused after the fact.</advantage>
-      <drawback>The input panel, today harness-blind, comes to know the action&apos;s harness and the rest of its prompt, and the send-time check is still needed beside it, so two places carry the rule and its tests; the figure rests on the session-opening sibling&apos;s mechanism.</drawback>
-    </alternative>
-    <alternative id="Value in a file">
-      The same check before sending, and on a prompt past the limit the extension writes the typed value to a file in the system temp location and sends a prompt in which the value is replaced by a sentence naming that file for the session to read; a prompt within the limit is sent as usual.
-      <advantage>The session opens in Desktop on the project&apos;s folder with the whole value reachable and no step for the person, whatever the value&apos;s length.</advantage>
-      <drawback>The skill receives a pointer where it expects the literal goal, issue description, or question, so its handling rests on the model reading the file before it parses its text, which no skill states; and the Desktop session may need permission to read a file outside the project&apos;s folder, while a file inside it would dirty the tree.</drawback>
     </alternative>
   </open-question>
   <open-question id="Desktop send feedback">
