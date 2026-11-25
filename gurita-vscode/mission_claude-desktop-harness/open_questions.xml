@@ -1,1 +1,35 @@
-<open-questions/>
+<open-questions>
+  <open-question id="Hands-on check timing">
+    <question>The mission&apos;s goal opens with a hands-on check of what Claude Desktop accepts from outside (a prompt, a folder, a model, an effort, a permission mode), and most of the feature&apos;s design hinges on what that check finds. Is the check run before the mission&apos;s remaining open questions are answered, with its findings written into the relevant starting state, or as the mission&apos;s first task after task derivation, with the decisions made beforehand written to hold for whichever outcome it finds?</question>
+  </open-question>
+  <open-question id="Hands-on check record">
+    <question>Where are the findings of the hands-on check of Claude Desktop recorded so that they outlive the mission&apos;s directory (the day, the Claude Desktop version checked, what was passed, and what arrived), both when the mission goes on and when it stops because no prompt can be passed?</question>
+  </open-question>
+  <open-question id="Check stop conditions">
+    <question>The goal stops the mission when the hands-on check finds that no prompt can be passed to Claude Desktop. Which other findings, if any, stop it the same way: a session that cannot be opened on the project&apos;s folder, a Desktop session in which the Gurita plugin&apos;s `/gurita:` skills are not available, or none?</question>
+  </open-question>
+  <open-question id="Session opening mechanism">
+    <question>Two ways of opening a Claude Desktop session from outside are known and neither has been tried: the `claude://code/new` link, which takes a prompt and a folder, and the `claude` CLI&apos;s `--desktop` option. Which does Gurita for VS Code use to send an action to Claude Desktop where the hands-on check finds that both pass a prompt?</question>
+  </open-question>
+  <open-question id="Desktop selection mechanism">
+    <question>How does a person select Claude Desktop for an action in Gurita for VS Code, given that no action carries a harness setting of its own, that a line&apos;s harness is today the command the line opens with, and that the variants of one action can differ in whether they are a single interactive line?</question>
+  </open-question>
+  <open-question id="Desktop harness availability">
+    <question>In which windows does Gurita for VS Code offer the Claude Desktop harness: everywhere the extension runs, or only where Claude Desktop can reach the project&apos;s folder? The extension runs on macOS, on Linux, and in remote windows (Remote-WSL, SSH), where the project&apos;s folder is not a path an application on the person&apos;s own machine can open, and it stays inert on native Windows.</question>
+  </open-question>
+  <open-question id="Desktop Harnesses row">
+    <question>What does Claude Desktop&apos;s row under Harnesses in the Settings window hold, given that the three existing rows each check a CLI (the command found in the shell, a Gurita plugin copy read through the CLI&apos;s plugin listing, that copy&apos;s version against the packaged one) and carry Install and Update controls: which of those checks does the row make for an application that is no CLI, and does it carry Install and Update controls?</question>
+  </open-question>
+  <open-question id="Uncarried line values">
+    <question>When an action is sent to Claude Desktop and Desktop takes no model, effort, or permission mode from outside, what becomes of the `--model`, `--effort`, and bypass-permission values the action&apos;s line carries: are they dropped without sign, or is the person shown, in the Settings window or on the action&apos;s button, that the Desktop session will not carry them?</question>
+  </open-question>
+  <open-question id="Over-long Desktop prompt">
+    <question>What does Gurita for VS Code do when an action&apos;s prompt, with the values the person typed written into it (a goal, an issue description, a question), is longer than Claude Desktop accepts from outside, the `claude://code/new` link cutting its prompt at 14,336 characters?</question>
+  </open-question>
+  <open-question id="Desktop send feedback">
+    <question>Sending an action to Claude Desktop is fire-and-forget, with no run tracked. What does the person see in VS Code after the click: anything at all on a send that went out, and what on a send that failed, such as Claude Desktop not being installed or the link not being handled?</question>
+  </open-question>
+  <open-question id="Listing texts naming Desktop">
+    <question>The goal names `gurita-vscode/USAGE.md` as the documentation the mission brings up to date. Do the texts outside it that name the three harnesses (the listing `README.md` and the manifest&apos;s description and keywords) also come to name Claude Desktop in this mission, which makes no extension release?</question>
+  </open-question>
+</open-questions>
