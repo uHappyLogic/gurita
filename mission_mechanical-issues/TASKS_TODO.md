@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Inline Completion Call Feeds Paths by Heredoc
-
-Give the commit tool's path-file reader `-` for standard input, and change only the inline `complete-task` skill's call to pass its recorded paths and `<MISSION_DIR>/TASKS_TODO.md` as `--path-file -` fed by a quoted heredoc, one path per line, the same line-exact form the agent's path file already has, so a project path holding a space or shell syntax no longer reaches the commit tool's command line (the project-path half of the draft's PATH entry). The commit procedure's command stays unquoted, CLAUDE.md recording the reason that its paths are plugin-named; verified by commit-tool tests of the `-` form and by the completion call's fixed-call test running the changed fence.
-
----
-
 ## Commit Procedure Captures Its Body by Heredoc
 
 Change the command `core/shared/commit-procedure.md` shows to the form the completion calls already use: the body captured once from a quoted heredoc in the group-fed form `{ body="$(cat)"; } <<'EOF'`, under the clause telling the runner to pick a delimiter line the text does not contain, and passed on as `--body "$body"` in the same shell call, a caller with no BODY leaving out both the capture and `--body`, while the commit tool, its contract, and every caller's own file stay unchanged. It closes the draft's BODY entry, and is verified by a new test that extracts the command from the rendered tree and runs it on a body holding a backtick, a `$`, a `"`, and an apostrophe, with CLAUDE.md recording the fix.

@@ -4,6 +4,7 @@ with an optional removal of named paths made inside the same commit.
 
 Usage: python3 <plugin root>/tools/commit.py --subject SUBJECT [--body BODY] [--remove PATH ...] [--] PATH [PATH ...]
        python3 <plugin root>/tools/commit.py --subject SUBJECT [--body BODY] [--remove PATH ...] --path-file FILE
+       python3 <plugin root>/tools/commit.py --subject SUBJECT [--body BODY] [--remove PATH ...] --path-file - < PATHS
        python3 <plugin root>/tools/commit.py --subject SUBJECT [--body BODY] --remove PATH [--remove PATH ...]
 
 Unlike the document writers beside it, which touch no git, this module exists to run git: it
@@ -45,7 +46,9 @@ The paths are given either as arguments (behind "--" when one may begin with "-"
 --path-file, in a file holding one path per line, never both. A path file is read
 line-exact: it is split at its newlines only, each line taken whole as one path with no word
 splitting, quoting, or trimming of its own, a line holding nothing is skipped (it names no
-path), and its last line needs no newline. The paths to remove are given as --remove, one
+path), and its last line needs no newline. A FILE of "-" is standard input, read whole and
+line-exact by the same rule, so a caller can feed the list from a quoted heredoc and no path
+reaches its command line, a path holding a space or shell syntax included. The paths to remove are given as --remove, one
 path per option, repeated for each, beside either form or alone. However they are given, the
 paths reach every git command as separate arguments, read literally rather than as
 patterns, so a path holding a glob character names that one file only. No path is checked
@@ -65,7 +68,8 @@ file) is passed on at once. Only the exit status is tested; no message text is r
 
 Refusals, made before any git command runs: an empty or multi-line SUBJECT, an empty path
 argument, an empty --remove value, no path and no --remove given at all, and a path file
-that is missing, unreadable, not UTF-8 text, or naming no path. Nothing else is checked.
+(standard input for "-") that is missing, unreadable, not UTF-8 text, or naming no path.
+Nothing else is checked.
 
 Output and error contract:
   - a commit that lands prints nothing; a call whose guard found none of the paths changed
@@ -131,20 +135,29 @@ def commit_body(body):
     return body
 
 
+STDIN_PATH_FILE = "-"
+
+
 def read_path_file(path):
-    """The paths a path file names: one per line, each line taken whole, empty lines skipped."""
-    try:
-        with open(path, "rb") as handle:
-            data = handle.read()
-    except FileNotFoundError:
-        raise ToolError(f"the path file {path} does not exist")
+    """The paths a path file names, standard input for "-": one per line, each line taken
+    whole, empty lines skipped."""
+    if path == STDIN_PATH_FILE:
+        source = "the path list on standard input"
+        data = sys.stdin.buffer.read()
+    else:
+        source = f"the path file {path}"
+        try:
+            with open(path, "rb") as handle:
+                data = handle.read()
+        except FileNotFoundError:
+            raise ToolError(f"{source} does not exist")
     try:
         text = data.decode("utf-8")
     except UnicodeDecodeError:
-        raise ToolError(f"the path file {path} is not UTF-8 text")
+        raise ToolError(f"{source} is not UTF-8 text")
     paths = [line for line in text.split("\n") if line]
     if not paths:
-        raise ToolError(f"the path file {path} names no path")
+        raise ToolError(f"{source} names no path")
     return paths
 
 
@@ -286,7 +299,10 @@ def build_parser():
     parser.add_argument(
         "--path-file",
         metavar="FILE",
-        help="a file naming the paths to commit, one per line, each line taken whole; instead of PATH arguments",
+        help=(
+            "a file naming the paths to commit, one per line, each line taken whole, '-' for "
+            "standard input read by the same rule; instead of PATH arguments"
+        ),
     )
     parser.add_argument(
         "--remove",

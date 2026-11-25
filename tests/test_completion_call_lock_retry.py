@@ -1,7 +1,8 @@
 """The inline complete-task skill's fixed call, as the committed Claude Code tree renders it, run
 against another process's .git/index.lock: the one fenced block of the skill file holding the
 task-list tool's remove, filled as the runner fills it (the mission directory, the task's full
-heading, its bar as bullets, and the paths the task edited and created), and run under bash in a
+heading, its bar as bullets, and the paths the task edited and created, one per line of the
+heredoc that feeds the commit tool's `--path-file -`), and run under bash in a
 temporary git repository seeded through the conftest factory, with another run's change staged
 and an untracked file beside it. Git's own trace, written to a file, counts the attempts the
 commit tool makes, so the test knows the first `git add` met the held lock before it releases
@@ -9,7 +10,9 @@ it. A lock released within the retry window lets the completion commit land carr
 own paths and the bar, exactly, as its body; a lock never released ends the call within a limit
 a little above the retry bound, passing git's message on in the commit tool's one Error: line,
 with no commit. An empty bar, filled as the runner would leave it, is refused by the call's own
-test before anything is removed or committed. This is the suite's one fixed call run against a
+test before anything is removed or committed. A recorded path holding a space and shell syntax
+(an apostrophe, a command substitution, a backtick, a glob) reaches the commit tool as written
+from its heredoc line, runs nothing, and is committed. This is the suite's one fixed call run against a
 held lock: the retry schedule itself is the commit tool's and is tested in test_commit_retry.py,
 and the parallel test is not relied on for it."""
 
@@ -30,7 +33,13 @@ FIXTURES = Path(__file__).resolve().parent / "fixtures"
 REMOVE_COMMAND = "/tools/task_list.py remove "
 COMMIT_COMMAND = "/tools/commit.py "
 BAR_PLACEHOLDER = "- <criterion "
-PATHS_PLACEHOLDER = "<recorded path 1> <recorded path 2>"
+PATHS_PLACEHOLDER = ["<recorded path 1>", "<recorded path 2>"]
+
+# The line feeding the commit tool its paths from the second heredoc.
+COMMIT_LINE = (
+    '{ out="$(python3 ${CLAUDE_PLUGIN_ROOT}/tools/commit.py --subject "Task-completion: <Task Title>" '
+    '--body "$bar" --path-file -)"; } <<\'EOF\' &&'
+)
 
 # The lines the call opens with: the bar captured from its heredoc, then the empty-bar test.
 CAPTURE_LINE = "{ bar=\"$(cat)\"; } <<'EOF' &&"
@@ -58,6 +67,11 @@ BAR = [
 EDITED = "src/parser.py"
 CREATED = "src/parser_test.py"
 OWN_PATHS = [EDITED, CREATED, TODO]
+
+# A project path a task may create that the command line would have broken: a space, an
+# apostrophe, a command substitution, a backtick, and a glob character, none of which may run
+# or expand.
+SHELL_SYNTAX = "docs/User Guide/it's $(touch pwned) `touch pwned` [x]*.md"
 
 # Another run's work in the same tree: a staged edit and an untracked file.
 STAGED_ELSEWHERE = "README.md"
@@ -106,21 +120,20 @@ def fixed_call():
     return lines
 
 
-def completion_call(bar=BAR):
+def completion_call(bar=BAR, paths=(EDITED, CREATED)):
     """The call written out as the runner writes it: the template's bar bullets replaced by the
-    given bar (the verified one unless another is given), the two recorded-path placeholders by
-    the task's paths, and every other placeholder by its value."""
+    given bar (the verified one unless another is given), the two recorded-path placeholder lines
+    by the task's recorded paths, one per line (the edited and created ones unless others are
+    given), and every other placeholder by its value."""
     template = fixed_call()
     bullets = [index for index, line in enumerate(template) if line.startswith(BAR_PLACEHOLDER)]
     assert bullets and bullets == list(range(bullets[0], bullets[-1] + 1)), "the bar's bullets are not one run"
     lines = template[: bullets[0]] + list(bar) + template[bullets[-1] + 1 :]
+    first = lines.index(PATHS_PLACEHOLDER[0])
+    assert lines[first : first + len(PATHS_PLACEHOLDER)] == PATHS_PLACEHOLDER
+    lines = lines[:first] + list(paths) + lines[first + len(PATHS_PLACEHOLDER) :]
     call = "\n".join(lines) + "\n"
-    assert call.count(PATHS_PLACEHOLDER) == 1
-    call = (
-        call.replace(PATHS_PLACEHOLDER, f"{EDITED} {CREATED}")
-        .replace("<MISSION_DIR>", MISSION)
-        .replace("<Task Title>", TASK_TITLE)
-    )
+    call = call.replace("<MISSION_DIR>", MISSION).replace("<Task Title>", TASK_TITLE)
     assert not re.search(r"<[A-Za-z][^<>\n]*>", call), "a placeholder is left unfilled"
     return call
 
@@ -206,14 +219,13 @@ def test_the_call_captures_and_tests_the_bar_then_chains_the_removal_with_the_co
     assert lines[eof + 1 : eof + 1 + len(EMPTY_BAR_TEST)] == EMPTY_BAR_TEST
     remove_line = lines[eof + 1 + len(EMPTY_BAR_TEST)]
     assert remove_line == 'python3 ${CLAUDE_PLUGIN_ROOT}/tools/task_list.py remove <MISSION_DIR> "<Task Title>" &&'
-    commit_line = lines[eof + 2 + len(EMPTY_BAR_TEST)]
-    assert COMMIT_COMMAND in commit_line
-    assert commit_line == (
-        'out="$(python3 ${CLAUDE_PLUGIN_ROOT}/tools/commit.py --subject "Task-completion: <Task Title>" --body "$bar" -- '
-        f'{PATHS_PLACEHOLDER} <MISSION_DIR>/TASKS_TODO.md)" &&'
-    )
+    commit_index = eof + 2 + len(EMPTY_BAR_TEST)
+    assert lines[commit_index] == COMMIT_LINE
+    # The commit tool names no path on its command line: every path is a line of its heredoc.
+    assert lines[commit_index + 1 :][: len(PATHS_PLACEHOLDER) + 2] == PATHS_PLACEHOLDER + ["<MISSION_DIR>/TASKS_TODO.md", "EOF"]
     assert "<<'EOF'" not in remove_line, "the removal reads a heredoc"
-    assert text.count("<<'EOF'") == 1
+    assert text.count("<<'EOF'") == 2
+    assert lines.count("EOF") == 2
     assert "echo 'completion commit landed'" in text
 
 
@@ -285,6 +297,22 @@ def test_a_lock_never_released_ends_the_call_within_the_limit_with_gits_message_
     # The removal landed before the commit tool ran, so the completion stays in the tree for a
     # rerun of the commit.
     assert f"## {TASK_TITLE}\n" not in (project / TODO).read_text(encoding="utf-8")
+
+
+# --- a project path holding a space and shell syntax --------------------------------------
+
+
+def test_a_recorded_path_holding_a_space_and_shell_syntax_is_committed_as_written(project, environment, git, run_call):
+    target = project / SHELL_SYNTAX
+    target.parent.mkdir(parents=True)
+    target.write_bytes(b"A guide page the task created.\n")
+    status, stdout, stderr = run_call(project, environment, completion_call(paths=(EDITED, CREATED, SHELL_SYNTAX)))
+    assert (status, stdout, stderr) == (0, COMPLETION_COMMIT_LANDED, "")
+    assert message(git, project, environment) == f"Task-completion: {TASK_TITLE}\n\n" + "\n".join(BAR) + "\n"
+    committed = git(project, environment, "show", "-z", "--name-only", "--format=", "HEAD").split("\0")
+    assert sorted(path for path in committed if path) == sorted(OWN_PATHS + [SHELL_SYNTAX])
+    assert not (project / "pwned").exists(), "a recorded path ran a command"
+    assert staged(git, project, environment) == [STAGED_ELSEWHERE]
 
 
 # --- an empty bar ---------------------------------------------------------------------------
