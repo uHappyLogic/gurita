@@ -56,5 +56,9 @@ The findings of the hands-on check of Claude Desktop are recorded in one of two 
 
 Claude Desktop is selected through the line, keeping the rule that a line's harness is the command it opens with. A Desktop line opens with a word of its own that names no CLI, a fourth key added to the three harness lists (`HARNESSES` in `src/harnessCheck.ts`, `HARNESSES` in `src/lineValues.ts`, and `SWITCHABLE` in `src/settingsWindow.ts`). The line editor's harness dropdown offers Claude Desktop only on the line of a variant that holds exactly one line, an interactive one; that test is new, since `Variant` records only `singleTask` and `looped`. A pick rewrites the line through `rewriteHarness` into a `custom N` variant in `~/.gurita/variants.json`, and the person then selects that variant in the action button's existing dropdown, the selection remembered in `workspaceState` as now. `shipped_recipes.md` ships no Desktop variant, and the action, the click, and the Settings window gain no other selection control.
 
+### Desktop harness availability
+
+Claude Desktop is offered only where the extension host runs on macOS in a local window, `process.platform === 'darwin'` with no `vscode.env.remoteName`. In a local Linux window and in every remote window (Remote-WSL, SSH) it is not offered and is never selectable for an action. The rule is fixed and read from the window, with no probe of the application.
+
 ## Out of Scope
 
