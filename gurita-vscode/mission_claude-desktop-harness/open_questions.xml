@@ -60,6 +60,36 @@
   </open-question>
   <open-question id="Session opening mechanism">
     <question>Two ways of opening a Claude Desktop session from outside are known and neither has been tried: the `claude://code/new` link, which takes a prompt and a folder, and the `claude` CLI&apos;s `--desktop` option. Which does Gurita for VS Code use to send an action to Claude Desktop where the hands-on check finds that both pass a prompt?</question>
+    <alternative id="Link through openExternal">
+      The `claude://code/new` link only, the `claude` CLI not used: Gurita builds the link with the action&apos;s prompt, its placeholder values written into the text, as `q` and the project&apos;s root folder as `folder`, and hands it to `vscode.env.openExternal`, the extension&apos;s first call of that API.
+      <advantage>It depends on Claude Desktop alone, the scheme Claude.app registers and its own Finder service uses, with no CLI on the shell&apos;s path, and it starts no child process: VS Code&apos;s own API opens the link on the person&apos;s machine, including from a remote window.</advantage>
+      <drawback>Placeholder values live only in the terminal&apos;s `GURITA_*` variables today, so a new function has to write them into the prompt text. The link cuts the prompt at 14,336 characters and names no model, effort, or permission mode, so the line&apos;s flags cannot travel with it. The only sign of failure is openExternal&apos;s boolean. In a remote window the folder is a remote path, so this option&apos;s reach depends on where the harness is offered, which the availability question decides.</drawback>
+    </alternative>
+    <alternative id="Link through the OS opener">
+      The same `claude://code/new` link, with the prompt&apos;s values written in and the project&apos;s root as `folder`, passed to the operating system&apos;s opener (`open` on macOS, `xdg-open` on Linux) as an `execFile` child, the way the extension already runs its git and Python reads. The `claude` CLI is not used.
+      <advantage>The opener&apos;s exit status and stderr are a failure signal Gurita can read, for example no application handling the `claude` scheme, and the extension keeps its existing pattern of `execFile` children with no openExternal call.</advantage>
+      <drawback>It has the link&apos;s costs: a new function to write values into the prompt, the 14,336-character cut, and no model, effort, or permission mode. The opener also runs on the extension host, which in a remote window is the remote machine, where no Claude.app runs, so where it works depends on the availability question. Each platform needs its own command.</drawback>
+    </alternative>
+    <alternative id="CLI desktop in a terminal">
+      The `claude` CLI&apos;s `--desktop` option only. The action&apos;s one interactive line runs as today, through the bundled runner in a terminal at the project root, with `--desktop` added to its `claude` command and no run tracked. The link is not used.
+      <advantage>The line&apos;s text stays whole. The shell expands the `GURITA_*` variables, so no function writes values into the prompt and no 14,336-character link cut applies. The line&apos;s `--model`, `--effort`, and bypass flag ride on the same command wherever the CLI forwards them, and the folder is the terminal&apos;s working directory.</advantage>
+      <drawback>A VS Code terminal still opens, which the goal sets the Desktop session against, and the runner&apos;s run tracking has to be bypassed for this one kind of send. It needs `claude` on the session shell&apos;s path. Nobody has observed whether `--desktop` without `--continue` or `--resume` opens a new session with the prompt in place.</drawback>
+    </alternative>
+    <alternative id="CLI desktop in background">
+      The `claude` CLI&apos;s `--desktop` option only, run by the extension itself as a background child of the session shell at the project root. The line&apos;s `claude` command gets `--desktop` added, and the `GURITA_*` values are set in the child&apos;s environment. No terminal opens and the link is not used.
+      <advantage>No terminal opens, yet the shell still expands the values and the line&apos;s own flags travel with it. The child&apos;s exit status and stderr give a failure signal, and there is no link length cut.</advantage>
+      <drawback>It adds a new kind of child process. Nobody knows whether the CLI exits once it hands off to Desktop or stays running, and it needs `claude` on the session shell&apos;s path. In a remote window it runs on the remote host, so where it works depends on the availability question. Whether `--desktop` alone opens a new session with the prompt has not been observed.</drawback>
+    </alternative>
+    <alternative id="CLI where found, link otherwise">
+      Both mechanisms, chosen per send. When the harness check finds `claude` on the session shell&apos;s path, Gurita runs `--desktop` as a background child of the session shell at the project root. Otherwise it opens the `claude://code/new` link, with the values written into the prompt and the project&apos;s root as `folder`, through `vscode.env.openExternal`.
+      <advantage>Desktop is reachable for a person who has Claude.app but no CLI. Wherever the CLI is present, the send keeps the line&apos;s flags and avoids the link&apos;s prompt cut.</advantage>
+      <drawback>Two code paths to build, test, and document, with different carried values and different failure signals. The same action can then open differently on two machines, for example with or without the line&apos;s model, and the person cannot tell which route was taken.</drawback>
+    </alternative>
+    <alternative id="Decide on the check&apos;s findings">
+      No mechanism is fixed now. The choice is left to the hands-on check under one stated rule: use whichever mechanism, when tried, also carries more of the project&apos;s folder, the model, the effort, and the permission mode, and leaves the prompt prefilled rather than already sent. On a tie, use the link.
+      <advantage>The choice rests on what Claude Desktop is seen to do rather than on a static reading of its bundle and the CLI&apos;s help text, which so far has observed nothing that either route delivers.</advantage>
+      <drawback>The questions on feedback, over-long prompts, the Harnesses row, and remote availability are each shaped by the mechanism, so they stay unsettled or must be written to hold for either. How much that costs depends on when the check runs, which the timing question decides.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Desktop selection mechanism">
     <question>How does a person select Claude Desktop for an action in Gurita for VS Code, given that no action carries a harness setting of its own, that a line&apos;s harness is today the command the line opens with, and that the variants of one action can differ in whether they are a single interactive line?</question>
