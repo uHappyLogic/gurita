@@ -19,9 +19,17 @@
 // `claude "/gurita:<skill> …"` or `agy -i "…"`, the trailing `# interactive` mark kept. The rewritten
 // line takes the picked harness's first listed model, and it keeps its effort when that harness's
 // effort list offers it, taking the list's first effort otherwise; a line switched onto Codex while
-// Codex's effort list is empty carries no effort override. A line's harness is its first word when that word is
-// `claude`, `agy`, or `codex`; any other line (a shell step, the slot line `<single-task line>`,
-// a command the extension does not know) has no harness and carries no value. On `claude` and
+// Codex's effort list is empty carries no effort override. An interactive line whose harness can be
+// picked is also rewritten onto Claude Desktop, whose line opens with the plain word
+// `claude-desktop` naming no CLI: `claude-desktop "/gurita:<skill> …"`, its prompt and every other
+// word kept, an `agy` line's `-i` dropped, a bare `codex` line's prompt invoked as `/gurita:` and
+// double-quoted, and its trailing `# interactive` mark kept, with every model flag, every effort,
+// and the bypass flag dropped, since no parameter of the `claude://code/new` link Desktop opens a
+// session from names a model, an effort, or a permission mode; the stored line so shows exactly
+// what the session gets. A line's harness is its first word when that word is, by exact equality,
+// `claude`, `agy`, `codex`, or `claude-desktop`; a Claude Desktop line carries no model and no
+// effort, whatever flags it still holds, and any other line (a shell step, the slot line
+// `<single-task line>`, a command the extension does not know) has no harness and carries no value. On `claude` and
 // `agy` the model is the value of `--model` and the effort that of `--effort`; on `codex` the
 // model is the value of `-m` and the effort is the config override
 // `-c model_reasoning_effort=<level>`, the `--config` spelling read as well, its level the text
@@ -37,10 +45,19 @@
 // word of its arguments or a part of one, the quoted prompt being one word. This module imports
 // nothing from `vscode`.
 
-/** The harnesses a line can run on, each named by the command a line opens with. */
-export const HARNESSES = ['claude', 'agy', 'codex'] as const;
+/** The harnesses a line can run on that are CLIs, each named by the command a line opens with. */
+const CLI_LINE_HARNESSES = ['claude', 'agy', 'codex'] as const;
+
+/** The harness that is an application, named by the word a line on it opens with, which names no CLI. */
+const DESKTOP = 'claude-desktop';
+
+/** The harnesses a line can run on, each named by the word a line opens with, Claude Desktop last. */
+export const HARNESSES = [...CLI_LINE_HARNESSES, DESKTOP] as const;
 
 export type Harness = (typeof HARNESSES)[number];
+
+/** A harness a line can run on that is a CLI, the line carrying its model and effort in its own text. */
+type CliLineHarness = (typeof CLI_LINE_HARNESSES)[number];
 
 /** The value a line carries: a harness, its model, and its effort, each read from the line's text. */
 export interface LineValues {
@@ -56,7 +73,7 @@ export interface LineValues {
 type EffortSpec = { flag: string } | { flags: readonly string[]; key: string };
 
 /** The flag carrying each harness's model, and where each carries its effort. */
-const FLAGS: Readonly<Record<Harness, { model: string; effort: EffortSpec }>> = {
+const FLAGS: Readonly<Record<CliLineHarness, { model: string; effort: EffortSpec }>> = {
   claude: { model: '--model', effort: { flag: '--effort' } },
   agy: { model: '--model', effort: { flag: '--effort' } },
   codex: { model: '-m', effort: { flags: ['-c', '--config'], key: 'model_reasoning_effort' } },
@@ -214,7 +231,7 @@ function overrideSpan(line: string, command: Word[], flags: readonly string[], k
 }
 
 /** Where the effort a line's command carries stands on `harness`, or undefined when it carries none. */
-function effortSpan(line: string, command: Word[], harness: Harness): WritableSpan | undefined {
+function effortSpan(line: string, command: Word[], harness: CliLineHarness): WritableSpan | undefined {
   const spec = FLAGS[harness].effort;
   if ('flag' in spec) {
     return plainSpan(valueSpan(line, command, spec.flag));
@@ -230,6 +247,9 @@ export function readLine(line: string): LineValues | undefined {
     return undefined;
   }
   const values: LineValues = { harness };
+  if (harness === DESKTOP) {
+    return values;
+  }
   const model = valueSpan(line, command, FLAGS[harness].model);
   if (model !== undefined) {
     values.model = model.text;
@@ -281,7 +301,7 @@ function replaceValue(line: string, kind: 'model' | 'effort', value: string): st
   }
   const command = words(line);
   const harness = harnessOf(command);
-  if (harness === undefined) {
+  if (harness === undefined || harness === DESKTOP) {
     return undefined;
   }
   const span: WritableSpan | undefined =
@@ -302,7 +322,10 @@ export function replaceEffort(line: string, effort: string): string | undefined 
   return replaceValue(line, 'effort', effort);
 }
 
-/** The harnesses a line's harness can be picked between, each named by the command a line opens with. */
+/**
+ * The harnesses a line can be rewritten onto, each named by the word a line opens with: the three
+ * CLIs `harnessChoices` gives a line, and Claude Desktop for an interactive one.
+ */
 export const SWITCHABLE_HARNESSES = HARNESSES;
 
 export type SwitchableHarness = (typeof SWITCHABLE_HARNESSES)[number];
@@ -342,8 +365,11 @@ function bareCodex(command: Word[]): boolean {
  * a line whose harness cannot be picked: a `claude` or `agy` line carrying both `--model` and
  * `--effort`, headless or interactive, and a `codex` line carrying `-m`, with or without its effort
  * override, that is a headless `codex exec` line or an interactive bare `codex '$gurita:…'` one,
- * are given all three harnesses, and every other line (any other Codex line, one carrying no `-m`,
- * a line without both flags, a shell step, a command the extension does not know) none.
+ * are given the three harnesses that are CLIs, and every other line (any other Codex line, one
+ * carrying no `-m`, a line without both flags, a Claude Desktop line, a shell step, a command the
+ * extension does not know) none. Claude Desktop is not among the choices: whether a line may go to
+ * it is not read from the line alone, and `rewriteHarness` rewrites onto it any interactive line
+ * given choices here.
  */
 export function harnessChoices(line: string): readonly Harness[] | undefined {
   const read = readLine(line);
@@ -352,9 +378,9 @@ export function harnessChoices(line: string): readonly Harness[] | undefined {
   }
   const command = words(line);
   if (read.harness === 'codex') {
-    return execWord(command) !== undefined || bareCodex(command) ? HARNESSES : undefined;
+    return execWord(command) !== undefined || bareCodex(command) ? CLI_LINE_HARNESSES : undefined;
   }
-  return read.effort === undefined ? undefined : HARNESSES;
+  return read.effort === undefined ? undefined : CLI_LINE_HARNESSES;
 }
 
 /** The line with its first command's command word, and the form flag it needs, rewritten for `claude` or `agy`. */
@@ -463,21 +489,21 @@ function doubleQuoted(text: string): string {
  * the prompt single-quoted, double-quoted where it holds a single quote, for `codex`, and invoked
  * as `/gurita:` and double-quoted for `claude` and `agy`.
  */
-function prompt(text: string, harness: Harness): string {
+function prompt(text: string, harness: CliLineHarness): string {
   const sign = harness === 'codex' ? '$' : '/';
   const invoked = text.replace(INVOKED, (_match, before: string) => `${before}${sign}gurita:`);
   return harness === 'codex' && !invoked.includes("'") ? `'${invoked}'` : doubleQuoted(invoked);
 }
 
 /** The bypass flag of each harness's headless line. */
-const BYPASS: Readonly<Record<Harness, string>> = {
+const BYPASS: Readonly<Record<CliLineHarness, string>> = {
   claude: '--dangerously-skip-permissions',
   agy: '--dangerously-skip-permissions',
   codex: '--dangerously-bypass-approvals-and-sandbox',
 };
 
 /** The flag and value a line's effort is written as on `harness`. */
-function effortWords(harness: Harness, effort: string): string {
+function effortWords(harness: CliLineHarness, effort: string): string {
   return harness === 'codex' ? `-c ${quoted(`model_reasoning_effort=${effort}`, '')}` : `--effort ${quoted(effort, '')}`;
 }
 
@@ -491,7 +517,7 @@ function effortWords(harness: Harness, effort: string): string {
  * rewritten in place; a Codex line carrying no effort override gains `effort` after its last model
  * flag. Every other word is kept as written.
  */
-function rewriteAcross(line: string, from: Harness, to: Harness, model: string, effort: string | undefined): string {
+function rewriteAcross(line: string, from: CliLineHarness, to: CliLineHarness, model: string, effort: string | undefined): string {
   const command = words(line);
   const first = command[0];
   const edits: Edit[] = [];
@@ -542,6 +568,56 @@ function rewriteAcross(line: string, from: Harness, to: Harness, model: string, 
   return applyEdits(line, edits);
 }
 
+/** The `# interactive` mark ending an interactive line, as the recipe reader reads it. */
+const INTERACTIVE_MARK = /(?:^|\s)#\s*interactive\s*$/;
+
+/**
+ * Whether `line`, on the CLI harness `harness`, is interactive: it ends in the `# interactive`
+ * mark and its first command is in its harness's interactive form, a `claude` or `agy` command
+ * carrying no `-p` or `--print` and a `codex` command the bare `codex '$gurita:…'` form.
+ */
+function interactiveForm(line: string, command: Word[], harness: CliLineHarness): boolean {
+  if (!INTERACTIVE_MARK.test(line)) {
+    return false;
+  }
+  return harness === 'codex' ? bareCodex(command) : !printForm(command);
+}
+
+/** The edit removing the span `span` of `command`, a flag and its value, with the blanks standing before it. */
+function spanRemoval(command: Word[], span: FlagSpan): Edit {
+  const index = command.findIndex((word) => word.start === span.start);
+  return { start: command[index - 1].end, end: span.end, text: '' };
+}
+
+/**
+ * The interactive line `line`, on the CLI harness `from`, rewritten onto Claude Desktop: its command
+ * word written as `claude-desktop`, an `agy` line's `-i` dropped, a `codex` line's prompt invoked as
+ * `/gurita:` and double-quoted, and every model flag, every effort, and the bypass flag dropped with
+ * the blanks before them, since Desktop takes none of them; every other word, the prompt of a
+ * `claude` or `agy` line, and the trailing `# interactive` mark are kept as written.
+ */
+function rewriteDesktop(line: string, from: CliLineHarness): string {
+  const command = words(line);
+  const first = command[0];
+  const edits: Edit[] = [{ start: first.start, end: first.end, text: DESKTOP }];
+  for (const word of command.slice(1)) {
+    const raw = line.slice(word.start, word.end);
+    if ((from === 'agy' && raw === '-i') || word.text === BYPASS[from]) {
+      edits.push(removal(command, word));
+    }
+  }
+  const asked = promptWord(command);
+  if (from === 'codex' && asked !== undefined) {
+    edits.push({ start: asked.start, end: asked.end, text: prompt(asked.text, 'claude') });
+  }
+  const spec = FLAGS[from].effort;
+  const efforts = 'flag' in spec ? flagSpans(line, command, spec.flag) : overrideSpans(line, command, spec.flags, spec.key);
+  for (const span of [...flagSpans(line, command, FLAGS[from].model), ...efforts]) {
+    edits.push(spanRemoval(command, span));
+  }
+  return applyEdits(line, edits);
+}
+
 /**
  * The line `line` rewritten onto `harness`, one of the harnesses `harnessChoices` gives it: its
  * prompt, its other words, and its headless or interactive form kept, its model the first `offer`
@@ -557,11 +633,27 @@ function rewriteAcross(line: string, from: Harness, to: Harness, model: string, 
  * line written without the override taking the first effort listed. A line already on `harness` is
  * given back unchanged, and undefined is given for a harness `harnessChoices` does not offer the
  * line. An offer listing no model is refused, and so is one listing no effort for `claude` or `agy`.
+ * Onto Claude Desktop, `claude-desktop`, only an interactive line `harnessChoices` gives choices is
+ * rewritten, one ending in the `# interactive` mark whose first command is an interactive `claude`,
+ * `agy -i`, or bare `codex '$gurita:…'` one, and `offer` is not read: the line becomes
+ * `claude-desktop "/gurita:<skill> …"` with its prompt, its other words, and its `# interactive`
+ * mark kept and every model flag, every effort, and the bypass flag dropped. A Claude Desktop line
+ * is given back unchanged onto Claude Desktop, and undefined onto any other harness, as a headless
+ * line and every other line are onto Claude Desktop.
  */
 export function rewriteHarness(line: string, harness: SwitchableHarness, offer: HarnessOffer): string | undefined {
   const choices = harnessChoices(line);
   const read = readLine(line);
-  if (choices === undefined || read === undefined || !choices.includes(harness)) {
+  if (harness === DESKTOP) {
+    if (read?.harness === DESKTOP) {
+      return line;
+    }
+    if (choices === undefined || read === undefined || !interactiveForm(line, words(line), read.harness)) {
+      return undefined;
+    }
+    return rewriteDesktop(line, read.harness);
+  }
+  if (choices === undefined || read === undefined || read.harness === DESKTOP || !choices.includes(harness)) {
     return undefined;
   }
   if (read.harness === harness) {

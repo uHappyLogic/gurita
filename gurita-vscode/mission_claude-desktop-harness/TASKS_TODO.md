@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Read And Rewrite Claude Desktop Lines
-
-Add `claude-desktop` as the fourth command word of `HARNESSES` in `src/lineValues.ts`, a plain word matched by exact equality beside `claude`, `agy`, and `codex`, so a line opening with it reads as a Claude Desktop line with its quoted prompt and skill. Make `rewriteHarness` rewrite an interactive line onto Claude Desktop keeping its prompt and its trailing `# interactive` mark and dropping `--model`, `--effort`, and the bypass-permission flag, since no parameter of the `claude://code/new` link names a model, an effort, or a permission mode, so the stored line shows exactly what the session gets and no indicator of dropped values is built. Verified by `npm test` unit tests in `src/test/lineValues.test.ts` of reading a Desktop line and of rewriting each harness's interactive line onto it.
-
----
-
 ## Offer Claude Desktop In The Harness Dropdown
 
 Add Claude Desktop to `SWITCHABLE` in `src/settingsWindow.ts` and make the line editor's harness dropdown offer it only on the line of a variant that holds exactly one line, an interactive one, a test new to `Variant`, which records only `singleTask` and `looped`, so no chain and no headless line can be set to it. A pick rewrites the line through `rewriteHarness` into a `custom N` variant in `~/.gurita/variants.json`, which the person then selects in the action button's existing dropdown; `shipped_recipes.md` ships no Desktop variant, and the action, the click, and the Settings window gain no other selection control. Verified by `npm test` unit tests that the dropdown offers Claude Desktop on a one-interactive-line variant and on no other line, and that a pick stores the rewritten line as a `custom N` variant.
