@@ -1,7 +1,8 @@
 # Using Gurita for VS Code
 
 This is the reference for the installed extension: its side-bar view, the mission windows, the
-Settings window, the recipes, the looped task run, and the runner. What the extension needs and
+Settings window, the recipes, the looped task run, the runner, and sending an action to Claude
+Desktop. What the extension needs and
 how to install it are in [`README.md`](README.md), the page the listings show.
 
 ## The side-bar view
@@ -38,7 +39,8 @@ While at least one harness counts, the tree holds a plugin notice row at its ver
 in the Settings window, its CLI is found, and its plugin check or version check fails: the Gurita
 plugin is not installed, the harness's plugin listing could not be read, the copy is installed but
 disabled, or the installed copy is older than the packaged version. A harness you disabled in the
-Settings window, and one whose CLI is not found, never counts. A check that could not be run at
+Settings window, and one whose CLI is not found, never counts, nor does Claude Desktop, whose one
+check is whether the application is installed. A check that could not be run at
 all also makes the row stand.
 
 - The row's label is `Gurita plugin missing or outdated`, and its icon is a warning.
@@ -461,7 +463,8 @@ and nothing the window stores.
 ### The harness check
 
 Under **Harnesses** the window lists Claude Code, Antigravity, and Codex, each with the result of
-the harness check. The check is the packaged `harness_check.py`, beside `runner.py`, which the
+the harness check, and, in a local macOS window, Claude Desktop fourth (see Claude Desktop's row
+below). The check is the packaged `harness_check.py`, beside `runner.py`, which the
 extension runs with `python3` from the project root. In one session of the shell the runner
 starts its chains in, it looks up each harness's CLI (`claude`, `agy`, `codex`) and, when found,
 reads which Gurita copy that harness has installed (`claude plugin list --json`,
@@ -524,6 +527,25 @@ install the copy again at each scope one was detected at, and Codex's end with
 `codex plugin add gurita@gurita` when a copy is held, enabled or disabled. The status line and
 its checks are unchanged by the source. Antigravity's listing names no source, so its copy is
 reported as before.
+
+Claude Desktop's row stands only where the extension host runs on macOS in a local window,
+`process.platform` reading `darwin` and the window having no remote name. In a local Linux or
+Windows window and in every remote window (Remote-WSL, SSH, a dev container) the window draws no
+Claude Desktop row, no harness dropdown offers it, and no action can be sent to it (see Sending
+an action to Claude Desktop below). The rule is fixed and read from the window, with no probe of
+the application. Claude Desktop is an application rather than a CLI, so `harness_check.py` does
+not cover it, and its row makes one check of its own in place of the CLI check: whether Claude
+Desktop is installed, read from its application bundle at `/Applications/Claude.app` through the
+file system, never through a command in the shell, and made each time the harness check runs.
+The row then reads `Installed: Claude Desktop <version> at /Applications/Claude.app.`, the
+version taken from the bundle's `Contents/Info.plist` as information only and compared with
+nothing (`Installed: Claude Desktop at /Applications/Claude.app, its version not read.` when the
+bundle holds none), or, when no bundle stands there, **Application not found**:
+`Application not found: no Claude Desktop at /Applications/Claude.app.` The row makes no plugin
+check and no version check of a Gurita copy, names no scope or source, and carries no
+**Install** or **Update** control; it keeps its **Enabled** or **Disabled** state and its switch
+(see Enabling and disabling harnesses below). A failed presence check is drawn on the row alone:
+the side-bar view's plugin notice row never counts Claude Desktop.
 
 The check runs in the background as soon as the side-bar view first shows after the extension
 starts, or the first time you open the Settings window, when that comes first. Its
@@ -593,7 +615,7 @@ Code.`, followed by the one sentence `Running sessions of that harness must be r
 the new copy.`, whether or not the version changed. Any other status is an error notification
 naming the status, and so is a failed release lookup, which the script reports in the terminal
 before exiting non-zero with no install, update, or marketplace command run. Either way the
-window then runs the whole harness check afresh, for all three harnesses, as **Check again**
+window then runs the whole harness check afresh, for every harness, as **Check again**
 does, and its result replaces the one kept.
 
 ### Enabling and disabling harnesses
@@ -603,13 +625,13 @@ control, **Disable** or **Enable**, that switches it. Every harness starts enabl
 check reports and whatever recipes run on it, and stays enabled until you disable it; the check
 never changes it. The state is kept in your per-user variant store, `~/.gurita/variants.json`, in
 the part of that file set aside for harness values, its `harnesses` object, as
-`"<harness>": { "enabled": false }` keyed `claude`, `antigravity`, or `codex`, so it lasts across
+`"<harness>": { "enabled": false }` keyed `claude`, `antigravity`, `codex`, or `claude-desktop`, so it lasts across
 every window, the editor, and every project. When the file cannot be read, the window says so with the
 cause beneath it and draws no control.
 
 Disabling a harness acts on the mission pages' recipe lists alone. A variant with at least one
-line on a disabled harness (a line opening with `claude`, `agy`, or `codex`) is left out of the
-list, mixed variants included, so it leaves its recipe's dropdown and a click on it starts
+line on a disabled harness (a line opening with `claude`, `agy`, `codex`, or `claude-desktop`) is
+left out of the list, mixed variants included, so it leaves its recipe's dropdown and a click on it starts
 nothing, and a recipe every variant of which is left out loses its button. Where the variant
 selected for a recipe or its default is left out, the button stands on the default if that
 variant is still listed and otherwise on the first listed variant; the remembered selection is
@@ -619,7 +641,10 @@ click on it starts nothing, the button stands on its default or its first remain
 recipe button does, and a button left with no variant stays drawn but disabled, with no dropdown
 beside it, until the harness is enabled again. The side-bar view's **New mission** and **Define
 mission** rows leave such a variant out of their QuickPick the same way, and a row left with no
-variant reads `no variant enabled`. The looped run is untouched: its preview's override
+variant reads `no variant enabled`. In a window where Claude Desktop is not offered, any but a
+local macOS one, a variant with a line opening with `claude-desktop` is left out the same way
+whatever Claude Desktop's state, its remembered selection kept and coming back in a local macOS
+window. The looped run is untouched: its preview's override
 list offers every named single-task line, the rule file chooses among all of them, and every one
 is passed to the runner.
 
@@ -637,7 +662,8 @@ override is read in the `--config` spelling too (`--config model_reasoning_effor
 no effort; `--effort` on a `codex` line is not Codex's effort and is not read. Codex's lists
 therefore start from the one shipped Codex line, `Single task with GPT-6-Luna High (Codex)`, with
 `gpt-6-luna` and `high`, and grow with the Codex lines you have. The list keeps no record of which
-model takes which effort.
+model takes which effort. Claude Desktop has no model or effort list, since no value a line could
+carry for it reaches a Desktop session (see Variants below).
 
 Each entry has a **Remove** control, which takes it out of the offer, and each list an **Add
 model** or **Add effort** control, which asks for an entry no line uses yet in VS Code's own input
@@ -697,23 +723,25 @@ is told in an error notification and writes nothing. When the variants cannot be
 says so with the cause beneath it.
 
 Beneath each variant stands its line editor, one row per line. A line of a known harness
-(`claude`, `agy`, or `codex`) that runs a `gurita:` skill is drawn as the skill's bare name
+(`claude`, `agy`, `codex`, or `claude-desktop`) that runs a `gurita:` skill is drawn as the skill's bare name
 (`specify-mission-starting-state`, not the whole
 `claude -p "/gurita:specify-mission-starting-state --mission <path>" …` line), with an
 `interactive` mark beside it when the line is not headless (when it carries the `# interactive`
 mark), and the line as written in its hover text; on the right of the row stand its harness
-(Claude Code, Antigravity, or Codex) and then its dropdowns. Every other line, a shell step,
+(Claude Code, Antigravity, Codex, or Claude Desktop) and then its dropdowns. Every other line, a shell step,
 the slot line `<single-task line>`, or a command the extension does not know, is drawn as its
 text. A `claude` or `agy` line carrying both `--model` and `--effort` gets a model dropdown and an
 effort dropdown, and its harness is a dropdown too, standing on the one the line runs on (on a
 line drawn as its text, it stands before the model dropdown), offering Claude Code, Antigravity,
-and Codex on a headless and an interactive line alike. A
+and Codex on a headless and an interactive line alike, and Claude Desktop after them on the line
+of a variant holding exactly one line, an interactive one (see below). A
 `codex` line carrying `-m` gets its model dropdown and, when it also carries the override
 `-c model_reasoning_effort=<level>`, an effort dropdown beside it; a `codex` line written
 without the override has no effort dropdown, since a pick inserts no text, until you write the
 override into the line yourself. A headless `codex exec` line and an interactive bare
-`codex '$gurita:…'` line carrying `-m` get the harness dropdown offering all three harnesses, with
-or without the override, while any other `codex` line keeps its harness as text. Every other line, a `claude` or `agy` line without both flags
+`codex '$gurita:…'` line carrying `-m` get the harness dropdown offering all three CLI harnesses,
+with or without the override, and Claude Desktop too on such an interactive line when it is its
+variant's only line, while any other `codex` line keeps its harness as text. Every other line, a `claude` or `agy` line without both flags
 included, gets no dropdown and stays read-only, its harness shown as text. Drawing the rows changes no line,
 stored value, or mission page. The model dropdown offers the harness's model list and the
 effort dropdown its whole effort list, as **Models and efforts** holds them, whatever the line's
@@ -761,7 +789,33 @@ carried is dropped, since on `codex` that flag attaches an image, and the traili
 `# interactive` mark is kept. The skill runs from the initial prompt and the session stays open
 on its result, as checked with `codex` 0.159.3. Switched back, the line becomes
 `claude "/gurita:…"` or `agy -i "/gurita:…"`, so the interactive form survives the round trip.
-A pick, of any of the three, is written to
+
+Claude Desktop is offered in a line's harness dropdown, after the three CLI harnesses, only in a
+local macOS window (see The harness check above) and only on the line of a variant that holds
+exactly one line, an interactive one: both `Execute tasks` variants and the button recipes
+`discuss-open-question`, `discuss-mission-goal`, `discuss-new-task`, `ask-in-mission-context`, and
+`capture-mission-principle-updates` among the shipped recipes. No line of a chain, the
+interactive last line of `First run` or `Prepare and Execute tasks` included, no headless line,
+and no single-task line is offered it, and a pick of it there is refused and writes nothing. A
+line set to go to Claude Desktop opens with the word `claude-desktop`, which names no CLI, and
+keeps its quoted prompt, its other words, and its trailing `# interactive` mark. It carries no
+value Claude Desktop does not take: no parameter of the link Desktop opens a session from names a
+model, an effort, or a permission mode, so the pick drops `--model` and `--effort`, Codex's `-m`
+and its `model_reasoning_effort` override, and the bypass flag,
+`--dangerously-skip-permissions` or `--dangerously-bypass-approvals-and-sandbox`, together with an
+`agy` line's `-i`, and writes a bare `codex` line's prompt as a double-quoted `/gurita:`
+invocation, so the line shows exactly what the session gets. The shipped `Normal difficulty`
+variant of `Execute tasks`,
+`claude "/gurita:complete-all-tasks --mission <path>" --dangerously-skip-permissions --model "opus" --effort high; # interactive`,
+becomes
+`claude-desktop "/gurita:complete-all-tasks --mission <path>"; # interactive`.
+A Claude Desktop line is drawn as its skill's name with its `interactive` mark and Claude Desktop
+as its harness, as text: it gets no harness, model, or effort dropdown, so it is not switched back
+from its row, and a stored `custom N` holding it returns to the line it was made from through its
+**Reset**. No indicator of the dropped values is drawn in the window, on the action's button, or
+at the send.
+
+A pick, of any harness, is written to
 `~/.gurita/variants.json`. On a shipped variant or one of the project's or your own recipe file,
 `default` included, the variant is left untouched and listed, and a stored variant named `custom N` is
 added beside it, after the recipe's other variants, holding the changed lines, N the lowest number
@@ -1132,6 +1186,10 @@ none of which declares a step and each of which is one block:
   its model a Codex model id from the catalog `codex debug models` prints; no chain and no button
   recipe holds a Codex line.
 
+No shipped recipe holds a Claude Desktop line: a variant that sends an action to Claude Desktop is
+one you make, such as a `custom N` from a harness dropdown in the Settings window (see Variants
+above).
+
 ### The project's recipe file
 
 A project can carry recipes of its own, shared by everyone who works on it, in one Markdown file
@@ -1271,7 +1329,8 @@ brief names `core/tools/`, a `.py` file, a test, a parser, or the runner go to
 ## The runner
 
 Every run is the bundled `runner.py`, started with `python3` as the run terminal's own process at
-the project root. It composes the chain into one script and runs it in one shell session, using
+the project root; an action sent to Claude Desktop is no run and never reaches it (see Sending an
+action to Claude Desktop below). It composes the chain into one script and runs it in one shell session, using
 the shell `$SHELL` names as an interactive shell (so it reads `~/.zshrc` or `~/.bashrc`), or
 `/bin/sh` with no startup files when `$SHELL` is unset or names a shell outside the sh, bash, zsh
 family. Before each line it prints a marker naming the line's number, the total, and its text,
@@ -1300,3 +1359,50 @@ task that did not end on `Task completed.`, or on a task list it could not read.
 off, every run waits for a keypress, finished or stopped, and its terminal closes once you
 dismiss it. The setting is read each time a run starts, and the extension passes it to the runner
 as the option `--close-when-finished` of its `chain` and `loop` commands.
+
+## Sending an action to Claude Desktop
+
+An action whose selected variant is exactly one line opening with `claude-desktop` (see Variants
+above) is not run in a terminal: a click sends it to Claude Desktop, to open as a session in
+Desktop's Code tab on the project's folder. That holds wherever the action is fired: its button
+in a mission page's action list, such as `Execute tasks`, **Discuss** on the question card, **New
+task** and **Ask in mission context** on a mission's page, the side-bar view's **New mission**
+row, and **Capture principles** on a finished mission's window. Every other variant, a chain of
+several lines included, runs in a terminal as before. Claude Desktop is offered only in a local
+macOS window: in any other window no such variant is listed or selectable, and a click naming one
+sends nothing and starts no run.
+
+The values the action fills or asks for are taken as for any run, in VS Code's own input box,
+and are written into the prompt itself, since no terminal holds them: the prompt is the line's
+quoted `/gurita:` word as the shell reads it, each `<name>` replaced by its value exactly as typed,
+in one pass, and an optional value left empty dropped together with the `. ` before it, as a run's
+line drops it. The extension then builds the `claude://code/new` link, Claude Desktop's own way of
+opening a session from outside, carrying the prompt as `q` and the project's root as `folder`,
+each written as a URI component, and passes it as the one argument to `open`, the macOS opener,
+run as a child process. Neither the `claude` CLI nor its `--desktop` option is used. The session
+gets no model, effort, or permission mode from the line, which carries none (see Variants above),
+and opens on Claude Desktop's own settings.
+
+The send is fire-and-forget: no run is tracked. The mission's page keeps its action buttons
+enabled, a second click sends the action again, and the live missions are not re-read for it. A
+click is still refused, as any is, while a terminal run of that mission is going. After a send
+that went out VS Code shows nothing; Claude Desktop coming to the front is the sign. A failed send
+is told only from the outcome of the `open` call itself, with no check made beforehand, in one
+error notification, `The action "<action>" could not be sent to Claude Desktop: <cause>`, the
+cause being what the opener wrote to its standard error, trimmed, or the failed call's own message
+when it wrote nothing; nothing runs in its place.
+
+Claude Desktop's link cuts its prompt at 14,336 characters, counted as JavaScript counts a
+string's length, in UTF-16 code units, so a character outside the Basic Multilingual Plane, an
+emoji for instance, counts as two. Before a send the extension measures the prompt, its values
+written in, the same way: a prompt of up to 14,336 characters is sent as above, and one past that
+is not sent to Claude Desktop at all. The action runs in a VS Code terminal instead, without
+asking, as an ordinary run tracked until its terminal closes, its values set in the terminal's
+environment as for any run, and one information notice says why:
+`The prompt of the action "<action>" is too long for Claude Desktop (<length> characters, past its limit of 14,336), so it runs in a terminal instead.`
+The terminal runs the line the extension builds from the Desktop line before the run starts, its
+opening word `claude-desktop` replaced by `claude` and every other word kept as stored, so
+`claude-desktop "/gurita:complete-all-tasks --mission <path>"; # interactive` runs as
+`claude "/gurita:complete-all-tasks --mission <path>"; # interactive`, an interactive Claude Code
+session on Claude Code's own defaults, or with any flag the line still holds. The runner is given
+that line as a chain of one line and never sees the Desktop word.
