@@ -171,6 +171,41 @@
   </open-question>
   <open-question id="Alternative id characters">
     <question>An alternative&apos;s id is a free-form label the alternatives agent writes, checked at `embed --alternatives` only as non-empty and unique within its block, and it is later substituted into the double-quoted `--option &quot;&lt;Option&gt;&quot;` argument, where `&quot;`, `$`, a backtick, and `\` are special. Does `embed --alternatives` refuse those characters in an alternative id, as `add` refuses characters in a Short Title, or are ids handled another way or left unchecked?</question>
+    <alternative id="Refuse four, rule stated">
+      `embed --alternatives` refuses an alternative whose id holds `&quot;`, `$`, a backtick, or `\`, a fixed set of the id&apos;s own that is checked independently of whatever `add` refuses in a Short Title. The check runs at embed only, so ids already in a document stand and loading a document checks no id character. The alternatives agent&apos;s rendering rule names the four characters as ones an id may not hold. No call site gains an escaping rule.
+      <advantage>It closes exactly the shell-active class at the one place ids enter the document. The agent is told the rule up front, so it writes a valid id the first time and a refusal stays rare. No recorded id is affected: none of the 3,853 distinct ids in this repository&apos;s history holds any of the four.</advantage>
+      <drawback>The rule is stated in two homes, the tool&apos;s `Error:` line and the agent&apos;s file, and they can drift apart. The ` — ` cut is left to the sibling that owns it. The id&apos;s refused set can diverge from the Short Title&apos;s, depending on how the sibling on Short Title characters settles.</drawback>
+    </alternative>
+    <alternative id="Refuse four, tool only">
+      `embed --alternatives` refuses an id holding `&quot;`, `$`, a backtick, or `\`, checked at embed only and independently of the Short Title rule. The rule is stated only in the open-question tool&apos;s help text and its `Error:` line. The alternatives agent&apos;s file is unchanged, and no call site gains an escaping rule.
+      <advantage>The rule has one home, the tool. The agent&apos;s file stays as it is, and the existing one-repair loop already hands the agent the `Error:` line to correct against.</advantage>
+      <drawback>Every id that breaks the rule costs the return its one repair. A second refusal skips the question, leaving it bare until the next run. The agent learns the rule only by being refused.</drawback>
+    </alternative>
+    <alternative id="Mirror the Short Title rule">
+      `embed --alternatives` applies the same character check that `add` applies to a new Short Title, through one function in `open_questions.py`, so both handles always carry one rule whatever that rule refuses. The check runs at embed only. The agent&apos;s rendering rule refers to that same rule.
+      <advantage>Both handles share one rule and one implementation, so whatever is decided for Short Titles reaches ids with no second decision and no second set to keep in step.</advantage>
+      <drawback>Whether this protects anything depends on the sibling question on Short Title refused characters. If it settles on no further characters, ids get no shell protection. A Short Title&apos;s `/` refusal exists only because a title names a file, and an id names none, so ids would be refused for a reason that does not apply to them: 10 recorded distinct ids hold a `/`.</drawback>
+    </alternative>
+    <alternative id="Allow-list ids">
+      `embed --alternatives` accepts an id only if it consists of letters, digits, spaces, and a fixed punctuation set, and refuses anything else. The punctuation set is the one the recorded ids already use: `,` `-` `.` `&amp;` `_` `/` `:` `(` `)`. The check runs at embed only, and the agent&apos;s rendering rule states the allowed set.
+      <advantage>It closes the four shell-active characters and any later one (`&apos;`, `&lt;`, `;`) in one rule. No recorded id would have been refused under it.</advantage>
+      <drawback>The list must be kept up to date, and an id written in another script is refused unless &quot;letters&quot; is defined as Unicode letters. Depending on how it is drawn, the list also refuses the em dash, which decides part of what the sibling on the lifted line&apos;s option cut owns.</drawback>
+    </alternative>
+    <alternative id="Escaping rule at every site">
+      No id is refused. Every site that writes an id as a literal inside a double-quoted argument states the escaping rule the answer sweep and `submit-task` already state: `&quot;`, `$`, a backtick, and `\` are each escaped by a backslash. The sites gaining the rule are the answer core&apos;s `remove --option` and the single-question skills&apos; `lift --alternative`.
+      <advantage>No id is ever refused, and no tool contract changes. It extends a rule the sweep&apos;s batched call already carries and tests.</advantage>
+      <drawback>Correctness stays with each runner on each call, and it fails silently: an unescaped backtick runs as a command and the call can still exit 0. No fixed-call test extracts the answer core&apos;s or the single-question skills&apos; calls, so the new rule would go untested.</drawback>
+    </alternative>
+    <alternative id="Id captured from heredoc">
+      No id is refused, and no escaping rule is stated. Every site that passes an id to the tool (`--option`, `lift --alternative`) captures it once from a quoted heredoc in the group-fed form `{ option=&quot;$(cat)&quot;; } &lt;&lt;&apos;EOF&apos;` and passes the quoted variable on, the way the completion calls capture the bar.
+      <advantage>Any character in an id is safe, with no refusal and no escaping judgment by the runner. It reuses a capture form the plugin already ships and tests.</advantage>
+      <drawback>It makes every call site heavier, the one-line `remove` in the answer core and each section of the sweep&apos;s batched call included. It brings the heredoc-delimiter concern to every id, and it changes the call shapes that the four fixed-call tests extract.</drawback>
+    </alternative>
+    <alternative id="Leave ids unchecked">
+      Nothing changes: ids stay free-form, checked only as non-empty and unique within their block, and no site gains an escaping rule. CLAUDE.md records this outcome as accepted, with its reason: the agent writes Short-Title-style labels, and none of the 3,853 distinct recorded ids holds a shell-active character.
+      <advantage>It costs no change to the tool, the agent, or any call. The failure has never happened in this repository&apos;s history.</advantage>
+      <drawback>The failure stays possible. An id holding a backtick or `$` would expand inside `--option &quot;…&quot;` in the answer core&apos;s `remove`, which states no escaping rule, and could pass a different option without any error.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Lifted line option cut">
     <question>The answer sweep&apos;s compact view and the two single-question lift paths take the option id from a lifted line as the text before its first spaced em dash, so an alternative id that itself holds ` — ` is cut short and the call that follows is refused. How is that closed: is ` — ` refused in an alternative id at `embed --alternatives`, is the id obtained without parsing it out of the lifted line, or is the case left as it is?</question>
