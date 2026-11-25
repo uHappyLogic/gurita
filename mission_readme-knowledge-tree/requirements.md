@@ -68,5 +68,9 @@ A pointer is a line of one fixed form of the project's own, for example ``- → 
 
 Every tracked top-level folder, the root `mission_*/` directories left out, must be covered: by a `README.md` node of its own or, where that name is taken or rendered, by a description in the root. Below the top level no folder is required to have a node. Any `README.md` node that does stand deeper in the tree must be pointed at from its parent folder's node, or from the nearest ancestor node where the parent has none, so a deeper node exists only by choice and is never orphaned.
 
+### Root-level file entries
+
+Each file at the repository root that can carry prose describes itself in its own header. The root `CLAUDE.md` carries a short entry, inside its byte budget, only for the root files that cannot carry a header and still bind work, chiefly `VERSION` and `.python-version`, with `AGENTS.md` as the symlink to the root itself. Policy, licence, and lock files get no entry.
+
 ## Out of Scope
 
