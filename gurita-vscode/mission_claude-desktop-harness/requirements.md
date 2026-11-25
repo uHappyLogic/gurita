@@ -52,5 +52,9 @@ Before sending an action to Claude Desktop, the extension builds the prompt with
 
 The findings of the hands-on check of Claude Desktop are recorded in one of two places, by the check's outcome. Where the mission goes on, they are kept as a dated comment block in the extension's source beside the Claude Desktop harness entry, in `src/harnessCheck.ts` next to `HARNESSES`, naming the day, the Claude Desktop version checked, what was passed, and what arrived; a later re-check updates that block in place, as the dated hands-on block in the header comment of each host's `scripts/hosts/<host>/settings.toml` is updated. Where the mission stops because no prompt can be passed, no harness code is written, so the findings go into the mission's own record and the summary body of its `Mission-finish:` commit.
 
+### Desktop selection mechanism
+
+Claude Desktop is selected through the line, keeping the rule that a line's harness is the command it opens with. A Desktop line opens with a word of its own that names no CLI, a fourth key added to the three harness lists (`HARNESSES` in `src/harnessCheck.ts`, `HARNESSES` in `src/lineValues.ts`, and `SWITCHABLE` in `src/settingsWindow.ts`). The line editor's harness dropdown offers Claude Desktop only on the line of a variant that holds exactly one line, an interactive one; that test is new, since `Variant` records only `singleTask` and `looped`. A pick rewrites the line through `rewriteHarness` into a `custom N` variant in `~/.gurita/variants.json`, and the person then selects that variant in the action button's existing dropdown, the selection remembered in `workspaceState` as now. `shipped_recipes.md` ships no Desktop variant, and the action, the click, and the Settings window gain no other selection control.
+
 ## Out of Scope
 
