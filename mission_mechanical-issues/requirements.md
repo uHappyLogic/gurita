@@ -172,5 +172,9 @@ The open-question tool's help text and `Error:` line state the Short Title rule.
 
 The commit tool's path-file reader gains `-` for standard input, and only the inline completion call passes its recorded paths and `<MISSION_DIR>/TASKS_TODO.md` as `--path-file -` fed by a quoted heredoc, one path per line, the same line-exact form the agent's path file already has. The commit procedure's command stays unquoted, with the recorded reason that its paths are plugin-named. The change is pinned by commit-tool tests and the completion call's fixed-call test.
 
+### Hand-rendered attribute quoting
+
+The attributes are left as they are. Nothing changes at the recommendation pass, the agent, or the tool: a `"` in a hand-rendered attribute keeps yielding a fragment the tool refuses, and the pass's existing step 6 corrects the refused block against its `Error:` line and re-sends it once. CLAUDE.md records the entry as accepted, with the reason that the refusal is never silent and is corrected by the re-send, and that no new title or id can carry a `"` wherever the creation-time refusals cover it; the acceptance is meant as never, not later.
+
 ## Out of Scope
 
