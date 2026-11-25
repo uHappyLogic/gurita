@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Write The Scripts Folder Node
-
-Write `scripts/README.md`, the node for the host build, the host definitions under `scripts/hosts/`, and the version and render scripts: what today's `CLAUDE.md` says of them in its layout, commands, development points, and invariants, the host-wording slot rules among them where no earlier node states them whole, each rule compressed to its rule, its reason, and its retired forms with none dropped or changed, in the fixed node parts, at most 12,000 bytes, every pointer a line of the fixed pointer form with a note of at most 400 bytes. Verified by the node holding only the allowed headings in their order and staying within both byte limits, by every pointer resolving, and by `uv run scripts/build_hosts.py --check` still passing.
-
----
-
 ## Write The Test Suite Nodes
 
 Write `tests/README.md` and `host_tests/README.md`, the nodes for the tool suite and the on-demand host suite: how each suite is organised and run, from what today's `CLAUDE.md` says of it in its layout, commands, and development points, in the fixed node parts and at most 12,000 bytes each, with a pointer line of the fixed form, its note at most 400 bytes, to every rule a suite pins in the node that states it, and no such rule restated. Verified by each node holding only the allowed headings in their order and staying within both byte limits, by every pointer resolving, and by both pytest runs still passing.
