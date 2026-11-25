@@ -60,5 +60,9 @@ Before tasks are derived, the recorded decisions settle the home only of each it
 
 Every node, and every description a parent node gives of a folder whose `README.md` name is taken or rendered, has one fixed, ordered set of parts: purpose, rules (each the rule, its reason, and its retired forms), commands, and pointers to the nodes below. Purpose is required, and each other part is present only when the node holds something for it. There is no per-file part: a file is known from listing its folder and from its own docstring, `--help`, or header, and what a node says of a particular file is said inside a rule or the purpose. The mission's pytest check verifies that a node holds only the allowed headings, in their order.
 
+### Pointer form
+
+A pointer is a line of one fixed form of the project's own, for example ``- → `docs/workflow.md#heading` — when-to-follow note``: a backticked repo-relative path with an optional heading-slug anchor, followed by its when-to-follow note. Pointers stand only on such lines, a node's pointers to what lies below it as a list of them and a cross-reference from one rule to another as such a line beneath the rule. Every other mention of a file, in backticks or as a Markdown link, is ordinary prose the check does not resolve.
+
 ## Out of Scope
 
