@@ -60,5 +60,9 @@ Claude Desktop is selected through the line, keeping the rule that a line's harn
 
 Claude Desktop is offered only where the extension host runs on macOS in a local window, `process.platform === 'darwin'` with no `vscode.env.remoteName`. In a local Linux window and in every remote window (Remote-WSL, SSH) it is not offered and is never selectable for an action. The rule is fixed and read from the window, with no probe of the application.
 
+### Listing texts naming Desktop
+
+No text outside `gurita-vscode/USAGE.md` comes to name Claude Desktop in this mission. The listing `README.md` (its opening paragraph, its Settings window paragraph, its "What the extension needs" list, and the `settings-window.png` still with its alt text), the manifest's `description`, and its `keywords` stay as they stand; they come to name Claude Desktop in whatever later work prepares the release that first ships the feature.
+
 ## Out of Scope
 
