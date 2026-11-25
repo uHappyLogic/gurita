@@ -68,5 +68,9 @@ No text outside `gurita-vscode/USAGE.md` comes to name Claude Desktop in this mi
 
 The extension sends an action to Claude Desktop through the `claude://code/new` link, with the prompt's values written in and the project's root as `folder`, passed to the operating system's opener (`open` on macOS, `xdg-open` on Linux) as an `execFile` child, the way the extension already runs its git and Python reads. The `claude` CLI and its `--desktop` option are not used.
 
+### Desktop Harnesses row
+
+Claude Desktop's row under Harnesses keeps the Enabled or Disabled state and its switch, and makes one check of its own in place of the CLI check: whether Claude Desktop is installed on the machine, read from the application bundle (`/Applications/Claude.app`, its version taken from the bundle as information only) or from a registered handler of the `claude` URL scheme, never through a command in the shell. The row makes no plugin check and no version check of a Gurita copy and carries no Install or Update control. A failed presence check is drawn on the row only and is not counted by the side-bar view's plugin notice, which counts plugin and version failures.
+
 ## Out of Scope
 
