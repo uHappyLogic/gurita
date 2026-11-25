@@ -27,7 +27,7 @@ This file is the root node of the repository's knowledge tree: it holds only wha
 ## Pointers
 
 - → `.claude-plugin/README.md` — The maintainer's directory marketplace pointing at the built Claude Code tree. Read it before changing how a checkout installs its own plugin.
-- → `.claude/README.md` — This repository's project settings and the two maintainer-only release skills. Read it before any release or a change to a release skill.
+- → `.claude/README.md` — This repository's project settings and its maintainer-only skills, the two releases and the knowledge tree's upkeep. Read it before a release, a tree update, or a change to a maintainer skill.
 - → `assets/README.md` — The hand-drawn banner and icon drawings and their derived outputs. Read it before editing a drawing.
 - → `docs/README.md` — The four user pages and the rule that they carry user content only. Read it before editing a page or when a change alters what a user runs.
 - → `host_tests/README.md` — The on-demand host suite driving one host's installed CLI. Read it before a change touching a host's trigger set.
