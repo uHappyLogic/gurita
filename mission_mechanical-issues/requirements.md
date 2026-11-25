@@ -80,5 +80,9 @@ The task-list tool refuses a new task title holding `"`, `$`, a backtick, or `\`
 
 The commit procedure's shown command changes to the form the completion calls already use: the body is captured once from a quoted heredoc in the group-fed form `{ body="$(cat)"; } <<'EOF'`, under the clause telling the runner to pick a delimiter line the text does not contain, and passed on as `--body "$body"` in the same shell call. A caller with no BODY leaves out both the capture and `--body`, as it leaves out `--body` now. The commit tool and its contract stay unchanged. Every caller following the procedure by reference (`finish-mission`, `answer-open-question`, the two lift-based answer skills, `capture-mission-principle-updates`) gets the form through the procedure with no edit of its own, and the fixed calls that already pass a captured value keep their calls. The new command is pinned by a test that extracts it from the rendered tree and runs it on a body holding a backtick, a `$`, a `"`, and an apostrophe.
 
+### Decision heading quoting
+
+Each section of the answer sweep's batched call captures its decision heading once from a quoted heredoc in the group-fed form the completion calls use for the bar (`{ heading="$(cat)"; } <<'EOF'`, the heading on the one line inside) and passes it on as `--section "$heading"` to `fold` or `replace`. The runner escapes nothing in the heading, and the delimiter clause covers the new heredoc. The fold tool, its required `--section` argument, and its contract stay unchanged, and the batched-call test fills a raw backticked heading through the new form.
+
 ## Out of Scope
 
