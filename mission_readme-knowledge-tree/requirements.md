@@ -56,5 +56,9 @@ A rule governing files in more than one folder is stated once and whole (its rul
 
 Before tasks are derived, the recorded decisions settle the home only of each item the recorded placement rules leave open or ambiguous, for example a rule governing files in several folders, a rule about `core/`, or a section with no obvious single folder. A review pass names those items once it has read the placement rules against the 35 invariants and the other sections of today's `CLAUDE.md`. Every other item's home is left to the runner completing its task, who places it under the recorded rules, so no full map from item to destination is recorded.
 
+### Node structure
+
+Every node, and every description a parent node gives of a folder whose `README.md` name is taken or rendered, has one fixed, ordered set of parts: purpose, rules (each the rule, its reason, and its retired forms), commands, and pointers to the nodes below. Purpose is required, and each other part is present only when the node holds something for it. There is no per-file part: a file is known from listing its folder and from its own docstring, `--help`, or header, and what a node says of a particular file is said inside a rule or the purpose. The mission's pytest check verifies that a node holds only the allowed headings, in their order.
+
 ## Out of Scope
 
