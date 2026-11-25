@@ -104,5 +104,9 @@ A re-evaluation may end in a rule being dropped, never in one being changed. A r
 
 The build's `host-name-in-core` and `old-word-in-core` checks stay exactly as they are and scan the four `README.md` nodes under `core/` like every other file there, so the no-build-change clause holds. Every rule placed in a `core/` node is worded so that it names no host and carries no "milestone". A host is named by its mechanism (its tool names, config keys, file names, or a phrase such as "a host that dispatches in capped rounds") or by its definition directory path (`scripts/hosts/<host>/`, which the check reads as an identifier and passes). A milestone citation becomes a date, a commit hash, or a mission path, or it is dropped as history. No rule text leaves `core/` because it names a host or a milestone.
 
+### Root heading set
+
+The root `CLAUDE.md` is inside the heading check, held to the four node parts plus one heading of its own: exactly `## Purpose`, `## Rules`, `## Commands`, `## Pointers`, and `## Mission Workflow`, in that order. Purpose and Mission Workflow are required and the others are present only when filled; Mission Workflow stands last, where the bootstrap appends it to a file that lacks it. The rules on where knowledge lives and how nodes are read stand as rules inside `## Rules`, and the entries for `VERSION`, `.python-version`, and `AGENTS.md` are said inside the purpose or a rule, as the node structure says of any file. The descriptions of `core/`, `hosts/`, `gurita-vscode/`, and `.github/` stand inside `## Pointers`, one `### <folder>/` heading each, beside the pointer lines for the folders with nodes of their own, and each description's own `####` headings are checked against the same four parts and order.
+
 ## Out of Scope
 
