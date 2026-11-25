@@ -148,5 +148,9 @@ The task-list tool gains a `replace` subcommand, `python3 {{PLUGIN_ROOT}}/tools/
 
 The `complete-task` agent's file gains one host-neutral rule aimed at the recorded cause, beside its return protocol: run every command the procedure needs in the foreground and wait for it within the call, never end a turn while a process it started is still running, and end the session only on the `DONE` or `FAILED:` line. The shared completion procedure, which the inline skill also follows, and `complete-all-tasks` stay unchanged, so a return without a token still stops the run on its existing line, which remains the fail-safe for what still slips through.
 
+### Summary above done token
+
+The `complete-task` agent's file changes in its `## Return protocol` section only. The return changes from "exactly one of these as the final line" to a final message that is exactly the one line and nothing else, `DONE` or `FAILED: <reason>`, matching how the alternatives agent's file words its own return ("the bare token `DONE` as your final message and nothing else", with any remaining thinking done in an earlier turn). No sentence is added at step 5. `complete-all-tasks` keeps reading the last line only, so its verdict and its no-status stop stay as they are. CLAUDE.md records the entry as fixed by this rewording. No tool and no fixed call changes, so no test is added.
+
 ## Out of Scope
 
