@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Write The Core Skills Node
-
-Write `core/skills/README.md`, the node for the skills under `core/skills/`: every invariant of today's `CLAUDE.md` that chiefly governs a skill and that no node yet states whole, compressed to its rule, its reason, and the retired forms that must not return, none dropped or changed, with a pointer line of the fixed form wherever a rule stated in another node bears, in the fixed node parts, at most 12,000 bytes, each pointer's note at most 400 bytes, and worded to pass the build's `host-name-in-core` and `old-word-in-core` checks as they stand. List the file in the `exclude` key of every `scripts/hosts/<host>/settings.toml`, changing nothing in the build's Python, so that no host tree renders it. Verified by `uv run scripts/build_hosts.py --check` and both pytest runs passing, by no tree under `hosts/` holding the file, by every pointer resolving, and by each invariant placed here being readable in the node as rule, reason, and retired forms.
-
----
-
 ## Write The Scripts Folder Node
 
 Write `scripts/README.md`, the node for the host build, the host definitions under `scripts/hosts/`, and the version and render scripts: what today's `CLAUDE.md` says of them in its layout, commands, development points, and invariants, the host-wording slot rules among them where no earlier node states them whole, each rule compressed to its rule, its reason, and its retired forms with none dropped or changed, in the fixed node parts, at most 12,000 bytes, every pointer a line of the fixed pointer form with a note of at most 400 bytes. Verified by the node holding only the allowed headings in their order and staying within both byte limits, by every pointer resolving, and by `uv run scripts/build_hosts.py --check` still passing.
