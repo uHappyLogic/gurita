@@ -136,5 +136,9 @@ The whole view is accepted. The compact view stays exactly as step 1 of the answ
 
 The fix reaches the alternatives agent alone. The agent's file replaces its two shown commands with one fixed shell call, run exactly as shown with only `<MISSION_DIR>` and the Short Title replaced, that runs `locate` and then `list --with-question` with a separator every shell accepts between them (a quoted `printf` line). A new fixed-call test extracts that fence from the rendered tree and runs it, reproducing the separator failure under zsh. The open-question tool is unchanged, and every other runner is left as it is.
 
+### Removed path commit
+
+The commit tool changes and the completion procedure gains one sentence. In `core/tools/commit.py`, ahead of the path-scoped `git add`, the tool asks git which named paths the working tree or the index still holds, through a read with optional locks off as the guard already does. It runs `git add` over those paths only, skipping the add when none is left, and keeps every named path in the commit's pathspec. A path that `git rm` or `git mv` already took out of the index is then recorded as the staged removal it is, which the pathspec `git commit` already matches against `HEAD`. A path that git knows nowhere, such as a mistyped one, still reaches the commit's pathspec and is refused there with git's exit 1. The tool's contract text changes accordingly, and a new test in the commit-tool suite reproduces the `git rm` and `git mv` failure and pins that it now commits. The completion procedure's "Record the paths you touch" sentence is widened from creating or editing to deleting and renaming: the runner records a deleted file's path, and both the old and the new path of a renamed or moved file. Runners may use `git rm`, `git mv`, or plain `rm` and `mv` alike. No call shape, path-file format, or `--remove` use changes.
+
 ## Out of Scope
 
