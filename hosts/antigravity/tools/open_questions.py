@@ -26,7 +26,12 @@ Subcommands:
   add MISSION_DIR SHORT_TITLE
       append a bare block — the wrapper and its one <question> child — whose id is the
       Short Title and whose question text is the body read from standard input; an id an
-      existing block already carries is refused
+      existing block already carries is refused, and so is a new Short Title whose folded
+      form holds a "/", a '"', a "$", a backtick, a "\\", a control character (C0 or DEL),
+      or a "." followed by whitespace, or opens with a "-" or ends in a "." — the
+      characters a file name, a double-quoted shell argument, a command line, or the
+      hand-answer separator would read as something other than text; only add checks them,
+      so the ids a loaded document already holds are checked for duplicates only
   strip MISSION_DIR [--recommendation] SHORT_TITLE...
       delete every child but <question> from each named block — its <alternative>,
       <applied-principle>, <depends-on>, and <recommendation> elements — leaving the
@@ -968,10 +973,59 @@ def cmd_lift(args):
     return 0
 
 
+SHELL_QUOTED_CHARACTERS = ('"', "$", "`", "\\")
+
+
+def check_new_short_title(short_title):
+    """Refuse a new folded Short Title holding a character a later position reads as syntax.
+
+    The title becomes a file name (the alternatives agent's return), a double-quoted shell
+    argument and a positional argument (every fixed call naming the block), and the text
+    before the hand-answer skills' "." separator, so each refusal names what was found.
+    """
+    for character in short_title:
+        code = ord(character)
+        if code < 0x20 or code == 0x7F:
+            raise ToolError(
+                f"the Short Title holds the control character U+{code:04X}, "
+                "which no Short Title may carry"
+            )
+    if "/" in short_title:
+        raise ToolError(f'the Short Title "{short_title}" contains a "/", which no file name can carry')
+    for character in short_title:
+        if character in SHELL_QUOTED_CHARACTERS:
+            if character == "`":
+                shown = "a backtick"
+            elif character == '"':
+                shown = "a '\"'"
+            else:
+                shown = f'a "{character}"'
+            raise ToolError(
+                f'the Short Title "{short_title}" contains {shown}, '
+                "which a double-quoted shell argument does not carry as written"
+            )
+    if re.search(r"\.\s", short_title):
+        raise ToolError(
+            f'the Short Title "{short_title}" contains a "." followed by whitespace, '
+            "which the hand-answer skills read as the end of the Short Title"
+        )
+    if short_title.endswith("."):
+        raise ToolError(
+            f'the Short Title "{short_title}" ends in a ".", '
+            "which the hand-answer skills read as the end of the Short Title"
+        )
+    if short_title.startswith("-"):
+        raise ToolError(
+            f'the Short Title "{short_title}" opens with a "-", '
+            "which a command line reads as an option"
+        )
+
+
 def cmd_add(args):
     short_title = fold(args.short_title)
     if not short_title:
         raise ToolError("the Short Title is empty")
+    check_new_short_title(short_title)
     document = load_document(args.mission_dir)
     wanted = id_key(short_title)
     for question in document.questions:
@@ -1112,7 +1166,10 @@ def build_parser():
         cmd_add,
         "append a bare block whose id is SHORT_TITLE and whose <question> text is the body "
         "read from standard input as UTF-8 (pipe it as a quoted heredoc; a terminal stdin "
-        "is refused); an id an existing block already carries is refused",
+        "is refused); an id an existing block already carries is refused, and so is a "
+        "SHORT_TITLE whose folded form holds a \"/\", a '\"', a \"$\", a backtick, a \"\\\", "
+        "a control character (C0 or DEL), or a \".\" followed by whitespace, or opens with a "
+        "\"-\" or ends in a \".\"",
     )
     add_parser.add_argument(
         "short_title",

@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Refuse Unsafe New Short Titles at Add
-
-Make the open-question tool's `add`, and `add` alone, refuse a new Short Title whose folded form holds `/`, `"`, `$`, a backtick, `\`, any control character (C0 and DEL), or a `.` followed by whitespace, or that opens with `-` or ends in `.`, with one `Error:` line naming what was found, the document unchanged, and the help text stating the rule, while `load_document` keeps validating ids for duplicates only. It closes the Short Title case with its DASH and DOT additions at the one point a title is created, with no fixed call gaining an escaping rule or a `--`; verified by a test per refusal in `tests/test_add.py`, with CLAUDE.md recording the refusal and its reason.
-
----
-
 ## Short Title Rule in the Review Pass
 
 Add one clause to the review pass's Short Title bullet naming the refusal and listing what `add` refuses, in the shape of the duplicate-id clause it already carries (the tool refuses such a title, its `Error:` line names what it found, and the author picks another title), and reword the alternatives agent's path-separator clause as the case of a block authored before the refusal, a `/` title still ending in a `FAILED:` whose reason names the separator. The author then writes a valid title the first time while no runner acts on an existing invalid one, which is left to the operator's own `remove` and `add`; verified by the rebuilt host trees carrying both wordings with `--check` and both pytest runs passing, and by CLAUDE.md's return-contracts invariant recording the `FAILED:` skip as the case of a block authored before the refusal.

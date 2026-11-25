@@ -1,6 +1,6 @@
 """The add subcommand: one bare block appended in canonical form, its question text the one
-body read from standard input, with a terminal stdin, an empty body, and a duplicate id
-refused."""
+body read from standard input, with a terminal stdin, an empty body, a duplicate id, and a
+new Short Title holding a character a later position reads as syntax refused."""
 
 import io
 import os
@@ -106,13 +106,13 @@ def test_add_folds_the_short_title_to_one_line(run_tool, mission_dir):
 
 def test_add_escapes_the_five_entities_in_the_id_and_the_text(run_tool, mission_dir):
     target = mission_dir("empty")
-    title = "Ampersand & angle <brackets>, \"quotes\", 'apostrophes'"
+    title = "Ampersand & angle <brackets>, 'apostrophes'"
     body = "Does <text> with &, \"double\" and 'single' quotes survive?".encode("utf-8")
     result = run_tool("add", str(target), title, stdin=body)
     assert (result.returncode, result.stdout, result.stderr) == (0, b"", b"")
     assert document_of(target) == (
         b"<open-questions>\n"
-        b'  <open-question id="Ampersand &amp; angle &lt;brackets&gt;, &quot;quotes&quot;, &apos;apostrophes&apos;">\n'
+        b'  <open-question id="Ampersand &amp; angle &lt;brackets&gt;, &apos;apostrophes&apos;">\n'
         b"    <question>Does &lt;text&gt; with &amp;, &quot;double&quot; and &apos;single&apos; quotes survive?</question>\n"
         b"  </open-question>\n"
         b"</open-questions>\n"
@@ -249,15 +249,29 @@ def test_add_compares_the_id_case_folded_and_whitespace_folded(run_tool, mission
 
 
 def test_add_compares_the_id_against_the_un_escaped_value(run_tool, mission_dir):
-    target = mission_dir("entities")
+    target = mission_dir("empty")
+    first = run_tool("add", str(target), "Ampersand & angle <brackets>, 'apostrophes'", stdin=b"First?")
+    assert first.returncode == 0
     before = document_of(target)
-    un_escaped = run_tool("add", str(target), "ampersand & ANGLE <brackets>, \"quotes\", 'apostrophes'", stdin=b"Again?")
+    un_escaped = run_tool("add", str(target), "ampersand & ANGLE <brackets>, 'APOSTROPHES'", stdin=b"Again?")
     assert un_escaped.returncode == 1
-    assert un_escaped.stderr.startswith(b"Error: an <open-question> block with the id ")
+    assert un_escaped.stderr == (
+        b"Error: an <open-question> block with the id \"Ampersand & angle <brackets>, 'apostrophes'\" already exists\n"
+    )
     assert document_of(target) == before
-    escaped = run_tool("add", str(target), "Ampersand &amp; angle &lt;brackets&gt;, &quot;quotes&quot;, &apos;apostrophes&apos;", stdin=b"A new one?")
+    escaped = run_tool("add", str(target), "Ampersand &amp; angle &lt;brackets&gt;, &apos;apostrophes&apos;", stdin=b"A new one?")
     assert escaped.returncode == 0
     assert run_tool("list", str(target)).stdout.count(b"\n") == 2
+
+
+def test_add_to_a_document_holding_an_id_it_would_refuse_leaves_that_block_standing(run_tool, mission_dir):
+    target = mission_dir("entities")
+    standing = "Ampersand & angle <brackets>, \"quotes\", 'apostrophes'"
+    result = run_tool("add", str(target), "A new valid question", stdin=b"Does the standing id load?")
+    assert (result.returncode, result.stdout, result.stderr) == (0, b"", b"")
+    listed = run_tool("list", str(target)).stdout.decode("utf-8").splitlines()
+    assert listed[0] == standing
+    assert listed[-1] == "A new valid question"
 
 
 def test_add_refuses_an_empty_short_title(run_tool, mission_dir):
@@ -301,3 +315,122 @@ def test_add_leaves_no_temporary_file_behind(run_tool, mission_dir):
     run_tool("add", str(target), "Third bare question", stdin=b"What is third?")
     run_tool("add", str(target), "Third bare question", stdin=b"Again?")
     assert sorted(path.name for path in target.iterdir()) == [open_questions.DOCUMENT_NAME]
+
+
+def assert_refused(run_tool, target, title, error):
+    before = document_of(target)
+    result = run_tool("add", str(target), title, stdin=b"Is this title refused?")
+    assert result.returncode == 1
+    assert result.stdout == b""
+    assert result.stderr == ("Error: " + error + "\n").encode("utf-8")
+    assert document_of(target) == before
+
+
+def test_add_refuses_a_short_title_holding_a_slash(run_tool, mission_dir):
+    assert_refused(
+        run_tool,
+        mission_dir("bare"),
+        "tools/README.md headroom",
+        'the Short Title "tools/README.md headroom" contains a "/", which no file name can carry',
+    )
+
+
+@pytest.mark.parametrize(
+    "title, shown",
+    [
+        ('The "quoted" wording', "a '\"'"),
+        ("The $HOME expansion", 'a "$"'),
+        ("The `date` substitution", "a backtick"),
+        ("The back\\slash escape", 'a "\\"'),
+    ],
+)
+def test_add_refuses_a_short_title_holding_a_double_quote_special_character(run_tool, mission_dir, title, shown):
+    assert_refused(
+        run_tool,
+        mission_dir("bare"),
+        title,
+        f'the Short Title "{title}" contains {shown}, which a double-quoted shell argument does not carry as written',
+    )
+
+
+@pytest.mark.parametrize("character", ["\x01", "\x07", "\x1b", "\x7f"])
+def test_add_refuses_a_short_title_holding_a_control_character(run_tool, mission_dir, character):
+    assert_refused(
+        run_tool,
+        mission_dir("bare"),
+        f"Bell{character} title",
+        f"the Short Title holds the control character U+{ord(character):04X}, which no Short Title may carry",
+    )
+
+
+def test_add_folds_whitespace_control_characters_before_the_check(run_tool, mission_dir):
+    target = mission_dir("empty")
+    result = run_tool("add", str(target), "Tabbed\ttitle\x0bhere", stdin=b"Is the title folded first?")
+    assert (result.returncode, result.stdout, result.stderr) == (0, b"", b"")
+    assert run_tool("list", str(target)).stdout == b"Tabbed title here\n"
+
+
+def test_add_refuses_a_short_title_holding_a_dot_followed_by_whitespace(run_tool, mission_dir):
+    assert_refused(
+        run_tool,
+        mission_dir("bare"),
+        "First part. second part",
+        'the Short Title "First part. second part" contains a "." followed by whitespace, '
+        "which the hand-answer skills read as the end of the Short Title",
+    )
+
+
+def test_add_refuses_a_short_title_whose_dot_meets_whitespace_only_once_folded(run_tool, mission_dir):
+    assert_refused(
+        run_tool,
+        mission_dir("bare"),
+        "First part.\n\tsecond part",
+        'the Short Title "First part. second part" contains a "." followed by whitespace, '
+        "which the hand-answer skills read as the end of the Short Title",
+    )
+
+
+def test_add_refuses_a_short_title_ending_in_a_dot(run_tool, mission_dir):
+    assert_refused(
+        run_tool,
+        mission_dir("bare"),
+        "Ends in a dot.  ",
+        'the Short Title "Ends in a dot." ends in a ".", '
+        "which the hand-answer skills read as the end of the Short Title",
+    )
+
+
+def test_add_refuses_a_short_title_opening_with_a_dash(run_tool, mission_dir):
+    assert_refused(
+        run_tool,
+        mission_dir("bare"),
+        "  -x dash first",
+        'the Short Title "-x dash first" opens with a "-", which a command line reads as an option',
+    )
+
+
+def test_add_refuses_a_lone_dash_word_reaching_it_past_a_double_dash(run_tool, mission_dir):
+    target = mission_dir("bare")
+    before = document_of(target)
+    result = run_tool("add", str(target), "--", "-dash", stdin=b"Is this title refused?")
+    assert result.returncode == 1
+    assert result.stderr == b'Error: the Short Title "-dash" opens with a "-", which a command line reads as an option\n'
+    assert document_of(target) == before
+
+
+@pytest.mark.parametrize(
+    "title",
+    ["CLAUDE.md wording", "Retry-after header", "Version 3.9 floor", "Ampersand & <angle> 'quoted'", "Em dash — kept"],
+)
+def test_add_accepts_a_short_title_the_rule_does_not_name(run_tool, mission_dir, title):
+    target = mission_dir("empty")
+    result = run_tool("add", str(target), title, stdin=b"Is this title accepted?")
+    assert (result.returncode, result.stdout, result.stderr) == (0, b"", b"")
+    assert run_tool("list", str(target)).stdout.decode("utf-8") == title + "\n"
+
+
+def test_add_refuses_an_unsafe_short_title_before_reading_the_document(run_tool, tmp_path):
+    result = run_tool("add", str(tmp_path), "a/b", stdin=b"Is the title checked first?")
+    assert result.returncode == 1
+    assert result.stderr == b'Error: the Short Title "a/b" contains a "/", which no file name can carry\n'
+    assert list(tmp_path.iterdir()) == []
