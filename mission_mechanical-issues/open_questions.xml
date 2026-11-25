@@ -555,6 +555,51 @@
   </open-question>
   <open-question id="Project record read size">
     <question>`discuss-mission-goal` runs the missions tool&apos;s `record .` once per goal conversation, unbounded, and the print grows with every finished mission; in field runs 12 of 53 such calls printed more than the host keeps inline and were written to a file the runner then had to read. Does the `record` read get a bound, in the tool or in the call the skill makes, or is the print left whole and the cost accepted?</question>
+    <alternative id="Accept whole print">
+      The tool and the skill are left unchanged: `discuss-mission-goal` keeps its one fixed, unconditional, unbounded `record .` call, and a print larger than the host keeps inline is read back from the file the host writes it to. The outcome is recorded in CLAUDE.md as an acceptance with its reason, beside the missions-tool invariant, naming a later mission as the place a bound would be added if field runs show the cost growing.
+      <advantage>Nothing changes: the goal conversation keeps the whole record, every finished mission with its summary and every completed task title, so no past work that bears on a new goal is hidden, and no invariant, tool contract, test, or host tree moves.</advantage>
+      <drawback>The print grows with every finished mission and has no ceiling: it is already 37,789 bytes in this repository from one week of record (nine finished missions since 2026-11-18), 12 of 53 field calls already spilled to a file, so the share of spilled reads, the extra turn each costs, and the context the conversation carries only rise over time.</drawback>
+    </alternative>
+    <alternative id="Tool count bound">
+      `record` gains a `--last N` flag mirroring `missions --last N`: every live mission is printed, and only the N newest finished ones, each still with its summary bullets and its task lines. `discuss-mission-goal`&apos;s fixed call becomes `record . --last N` with N written as a literal, as the review pass writes `--last 10`; every other caller of `record` (`ask-in-mission-context`&apos;s discretionary scoped read) prints what it printed before.
+      <advantage>It reuses a bound the tool already has and a call shape already in use, keeps one fixed unconditional call, and caps the print by mission count so it stops growing with the project&apos;s age.</advantage>
+      <drawback>Missions older than the N newest drop out of the goal conversation entirely, however much they bear on the new goal, and the print still varies with how many tasks those N missions held (task lines are about 22 KB of today&apos;s 38 KB), so a count chosen today does not guarantee the print fits inline.</drawback>
+    </alternative>
+    <alternative id="Tool depth bound">
+      `record` gains a flag that leaves out the task lines, printing each mission&apos;s header line and its summary bullets (or a live mission&apos;s goal) only. `discuss-mission-goal`&apos;s fixed call passes it, still on `.` and with no count; every other caller of `record` is unchanged.
+      <advantage>Every mission, however old, stays in the conversation with what it accomplished, while the largest part of the print goes: the task lines are 187 of today&apos;s 261 lines and about 22 KB of 38 KB, and the summary bullets already say what each mission built.</advantage>
+      <drawback>The print still grows without a ceiling, only more slowly, one header and a handful of bullets per finished mission, so a long-lived project spills again; and the completed task titles, the finest-grained evidence of what exists, leave the goal conversation.</drawback>
+    </alternative>
+    <alternative id="Tool count and depth">
+      `record` gains both bounds, a `--last N` count as `missions` has and a flag leaving out the task lines, and `discuss-mission-goal`&apos;s fixed call passes both on `.`: every live mission and the N newest finished ones, each with its header and summary bullets only.
+      <advantage>It gives the tightest and most predictable print of the tool-side options, one header and a few bullets for each of a fixed number of missions, so it stays inline for any project age and any task count.</advantage>
+      <drawback>It loses on both fronts at once, older missions and every task title leaving the conversation, and adds two flags to the tool, each with its own help text, parser entry, and tests, for one caller.</drawback>
+    </alternative>
+    <alternative id="Tool byte bound">
+      `record` gains a size bound of its own, a maximum byte count, and stops printing at the last whole mission entry that fits, newest first after the live ones, never cutting inside an entry; `discuss-mission-goal`&apos;s fixed call passes a literal size chosen under what the host keeps inline.
+      <advantage>It is the one bound that directly targets the failure: the print fits inline by construction, whatever the mission count or task count, while keeping as many whole missions, tasks included, as the budget allows.</advantage>
+      <drawback>The size is a host fact written into host-neutral `core/` as a literal (or a new slot per host), and it moves when a host changes its inline limit; how many missions reach the conversation then varies from run to run, and a bound measured in bytes is a third kind of bound beside `--last`&apos;s count that every later reader has to learn.</drawback>
+    </alternative>
+    <alternative id="Call-side truncation">
+      The tool is unchanged, and `discuss-mission-goal`&apos;s fixed call bounds the print itself in the shell, piping `record .` through a byte or line cut such as `head`, so only the first part of the print (the live missions, then the newest finished ones) reaches the runner.
+      <advantage>No tool change, no new flag, and no test of the tool: one edit to one skill&apos;s fence bounds the print.</advantage>
+      <drawback>The cut can fall mid-entry, leaving a mission&apos;s summary or task list half printed with no sign it was cut; it is shell code beside a fixed command, the shape CLAUDE.md&apos;s missions-tool invariant already set aside for the completion read&apos;s bound; and a pipe masks the tool&apos;s exit status, so the skill&apos;s failed-read prose no longer sees a refusal without further shell code.</drawback>
+    </alternative>
+    <alternative id="Two-tier unbounded overview">
+      The tool is unchanged, and `discuss-mission-goal` replaces `record .` with the two-tier read the starting-state procedure already uses: one fixed, unconditional `missions .` overview (one line per mission, its state, date, path, and title), then, at the runner&apos;s discretion, `summary` on a mission whose line bears on the goal, or `record &lt;path&gt;` on the directory the goal concerns once the placement is in view.
+      <advantage>The unconditional read shrinks to about 100 bytes per mission while still naming every mission ever recorded, and the depth is spent only where the goal bears, with no tool change and a pattern runners already follow elsewhere.</advantage>
+      <drawback>Grounding becomes discretionary: a runner that judges no line bearing reads no summary, so past work that a title does not reveal can be missed, and each follow-up read costs a turn; the overview itself still grows without a ceiling, only slowly.</drawback>
+    </alternative>
+    <alternative id="Two-tier bounded overview">
+      The tool is unchanged, and `discuss-mission-goal` replaces `record .` with one fixed, unconditional `missions . --last N` overview, N a literal as in the review pass&apos;s `--last 10`, then `summary` or `record &lt;path&gt;` at the runner&apos;s discretion on a mission whose line bears on the goal.
+      <advantage>The unconditional print is bounded for good, every live mission and N one-line finished entries, using only the tool&apos;s existing flag, while every past mission stays reachable through a scoped follow-up read.</advantage>
+      <drawback>Missions older than the N newest are invisible unless the runner thinks to search for them, so the follow-up reads that recover them depend on knowing they exist; it carries the same discretionary-grounding cost as the unbounded overview and costs a turn per follow-up.</drawback>
+    </alternative>
+    <alternative id="Live missions only">
+      `discuss-mission-goal` drops the history-side read altogether and runs `live` instead, the tool&apos;s tree-side listing of the live missions (path, `started` or `defined`, title), relying on the context file for what finished missions built, since `finish-mission` writes lasting changes into it.
+      <advantage>The read becomes tiny and bounded by the number of live missions, not by history, and it still shows every mission the new one could overlap or wait behind, which is what the placement proposal and the conflicts check most need.</advantage>
+      <drawback>The goal conversation loses every finished mission&apos;s summary and task titles, so it grounds past work only in what the context file chose to keep, and it reverses CLAUDE.md&apos;s recorded decision that the skill runs one unconditional `record .` per goal conversation.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Mission document read size">
     <question>The missions tool&apos;s `show` prints one mission&apos;s `requirements.md` whole, and in field runs 10 of 65 such calls printed more than the host keeps inline and were written to a file the runner then had to read. Is the `show` print left whole and the cost accepted, or does the read change: a narrower print from the tool, or another way of reading the document?</question>
