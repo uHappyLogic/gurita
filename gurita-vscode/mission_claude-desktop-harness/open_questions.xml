@@ -93,6 +93,36 @@
   </open-question>
   <open-question id="Desktop line opening word">
     <question>The Desktop selection mechanism decision has a Claude Desktop line open with a word of its own that names no CLI, and does not say what that word is. Which word opens a Claude Desktop line, as the Settings window&apos;s line editor shows it, `~/.gurita/variants.json` stores it, and `gurita-vscode/USAGE.md` documents it?</question>
+    <alternative id="Generic desktop">
+      A Claude Desktop line opens with the plain, unqualified word `desktop` (for example `desktop &quot;/gurita:discuss-open-question …&quot; # interactive`), the fourth entry of the command-word list in `src/lineValues.ts` beside `claude`, `agy`, and `codex`, shown so in the line editor, stored so in `~/.gurita/variants.json`, and documented so in `gurita-vscode/USAGE.md`.
+      <advantage>It is the shortest word and reads like the other three short command words in the line editor; `harnessOf` matches the first word by exact equality, so it needs no parsing change, and no command of that name is on this machine&apos;s PATH.</advantage>
+      <drawback>It does not say whose desktop: Codex and Antigravity have desktop applications too, so the stored line and USAGE.md need the harness name beside it to be read, and a plain generic word is the likeliest to name some command on another person&apos;s PATH, which matters wherever a stored Desktop line is ever run in a terminal as it stands (the Over-long fallback line question owns what the terminal runs).</drawback>
+    </alternative>
+    <alternative id="Qualified claude-desktop">
+      A Claude Desktop line opens with the plain product-qualified word `claude-desktop`, the fourth entry of the command-word list, shown, stored, and documented so.
+      <advantage>It names the harness unambiguously in every place the line appears, in the product&apos;s own name, so a line in `variants.json` or USAGE.md says which application it opens with no other text, and exact-equality matching keeps it apart from `claude` (no prefix test on `claude` stands in the extension&apos;s sources or `runner.py`).</advantage>
+      <drawback>It shares the `claude` prefix, so a person scanning lines, or any later prefix test, can take it for a Claude Code line; it is the longest plain word, and as a plain hyphenated word it could still come to name a real command on someone&apos;s PATH where a stored line is run in a terminal as it stands.</drawback>
+    </alternative>
+    <alternative id="Marked @desktop">
+      A Claude Desktop line opens with the generic word marked by a sigil that no installed command carries, `@desktop`, the fourth entry of the command-word list, shown, stored, and documented so.
+      <advantage>The sigil shows at a glance that the line is not a shell command and makes a collision with a command on PATH practically impossible, removing the plain generic word&apos;s collision risk while staying short.</advantage>
+      <drawback>The sigil has no precedent in any line form the extension knows, so USAGE.md must explain it, and the word still does not say whose desktop it is.</drawback>
+    </alternative>
+    <alternative id="Marked @claude-desktop">
+      A Claude Desktop line opens with the product-qualified word marked by a sigil, `@claude-desktop`, the fourth entry of the command-word list, shown, stored, and documented so.
+      <advantage>It is both unambiguous about the application and visibly not a shell command, so neither a reader nor a terminal can mistake it for a Claude Code line or a runnable command.</advantage>
+      <drawback>It is the longest and most unusual opening word, a sigil syntax with no precedent among the line forms that USAGE.md has to introduce, and it crowds the line editor more than any other option.</drawback>
+    </alternative>
+    <alternative id="Link as word">
+      A Claude Desktop line opens with the link it is sent through, `claude://code/new`, as its first word (for example `claude://code/new &quot;/gurita:discuss-open-question …&quot; # interactive`), the fourth entry of the command-word list, shown, stored, and documented so.
+      <advantage>The line states its mechanism exactly, the link the Session opening mechanism decision sends, and a word holding `/` is read by any shell as a path, so it can never resolve to a command on PATH and fails plainly if run.</advantage>
+      <drawback>It binds every stored line to one link form: if Claude Desktop changes the link or the extension changes how it opens a session, every `custom N` variant in people&apos;s `variants.json` holds a stale word; and it looks like a literal URL with the prompt appended, misleading a reader into thinking the line text is what is opened, when the prompt actually travels in the `q` parameter with its values written in.</drawback>
+    </alternative>
+    <alternative id="Leave to implementation">
+      No word is decided now: the task that adds the fourth harness entry picks it while implementing, and USAGE.md documents whatever it picked.
+      <advantage>It spends no decision on a naming detail, letting the word be chosen beside the code that parses and rewrites it.</advantage>
+      <drawback>The word is a stored format, written into people&apos;s `~/.gurita/variants.json` by every pick of the harness dropdown, so a word chosen ad hoc cannot later be renamed without breaking the custom variants already saved, and the tasks writing the harness lists, `rewriteHarness`, the tests, and USAGE.md would each have to agree on it without a recorded decision to read.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Linux opener conflict">
     <question>Which conflicting decision stands: &quot;Desktop harness availability&quot; or &quot;Session opening mechanism&quot;? The first offers Claude Desktop only where the extension host runs on macOS in a local window and says that in a local Linux window it is not offered and never selectable for an action. The second passes the `claude://code/new` link to the operating system&apos;s opener and names `xdg-open` on Linux beside `open` on macOS, a send from Linux that the first rules out.</question>
