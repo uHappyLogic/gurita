@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Refuse Unsafe Alternative Ids at Embed
-
-Make `embed --alternatives` refuse an `<alternative>` whose id holds `"`, `$`, a backtick, or `\`, or whose id after the tool's whitespace folding holds ` — `, with one `Error:` line naming the id and the document unchanged, ids already embedded and document loading left unchecked and a slash staying legal, and have the alternatives agent's rendering rule name the four characters, not the dash, as ones an id may not hold. It closes the draft's OPTION entry with the three parse sites and `lift`'s joined line left exactly as they are; verified by tests in the embed suite, one reproducing the `Wait — then decide` case, with CLAUDE.md recording both refusals and their reasons.
-
----
-
 ## Dot-Space Separator in the Hand-Answer Skills
 
 Reword the parse steps of `answer-open-question` and `answer-open-question-with-alternative` so the separator between a Short Title and the text after it is the first `.` followed by whitespace, not any `.` (`CLAUDE.md wording. answer` splits after `wording`), and reword their no-separator fixed line and its `docs/skill-reference.md` row to the dot-space form. It closes the draft's DOT entry so a title naming a dotted file can be answered by hand; verified by `tests/test_fixed_console_lines.py` passing on the rebuilt trees and by every recipe and usage line (`gurita-vscode/shipped_recipes.md`, `snippets/GURITA_USAGE.md`, `docs/ways-of-using.md`, `gurita-vscode/USAGE.md`) staying byte-identical, with CLAUDE.md recording the fix.

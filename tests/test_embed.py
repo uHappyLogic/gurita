@@ -1155,6 +1155,91 @@ def test_embed_refuses_a_malformed_attribute(run_tool, mission_dir, shape, body,
     assert_refused(embed(run_tool, target, FIRST, body, shape), target, before, reason)
 
 
+# --- the alternative id characters --------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "written, held, shown",
+    [
+        ("Say &quot;yes&quot;", 'Say "yes"', "a '\"'"),
+        ("Cost in $", "Cost in $", 'a "$"'),
+        ("Run `make`", "Run `make`", "a backtick"),
+        ("Back\\slash", "Back\\slash", 'a "\\"'),
+    ],
+)
+def test_embed_alternatives_refuses_an_id_holding_a_shell_quoted_character(run_tool, mission_dir, written, held, shown):
+    target = mission_dir("bare")
+    before = document_of(target)
+    body = f'<alternative id="Fine">f</alternative>\n<alternative id="{written}">x</alternative>'
+    result = embed_alternatives(run_tool, target, FIRST, body)
+    assert_refused(
+        result,
+        target,
+        before,
+        f'the <alternative> id "{held}" contains {shown}, which a double-quoted shell argument does not carry as written',
+    )
+
+
+def test_embed_alternatives_refuses_the_wait_then_decide_id(run_tool, mission_dir):
+    # The reproduced case: this id passed both embed forms, the lifted line's readers cut it
+    # to "Wait", and lift --alternative was refused on the cut option.
+    target = mission_dir("bare")
+    before = document_of(target)
+    body = '<alternative id="Decide now">d</alternative>\n<alternative id="Wait — then decide">w</alternative>'
+    result = embed_alternatives(run_tool, target, FIRST, body)
+    assert_refused(
+        result,
+        target,
+        before,
+        'the <alternative> id "Wait — then decide" contains " — ", '
+        "which every reader of lift's joined line takes as the end of the id",
+    )
+
+
+def test_embed_alternatives_refuses_a_spaced_em_dash_formed_by_whitespace_folding(run_tool, mission_dir):
+    target = mission_dir("bare")
+    before = document_of(target)
+    result = embed_alternatives(run_tool, target, FIRST, '<alternative id="Wait\t —   then decide">w</alternative>')
+    assert_refused(
+        result,
+        target,
+        before,
+        'the <alternative> id "Wait — then decide" contains " — ", '
+        "which every reader of lift's joined line takes as the end of the id",
+    )
+
+
+def test_embed_alternatives_accepts_a_slash_an_unspaced_em_dash_and_a_spaced_hyphen(run_tool, mission_dir):
+    target = mission_dir("bare")
+    body = (
+        '<alternative id="Read/write">a</alternative>\n'
+        '<alternative id="Wait—then decide">b</alternative>\n'
+        '<alternative id="Wait —then">c</alternative>\n'
+        '<alternative id="Now - later">d</alternative>\n'
+        "<alternative id=\"It's A &amp; B\">e</alternative>"
+    )
+    assert_ok(embed_alternatives(run_tool, target, FIRST, body))
+    assert [alternative.id for alternative in by_id(target, FIRST).alternatives] == [
+        "Read/write",
+        "Wait—then decide",
+        "Wait —then",
+        "Now - later",
+        "It's A & B",
+    ]
+
+
+def test_embed_leaves_ids_already_embedded_unchecked(run_tool, mission_dir):
+    # Ids a document already holds stand: loading checks no id character, embed
+    # --recommendation needs no check of its own since its option names one of them, and
+    # lift's joined line is unchanged.
+    target = mission_dir("bare")
+    give_alternatives(target, FIRST, 'Say "yes"', "Wait — then decide")
+    assert run_tool("list", "--without-recommendation", str(target)).returncode == 0
+    assert_ok(embed_recommendation(run_tool, target, FIRST, '<recommendation option="Wait — then decide">Later.</recommendation>'))
+    assert run_tool("lift", str(target), FIRST).stdout.decode("utf-8") == "Wait — then decide — Later.\n"
+    assert by_id(target, FIRST).recommendation == Recommendation(option="Wait — then decide", rationale="Later.")
+
+
 # --- the block and the document -------------------------------------------------------
 
 

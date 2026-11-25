@@ -53,7 +53,11 @@ Subcommands:
       Error line. With --alternatives the block must carry no
       <alternative> yet (bare strip is the hatch), the slice runs from the first line
       holding "<alternative" through the last line holding "</alternative>", and the
-      fragment must hold at least one <alternative>. With --recommendation the block must
+      fragment must hold at least one <alternative>, no folded id of which holds a '"', a
+      "$", a backtick, a "\\", or a spaced em dash " — " — the characters a double-quoted
+      shell argument or a reader of lift's joined line would read as something other than
+      text, a "/" staying legal; only embed checks them, so the ids a loaded document already
+      holds are not checked. With --recommendation the block must
       already carry at least one <alternative> and no <recommendation> yet (strip
       --recommendation is the hatch), the slice runs from the first line holding
       "<applied-principle", "<depends-on", or "<recommendation" through the last line
@@ -914,15 +918,47 @@ def check_dependencies(document, question, fragment):
             )
 
 
+LIFT_SEPARATOR = " — "
+
+
+def check_new_alternative_ids(fragment):
+    """Refuse a fragment's folded alternative id holding a character a later position reads
+    as syntax: a '"', a "$", a backtick, or a "\\", which a double-quoted shell argument (the
+    option every fixed call copies) does not carry as written, or a spaced em dash, which
+    every reader of lift's joined line takes as the end of the id. Only embed --alternatives
+    checks them, so the ids a loaded document already holds are not checked; a "/" stays
+    legal, since an id names no file."""
+    for alternative in fragment.alternatives:
+        for character in alternative.id:
+            if character in SHELL_QUOTED_CHARACTERS:
+                if character == "`":
+                    shown = "a backtick"
+                elif character == '"':
+                    shown = "a '\"'"
+                else:
+                    shown = f'a "{character}"'
+                raise ToolError(
+                    f'the <alternative> id "{alternative.id}" contains {shown}, '
+                    "which a double-quoted shell argument does not carry as written"
+                )
+        if LIFT_SEPARATOR in alternative.id:
+            raise ToolError(
+                f'the <alternative> id "{alternative.id}" contains "{LIFT_SEPARATOR}", '
+                "which every reader of lift's joined line takes as the end of the id"
+            )
+
+
 def embed_fragment(document, question, fragment, shape):
     """Make the fragment's children the shape's half of the block's children, leaving the
     other half as the block holds it: under --alternatives the block takes the fragment's
     alternatives in their returned order and nothing else changes; under --recommendation,
     once the recommendation's option names one of the block's own alternatives and every
     <depends-on> tag resolves against the document, the block takes the fragment's applied
-    principles, depends-on tags, and recommendation and its alternatives stay frozen. The
+    principles, depends-on tags, and recommendation and its alternatives stay frozen; an
+    alternative id check_new_alternative_ids refuses is refused before anything changes. The
     caller writes, and the writer groups the children by kind."""
     if shape == ALTERNATIVES_SHAPE:
+        check_new_alternative_ids(fragment)
         question.alternatives = list(fragment.alternatives)
         return
     check_recommendation_option(question, fragment)
@@ -1211,7 +1247,8 @@ def build_parser():
         "<applied-principle, <depends-on, or <recommendation line through the last "
         "</recommendation> line — parsed, validated (no <open-question> or <question> line, no "
         "text outside the elements, no unknown element and none of the other half; with "
-        "--alternatives at least one <alternative> into a block carrying none yet; with "
+        "--alternatives at least one <alternative> into a block carrying none yet, no id holding "
+        "a '\"', a '$', a backtick, a '\\', or a spaced em dash ' — '; with "
         "--recommendation exactly one <recommendation> naming one of the block's own "
         "<alternative> ids, into a block carrying alternatives and no <recommendation> yet, "
         "every <depends-on> resolving to another block carrying <alternative> elements and one "
@@ -1230,7 +1267,8 @@ def build_parser():
         dest="shape",
         action="store_const",
         const=ALTERNATIVES_SHAPE,
-        help="embed the <alternative> elements into a block carrying none yet",
+        help="embed the <alternative> elements into a block carrying none yet, refusing an id that "
+        "holds a '\"', a '$', a backtick, a '\\', or a spaced em dash ' — '",
     )
     embed_shape.add_argument(
         "--recommendation",

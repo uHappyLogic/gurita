@@ -105,7 +105,8 @@ children, in exactly this shape:
   element (the strongest reason to choose it) and a child `<drawback>` element (the main cost
   or risk it carries). The `id` is the option's Short-Title-style label — it is what the
   recommendation pass's `<recommendation option="...">` element and the answer path's
-  alternative lift reference, so make it a stable, readable handle.
+  alternative lift reference, so make it a stable, readable handle. An id may not hold a `"`,
+  a `$`, a backtick, or a `\`: the tool that embeds your file refuses an id holding any of them.
 - The `<alternative>` elements are the **whole** return. Render no `<recommendation>`, no
   `<applied-principle>`, and no `<depends-on>` element — those are the recommendation pass's
   to write over the set you return, and a fragment carrying one is refused by the tool that
