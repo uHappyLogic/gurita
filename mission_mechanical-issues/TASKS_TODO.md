@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Five Readers Pass the Bars Bound
-
-Have all five readers of `tasks <MISSION_DIR> --with-body` (`finish-mission`, `derive-tasks`, `ask-in-mission-context`, `submit-task`, `discuss-new-task`) pass the new bars flag with one literal N, the same at every site, in their fixed call. It caps the cost of the bars while every completed task's title stays in front of every reader and the duplicate checks stay complete; verified by the rebuilt trees showing one call shape at the five sites with `--check` and both pytest runs passing, and by CLAUDE.md's missions-tool invariant recording the bound where it records the unbounded `tasks` print.
-
----
-
 ## Two-Tier Record Read in Discuss Mission Goal
 
 Replace `discuss-mission-goal`'s `record .` with the two-tier read the starting-state procedure already uses: one fixed, unconditional `missions .` overview, then, at the runner's discretion, `summary` on a mission whose line bears on the goal, or `record <path>` on the directory the goal concerns once the placement is in view, the missions tool unchanged. The unconditional read drops to one line per mission while still naming every mission recorded (the draft's BIGREAD entry for `record .`); verified by the rebuilt skill showing each full fixed command with `--check` and both pytest runs passing, and by CLAUDE.md's missions-tool invariant recording the new read.

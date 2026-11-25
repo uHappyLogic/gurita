@@ -107,13 +107,13 @@ In parallel, as independent tool calls:
 - Run the plugin's missions tool — completed work, to catch issues already addressed:
 
   ```
-  python3 ${CLAUDE_PLUGIN_ROOT}/tools/missions.py tasks <MISSION_DIR> --with-body
+  python3 ${CLAUDE_PLUGIN_ROOT}/tools/missions.py tasks <MISSION_DIR> --with-body --bodies 10
   ```
 
   It prints, newest first, one tab-separated line per task completed in the mission (the
   commit's abbreviated hash, its date, the mission directory, and the task title), with the
-  task's verified bar indented beneath it, and prints nothing when no task has been completed,
-  which is no failure.
+  verified bar of each of the 10 newest tasks indented beneath it, every older task its line
+  alone, and prints nothing when no task has been completed, which is no failure.
 
 If the call fails, stop, writing and committing nothing: print the fixed line
 `Task not submitted — the completed-task read failed.` first, then below it its one
