@@ -66,7 +66,7 @@ No text outside `gurita-vscode/USAGE.md` comes to name Claude Desktop in this mi
 
 ### Session opening mechanism
 
-The extension sends an action to Claude Desktop through the `claude://code/new` link, with the prompt's values written in and the project's root as `folder`, passed to the operating system's opener (`open` on macOS, `xdg-open` on Linux) as an `execFile` child, the way the extension already runs its git and Python reads. The `claude` CLI and its `--desktop` option are not used.
+The extension sends an action to Claude Desktop through the `claude://code/new` link, with the prompt's values written in and the project's root as `folder`, passed to `open`, the macOS opener, as an `execFile` child, the way the extension already runs its git and Python reads. The `claude` CLI and its `--desktop` option are not used.
 
 ### Desktop Harnesses row
 
