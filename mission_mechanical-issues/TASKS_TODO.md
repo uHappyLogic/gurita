@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Two-Tier Record Read in Discuss Mission Goal
-
-Replace `discuss-mission-goal`'s `record .` with the two-tier read the starting-state procedure already uses: one fixed, unconditional `missions .` overview, then, at the runner's discretion, `summary` on a mission whose line bears on the goal, or `record <path>` on the directory the goal concerns once the placement is in view, the missions tool unchanged. The unconditional read drops to one line per mission while still naming every mission recorded (the draft's BIGREAD entry for `record .`); verified by the rebuilt skill showing each full fixed command with `--check` and both pytest runs passing, and by CLAUDE.md's missions-tool invariant recording the new read.
-
----
-
 ## One Joined Read Call in the Alternatives Agent
 
 Replace the alternatives agent's two shown commands with one fixed shell call, run exactly as shown with only `<MISSION_DIR>` and the Short Title replaced, that runs `locate` and then `list --with-question` with a quoted `printf` line between them, a separator every shell accepts, the open-question tool and every other runner left as they are. It closes the draft's SEP entry, where a bare `=` separator lost the second read under zsh; verified by a new fixed-call test that extracts the fence from the rendered tree and runs it, reproducing the separator failure under zsh, with CLAUDE.md recording the fix.
