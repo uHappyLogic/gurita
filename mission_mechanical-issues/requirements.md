@@ -132,5 +132,9 @@ The whole print is accepted. `show MISSION_PATH` stays exactly as it is, printin
 
 The whole view is accepted. The compact view stays exactly as step 1 of the answer sweep shows it: one fixed shell call printing `list --with-question` for every block and then, per walked id, the id, its lifted line, and its picked alternative's what-it-is, with no change to the open-question tool, the call, or the skill's prose. A print past the host's inline limit keeps going to the host's file, read by the runner as it chooses. CLAUDE.md records the acceptance and its reason beside the answer sweep invariant: 12 of 118 field views spilled, the size following the question document, and every walked question's text and pick is needed to compose its section, so the view has no bound to give.
 
+### Joined read separators
+
+The fix reaches the alternatives agent alone. The agent's file replaces its two shown commands with one fixed shell call, run exactly as shown with only `<MISSION_DIR>` and the Short Title replaced, that runs `locate` and then `list --with-question` with a separator every shell accepts between them (a quoted `printf` line). A new fixed-call test extracts that fence from the rendered tree and runs it, reproducing the separator failure under zsh. The open-question tool is unchanged, and every other runner is left as it is.
+
 ## Out of Scope
 
