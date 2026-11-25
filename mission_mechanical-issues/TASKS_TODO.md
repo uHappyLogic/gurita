@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Dot-Space Separator in the Hand-Answer Skills
-
-Reword the parse steps of `answer-open-question` and `answer-open-question-with-alternative` so the separator between a Short Title and the text after it is the first `.` followed by whitespace, not any `.` (`CLAUDE.md wording. answer` splits after `wording`), and reword their no-separator fixed line and its `docs/skill-reference.md` row to the dot-space form. It closes the draft's DOT entry so a title naming a dotted file can be answered by hand; verified by `tests/test_fixed_console_lines.py` passing on the rebuilt trees and by every recipe and usage line (`gurita-vscode/shipped_recipes.md`, `snippets/GURITA_USAGE.md`, `docs/ways-of-using.md`, `gurita-vscode/USAGE.md`) staying byte-identical, with CLAUDE.md recording the fix.
-
----
-
 ## Discuss Open Question Splits Off a Note
 
 Give `discuss-open-question` a parse rule at its step 0: after the `--mission` strip, split the text on the same separator the hand-answer skills use, the part before it the Short Title passed to `locate` and the part after it, trimmed, an optional note the discussion takes as the user's opening remark on the question, text holding no separator being the Short Title alone with no note. The extension's discuss line already sends `<Short Title>. <note>`, and a note reached `locate` inside the title; verified by the rebuilt trees carrying the rule with `--check` and both pytest runs passing, and by the discuss lines in `gurita-vscode/shipped_recipes.md`, `snippets/GURITA_USAGE.md`, and `gurita-vscode/USAGE.md` and the extension's note prompt and empty-note drop staying as they are, with CLAUDE.md recording the fix.

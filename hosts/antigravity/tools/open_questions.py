@@ -1017,7 +1017,7 @@ def check_new_short_title(short_title):
 
     The title becomes a file name (the alternatives agent's return), a double-quoted shell
     argument and a positional argument (every fixed call naming the block), and the text
-    before the hand-answer skills' "." separator, so each refusal names what was found.
+    before the hand-answer skills' ". " separator, so each refusal names what was found.
     """
     for character in short_title:
         code = ord(character)
