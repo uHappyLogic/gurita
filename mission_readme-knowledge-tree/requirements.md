@@ -72,5 +72,9 @@ Every tracked top-level folder, the root `mission_*/` directories left out, must
 
 Each file at the repository root that can carry prose describes itself in its own header. The root `CLAUDE.md` carries a short entry, inside its byte budget, only for the root files that cannot carry a header and still bind work, chiefly `VERSION` and `.python-version`, with `AGENTS.md` as the symlink to the root itself. Policy, licence, and lock files get no entry.
 
+### GitHub folder node
+
+`.github/` is treated as a folder whose `README.md` name is taken, on GitHub's documentation and with no check made against this repository, and is described by the root `CLAUDE.md` as `core/`, `hosts/`, and `gurita-vscode/` are. The mission's pytest check additionally fails when a tracked `.github/README.md` exists, its message naming GitHub's front-page precedence as the reason.
+
 ## Out of Scope
 
