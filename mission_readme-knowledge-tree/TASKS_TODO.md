@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Replace The Root Context File
-
-Replace the root `CLAUDE.md`, `AGENTS.md` staying its symlink, with a node of at most 20,000 bytes holding `## Purpose`, `## Rules`, `## Commands`, `## Pointers`, and `## Mission Workflow` in that order: the rules that bind everywhere, among them plain directions on which node an area's lasting knowledge goes to, which node to read before working in a folder, and where a rule spanning folders is stated; one pointer line of the fixed form, its note at most 400 bytes, per top-level folder with a node of its own, and one `### <folder>/` description in the four node parts each for `core/` (pointing at its four nodes), `hosts/`, `gurita-vscode/`, and `.github/`; the entries for `VERSION`, `.python-version`, and `AGENTS.md`; and the bootstrap's Mission Workflow section last, exactly as `core/shared/workflow-guidance.md` states it. Before the old text goes, give a home under the recorded placement rules to everything of it that no node yet carries, a root file that can carry prose taking what is said of it into its own header, so that only the rule that all rationale lives in `CLAUDE.md` is retired. Verified by each of the outgoing file's 35 invariants being found in a node or the root as rule, reason, and retired forms, by the root's heading set and order, its byte limit, and every pointer resolving, and by `uv run scripts/build_hosts.py --check` and both pytest runs passing.
-
----
-
 ## Repoint Outside References To The Tree
 
 Bring the three statements outside the tree that name the outgoing file's sections in line with it: `CONTRIBUTING.md`'s link to `CLAUDE.md#invariants-to-preserve-when-editing-skills`, the pull-request template's checkbox that `CLAUDE.md` is touched only for lasting changes, and the statement in `.claude/skills/release-plugin/SKILL.md` that no release prose lives in `CLAUDE.md` or `README.md`, each saying where that knowledge lives now. Verified by no tracked file outside the mission directories and `hosts/` linking a heading the root no longer holds, and by each of the three reading true against the root and its nodes.

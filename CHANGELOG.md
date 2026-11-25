@@ -1,6 +1,6 @@
 # Changelog
 
-Each entry is the notes of that version's [GitHub release](https://github.com/uHappyLogic/gurita/releases), verbatim, newest first.
+Each entry is the notes of that version's [GitHub release](https://github.com/uHappyLogic/gurita/releases), verbatim, newest first, each prepended by `/release-plugin` in its `Release: <VERSION>` commit.
 
 ## 2.0.0 — 2026-11-18
 

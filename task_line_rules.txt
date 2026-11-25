@@ -1,4 +1,5 @@
-# Single-task line rules for this repository's looped task runs.
+# Single-task line rules for this repository's looped task runs, read by gurita-vscode/runner.py
+# to assign each task of a looped task run to a single-task recipe line.
 # Each rule is a pattern, then " -> ", then a single-task line's name as its recipe's heading
 # reads. A pattern is matched case-insensitively against a task's title and brief; the first
 # matching rule wins, and the bare "*" line names the line for every task no rule matches.
