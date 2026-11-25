@@ -128,5 +128,9 @@ The missions tool stays unchanged, and `discuss-mission-goal` replaces its `reco
 
 The whole print is accepted. `show MISSION_PATH` stays exactly as it is, printing the mission's `requirements.md` whole, and its three callers (the starting-state procedure's deeper read, the review pass's discretionary follow-up, and the completion procedure's past-work `show`) keep their commands unchanged; a print past the host's inline limit keeps landing in the host's file for the runner to read. CLAUDE.md's missions-tool invariant records the acceptance with its reason, as it records the unbounded `tasks` print: the print is bounded by one document and taken only at a caller's discretion, and the starting state it carries is the as-of its decisions are read back with, so a narrower print would cut context the read is taken for.
 
+### Compact view size
+
+The whole view is accepted. The compact view stays exactly as step 1 of the answer sweep shows it: one fixed shell call printing `list --with-question` for every block and then, per walked id, the id, its lifted line, and its picked alternative's what-it-is, with no change to the open-question tool, the call, or the skill's prose. A print past the host's inline limit keeps going to the host's file, read by the runner as it chooses. CLAUDE.md records the acceptance and its reason beside the answer sweep invariant: 12 of 118 field views spilled, the size following the question document, and every walked question's text and pick is needed to compose its section, so the view has no bound to give.
+
 ## Out of Scope
 
