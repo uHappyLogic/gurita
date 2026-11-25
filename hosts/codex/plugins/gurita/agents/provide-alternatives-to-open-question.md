@@ -139,9 +139,10 @@ mv "<scratch dir>/<Short Title>.xml.part" "<scratch dir>/<Short Title>.xml"
 The file name is the Short Title **exactly as given** plus the fixed extension: never shorten,
 slug, escape, or otherwise alter it, because the orchestrator derives the question from the
 file name alone. Write under the `.xml.part` name first and rename only once the whole draft is
-written, so the orchestrator never reads a half-written return. If the Short Title holds a
-path separator, the write fails: do not create a directory or alter the title to make it
-succeed — that failure is a `FAILED:` like any other.
+written, so the orchestrator never reads a half-written return. Only a block authored before the
+open-question tool's `add` refused such a title can still carry a Short Title holding a path
+separator, and for it the write fails: do not create a directory or alter the title to make it
+succeed — that failure is a `FAILED:` like any other, its reason naming the separator.
 
 Once the rename has succeeded, **end your session with the bare token `DONE` as your final
 message** and nothing else — not the path, not the elements, not a summary. The file is the

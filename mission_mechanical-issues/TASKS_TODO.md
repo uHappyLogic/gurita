@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Short Title Rule in the Review Pass
-
-Add one clause to the review pass's Short Title bullet naming the refusal and listing what `add` refuses, in the shape of the duplicate-id clause it already carries (the tool refuses such a title, its `Error:` line names what it found, and the author picks another title), and reword the alternatives agent's path-separator clause as the case of a block authored before the refusal, a `/` title still ending in a `FAILED:` whose reason names the separator. The author then writes a valid title the first time while no runner acts on an existing invalid one, which is left to the operator's own `remove` and `add`; verified by the rebuilt host trees carrying both wordings with `--check` and both pytest runs passing, and by CLAUDE.md's return-contracts invariant recording the `FAILED:` skip as the case of a block authored before the refusal.
-
----
-
 ## Refuse Unsafe Alternative Ids at Embed
 
 Make `embed --alternatives` refuse an `<alternative>` whose id holds `"`, `$`, a backtick, or `\`, or whose id after the tool's whitespace folding holds ` — `, with one `Error:` line naming the id and the document unchanged, ids already embedded and document loading left unchecked and a slash staying legal, and have the alternatives agent's rendering rule name the four characters, not the dash, as ones an id may not hold. It closes the draft's OPTION entry with the three parse sites and `lift`'s joined line left exactly as they are; verified by tests in the embed suite, one reproducing the `Wait — then decide` case, with CLAUDE.md recording both refusals and their reasons.
