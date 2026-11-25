@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Discuss Open Question Splits Off a Note
-
-Give `discuss-open-question` a parse rule at its step 0: after the `--mission` strip, split the text on the same separator the hand-answer skills use, the part before it the Short Title passed to `locate` and the part after it, trimmed, an optional note the discussion takes as the user's opening remark on the question, text holding no separator being the Short Title alone with no note. The extension's discuss line already sends `<Short Title>. <note>`, and a note reached `locate` inside the title; verified by the rebuilt trees carrying the rule with `--check` and both pytest runs passing, and by the discuss lines in `gurita-vscode/shipped_recipes.md`, `snippets/GURITA_USAGE.md`, and `gurita-vscode/USAGE.md` and the extension's note prompt and empty-note drop staying as they are, with CLAUDE.md recording the fix.
-
----
-
 ## Refuse Unsafe Characters in New Task Titles
 
 Make the task-list tool refuse a new task title holding `"`, `$`, a backtick, or `\`, or opening with `-`, at both points where a title is created, `insert`'s title argument and every heading `initialize` reads from its heredoc, each refusal one `Error:` line naming the character with the file left unchanged and the help text stating the refused set, while sections already standing in a list keep their headings and no call gains an escaping rule or a `--`. It closes the draft's task-title and DASH entries for the double-quoted positions a title is copied into; verified by a test per creation point in the task-list suite, with CLAUDE.md's task-list invariant recording the refusal.
