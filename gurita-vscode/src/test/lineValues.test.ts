@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import * as assert from 'node:assert';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { harnessChoices, readLine, readSkill, replaceEffort, replaceModel, rewriteHarness } from '../lineValues';
+import { harnessChoices, readLine, readPrompt, readSkill, replaceEffort, replaceModel, rewriteHarness } from '../lineValues';
 import { Recipe, SLOT_LINE, isHeadless, parseShippedRecipes } from '../recipes';
 
 const SHIPPED_RECIPES = path.join(__dirname, '..', '..', 'shipped_recipes.md');
@@ -553,4 +553,17 @@ test('only an interactive line whose harness can be picked is rewritten onto Cla
   for (const [harness, offer] of [['claude', CLAUDE_OFFER], ['agy', AGY_OFFER], ['codex', CODEX_OFFER]] as const) {
     assert.strictEqual(rewriteHarness(DESKTOP_LINE, harness, offer), undefined, harness);
   }
+});
+
+test("a line's prompt is its first command's /gurita: or $gurita: word as the shell reads it, and none for a line of no harness or invoking no skill", () => {
+  assert.strictEqual(readPrompt(DESKTOP_LINE), '/gurita:complete-all-tasks --mission <path>');
+  assert.strictEqual(
+    readPrompt('claude-desktop "/gurita:discuss-open-question --mission <path> <Short Title>. \\"<note>\\""; # interactive'),
+    '/gurita:discuss-open-question --mission <path> <Short Title>. "<note>"',
+  );
+  assert.strictEqual(readPrompt("codex '$gurita:ask-in-mission-context --mission <path> <question>' -m gpt-5.5; # interactive"), '$gurita:ask-in-mission-context --mission <path> <question>');
+  assert.strictEqual(readPrompt('claude -p "/gurita:review-mission-requirements --mission <path>" --model "fable";'), '/gurita:review-mission-requirements --mission <path>');
+  assert.strictEqual(readPrompt('claude-desktop; # interactive'), undefined);
+  assert.strictEqual(readPrompt('echo "/gurita:x"'), undefined);
+  assert.strictEqual(readPrompt('claude-desktop "/gurita:x"; claude "/gurita:y"'), '/gurita:x', 'only the first command is read');
 });

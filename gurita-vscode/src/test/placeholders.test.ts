@@ -7,6 +7,7 @@ import {
   fillPlaceholders,
   sessionEnvironment,
   sessionVariable,
+  writeValues,
 } from '../placeholders';
 import { KNOWN_PLACEHOLDERS } from '../recipes';
 
@@ -136,4 +137,18 @@ test('an empty note written without the dot before it is dropped alone, and othe
     buildLine('claude -p "/gurita:answer-open-question --mission <path> <Short Title>. <answer text>";', { path: 'p/' }),
     'claude -p "/gurita:answer-open-question --mission ${GURITA_PATH} ${GURITA_SHORT_TITLE}. ${GURITA_ANSWER_TEXT}";',
   );
+});
+
+test('writing values into a text replaces each known placeholder given a value by that value as it stands, in one pass', () => {
+  assert.strictEqual(
+    writeValues('/gurita:answer-open-question-with-alternative --mission <path> <Short Title>. <Alternative Id>', {
+      path: 'pkg/mission_alpha/',
+      'Short Title': 'Pane Layout',
+      'Alternative Id': 'keep',
+    }),
+    '/gurita:answer-open-question-with-alternative --mission pkg/mission_alpha/ Pane Layout. keep',
+  );
+  assert.strictEqual(writeValues('<question>', { question: '"$HOME" <path>', path: 'x/' }), '"$HOME" <path>', 'a value is not filled again');
+  assert.strictEqual(writeValues('<path> <goal> <unknown>', { path: 'x/' }), 'x/ <goal> <unknown>', 'a placeholder given no value, and an unknown one, stay as written');
+  assert.strictEqual(writeValues('<path>', { path: '' }), '');
 });

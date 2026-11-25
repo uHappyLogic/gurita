@@ -5,7 +5,9 @@
 // then the placeholder's text upper-cased with every space turned into an underscore. An optional
 // placeholder, the discussion note, may be given an empty value: a line is then built with it
 // dropped, together with the `. ` written directly before it, so the line reads exactly as it
-// would had the placeholder never been written. This module imports nothing from `vscode`.
+// would had the placeholder never been written. A prompt sent to Claude Desktop, which no shell
+// reads, is the one text a value is written into (`writeValues`), each `<name>` replaced by its
+// value as typed. This module imports nothing from `vscode`.
 
 import { KNOWN_PLACEHOLDERS } from './recipes';
 
@@ -86,4 +88,26 @@ export function dropEmptyOptional(line: string, values: Readonly<Record<string, 
  */
 export function buildLine(line: string, values: Readonly<Record<string, string>>): string {
   return fillPlaceholders(dropEmptyOptional(line, values), KNOWN_PLACEHOLDERS);
+}
+
+/**
+ * `text` with every known placeholder written as `<name>` that `values` gives a value for replaced
+ * by that value as it stands, in one pass, so a value holding a placeholder's text is not filled
+ * again; a placeholder `values` gives no value for is left as written.
+ */
+export function writeValues(text: string, values: Readonly<Record<string, string>>): string {
+  const names = KNOWN_PLACEHOLDERS.filter((name) => Object.prototype.hasOwnProperty.call(values, name));
+  let written = '';
+  let index = 0;
+  while (index < text.length) {
+    const found = names.find((name) => text.startsWith(`<${name}>`, index));
+    if (found !== undefined) {
+      written += values[found];
+      index += found.length + 2;
+      continue;
+    }
+    written += text[index];
+    index += 1;
+  }
+  return written;
 }

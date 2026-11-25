@@ -92,7 +92,11 @@
 // Short Title and the Alternative Id come from the card clicked, the answer text, the goal, and
 // the issue description each from the input panel (`inputPanel.ts`), an editor tab holding one
 // textarea with Run and Cancel, every other typed value from VS Code's own input box, one line per
-// value, and each value reaches its line only as its `GURITA_*` session variable. The discuss button always asks for an optional discussion note,
+// value, and each value reaches its line only as its `GURITA_*` session variable. Every one of these
+// clicks, a recipe button's, a fixed-name button's, and a mission-starting row's, starts its run
+// through `startAction` (`runs.ts`), which sends a variant of one line opening with
+// `claude-desktop` to Claude Desktop instead, its prompt built with the typed values written in,
+// creating no terminal and holding no run. The discuss button always asks for an optional discussion note,
 // the one value a box accepts empty: a note typed is carried after the Short Title as
 // `<Short Title>. <note>`, an empty one leaves the line as if it held no note, and Escape starts
 // nothing. While a chain started for a mission is running, from its start until its terminal
@@ -199,7 +203,7 @@ import { Harness } from './lineValues';
 import { FileEventKind, RefreshBatch, RefreshQueue, WATCHED_PATTERN, eventEffect, gitEventEffect, gitWatches } from './refresh';
 import { OPTIONAL_PLACEHOLDERS } from './placeholders';
 import { askInPanel } from './inputPanel';
-import { refuseWhileRunning, runnerFile, runningMissions, showRunTerminal, startChain, startLoop } from './runs';
+import { refuseWhileRunning, runnerFile, runningMissions, showRunTerminal, startAction, startLoop } from './runs';
 import { MissionWorkflow, WorkflowStep, missionWorkflow, reviewCount } from './workflow';
 import { MissionStops, readMissionStops } from './stops';
 import { CompletedRead, readCompletedTasks } from './completedTasks';
@@ -1344,7 +1348,7 @@ function runRecipe(context: vscode.ExtensionContext, win: MissionWindow, mission
   if (posted === undefined || listed === undefined || listed.kind !== 'runnable') {
     return;
   }
-  startChain(context, posted.root, posted.mission, listed.name, listed.lines, { path: posted.mission });
+  void startAction(context, posted.root, posted.mission, listed.name, listed.lines, { path: posted.mission });
 }
 
 /**
@@ -1697,7 +1701,7 @@ async function runQuestionButton(
   if (typed === undefined) {
     return;
   }
-  startChain(context, root, mission, recipe.name, recipe.lines, { path: mission, 'Short Title': question, ...typed });
+  await startAction(context, root, mission, recipe.name, recipe.lines, { path: mission, 'Short Title': question, ...typed });
 }
 
 /**
@@ -1725,7 +1729,7 @@ function runAlternativeButton(
   if (recipe === undefined) {
     return;
   }
-  startChain(context, posted.root, mission, recipe.name, recipe.lines, {
+  void startAction(context, posted.root, mission, recipe.name, recipe.lines, {
     path: mission,
     'Short Title': question,
     'Alternative Id': alternative,
@@ -1765,7 +1769,7 @@ async function runMissionAction(
   if (typed === undefined) {
     return;
   }
-  startChain(context, root, mission, recipe.name, recipe.lines, { path: mission, ...typed });
+  await startAction(context, root, mission, recipe.name, recipe.lines, { path: mission, ...typed });
 }
 
 /**
@@ -1856,7 +1860,7 @@ export async function runStartingRow(context: vscode.ExtensionContext, button: M
   }
   const root = await startingRoot();
   const before = button === 'defineMission' && current !== undefined ? new Set(current.live.map((mission) => mission.path)) : undefined;
-  startChain(context, root, undefined, offer.recipe, variant.lines, typed, before === undefined ? undefined : () => void closedDefines.push(before));
+  await startAction(context, root, undefined, offer.recipe, variant.lines, typed, before === undefined ? undefined : () => void closedDefines.push(before));
 }
 
 /**

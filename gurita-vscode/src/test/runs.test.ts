@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import * as assert from 'node:assert';
 // The run path against a stub of the `vscode` module, standing in for the editor: the terminals it
-// creates, the terminal-close event, the notification, and the `gurita` settings.
+// creates, the terminal-close event, the notifications, and the `gurita` settings, and a stub of
+// `node:child_process` standing in for `open`, the opener a send to Claude Desktop calls.
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 const Module = require('node:module') as {
@@ -19,6 +20,18 @@ const settings: Record<string, unknown> = {};
 
 const created: StubTerminal[] = [];
 const notifications: string[] = [];
+const errors: string[] = [];
+
+/** Every call the stubbed opener received, and the error and standard error its next call fails with, or none. */
+const opened: { file: string; args: string[] }[] = [];
+let failOpen: { error: Error; stderr: string } | undefined;
+const childProcess = {
+  execFile(file: string, args: string[], callback: (error: Error | null, stdout: string, stderr: string) => void): void {
+    opened.push({ file, args: [...args] });
+    const failure = failOpen;
+    setImmediate(() => (failure === undefined ? callback(null, '', '') : callback(failure.error, '', failure.stderr)));
+  },
+};
 let closeListener: ((terminal: StubTerminal) => void) | undefined;
 
 const stub = {
@@ -39,6 +52,10 @@ const stub = {
       notifications.push(message);
       return Promise.resolve(undefined);
     },
+    showErrorMessage(message: string): Promise<undefined> {
+      errors.push(message);
+      return Promise.resolve(undefined);
+    },
   },
   workspace: {
     getConfiguration(section: string): { get(key: string, fallback?: unknown): unknown } {
@@ -49,7 +66,8 @@ const stub = {
 };
 
 const load = Module._load;
-Module._load = (request, parent, isMain) => (request === 'vscode' ? stub : load(request, parent, isMain));
+Module._load = (request, parent, isMain) =>
+  request === 'vscode' ? stub : request === 'node:child_process' ? childProcess : load(request, parent, isMain);
 const runs = require('../runs') as typeof import('../runs');
 Module._load = load;
 
@@ -119,6 +137,85 @@ test("a closed terminal the extension never started is not the end of a run", ()
   events.length = 0;
   close({ name: 'another', shown: 0 });
   assert.deepStrictEqual(events, []);
+});
+
+const DESKTOP_LINE = 'claude-desktop "/gurita:discuss-open-question --mission <path> <Short Title>. <note>"; # interactive';
+
+test('an action of one claude-desktop line is sent to Claude Desktop through open, with its values written in, and no run is tracked', async () => {
+  events.length = 0;
+  opened.length = 0;
+  errors.length = 0;
+  notifications.length = 0;
+  const count = created.length;
+  let closedCalls = 0;
+  await runs.startAction(
+    context,
+    '/my project',
+    'lib/mission_alpha/',
+    'discuss-open-question',
+    [DESKTOP_LINE],
+    { path: 'lib/mission_alpha/', 'Short Title': 'Pane Layout', note: 'Keep it short' },
+    () => closedCalls++,
+  );
+  assert.deepStrictEqual(opened, [
+    {
+      file: 'open',
+      args: ['claude://code/new?q=%2Fgurita%3Adiscuss-open-question%20--mission%20lib%2Fmission_alpha%2F%20Pane%20Layout.%20Keep%20it%20short&folder=%2Fmy%20project'],
+    },
+  ], 'one open child, the link carrying the prompt with its values written in and the root as folder');
+  assert.strictEqual(created.length, count, 'no terminal is created, so the runner never sees the line');
+  assert.deepStrictEqual(runs.runningMissions(), [], 'no run is held for the mission');
+  assert.deepStrictEqual(events, [], 'no run is posted as started');
+  assert.deepStrictEqual(errors, [], 'a send that went out shows nothing');
+  assert.deepStrictEqual(notifications, []);
+  assert.strictEqual(closedCalls, 0);
+
+  // Nothing is held, so a second send for the same mission goes out too.
+  await runs.startAction(context, '/my project', 'lib/mission_alpha/', 'discuss-open-question', [DESKTOP_LINE], { path: 'lib/mission_alpha/', 'Short Title': 'Pane Layout', note: '' });
+  assert.strictEqual(opened.length, 2);
+  assert.strictEqual(
+    new URL(opened[1].args[0]).searchParams.get('q'),
+    '/gurita:discuss-open-question --mission lib/mission_alpha/ Pane Layout',
+    'an empty note is dropped from the prompt',
+  );
+  assert.strictEqual(created.length, count);
+});
+
+test('a failed send is shown as one error notification carrying the cause the opener reported, and nothing is checked beforehand', async () => {
+  opened.length = 0;
+  errors.length = 0;
+  const count = created.length;
+  failOpen = { error: new Error('Command failed: open claude://code/new'), stderr: 'No application knows how to open URL claude://code/new?q=x.\n' };
+  try {
+    await runs.startAction(context, '/project', 'mission_beta/', 'Execute tasks', ['claude-desktop "/gurita:complete-all-tasks --mission <path>"; # interactive'], { path: 'mission_beta/' });
+  } finally {
+    failOpen = undefined;
+  }
+  assert.strictEqual(opened.length, 1, 'the send is the one call made');
+  assert.deepStrictEqual(errors, [
+    'The action "Execute tasks" could not be sent to Claude Desktop: No application knows how to open URL claude://code/new?q=x.',
+  ]);
+  assert.strictEqual(errors[0], runs.desktopSendFailed('Execute tasks', 'No application knows how to open URL claude://code/new?q=x.'));
+  assert.strictEqual(created.length, count, 'a failed send starts no run in its place');
+  assert.deepStrictEqual(runs.runningMissions(), []);
+});
+
+test('every other action starts its chain as before, a Desktop line in a chain of several lines included, and a send for a mission whose run is going is refused', async () => {
+  opened.length = 0;
+  notifications.length = 0;
+  await runs.startAction(context, '/project', 'mission_gamma/', 'review', ['echo review'], { path: 'mission_gamma/' });
+  const chain = created[created.length - 1];
+  assert.deepStrictEqual(chain.args?.slice(-2), ['--', 'echo review']);
+  assert.deepStrictEqual(runs.runningMissions(), ['mission_gamma/']);
+  await runs.startAction(context, '/project', 'mission_gamma/', 'discuss-open-question', [DESKTOP_LINE], { path: 'mission_gamma/', 'Short Title': 'x', note: '' });
+  assert.deepStrictEqual(opened, [], 'nothing is sent while the mission runs');
+  assert.deepStrictEqual(notifications, [runs.ALREADY_RUNNING]);
+  close(chain);
+  await runs.startAction(context, '/project', 'mission_gamma/', 'two', [DESKTOP_LINE, 'echo after'], { path: 'mission_gamma/', 'Short Title': 'x', note: '' });
+  assert.deepStrictEqual(opened, []);
+  const two = created[created.length - 1];
+  assert.strictEqual(two.args?.[two.args.length - 1], 'echo after');
+  close(two);
 });
 
 const LOOP_ARGS = ['/extension/runner.py', 'loop', '--mission', 'mission_gamma/', '--', '<single-task line>'];

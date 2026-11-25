@@ -42,8 +42,8 @@
 // end at the first `;`, `&`, or `|`, or a `#` opening a word, standing outside quotes, so a flag written
 // inside the quoted prompt or after the line's closing `;` is never read. The skill a line runs
 // is read from the same first command: the name after the first `/gurita:` or `$gurita:` opening a
-// word of its arguments or a part of one, the quoted prompt being one word. This module imports
-// nothing from `vscode`.
+// word of its arguments or a part of one, the quoted prompt being one word, and the line's prompt
+// (`readPrompt`) is that word as the shell reads it. This module imports nothing from `vscode`.
 
 /** The harnesses a line can run on that are CLIs, each named by the command a line opens with. */
 const CLI_LINE_HARNESSES = ['claude', 'agy', 'codex'] as const;
@@ -280,6 +280,19 @@ export function readSkill(line: string): string | undefined {
     }
   }
   return undefined;
+}
+
+/**
+ * The prompt of a line's first command, the first word of its arguments invoking a `gurita:` skill,
+ * read as the shell reads it, its quotes removed; undefined for a line of no known harness and for
+ * one whose first command invokes no skill.
+ */
+export function readPrompt(line: string): string | undefined {
+  const command = words(line);
+  if (harnessOf(command) === undefined) {
+    return undefined;
+  }
+  return promptWord(command)?.text;
 }
 
 /** Writes `value` as a shell word in the quoting the replaced word used, quoting it where it needs it. */

@@ -20,8 +20,18 @@
 // runner's `--close-when-finished`, so a chain that ran all its lines and a loop that ends with no
 // task remaining exit after their report and their terminal closes by itself; a run that stopped
 // still waits for a keypress.
+// An action whose variant is one line opening with `claude-desktop` starts no run: `startAction`,
+// through which every action that starts a chain goes, sends it to Claude Desktop instead
+// (`desktop.ts`), its prompt built with the typed values written in and carried in the
+// `claude://code/new` link with the project root as `folder`, passed to `open`. The send is
+// fire-and-forget: no terminal is created and no run is held, so the mission's page draws no button
+// disabled for it, and after a send that went out VS Code shows nothing, Claude Desktop coming to
+// the front being the sign, while a send the opener reports failed is shown as one error
+// notification saying the action could not be sent to Claude Desktop and carrying the cause the
+// opener reported. A send for a mission whose run is going is refused as a click is.
 
 import * as vscode from 'vscode';
+import { desktopLine, desktopLink, desktopPrompt, openDesktopLink } from './desktop';
 import { buildLine, sessionEnvironment } from './placeholders';
 import { RunningRuns } from './running';
 
@@ -141,6 +151,42 @@ export function startChain(
   const terminal = launch(root, mission, recipe, [runnerFile(context), 'chain', '--', ...filled], sessionEnvironment(values));
   if (closed !== undefined) {
     closers.set(terminal, closed);
+  }
+}
+
+/** The error notification a send to Claude Desktop the opener reported failed shows, for the action `recipe`. */
+export function desktopSendFailed(recipe: string, cause: string): string {
+  return `The action "${recipe}" could not be sent to Claude Desktop: ${cause}`;
+}
+
+/**
+ * Starts the action `recipe` of `lines` with `values`, as `startChain` takes them, unless its lines
+ * are one line opening with `claude-desktop`: that line is sent to Claude Desktop instead, unless a
+ * run for `mission` is running, its prompt with `values` written in carried with `root` as `folder`
+ * in the `claude://code/new` link passed to `open`, no terminal created and no run held, and
+ * `closed` never called. The promise settles once the send's outcome is known, a failed send shown
+ * in one error notification carrying the cause the opener reported, and at once for a chain.
+ */
+export async function startAction(
+  context: vscode.ExtensionContext,
+  root: string | undefined,
+  mission: string | undefined,
+  recipe: string,
+  lines: readonly string[],
+  values: Readonly<Record<string, string>>,
+  closed?: () => void,
+): Promise<void> {
+  const line = desktopLine(lines);
+  if (line === undefined) {
+    startChain(context, root, mission, recipe, lines, values, closed);
+    return;
+  }
+  if (mission !== undefined && refuseWhileRunning(mission)) {
+    return;
+  }
+  const cause = await openDesktopLink(desktopLink(desktopPrompt(line, values), root));
+  if (cause !== undefined) {
+    void vscode.window.showErrorMessage(desktopSendFailed(recipe, cause));
   }
 }
 

@@ -24,7 +24,8 @@
 // argument with no `--mission`, so nothing is typed; the shipped line is an interactive one, since
 // the skill asks for one confirmation before it commits. The run starts at the project root and is
 // held under the finished mission's path, so a second click while it is going starts nothing and
-// reveals its terminal. A button whose recipe cannot be read or run is posted with no entry and its
+// reveals its terminal; a variant of one line opening with `claude-desktop` is sent to Claude
+// Desktop instead, through `startAction` (`runs.ts`), and holds no run. A button whose recipe cannot be read or run is posted with no entry and its
 // click tells why in an error notification. No serializer is registered for its view type, so a
 // window open before a restart or a window reload is not restored.
 
@@ -33,7 +34,7 @@ import { CompletedRead, readCompletedTasks } from './completedTasks';
 import { openCommit } from './commitDocuments';
 import { SummaryRead, readFinishedSummary } from './finishedMissions';
 import { ButtonPost, FixedButtonEntry, captureButton, onStartingSelection, pageShell, postedRun, rememberProjectVariant, webviewOptions } from './pane';
-import { startChain } from './runs';
+import { startAction } from './runs';
 
 /** The view type of every finished mission's window. */
 export const FINISHED_VIEW_TYPE = 'gurita.finishedMission';
@@ -123,7 +124,7 @@ function runCapture(context: vscode.ExtensionContext, mission: string, win: Fini
   if (run === undefined) {
     return;
   }
-  startChain(context, win.root, mission, run.name, run.lines, { path: mission });
+  void startAction(context, win.root, mission, run.name, run.lines, { path: mission });
 }
 
 /**

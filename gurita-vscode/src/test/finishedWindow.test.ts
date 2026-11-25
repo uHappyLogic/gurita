@@ -148,8 +148,23 @@ const stub = {
   },
 };
 
+/** Every call `open`, the opener a send to Claude Desktop calls, received. */
+const desktopOpens: { file: string; args: string[] }[] = [];
+/** The `node:child_process` the send module alone is given, standing in for `open`; every other module keeps the real one, for git and the tools. */
+const desktopChildProcess = {
+  execFile(file: string, args: string[], callback: (error: Error | null, stdout: string, stderr: string) => void): void {
+    desktopOpens.push({ file, args: [...args] });
+    setImmediate(() => callback(null, '', ''));
+  },
+};
+
 const load = Module._load;
-Module._load = (request, parent, isMain) => (request === 'vscode' ? stub : load(request, parent, isMain));
+Module._load = (request, parent, isMain) =>
+  request === 'vscode'
+    ? stub
+    : request === 'node:child_process' && ((parent as { filename?: string } | undefined)?.filename ?? '').endsWith(`${path.sep}desktop.js`)
+      ? desktopChildProcess
+      : load(request, parent, isMain);
 const finishedWindow = require('../finishedWindow') as typeof import('../finishedWindow');
 Module._load = load;
 
@@ -339,4 +354,44 @@ test('a closed window is forgotten, and opening it again creates a fresh one', (
   assert.deepStrictEqual(finishedWindow.openFinishedWindows(), []);
   finishedWindow.openFinishedWindow(context, root, MISSION, 'The done mission');
   assert.strictEqual(panels.length, 2);
+});
+
+test("a Capture principles variant of one claude-desktop line is sent to Claude Desktop through open, the mission's path written in and the project root as folder, starting no run", async () => {
+  const other = 'pkg/mission_sent/';
+  const home = process.env.HOME as string;
+  fs.mkdirSync(path.join(home, '.gurita'), { recursive: true });
+  const line = 'claude-desktop "/gurita:capture-mission-principle-updates <path>"; # interactive';
+  fs.writeFileSync(path.join(home, '.gurita', 'recipes.md'), `## Recipes\n\n### capture-mission-principle-updates\n#### Desktop\n\`\`\`\n${line}\n\`\`\`\n`);
+  const count = panels.length;
+  finishedWindow.openFinishedWindow(context, root, other, 'The sent mission');
+  const panel = panels[count];
+  panel.receive?.({ type: 'ready' });
+  await until(() => panel.posted.length === 1, 'the answer is posted');
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  panel.receive?.({ type: 'selectCaptureVariant', mission: other, variant: 'Desktop' });
+  await until(() => panel.posted.length === 2, 'the window is answered again');
+  const posted = panel.posted[1] as import('../finishedWindow').FinishedMessage;
+  assert.ok(posted.mission.capture?.state === 'offered');
+  assert.deepStrictEqual(posted.mission.capture.lines, [line]);
+
+  const terminalCount = terminals.length;
+  const errorCount = errors.length;
+  const noticeCount = notices.length;
+  panel.receive?.({ type: 'capturePrinciples', mission: other, variant: 'Desktop' });
+  await until(() => desktopOpens.length === 1, 'the link is passed to open');
+  assert.deepStrictEqual(desktopOpens, [
+    {
+      file: 'open',
+      args: [`claude://code/new?q=${encodeURIComponent(`/gurita:capture-mission-principle-updates ${other}`)}&folder=${encodeURIComponent(root)}`],
+    },
+  ]);
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  assert.strictEqual(terminals.length, terminalCount, 'no terminal is created');
+  assert.strictEqual(errors.length, errorCount, 'a send that went out shows nothing');
+  assert.strictEqual(notices.length, noticeCount);
+
+  // Nothing is held under the mission's path, so a second click sends again.
+  panel.receive?.({ type: 'capturePrinciples', mission: other, variant: 'Desktop' });
+  await until(() => desktopOpens.length === 2, 'a second click sends again');
+  assert.strictEqual(terminals.length, terminalCount);
 });

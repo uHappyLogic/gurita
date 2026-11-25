@@ -332,8 +332,25 @@ function answerPanel(record: StubPanel): void {
   }
 }
 
+/** Every call `open`, the opener a send to Claude Desktop calls, received, and the error and standard error its next call fails with, or none. */
+const desktopOpens: { file: string; args: string[] }[] = [];
+let failDesktopOpen: { error: Error; stderr: string } | undefined;
+/** The `node:child_process` the send module alone is given, standing in for `open`; every other module keeps the real one, for git and the tools. */
+const desktopChildProcess = {
+  execFile(file: string, args: string[], callback: (error: Error | null, stdout: string, stderr: string) => void): void {
+    desktopOpens.push({ file, args: [...args] });
+    const failure = failDesktopOpen;
+    setImmediate(() => (failure === undefined ? callback(null, '', '') : callback(failure.error, '', failure.stderr)));
+  },
+};
+
 const load = Module._load;
-Module._load = (request, parent, isMain) => (request === 'vscode' ? stub : load(request, parent, isMain));
+Module._load = (request, parent, isMain) =>
+  request === 'vscode'
+    ? stub
+    : request === 'node:child_process' && ((parent as { filename?: string } | undefined)?.filename ?? '').endsWith(`${path.sep}desktop.js`)
+      ? desktopChildProcess
+      : load(request, parent, isMain);
 const pane = require('../pane') as typeof import('../pane');
 const settingsWindow = require('../settingsWindow') as typeof import('../settingsWindow');
 const runs = require('../runs') as typeof import('../runs');
@@ -3245,6 +3262,149 @@ test("a Define mission run's terminal closing opens the window of the one missio
     panelCount = panels.length;
     await closeAndReread(terminal);
     assert.deepStrictEqual(missionPanelsFrom(panelCount), [], 'a run that created no mission opens no window');
+  } finally {
+    process.env.HOME = home;
+  }
+});
+
+/** The mission of the Claude Desktop test, holding one open question with two alternatives. */
+const DESK = 'pkg/mission_desk/';
+
+/** The own file of the Claude Desktop test: a page recipe and a `Desktop` variant of every fixed-name button recipe it fires, each one claude-desktop line. */
+const DESKTOP_OWN_TEXT = `### Desktop review
+\`\`\`
+claude-desktop "/gurita:review-mission-requirements --mission <path>"; # interactive
+\`\`\`
+
+### discuss-open-question
+#### Desktop
+\`\`\`
+claude-desktop "/gurita:discuss-open-question --mission <path> <Short Title>. <note>"; # interactive
+\`\`\`
+
+### answer-open-question-with-alternative
+#### Desktop
+\`\`\`
+claude-desktop "/gurita:answer-open-question-with-alternative --mission <path> <Short Title>. <Alternative Id>"; # interactive
+\`\`\`
+
+### discuss-new-task
+#### Desktop
+\`\`\`
+claude-desktop "/gurita:discuss-new-task --mission <path> <issue description>"; # interactive
+\`\`\`
+
+### ask-in-mission-context
+#### Desktop
+\`\`\`
+claude-desktop "/gurita:ask-in-mission-context --mission <path> <question>"; # interactive
+\`\`\`
+
+### discuss-mission-goal
+#### Desktop
+\`\`\`
+claude-desktop "/gurita:discuss-mission-goal <goal>"; # interactive
+\`\`\`
+`;
+
+test("every action of a mission's page and the New mission row whose variant is one claude-desktop line sends it to Claude Desktop through open, with its typed values written in and the project root as folder, starting no run", async () => {
+  const home = process.env.HOME;
+  const fakeHome = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-home-'));
+  process.env.HOME = fakeHome;
+  try {
+    const root = project(DESK);
+    fs.writeFileSync(path.join(root, DESK, 'open_questions.xml'), SELECTION_QUESTIONS);
+    git(root, 'add', '.');
+    git(root, 'commit', '-q', '-m', 'Questions');
+    const files = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-recipes-'));
+    fs.writeFileSync(path.join(files, 'shipped_recipes.md'), BUTTON_SHIPPED_TEXT);
+    fs.writeFileSync(path.join(files, 'recipes.md'), DESKTOP_OWN_TEXT);
+    fs.mkdirSync(path.join(fakeHome, '.gurita'));
+    // The Settings window's pick of the Desktop variant as the default of every fixed-name button recipe.
+    const fixed = ['discuss-open-question', 'answer-open-question-with-alternative', 'discuss-new-task', 'ask-in-mission-context', 'discuss-mission-goal'];
+    fs.writeFileSync(
+      path.join(fakeHome, '.gurita', 'variants.json'),
+      JSON.stringify({ defaults: fixed.map((recipe) => ({ recipe, name: 'Desktop', origin: 'own' })) }),
+    );
+    packaged.set('bundled/missions.py', path.join(__dirname, '..', '..', '..', 'core', 'tools', 'missions.py'));
+    packaged.set('bundled/shipped_recipes.md', path.join(files, 'shipped_recipes.md'));
+    packaged.set('runner.py', path.join(__dirname, '..', '..', 'runner.py'));
+    workspace.folders = [{ uri: { fsPath: root } }];
+    workspace.settings = { ownRecipesFile: path.join(files, 'recipes.md') };
+    workspaceState.clear();
+    await pageAfter({ type: 'refresh' }, DESK);
+    pane.startingOffers(context);
+    const folder = `folder=${encodeURIComponent(root)}`;
+    /** The runs earlier tests left held, none of them for this test's mission. */
+    const held = runs.runningMissions();
+    assert.ok(!held.includes(DESK));
+
+    /** Fires `click` with `values` queued for its boxes and panels, and returns the prompt and folder of the one link it passed to open. */
+    const sent = async (click: () => void, values: string[] = []): Promise<{ prompt: string | null; folder: string | null }> => {
+      const terminals = created.length;
+      const from = desktopOpens.length;
+      typedValues.length = 0;
+      typedValues.push(...values);
+      click();
+      for (let attempt = 0; attempt < 200 && desktopOpens.length === from; attempt++) {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      typedValues.length = 0;
+      assert.strictEqual(desktopOpens.length, from + 1, 'the click passes one link to open');
+      const call = desktopOpens[from];
+      assert.strictEqual(call.file, 'open');
+      assert.strictEqual(call.args.length, 1);
+      assert.ok(call.args[0].startsWith('claude://code/new?q=') && call.args[0].endsWith(`&${folder}`), call.args[0]);
+      assert.strictEqual(created.length, terminals, 'no terminal is created');
+      assert.deepStrictEqual(runs.runningMissions(), held, 'no run is held');
+      const link = new URL(call.args[0]);
+      return { prompt: link.searchParams.get('q'), folder: link.searchParams.get('folder') };
+    };
+
+    notifications.length = 0;
+    assert.deepStrictEqual(await sent(() => send({ type: 'runRecipe', mission: DESK, recipe: 'Desktop review', variant: 'default' })), {
+      prompt: `/gurita:review-mission-requirements --mission ${DESK}`,
+      folder: root,
+    }, "a recipe button's variant is sent with the mission's path written in");
+    assert.deepStrictEqual(
+      await sent(() => send({ type: 'questionButton', button: 'discussQuestion', mission: DESK, question: 'Pane Layout', variant: 'Desktop' }), ['Keep it short']),
+      { prompt: `/gurita:discuss-open-question --mission ${DESK} Pane Layout. Keep it short`, folder: root },
+      'the discuss button with its note typed',
+    );
+    assert.deepStrictEqual(
+      await sent(() => send({ type: 'alternativeButton', mission: DESK, question: 'Pane Layout', alternative: 'keep', variant: 'Desktop' })),
+      { prompt: `/gurita:answer-open-question-with-alternative --mission ${DESK} Pane Layout. keep`, folder: root },
+      'the answer-with-alternative button with the Short Title and the Alternative Id from the card',
+    );
+    assert.deepStrictEqual(
+      await sent(() => send({ type: 'taskButton', mission: DESK, variant: 'Desktop' }), ['An issue, "quoted"']),
+      { prompt: `/gurita:discuss-new-task --mission ${DESK} An issue, "quoted"`, folder: root },
+      'the New task button with its issue typed into the input panel',
+    );
+    assert.deepStrictEqual(
+      await sent(() => send({ type: 'askButton', mission: DESK, variant: 'Desktop' }), ['Why $HOME?']),
+      { prompt: `/gurita:ask-in-mission-context --mission ${DESK} Why $HOME?`, folder: root },
+      'the Ask in mission context button with its question typed',
+    );
+    assert.deepStrictEqual(
+      await sent(() => void pane.runStartingRow(context, 'discussGoal'), ['A goal']),
+      { prompt: '/gurita:discuss-mission-goal A goal', folder: root },
+      'the New mission row with its goal typed, at the project root',
+    );
+    assert.deepStrictEqual(notifications, [], 'a send that went out shows nothing');
+
+    // A failed send is shown in one error notification carrying the cause open reported, and starts nothing in its place.
+    failDesktopOpen = { error: new Error('Command failed: open'), stderr: 'No application knows how to open URL claude://code/new.\n' };
+    try {
+      await sent(() => send({ type: 'runRecipe', mission: DESK, recipe: 'Desktop review', variant: 'default' }));
+      for (let attempt = 0; attempt < 200 && notifications.length === 0; attempt++) {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+    } finally {
+      failDesktopOpen = undefined;
+    }
+    assert.deepStrictEqual(notifications, ['The action "Desktop review" could not be sent to Claude Desktop: No application knows how to open URL claude://code/new.']);
+    assert.strictEqual(execFileSync('git', ['status', '--porcelain', '--ignored'], { cwd: root, encoding: 'utf8' }), '', "nothing is written into the project's tree");
   } finally {
     process.env.HOME = home;
   }
