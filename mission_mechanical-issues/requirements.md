@@ -104,5 +104,9 @@ The mission-definition tool refuses, after normalization and before it creates a
 
 The fold tool refuses a `fold` or `replace` body holding a column-0 `## ` or `### ` line, with the file unchanged, which is a stop for the answer sweep's batched call. The answer core's fold step, the one home of a decision's content rules that the sweep already draws on, gains one sentence that a folded decision or rewritten entry holds no column-0 `## ` or `### ` line, so every runner, the three single-question skills' Edit-based fold included, writes it right the first time. CLAUDE.md's fold-tool invariant records the refusal, and the answer-procedure rule records where it lives.
 
+### Leading dash in titles
+
+The open-question tool's `add` refuses a new Short Title whose folded form opens with `-`, and the task-list tool refuses a new task title opening with `-` at both points where a title enters the list: `insert`'s title argument and every heading `initialize` reads from standard input. Each refusal is one `Error:` line with the document unchanged, pinned by a test per creation point. No fixed call changes: titles stay positional with no `--` written ahead of them, and option values (`--before`, `--after`, `--option`, `--undermined`, `--alternative`) stay as they are written now.
+
 ## Out of Scope
 
