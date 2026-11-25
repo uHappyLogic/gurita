@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Bars Bound on the Tasks Query
-
-Give the missions tool's `tasks` query a flag beside `--with-body` (the decision's example is `--bodies N`) that prints every task line but the bars of only the N newest tasks, an older task printing as its title line alone, the form a commit with no body already takes, so one parser reads the result. It bounds the draft's BIGREAD cost for `tasks` while every completed task's title stays in the print; verified by tests in the missions-tool suite, with the tool's help text stating the flag.
-
----
-
 ## Five Readers Pass the Bars Bound
 
 Have all five readers of `tasks <MISSION_DIR> --with-body` (`finish-mission`, `derive-tasks`, `ask-in-mission-context`, `submit-task`, `discuss-new-task`) pass the new bars flag with one literal N, the same at every site, in their fixed call. It caps the cost of the bars while every completed task's title stays in front of every reader and the duplicate checks stay complete; verified by the rebuilt trees showing one call shape at the five sites with `--check` and both pytest runs passing, and by CLAUDE.md's missions-tool invariant recording the bound where it records the unbounded `tasks` print.
