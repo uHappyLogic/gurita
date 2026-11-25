@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Write The Docs Folder Node
-
-Write `docs/README.md`, the maintainer-facing node covering `docs/`, in the fixed node parts (purpose, then rules, commands, and pointers, each of those three present only when filled) and at most 12,000 bytes: its rules state that the pages carry user content only and that a mechanic already stated by a runtime file, a tool's `--help` or docstring, or a test is cut and not restated, and its pointers, each a line of the fixed pointer form with a when-to-follow note of at most 400 bytes, lead to the four pages and to the sources the pages defer to. Verified by the node holding only the allowed headings in their order, staying within both byte limits, and every pointer's path and heading anchor resolving.
-
----
-
 ## Write The Core Tools Node
 
 Write `core/tools/README.md`, the node for the six tools under `core/tools/`: every invariant of today's `CLAUDE.md` that chiefly governs a tool, compressed to its rule, its reason, and the retired forms that must not return, none dropped or changed and the mechanics left to the tool's `--help`, docstring, and tests, in the fixed node parts, at most 12,000 bytes, every pointer a line of the fixed pointer form with a note of at most 400 bytes, and worded to pass the build's `host-name-in-core` and `old-word-in-core` checks as they stand. List the file in the `exclude` key of every `scripts/hosts/<host>/settings.toml`, changing nothing in the build's Python, so that no host tree renders it. Verified by `uv run scripts/build_hosts.py --check` and both pytest runs passing, by no tree under `hosts/` holding the file, and by each invariant placed here being readable in the node as rule, reason, and retired forms.
