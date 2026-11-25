@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## One Joined Read Call in the Alternatives Agent
-
-Replace the alternatives agent's two shown commands with one fixed shell call, run exactly as shown with only `<MISSION_DIR>` and the Short Title replaced, that runs `locate` and then `list --with-question` with a quoted `printf` line between them, a separator every shell accepts, the open-question tool and every other runner left as they are. It closes the draft's SEP entry, where a bare `=` separator lost the second read under zsh; verified by a new fixed-call test that extracts the fence from the rendered tree and runs it, reproducing the separator failure under zsh, with CLAUDE.md recording the fix.
-
----
-
 ## Refused Dispatches Resent in the Alternatives Pass
 
 Add a stated step to the Claude Code value of `ALTERNATIVES_CONCURRENCY`, which keeps its one uncapped message: a dispatch the host refuses for its concurrent-subagent limit is held as pending, despite the refusal message's "Do not retry", and each time the run wakes with an ended agent it sends one held question again per agent that ended, the resent agent's file landing like any other for the next batch call, with no number written into the slot value. It closes the draft's CAP entry; verified by the rebuilt Claude Code tree carrying the step while the Antigravity and Codex values and `core/` stay unchanged, with `--check` passing and CLAUDE.md recording the fix.
