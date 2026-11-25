@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Write The Core Tools Node
-
-Write `core/tools/README.md`, the node for the six tools under `core/tools/`: every invariant of today's `CLAUDE.md` that chiefly governs a tool, compressed to its rule, its reason, and the retired forms that must not return, none dropped or changed and the mechanics left to the tool's `--help`, docstring, and tests, in the fixed node parts, at most 12,000 bytes, every pointer a line of the fixed pointer form with a note of at most 400 bytes, and worded to pass the build's `host-name-in-core` and `old-word-in-core` checks as they stand. List the file in the `exclude` key of every `scripts/hosts/<host>/settings.toml`, changing nothing in the build's Python, so that no host tree renders it. Verified by `uv run scripts/build_hosts.py --check` and both pytest runs passing, by no tree under `hosts/` holding the file, and by each invariant placed here being readable in the node as rule, reason, and retired forms.
-
----
-
 ## Write The Core Shared Procedures Node
 
 Write `core/shared/README.md`, the node for the shared procedures under `core/shared/`: every invariant of today's `CLAUDE.md` that chiefly governs a shared procedure and that no node yet states whole, compressed to its rule, its reason, and the retired forms that must not return, none dropped or changed, with a pointer line of the fixed form wherever a rule stated in another node bears, in the fixed node parts, at most 12,000 bytes, each pointer's note at most 400 bytes, and worded to pass the build's `host-name-in-core` and `old-word-in-core` checks as they stand. List the file in the `exclude` key of every `scripts/hosts/<host>/settings.toml`, changing nothing in the build's Python, so that no host tree renders it. Verified by `uv run scripts/build_hosts.py --check` and both pytest runs passing, by no tree under `hosts/` holding the file, by every pointer resolving, and by each invariant placed here being readable in the node as rule, reason, and retired forms.
