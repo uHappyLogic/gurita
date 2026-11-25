@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Commit Procedure Captures Its Body by Heredoc
-
-Change the command `core/shared/commit-procedure.md` shows to the form the completion calls already use: the body captured once from a quoted heredoc in the group-fed form `{ body="$(cat)"; } <<'EOF'`, under the clause telling the runner to pick a delimiter line the text does not contain, and passed on as `--body "$body"` in the same shell call, a caller with no BODY leaving out both the capture and `--body`, while the commit tool, its contract, and every caller's own file stay unchanged. It closes the draft's BODY entry, and is verified by a new test that extracts the command from the rendered tree and runs it on a body holding a backtick, a `$`, a `"`, and an apostrophe, with CLAUDE.md recording the fix.
-
----
-
 ## Refuse Unsafe New Short Titles at Add
 
 Make the open-question tool's `add`, and `add` alone, refuse a new Short Title whose folded form holds `/`, `"`, `$`, a backtick, `\`, any control character (C0 and DEL), or a `.` followed by whitespace, or that opens with `-` or ends in `.`, with one `Error:` line naming what was found, the document unchanged, and the help text stating the rule, while `load_document` keeps validating ids for duplicates only. It closes the Short Title case with its DASH and DOT additions at the one point a title is created, with no fixed call gaining an escaping rule or a `--`; verified by a test per refusal in `tests/test_add.py`, with CLAUDE.md recording the refusal and its reason.
