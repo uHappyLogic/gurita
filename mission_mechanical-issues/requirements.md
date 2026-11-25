@@ -120,5 +120,9 @@ The Claude Code value of `ALTERNATIVES_CONCURRENCY` keeps its one uncapped messa
 
 The missions tool's `tasks` query gains a flag that prints every task line but the bars of only the N newest tasks (for example, `--with-body --bodies N`). An older task prints as its title line alone, the form a commit with no body already takes, so one parser reads the result. All five readers (`finish-mission`, `derive-tasks`, `ask-in-mission-context`, `submit-task`, `discuss-new-task`) pass one literal N in their fixed call, so every completed task's title stays in front of every reader and the duplicate checks stay complete while the cost of the bars is capped.
 
+### Project record read size
+
+The missions tool stays unchanged, and `discuss-mission-goal` replaces its `record .` with the two-tier read the starting-state procedure already uses: one fixed, unconditional `missions .` overview (one line per mission, its state, date, path, and title), then, at the runner's discretion, `summary` on a mission whose line bears on the goal, or `record <path>` on the directory the goal concerns once the placement is in view. The unconditional read thereby drops to one line per mission while still naming every mission recorded.
+
 ## Out of Scope
 
