@@ -156,6 +156,25 @@ test('a single-task line is exactly one headless line holding <Task Title>', () 
   assert.strictEqual(runs(own(), 'Single task (Antigravity)').singleTask, true);
 });
 
+test('a variant holds exactly one interactive line when its one line ends in the # interactive mark, and no chain or headless line is one', () => {
+  const recipes = parseShippedRecipes(fs.readFileSync(SHIPPED_RECIPES, 'utf8'), SHIPPED_RECIPES);
+  const single = recipes.flatMap((recipe) => recipe.variants.filter((each) => each.singleInteractive).map((each) => `${recipe.name}/${each.name}`));
+  assert.deepStrictEqual(single, [
+    'Execute tasks/Normal difficulty',
+    'Execute tasks/Critical tasks',
+    'discuss-open-question/default',
+    'discuss-mission-goal/default',
+    'discuss-new-task/default',
+    'ask-in-mission-context/default',
+    'capture-mission-principle-updates/default',
+  ]);
+  for (const name of ['First run', 'Approve all standing recommendations and review again', 'Prepare and Execute tasks', 'Finish mission', 'answer-open-question']) {
+    assert.ok(!byName(recipes, name).variants.some((each) => each.singleInteractive), `${name} holds no variant of one interactive line`);
+  }
+  assert.strictEqual(runs(shipped(), 'Interactive task line').singleInteractive, true);
+  assert.strictEqual(runs(shipped(), 'Single task (Claude Code)').singleInteractive, false, 'a single-task line is headless');
+});
+
 test('a line is headless when it holds a gurita: invocation and no # interactive mark', () => {
   assert.strictEqual(isHeadless('claude -p "/gurita:derive-tasks --mission <path>";'), true);
   assert.strictEqual(isHeadless("codex exec '$gurita:derive-tasks --mission <path>';"), true);

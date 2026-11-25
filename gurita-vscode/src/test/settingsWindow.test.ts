@@ -876,3 +876,36 @@ test('an install request naming no harness, or no scope Claude Code offers, star
   assert.strictEqual(terminals.length, created, 'no terminal is created');
   assert.strictEqual(pluginRuns.pluginRunGoing(), undefined);
 });
+
+test('a Claude Desktop pick in the harness dropdown stores the line rewritten as a custom N variant, and one on a line of a chain writes nothing', async () => {
+  const window = openWindow();
+  const store = path.join(home, '.gurita', 'variants.json');
+  const kept = fs.existsSync(store) ? fs.readFileSync(store, 'utf8') : undefined;
+  try {
+    let from = window.posted.length;
+    sendSettings({ type: 'replaceLineHarness', recipe: 'First run', variant: { name: 'default', origin: 'shipped' }, line: 3, harness: 'claude-desktop' });
+    sendSettings({ type: 'replaceLineHarness', recipe: 'Finish mission', variant: { name: 'default', origin: 'shipped' }, line: 0, harness: 'claude-desktop' });
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    assert.strictEqual(fs.existsSync(store) ? fs.readFileSync(store, 'utf8') : undefined, kept, "a pick on a chain's interactive line or a headless line writes nothing");
+    assert.deepStrictEqual(postedOf(window, 'variants', from), [], 'and posts nothing');
+    from = window.posted.length;
+    sendSettings({ type: 'replaceLineHarness', recipe: 'Execute tasks', variant: { name: 'Normal difficulty', origin: 'shipped' }, line: 0, harness: 'claude-desktop' });
+    await until(() => postedOf(window, 'variants', from).length > 0, 'the pick is posted to the window');
+    const stored = JSON.parse(fs.readFileSync(store, 'utf8')).variants as { recipe: string; name: string; lines: string[] }[];
+    assert.deepStrictEqual(
+      stored.filter((each) => each.recipe === 'Execute tasks').map((each) => [each.name, each.lines]),
+      [['custom 1', ['claude-desktop "/gurita:complete-all-tasks --mission <path>"; # interactive']]],
+      'the rewritten line is stored as custom 1 in the variant store',
+    );
+    const listed = (postedOf(window, 'variants', from)[0].variants as { recipes: { name: string; variants: { name: string; lines: string[] }[] }[] }).recipes.find(
+      (each) => each.name === 'Execute tasks',
+    );
+    assert.deepStrictEqual(listed?.variants.map((each) => each.name), ['Normal difficulty', 'Critical tasks', 'custom 1'], 'the shipped variant stays listed beside its custom');
+  } finally {
+    if (kept === undefined) {
+      fs.rmSync(store, { force: true });
+    } else {
+      fs.writeFileSync(store, kept);
+    }
+  }
+});

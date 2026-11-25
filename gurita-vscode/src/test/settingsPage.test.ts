@@ -1252,6 +1252,55 @@ test("a pick in a line's dropdown posts the line, the kind, and the value, and t
   }, 'a stored copy is named as listed');
 });
 
+test("a line posted with Claude Desktop among its harnesses draws it last in its harness dropdown, and a pick of it posts the line and claude-desktop", () => {
+  const page = loadSettings();
+  page.send(harnessListsMessage(LISTS));
+  const execute = 'claude "/gurita:complete-all-tasks --mission <path>" --dangerously-skip-permissions --model "opus" --effort high; # interactive';
+  page.send({
+    type: 'variants',
+    variants: {
+      state: 'read',
+      recipes: [
+        {
+          name: 'Execute tasks',
+          group: 'shipped',
+          fixed: false,
+          variants: [
+            {
+              name: 'Normal difficulty',
+              origin: 'shipped',
+              lines: [execute],
+              editors: [{ harness: 'claude', model: 'opus', effort: 'high', harnesses: [...H3, 'claude-desktop'] }],
+              rows: [{ skill: 'complete-all-tasks', interactive: true, harness: 'claude' }],
+              isDefault: true,
+            },
+            {
+              name: 'In a chain',
+              origin: 'own',
+              lines: [CLAUDE_LINE, execute],
+              editors: [{ harness: 'claude', model: 'fable', effort: 'xhigh', harnesses: H3 }, { harness: 'claude', model: 'opus', effort: 'high', harnesses: H3 }],
+              rows: [
+                { skill: 'review-mission-requirements', interactive: false, harness: 'claude' },
+                { skill: 'complete-all-tasks', interactive: true, harness: 'claude' },
+              ],
+              isDefault: false,
+            },
+          ],
+          hidden: [],
+        },
+      ],
+    },
+  });
+  assert.deepStrictEqual(lineRows(page)[0][1][0], ['line-harness', ['Claude Code', 'Antigravity', 'Codex', 'Claude Desktop'], 'Claude Code']);
+  assert.deepStrictEqual(lineRows(page)[2][1][0], CC_HARNESS, 'a line posted without Claude Desktop is not offered it');
+  const count = page.posted.length;
+  focused(page, 'line-harness-0-0-0').change('claude-desktop');
+  focused(page, 'line-harness-0-1-1').change('claude-desktop');
+  assert.deepStrictEqual(page.posted.slice(count), [
+    { type: 'replaceLineHarness', recipe: 'Execute tasks', variant: { name: 'Normal difficulty', origin: 'shipped' }, line: 0, harness: 'claude-desktop' },
+  ], 'a pick not offered posts nothing');
+});
+
 test("a pick in a line's harness dropdown posts the line and the harness, Codex offered on a headless line alone, a line without both flags getting none, and the row is redrawn only from what the extension posts", () => {
   const page = loadSettings();
   page.send(harnessListsMessage(LISTS));

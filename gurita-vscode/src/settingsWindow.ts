@@ -66,7 +66,8 @@
 // dropdown and, when it also carries the override, its effort dropdown, and every other line is
 // shown as its text, read-only; one of these lines, headless or interactive, a Codex one opening
 // `codex exec` or a bare `codex '$gurita:…'`, gets a harness dropdown offering Claude Code,
-// Antigravity, and Codex, and any other Codex line keeps its harness as text. A model or effort pick replaces the value the line carries
+// Antigravity, and Codex, Claude Desktop after them on the line of a variant holding exactly one
+// line, an interactive one, and any other Codex line keeps its harness as text. A model or effort pick replaces the value the line carries
 // through the store's edit (`replaceLineValue`), a harness pick rewrites the line onto the picked
 // harness (`replaceLineHarness`), a shipped, project, or own variant left untouched and a `custom N` holding
 // the changed line added beside it, a stored variant changed in place. The window also edits the
@@ -125,7 +126,7 @@ import {
   readHarnessStates,
   setHarnessEnabled,
 } from './harnessSettings';
-import { SwitchableHarness } from './lineValues';
+import { HarnessOffer, SwitchableHarness } from './lineValues';
 import { CHECK_SCRIPT, CheckResult, CliHarnessKey, HARNESSES, PLUGIN_VERSION_FILE, isCliHarnessKey, readPackagedVersion, runHarnessCheck } from './harnessCheck';
 import { pageShell, recipeFiles, recipesChanged, startLiveRead, startingRoot, webviewOptions } from './pane';
 import {
@@ -943,16 +944,23 @@ function listedEditor(
   return listed?.variants.find((each) => isTarget(each, named))?.editors[line];
 }
 
-/** The harnesses a line's harness dropdown picks between, by key, each with the command its lines open with. */
-const SWITCHABLE: readonly { key: CliHarnessKey; cli: SwitchableHarness }[] = [
+/**
+ * The harnesses a line's harness dropdown picks between, by key, each with the word its lines open
+ * with: the three CLIs, and Claude Desktop, offered only on the line of a variant holding exactly
+ * one line, an interactive one (`lineEditor`).
+ */
+const SWITCHABLE: readonly { key: CliHarnessKey | 'claude-desktop'; cli: SwitchableHarness }[] = [
   { key: 'claude', cli: 'claude' },
   { key: 'antigravity', cli: 'agy' },
   { key: 'codex', cli: 'codex' },
+  { key: 'claude-desktop', cli: 'claude-desktop' },
 ];
 
 /**
  * Rewrites line `line` of the variant `variant` of the recipe `recipe` onto the harness `harness`,
- * Claude Code, Antigravity, or Codex, picked in the line's harness dropdown in the Settings window,
+ * Claude Code, Antigravity, Codex, or, on a variant of one interactive line, Claude Desktop, whose
+ * rewrite drops the line's model, effort, and bypass flag and reads no lists, picked in the line's
+ * harness dropdown in the Settings window,
  * through the store's edit (`replaceLineHarness`): the line's prompt and its headless or
  * interactive form kept, its model the picked harness's first listed model, and its effort kept
  * where that harness's effort list offers it and otherwise the first listed, a line switched onto
@@ -1000,15 +1008,18 @@ async function editLineHarness(
   ) {
     return;
   }
-  const lists = readListsOf(context);
-  if (lists.state === 'failed') {
-    void vscode.window.showErrorMessage(`The harness lists could not be read: ${lists.cause}`);
-    return;
+  let offer: HarnessOffer = { models: [], efforts: [] };
+  if (picked.key !== 'claude-desktop') {
+    const lists = readListsOf(context);
+    if (lists.state === 'failed') {
+      void vscode.window.showErrorMessage(`The harness lists could not be read: ${lists.cause}`);
+      return;
+    }
+    offer = { models: lists.lists[picked.key].models, efforts: lists.lists[picked.key].efforts };
   }
   if (settingsPanel !== target) {
     return;
   }
-  const offer = { models: lists.lists[picked.key].models, efforts: lists.lists[picked.key].efforts };
   try {
     const files = recipeFiles(context);
     replaceLineHarness(files.store, readRecipes(files.shipped, files.own, undefined, files.project), recipe, named, line, picked.cli, offer);

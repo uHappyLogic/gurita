@@ -33,7 +33,8 @@
 // model control and, when it also carries the override `-c model_reasoning_effort=<level>`, its
 // effort control, every other line shown as its text, read-only; one of these lines, headless or
 // interactive, a Codex one opening `codex exec` or a bare `codex '$gurita:…'`, gets a harness
-// control picking between Claude Code, Antigravity, and Codex, and any other Codex line keeps its
+// control picking between Claude Code, Antigravity, and Codex, Claude Desktop after them on the
+// line of a variant holding exactly one line, an interactive one, and any other Codex line keeps its
 // harness. A harness pick (`replaceLineHarness`) rewrites the
 // line onto the picked harness as `rewriteHarness` in `lineValues.ts` does, with that harness's
 // lists as the settings view offers them, and stores the changed line as a model or effort pick
@@ -51,7 +52,7 @@
 // may be no name a recipe or line carries, since the looped run, the rule file, and the override
 // list name a line by it alone. This module imports nothing from `vscode`.
 
-import { CLI_HARNESSES, CliHarnessKey, HARNESSES, Harness as CheckedHarness } from './harnessCheck';
+import { CLI_HARNESSES, CliHarnessKey, DESKTOP_HARNESS, HARNESSES, Harness as CheckedHarness } from './harnessCheck';
 import { HarnessOffer, LineValues, SwitchableHarness, harnessChoices, readLine, readSkill, replaceEffort, replaceModel, rewriteHarness } from './lineValues';
 import {
   Recipe,
@@ -195,9 +196,12 @@ export interface LineEditor {
  * the line shown as its text, read-only, for every other line, a line of a known harness without
  * both flags included. Its harness control picks between the harnesses `harnessChoices` gives the
  * line: Claude Code, Antigravity, and Codex for a headless or interactive line, and none for a
- * Codex line neither opening `codex exec` nor a bare `codex '$gurita:…'`.
+ * Codex line neither opening `codex exec` nor a bare `codex '$gurita:…'`. Claude Desktop is offered
+ * after them only when `singleInteractive` is set, the line being the one line of a variant that
+ * holds exactly one line, an interactive one (`Variant.singleInteractive`), and `rewriteHarness`
+ * rewrites the line onto it, so no line of a chain and no headless line is offered it.
  */
-export function lineEditor(line: string): LineEditor | undefined {
+export function lineEditor(line: string, singleInteractive = false): LineEditor | undefined {
   const read = readLine(line);
   if (read === undefined || read.model === undefined) {
     return undefined;
@@ -212,9 +216,17 @@ export function lineEditor(line: string): LineEditor | undefined {
   const editor: LineEditor = read.effort === undefined ? { harness, model: read.model } : { harness, model: read.model, effort: read.effort };
   const choices = harnessChoices(line);
   if (choices !== undefined) {
-    editor.harnesses = HARNESSES.filter((each) => (choices as readonly string[]).includes(each.cli)).map((each) => each.key);
+    const desktop = singleInteractive && desktopRewritable(line);
+    editor.harnesses = HARNESSES.filter(
+      (each) => (choices as readonly string[]).includes(each.cli) || (desktop && each.key === DESKTOP_HARNESS.key),
+    ).map((each) => each.key);
   }
   return editor;
+}
+
+/** Whether `rewriteHarness` rewrites `line` onto Claude Desktop, which reads no model or effort offer. */
+function desktopRewritable(line: string): boolean {
+  return rewriteHarness(line, 'claude-desktop', { models: [], efforts: [] }) !== undefined;
 }
 
 /**
@@ -322,7 +334,7 @@ function settingsVariants(
     return {
       ...variantTarget(variant),
       lines: [...variant.lines],
-      editors: variant.lines.map((line) => lineEditor(line) ?? null),
+      editors: variant.lines.map((line) => lineEditor(line, variant.singleInteractive) ?? null),
       rows: variant.lines.map((line) => lineRow(line) ?? null),
       isDefault: variant === standing,
       ...(resettable ? { from: source } : {}),
@@ -537,8 +549,9 @@ export function replaceLineValue(
 }
 
 /**
- * Rewrites line `index` of the variant `target` onto the harness `harness`, `claude`, `agy`, or
- * `codex`, as `rewriteHarness` does with `offer`, that harness's model and effort lists: the line's
+ * Rewrites line `index` of the variant `target` onto the harness `harness`, `claude`, `agy`,
+ * `codex`, or `claude-desktop`, as `rewriteHarness` does with `offer`, that harness's model and
+ * effort lists, which Claude Desktop does not read: the line's
  * prompt and its headless or interactive form kept, its model the first listed, and its effort kept
  * where the list offers it and otherwise the first listed, a line switched onto Codex while the
  * list offers no effort carrying no effort override. The changed line is stored as a model or
@@ -546,7 +559,9 @@ export function replaceLineValue(
  * neither opening `codex exec` nor a bare `codex '$gurita:…'`, a line without both `--model` and
  * `--effort`, a shell step), a line the variant lacks, and an offer listing no model, or no effort
  * for Claude Code or Antigravity, are refused, nothing written; a line already on `harness` writes
- * nothing.
+ * nothing. Onto Claude Desktop only the line of a variant holding exactly one line, an interactive
+ * one, is rewritten, a line of a chain and a headless line refused, so a pick on a shipped,
+ * project, or own variant stores the rewritten line as a `custom N` beside it.
  */
 export function replaceLineHarness(
   storeFile: string,
@@ -562,6 +577,11 @@ export function replaceLineHarness(
   const line = variant.lines[index];
   if (line === undefined) {
     throw new VariantEditError(`The ${describe(target)} of the action recipe ${recipe.name} has no line ${index + 1}.`);
+  }
+  if (harness === 'claude-desktop' && !variant.singleInteractive) {
+    throw new VariantEditError(
+      `Line ${index + 1} of the ${describe(target)} of the action recipe ${recipe.name} cannot be switched onto ${harness}: only a variant of one interactive line can.`,
+    );
   }
   let changed: string | undefined;
   try {
