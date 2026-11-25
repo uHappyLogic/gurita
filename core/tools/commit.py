@@ -27,12 +27,19 @@ Steps, each run only when the one before it succeeded:
      removal a failed earlier run of the same call left behind) is not removed again; its
      staged removal is recorded by the commit as it stands. Git refuses to remove a tracked
      file holding a change of its own, so a removal never discards uncommitted work
-  3. the path-scoped stage, "git add -- PATH...", staging exactly the named paths, run only
-     when a PATH is given
-  4. the commit, "git commit -m SUBJECT [-m BODY] -- PATH... REMOVED...", with the named paths
-     and the paths to remove together as its pathspec, so the one commit records the
-     removals and those paths and nothing else whatever else the index holds, and every
-     other staged change stays staged and uncommitted
+  3. the path-scoped stage: for each named PATH, "git ls-files --cached --others -- PATH", a
+     read run with git's optional locks off and never repeated, which tells whether the index
+     or the working tree still holds a file under it, then "git add -- HELD...", staging
+     exactly the named paths that are still held, skipped when none is. A named path neither
+     holds, one "git rm" or "git mv" already took out of the index, is not staged: its staged
+     removal is recorded by the commit as it stands. A path git knows nowhere, a mistyped
+     one, is not staged either, and the commit's pathspec refuses it
+  4. the commit, "git commit -m SUBJECT [-m BODY] -- PATH... REMOVED...", with every named
+     path, held or not, and the paths to remove together as its pathspec, so the one commit
+     records the removals and those paths and nothing else whatever else the index holds,
+     and every other staged change stays staged and uncommitted; git matches the pathspec
+     against HEAD as well as the index, so a path recorded only as a staged removal is
+     matched, while a path matching nothing in either is refused with git's exit 1
 
 The paths are given either as arguments (behind "--" when one may begin with "-") or, with
 --path-file, in a file holding one path per line, never both. A path file is read
@@ -43,7 +50,7 @@ path per option, repeated for each, beside either form or alone. However they ar
 paths reach every git command as separate arguments, read literally rather than as
 patterns, so a path holding a glob character names that one file only. No path is checked
 beyond that: git reports a path it cannot use. A call without --remove runs exactly steps 1,
-3, and 4 over its named paths, the guard's status alone and no ls-files.
+3, and 4 over its named paths, the guard's status alone with no ls-files of a removal.
 
 SUBJECT is the commit's one-line subject, passed to git as given. BODY, when given and holding
 anything but whitespace, is the commit's body, passed to git as given, line breaks included;
@@ -230,8 +237,16 @@ def commit(args):
         if result.returncode != 0:
             raise failure("rm", result, attempts)
 
-    if paths:
-        result, attempts = write(["add", "--", *paths])
+    held = []
+    for path in paths:
+        listing = git(["ls-files", "--cached", "--others", "--", path], guard_environment)
+        if listing.returncode != 0:
+            raise failure("ls-files", listing)
+        if listing.stdout.strip():
+            held.append(path)
+
+    if held:
+        result, attempts = write(["add", "--", *held])
         if result.returncode != 0:
             raise failure("add", result, attempts)
 
@@ -251,10 +266,10 @@ def build_parser():
         description=(
             "Commit exactly the named paths, with those paths as the commit's pathspec: a "
             "status guard over them, git rm -r -q of each path given as --remove, a "
-            "path-scoped git add of the other paths, and one git commit over the removals and "
-            "those paths together, each git write repeated on a fixed schedule while git exits "
-            "128. Prints nothing when the commit lands and one fixed line when none of the paths "
-            "changed."
+            "path-scoped git add of the other paths the index or the working tree still "
+            "holds, and one git commit over the removals and every named path together, each "
+            "git write repeated on a fixed schedule while git exits 128. Prints nothing when "
+            "the commit lands and one fixed line when none of the paths changed."
         ),
     )
     parser.add_argument(

@@ -160,10 +160,11 @@ requirements the task did not ask for.
 `{{CONTEXT_FILE}}`. At minimum, apply the project's way of verifying the change and fix any
 problems before continuing.
 
-**Record the paths you touch.** As you create or edit each file while carrying out the
-task, keep an explicit running list of those paths — recorded as each edit is made, never
-reconstructed afterwards by diffing the working tree. This recorded set is the task's real
-change set.
+**Record the paths you touch.** As you create, edit, delete, rename, or move each file while
+carrying out the task, keep an explicit running list of those paths — a deleted file's path,
+and both the old and the new path of a renamed or moved file — recorded as each change is
+made, never reconstructed afterwards by diffing the working tree. This recorded set is the
+task's real change set.
 
 **Tool patterns:**
 - Read or edit a file: `Read` then `Edit`.

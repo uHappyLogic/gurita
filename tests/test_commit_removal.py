@@ -4,7 +4,8 @@ paths are staged, and one commit with the removals and those paths as its pathsp
 them together and nothing else. Git runs through a logging wrapper put first on PATH, so every
 test sees the git commands the tool really ran; the lock tests hold a real index.lock, and the
 repeat test has the wrapper fail the removal itself with 128 a set number of times. A call
-without the option runs exactly the commands it ran before the option existed."""
+without the option runs no removal and no read of one: the guard's status, the stage's
+per-path ls-files reads, the add, and the commit."""
 
 import shlex
 import shutil
@@ -188,8 +189,9 @@ def test_the_removal_runs_before_the_stage_and_the_commit_names_the_paths_and_th
     result = run_commit(project, "--subject", "Ordered", "--remove", "mission_first/", "--", "README.md", env=env)
     assert_landed(result)
     logged_calls = calls()
-    assert subcommands(logged_calls) == ["status", "ls-files", "rm", "add", "commit"]
+    assert subcommands(logged_calls) == ["status", "ls-files", "rm", "ls-files", "add", "commit"]
     assert [locks for locks, _, _ in logged_calls[:2]] == ["0", "0"]
+    assert logged_calls[3][0] == "0"
     assert of(logged_calls, "status")[0][2] == ["--literal-pathspecs", "status", "--porcelain", "--", "README.md", "mission_first/"]
     assert of(logged_calls, "rm")[0][2] == ["--literal-pathspecs", "rm", "-r", "-q", "--", "mission_first/"]
     assert of(logged_calls, "add")[0][2] == ["--literal-pathspecs", "add", "--", "README.md"]
@@ -340,7 +342,7 @@ def test_a_removal_left_staged_by_a_failed_commit_is_recorded_by_the_next_run(ru
     calls.reset()
     result = run_commit(project, *arguments, env=env)
     assert_landed(result)
-    assert subcommands(calls()) == ["status", "ls-files", "add", "commit"]
+    assert subcommands(calls()) == ["status", "ls-files", "ls-files", "add", "commit"]
     assert changes(git, project, environment) == sorted(deleted(FIRST) + ["M\tREADME.md"])
     assert status(git, project, environment) == []
 
@@ -390,20 +392,22 @@ def test_the_help_text_states_the_removal(run_commit, project):
 # --- every call without the option ------------------------------------------------------
 
 
-def test_a_call_without_the_option_runs_exactly_the_commands_it_ran_before(run_commit, project, git, environment, logged):
+def test_a_call_without_the_option_runs_no_removal_command(run_commit, project, git, environment, logged):
     env, calls = logged()
     (project / "README.md").write_bytes(b"# An edited project\n")
     result = run_commit(project, "--subject", "Plain", "--body", "A body", "--", "README.md", "notes/a.md", env=env)
     assert_landed(result)
     assert calls() == [
         ("0", "status", ["--literal-pathspecs", "status", "--porcelain", "--", "README.md", "notes/a.md"]),
+        ("0", "ls-files", ["--literal-pathspecs", "ls-files", "--cached", "--others", "--", "README.md"]),
+        ("0", "ls-files", ["--literal-pathspecs", "ls-files", "--cached", "--others", "--", "notes/a.md"]),
         ("", "add", ["--literal-pathspecs", "add", "--", "README.md", "notes/a.md"]),
         ("", "commit", ["--literal-pathspecs", "commit", "-m", "Plain", "-m", "A body", "--", "README.md", "notes/a.md"]),
     ]
     assert changes(git, project, environment) == ["M\tREADME.md"]
 
 
-def test_a_path_file_call_without_the_option_runs_exactly_the_commands_it_ran_before(run_commit, project, git, environment, logged, tmp_path):
+def test_a_path_file_call_without_the_option_runs_no_removal_command(run_commit, project, git, environment, logged, tmp_path):
     env, calls = logged()
     (project / "notes" / "a.md").write_bytes(b"a changed\n")
     path_file = tmp_path / "paths.txt"
@@ -412,6 +416,8 @@ def test_a_path_file_call_without_the_option_runs_exactly_the_commands_it_ran_be
     assert_landed(result)
     assert calls() == [
         ("0", "status", ["--literal-pathspecs", "status", "--porcelain", "--", "notes/a.md", "notes/b.md"]),
+        ("0", "ls-files", ["--literal-pathspecs", "ls-files", "--cached", "--others", "--", "notes/a.md"]),
+        ("0", "ls-files", ["--literal-pathspecs", "ls-files", "--cached", "--others", "--", "notes/b.md"]),
         ("", "add", ["--literal-pathspecs", "add", "--", "notes/a.md", "notes/b.md"]),
         ("", "commit", ["--literal-pathspecs", "commit", "-m", "From a file", "--", "notes/a.md", "notes/b.md"]),
     ]

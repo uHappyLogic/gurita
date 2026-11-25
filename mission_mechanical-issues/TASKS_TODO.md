@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Commit Tool Commits Paths the Index Dropped
-
-In `core/tools/commit.py`, ahead of the path-scoped `git add`, ask git, through a read with optional locks off as the guard already does, which named paths the working tree or the index still holds, run `git add` over those paths only, skipping the add when none is left, and keep every named path in the commit's pathspec, so a path `git rm` or `git mv` already took out of the index is recorded as the staged removal it is instead of exiting 128 on all 16 attempts; widen the completion procedure's "Record the paths you touch" sentence from creating or editing to a deleted file's path and both the old and the new path of a renamed or moved file. It closes the draft's GITRM entry, and is verified by a new test in the commit-tool suite that reproduces the `git rm` and `git mv` failure and pins that it now commits, a path git knows nowhere still refused at the commit with git's exit 1, with the tool's contract text and CLAUDE.md recording the change.
-
----
-
 ## Inline Completion Call Feeds Paths by Heredoc
 
 Give the commit tool's path-file reader `-` for standard input, and change only the inline `complete-task` skill's call to pass its recorded paths and `<MISSION_DIR>/TASKS_TODO.md` as `--path-file -` fed by a quoted heredoc, one path per line, the same line-exact form the agent's path file already has, so a project path holding a space or shell syntax no longer reaches the commit tool's command line (the project-path half of the draft's PATH entry). The commit procedure's command stays unquoted, CLAUDE.md recording the reason that its paths are plugin-named; verified by commit-tool tests of the `-` form and by the completion call's fixed-call test running the changed fence.
