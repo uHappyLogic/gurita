@@ -205,6 +205,46 @@
   </open-question>
   <open-question id="Over-long Desktop prompt">
     <question>What does Gurita for VS Code do when an action&apos;s prompt, with the values the person typed written into it (a goal, an issue description, a question), is longer than Claude Desktop accepts from outside, the `claude://code/new` link cutting its prompt at 14,336 characters?</question>
+    <alternative id="Send as is">
+      No length check in the extension, now or later in this mission: the prompt, with the typed values written in, is sent to Claude Desktop whatever its length, and Desktop&apos;s own handler cuts it at its limit (14,336 characters for the `claude://code/new` link). Nothing is shown about the length, and USAGE.md at most states the limit.
+      <advantage>No code, no test, and no message for a case the shipped actions hardly reach: each single-interactive-line action&apos;s prompt is a short skill invocation (`/gurita:discuss-mission-goal`, `discuss-new-task`, `ask-in-mission-context`, `discuss-open-question`, and the rest) followed by one typed value, so only a value of some two thousand words or more, such as an issue description with a pasted log, comes near the limit.</advantage>
+      <drawback>When the limit is passed the cut is silent and falls in the typed value, which stands last in every shipped prompt, so the Desktop session starts on a goal, issue description, or question missing its tail without the person or the model knowing; and the limit depends on the mechanism chosen under the session-opening sibling, so the documented figure may not be the one that applies.</drawback>
+    </alternative>
+    <alternative id="Refuse the send">
+      Before sending, the extension builds the prompt with the typed values written in, measures it as Desktop measures it, and when it passes the limit sends nothing, telling the person the prompt&apos;s length and the limit so they can shorten the value or pick a terminal variant of the action themselves.
+      <advantage>No prompt ever reaches Desktop cut, and the rule is one comparison against one constant at the one place the Desktop send is made, easy to pin in a unit test.</advantage>
+      <drawback>The value the person typed is lost with the refused click unless it is kept for the next try, the input panel resolving and closing on Run, so a long description has to be typed or pasted again; and the limit&apos;s figure rests on the session-opening mechanism a sibling question chooses.</drawback>
+    </alternative>
+    <alternative id="Refuse and offer terminal">
+      The same check before sending, and on a prompt past the limit nothing is sent to Desktop; the message offers, beside cancelling, to run the same action in a VS Code terminal as an ordinary tracked run of its interactive `claude` line, with the value already typed, where no such limit applies.
+      <advantage>The person&apos;s typed value is never lost and the action still runs in one more click, while nothing is cut and nothing switches harness without their say.</advantage>
+      <drawback>The terminal session gives up exactly the visual and sound artifacts Desktop was selected for, and the offer needs a terminal line for the action, which an action whose selected variant was rewritten for Desktop must still yield, a dependency on how the Desktop-selection sibling settles.</drawback>
+    </alternative>
+    <alternative id="Fall back to terminal">
+      The same check before sending, and on a prompt past the limit the extension runs the action in a VS Code terminal instead, without asking, as an ordinary tracked run with the value typed, telling the person in one notice that the prompt was too long for Claude Desktop.
+      <advantage>The click always runs the action with the whole value and costs the person no extra decision.</advantage>
+      <drawback>The person who chose Desktop silently loses its artifacts on the one action they gave the most text to, and one click then sometimes starts a tracked terminal run and sometimes an untracked Desktop send, so the page&apos;s disabled buttons and refusal of a second click behave differently by input length.</drawback>
+    </alternative>
+    <alternative id="Send and warn">
+      The same check before sending, and on a prompt past the limit the prompt is still sent, cut at the limit by Desktop or by the extension at the same point, and the person is told that the session received only the first part of what was typed, the rest left out.
+      <advantage>Desktop is always opened as selected, so a person who mostly needs the session and its artifacts can paste the rest into it by hand, and the cut is no longer silent.</advantage>
+      <drawback>The model may already be acting on the cut prompt before the person reads the warning, if Desktop sends a prefilled prompt rather than leaving it to be sent, which the hands-on check has not yet observed; and the session then rests on a partial goal or description.</drawback>
+    </alternative>
+    <alternative id="Cap at input">
+      Where an action&apos;s selected variant goes to Desktop, the input panel shows the room left for the value (the limit less the rest of the prompt) and refuses Run past it on the page, keeping the text, and the same check before sending refuses any prompt still past the limit through a value typed outside the panel, such as a question or a discussion note asked in an input box.
+      <advantage>The person learns of the limit while typing, with the text still in front of them to shorten, so no value is lost and no click is refused after the fact.</advantage>
+      <drawback>The input panel, today harness-blind, comes to know the action&apos;s harness and the rest of its prompt, and the send-time check is still needed beside it, so two places carry the rule and its tests; the figure rests on the session-opening sibling&apos;s mechanism.</drawback>
+    </alternative>
+    <alternative id="Clipboard handoff">
+      The same check before sending, and on a prompt past the limit the extension puts the whole prompt on the clipboard and opens the Desktop session on the project&apos;s folder with no prompt, telling the person to paste it there; a prompt within the limit is sent prefilled as usual.
+      <advantage>The whole value reaches the Desktop session with its artifacts, with no length cap at all and no file written.</advantage>
+      <drawback>It adds a manual paste the ordinary send does not need and overwrites whatever the person had on the clipboard, and it rests on Desktop opening a session on a folder alone, which the Finder service form suggests but the hands-on check has not observed.</drawback>
+    </alternative>
+    <alternative id="Value in a file">
+      The same check before sending, and on a prompt past the limit the extension writes the typed value to a file in the system temp location and sends a prompt in which the value is replaced by a sentence naming that file for the session to read; a prompt within the limit is sent as usual.
+      <advantage>The session opens in Desktop on the project&apos;s folder with the whole value reachable and no step for the person, whatever the value&apos;s length.</advantage>
+      <drawback>The skill receives a pointer where it expects the literal goal, issue description, or question, so its handling rests on the model reading the file before it parses its text, which no skill states; and the Desktop session may need permission to read a file outside the project&apos;s folder, while a file inside it would dirty the tree.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Desktop send feedback">
     <question>Sending an action to Claude Desktop is fire-and-forget, with no run tracked. What does the person see in VS Code after the click: anything at all on a send that went out, and what on a send that failed, such as Claude Desktop not being installed or the link not being handled?</question>
