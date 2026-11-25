@@ -144,5 +144,9 @@ The commit tool changes and the completion procedure gains one sentence. In `cor
 
 The task-list tool gains a `replace` subcommand, `python3 {{PLUGIN_ROOT}}/tools/task_list.py replace <MISSION_DIR> "<Task Title>"`, which rewrites the body of the one section whose title it matches exactly after whitespace and case folding, the new body on stdin as a quoted heredoc, keeping the section's heading, its position, and its `---`, and refusing an unmatched or shared title or an empty body with the file unchanged, as the fold tool's `replace` rewrites one subsection. The title cannot change. The completion procedure gains a stated step allowing its runner, after a finding, to rewrite a later queued task's brief through that one call, and the revision rides in the running task's `Task-completion:` commit, `TASKS_TODO.md` already being on the agent's path file and in the inline call's pathspec. CLAUDE.md's task-list invariant names the fourth subcommand and keeps the tool the list's only writer, and a new `tests/` file pins the subcommand.
 
+### Agent return without token
+
+The `complete-task` agent's file gains one host-neutral rule aimed at the recorded cause, beside its return protocol: run every command the procedure needs in the foreground and wait for it within the call, never end a turn while a process it started is still running, and end the session only on the `DONE` or `FAILED:` line. The shared completion procedure, which the inline skill also follows, and `complete-all-tasks` stay unchanged, so a return without a token still stops the run on its existing line, which remains the fail-safe for what still slips through.
+
 ## Out of Scope
 
