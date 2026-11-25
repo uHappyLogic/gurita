@@ -64,5 +64,9 @@ Every node, and every description a parent node gives of a folder whose `README.
 
 A pointer is a line of one fixed form of the project's own, for example ``- → `docs/workflow.md#heading` — when-to-follow note``: a backticked repo-relative path with an optional heading-slug anchor, followed by its when-to-follow note. Pointers stand only on such lines, a node's pointers to what lies below it as a list of them and a cross-reference from one rule to another as such a line beneath the rule. Every other mention of a file, in backticks or as a Markdown link, is ordinary prose the check does not resolve.
 
+### Covered folder rule
+
+Every tracked top-level folder, the root `mission_*/` directories left out, must be covered: by a `README.md` node of its own or, where that name is taken or rendered, by a description in the root. Below the top level no folder is required to have a node. Any `README.md` node that does stand deeper in the tree must be pointed at from its parent folder's node, or from the nearest ancestor node where the parent has none, so a deeper node exists only by choice and is never orphaned.
+
 ## Out of Scope
 
