@@ -117,7 +117,7 @@ required_agent_frontmatter = { tools = [
 renames = []
 
 # Paths relative to core/ (files or whole directories) left out of this host's tree.
-exclude = ["tools/README.md", "shared/README.md"]
+exclude = ["tools/README.md", "shared/README.md", "agents/README.md"]
 
 # Where each top-level directory of core/ lands, relative to the host tree root. Every
 # top-level directory of core/ must appear here.
