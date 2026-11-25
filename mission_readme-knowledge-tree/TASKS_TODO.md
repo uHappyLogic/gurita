@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Write The Test Suite Nodes
-
-Write `tests/README.md` and `host_tests/README.md`, the nodes for the tool suite and the on-demand host suite: how each suite is organised and run, from what today's `CLAUDE.md` says of it in its layout, commands, and development points, in the fixed node parts and at most 12,000 bytes each, with a pointer line of the fixed form, its note at most 400 bytes, to every rule a suite pins in the node that states it, and no such rule restated. Verified by each node holding only the allowed headings in their order and staying within both byte limits, by every pointer resolving, and by both pytest runs still passing.
-
----
-
 ## Write The Remaining Top-Level Folder Nodes
 
 Write a `README.md` node in each of `.claude-plugin/`, `.claude/`, `assets/`, `ideas/`, and `snippets/`, from what today's `CLAUDE.md` says of the folder and from the files it holds as they stand, in the fixed node parts, at most 12,000 bytes each, every pointer a line of the fixed pointer form with a note of at most 400 bytes. Verified by each node holding only the allowed headings in their order and staying within both byte limits, by every pointer resolving, and by `uv run scripts/build_hosts.py --check` and both pytest runs still passing.
