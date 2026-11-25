@@ -64,5 +64,9 @@ No other live mission's scope overlaps this one's: `live` lists this mission alo
 
 ## Decisions
 
+### Short Title refused characters
+
+The open-question tool's `add` refuses, beside `/`, a new Short Title whose folded form holds `"`, `$`, a backtick, `\`, or any control character (C0 and DEL). The fixed calls stay as shown and gain no escaping rule for a new title: the one check at the point a title is created closes the file name, the double-quoted shell argument, and the control character that leaves the document unreadable, and it refuses no title a person would write.
+
 ## Out of Scope
 
