@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Queued Task Revision in the Completion Procedure
-
-Add a stated step to `core/shared/complete-procedure.md` allowing its runner, after a finding, to rewrite a later queued task's brief through the task-list tool's one `replace` call, the revision riding in the running task's `Task-completion:` commit since `TASKS_TODO.md` is already on the agent's path file and in the inline call's pathspec. Field runs rewrote the list by hand for want of such a step; verified by the rebuilt procedure showing the full fixed command, with `--check` and both pytest runs passing and CLAUDE.md recording the step.
-
----
-
 ## Refuse Heading Lines in Folded Bodies
 
 Make the fold tool refuse a `fold` or `replace` body holding a column-0 `## ` or `### ` line, with the file unchanged, and add one sentence to the answer core's fold step, the one home of a decision's content rules, that a folded decision or rewritten entry holds no such line. It closes the draft's FOLDBODY entry, where a body holding a `## Out of Scope` line left the file with two headings of that name; verified by tests in the fold tool's suite reproducing that case for both subcommands, with CLAUDE.md's fold-tool invariant recording the refusal and where the rule lives.
