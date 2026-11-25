@@ -5,6 +5,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import {
   disabledCommands,
+  harnessLists,
   harnessStates,
   isHarnessKey,
   readHarnessStates,
@@ -23,19 +24,29 @@ test('the module imports nothing from vscode', () => {
 });
 
 test('every harness starts enabled: a store with no harness part, or naming a harness without a state, disables none', () => {
-  assert.deepStrictEqual(harnessStates(emptyVariantStore(), FILE), { claude: true, antigravity: true, codex: true });
+  assert.deepStrictEqual(harnessStates(emptyVariantStore(), FILE), { claude: true, antigravity: true, codex: true, 'claude-desktop': true });
   const store = parseVariantStore(JSON.stringify({ harnesses: { claude: {}, kept: ['as', 'read'] } }), FILE);
-  assert.deepStrictEqual(harnessStates(store, FILE), { claude: true, antigravity: true, codex: true });
+  assert.deepStrictEqual(harnessStates(store, FILE), { claude: true, antigravity: true, codex: true, 'claude-desktop': true });
   assert.deepStrictEqual(disabledCommands(harnessStates(store, FILE)), []);
 });
 
 test('a harness disabled in the harness part reads disabled, and its lines are named by the command they open with', () => {
   const store = parseVariantStore(JSON.stringify({ harnesses: { antigravity: { enabled: false }, codex: { enabled: true } } }), FILE);
   const states = harnessStates(store, FILE);
-  assert.deepStrictEqual(states, { claude: true, antigravity: false, codex: true });
+  assert.deepStrictEqual(states, { claude: true, antigravity: false, codex: true, 'claude-desktop': true });
   assert.deepStrictEqual(disabledCommands(states), ['agy']);
-  assert.deepStrictEqual(disabledCommands({ claude: false, antigravity: false, codex: false }), ['claude', 'agy', 'codex']);
+  assert.deepStrictEqual(disabledCommands({ claude: false, antigravity: false, codex: false, 'claude-desktop': false }), ['claude', 'agy', 'codex', 'claude-desktop']);
   assert.ok(isHarnessKey('antigravity') && isHarnessKey('codex') && !isHarnessKey('agy') && !isHarnessKey(undefined));
+});
+
+test('Claude Desktop keeps an enabled state of its own under its key, claude-desktop, and has no model or effort lists', () => {
+  assert.ok(isHarnessKey('claude-desktop') && !isHarnessKey('desktop'));
+  const disabled = withHarnessEnabled(emptyVariantStore(), FILE, 'claude-desktop', false);
+  assert.deepStrictEqual(disabled.harnesses, { 'claude-desktop': { enabled: false } });
+  assert.deepStrictEqual(harnessStates(disabled, FILE), { claude: true, antigravity: true, codex: true, 'claude-desktop': false });
+  assert.deepStrictEqual(disabledCommands(harnessStates(disabled, FILE)), ['claude-desktop']);
+  assert.deepStrictEqual(harnessStates(withHarnessEnabled(disabled, FILE, 'claude-desktop', true), FILE)['claude-desktop'], true);
+  assert.deepStrictEqual(Object.keys(harnessLists(emptyVariantStore(), FILE, ['claude --model opus --effort high "/gurita:x"'])), ['claude', 'antigravity', 'codex']);
 });
 
 test('a harness part not in its form is refused, naming the file', () => {
@@ -61,19 +72,19 @@ test('enabling or disabling a harness keeps every other value of the harness par
   assert.deepStrictEqual(disabled.defaults, store.defaults);
   assert.deepStrictEqual(store.harnesses, { claude: { models: ['opus'] }, kept: ['as', 'read'] }, 'the store given is not changed');
   const again = withHarnessEnabled(disabled, FILE, 'claude', true);
-  assert.deepStrictEqual(harnessStates(again, FILE), { claude: true, antigravity: true, codex: true });
+  assert.deepStrictEqual(harnessStates(again, FILE), { claude: true, antigravity: true, codex: true, 'claude-desktop': true });
 });
 
 test('the state is written to the variant store file, created when missing, and read back from it', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-harness-settings-'));
   const file = path.join(dir, '.gurita', 'variants.json');
-  assert.deepStrictEqual(readHarnessStates(file), { claude: true, antigravity: true, codex: true }, 'a missing file disables nothing');
+  assert.deepStrictEqual(readHarnessStates(file), { claude: true, antigravity: true, codex: true, 'claude-desktop': true }, 'a missing file disables nothing');
   setHarnessEnabled(file, 'codex', false);
-  assert.deepStrictEqual(readHarnessStates(file), { claude: true, antigravity: true, codex: false });
+  assert.deepStrictEqual(readHarnessStates(file), { claude: true, antigravity: true, codex: false, 'claude-desktop': true });
   assert.deepStrictEqual(readVariantStore(file).harnesses, { codex: { enabled: false } });
   setHarnessEnabled(file, 'claude', false);
   setHarnessEnabled(file, 'codex', true);
-  assert.deepStrictEqual(readHarnessStates(file), { claude: false, antigravity: true, codex: true });
+  assert.deepStrictEqual(readHarnessStates(file), { claude: false, antigravity: true, codex: true, 'claude-desktop': true });
   assert.deepStrictEqual(fs.readdirSync(path.join(dir, '.gurita')), ['variants.json'], 'no temporary file is left');
 });
 

@@ -510,7 +510,7 @@ test('the refresh command re-reads the open Settings window, its lists posted af
   await until(() => postedOf(window, 'singleTaskLines', from).length > 0, 'the refresh posts the window its lists afresh');
   assert.deepStrictEqual(
     (postedOf(window, 'harnessSettings', from)[0].settings as { enabled: Record<string, boolean> }).enabled,
-    { claude: true, antigravity: true, codex: true },
+    { claude: true, antigravity: true, codex: true, 'claude-desktop': true },
     'the window shows the store as it stands now',
   );
   assert.strictEqual(postedOf(window, 'variants', from).length, 1);
@@ -681,9 +681,13 @@ test("an Update click's request starts the update at once with no confirmation, 
   }
 });
 
-test('a run request naming no harness, action, or scopes the install script takes starts nothing', async () => {
+test('a run request naming no harness, action, or scopes the install script takes starts nothing, Claude Desktop taking no install or update', async () => {
   const created = terminals.length;
+  const asked = prompts.length;
   for (const request of [
+    { type: 'runPlugin', harness: 'claude-desktop', action: 'install' },
+    { type: 'runPlugin', harness: 'claude-desktop', action: 'update' },
+    { type: 'installPlugin', harness: 'claude-desktop' },
     { type: 'runPlugin', harness: 'vscode', action: 'install' },
     { type: 'runPlugin', harness: 'codex', action: 'remove' },
     { type: 'runPlugin', harness: 'codex', action: 'install', scopes: ['user'] },
@@ -697,6 +701,7 @@ test('a run request naming no harness, action, or scopes the install script take
   }
   await new Promise((resolve) => setTimeout(resolve, 200));
   assert.strictEqual(terminals.length, created, 'no terminal is created');
+  assert.deepStrictEqual(prompts.slice(asked), [], 'no pick is opened');
   assert.strictEqual(pluginRuns.pluginRunGoing(), undefined);
 });
 

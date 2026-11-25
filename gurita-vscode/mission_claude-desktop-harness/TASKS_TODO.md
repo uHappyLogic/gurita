@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## List Claude Desktop Under Harnesses
-
-Add Claude Desktop as the fourth entry of `HARNESSES` in `src/harnessCheck.ts`, its command word `claude-desktop`, so the Settings window lists it under Harnesses, and keep beside the entry a dated comment block of the hands-on check's findings as `## Relevant starting state` records them, naming the day, the Claude Desktop version checked, what was passed, and what arrived. Its row keeps the Enabled or Disabled state and its switch and makes one check of its own in place of the CLI check, whether Claude Desktop is installed, read from the application bundle at `/Applications/Claude.app` with the bundle's version shown as information only and never through a command in the shell; it makes no plugin or version check of a Gurita copy, carries no Install or Update control, and a failed presence check is drawn on the row only, uncounted by the side-bar view's plugin notice. Verified by `npm test` unit tests of the entry, the presence check, the row's controls, and the notice count, and by the comment block matching the recorded findings.
-
----
-
 ## Read And Rewrite Claude Desktop Lines
 
 Add `claude-desktop` as the fourth command word of `HARNESSES` in `src/lineValues.ts`, a plain word matched by exact equality beside `claude`, `agy`, and `codex`, so a line opening with it reads as a Claude Desktop line with its quoted prompt and skill. Make `rewriteHarness` rewrite an interactive line onto Claude Desktop keeping its prompt and its trailing `# interactive` mark and dropping `--model`, `--effort`, and the bypass-permission flag, since no parameter of the `claude://code/new` link names a model, an effort, or a permission mode, so the stored line shows exactly what the session gets and no indicator of dropped values is built. Verified by `npm test` unit tests in `src/test/lineValues.test.ts` of reading a Desktop line and of rewriting each harness's interactive line onto it.

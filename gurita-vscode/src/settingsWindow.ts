@@ -21,7 +21,7 @@
 // pages are drawn and their clicks run whatever it reports.
 //
 // The window also starts the install and update runs (`pluginRuns.ts`): a page's request to install
-// or update the plugin on a harness starts the packaged `install_plugin.py` as a terminal's own
+// or update the plugin on a harness that is a CLI, never on Claude Desktop, starts the packaged `install_plugin.py` as a terminal's own
 // process at the project root, opened and shown as a recipe run's terminal is, with a note of the
 // run kept in this extension's state for the session, so that at most one goes at a time: while it
 // stands a second request starts nothing, showing a notification and revealing that run's terminal,
@@ -37,7 +37,11 @@
 // release lookup included, and then runs the whole harness check afresh through the code path check
 // again runs, its result replacing the kept one for every harness.
 //
-// The window enables and disables each harness: a click of a harness's enable or disable control
+// Claude Desktop's outcome is read beside the script's, from its application bundle
+// (`harnessCheck.ts`), and the window's model and effort lists, as its install and update runs,
+// cover the three CLIs alone.
+//
+// The window enables and disables each harness, Claude Desktop included: a click of a harness's enable or disable control
 // writes that state to the harness part of the variant store file and posts it again. Every
 // harness starts enabled and stays so until the person disables it, the check never changing it.
 // The window holds each harness's model list and its one effort list for the whole harness,
@@ -122,7 +126,7 @@ import {
   setHarnessEnabled,
 } from './harnessSettings';
 import { SwitchableHarness } from './lineValues';
-import { CHECK_SCRIPT, CheckResult, HARNESSES, PLUGIN_VERSION_FILE, readPackagedVersion, runHarnessCheck } from './harnessCheck';
+import { CHECK_SCRIPT, CheckResult, CliHarnessKey, HARNESSES, PLUGIN_VERSION_FILE, isCliHarnessKey, readPackagedVersion, runHarnessCheck } from './harnessCheck';
 import { pageShell, recipeFiles, recipesChanged, startLiveRead, startingRoot, webviewOptions } from './pane';
 import {
   CLAUDE_SCOPES,
@@ -444,7 +448,7 @@ async function checkHarnesses(context: vscode.ExtensionContext, afterRun = false
  * an install and at least one for an update. Undefined for anything else.
  */
 function pluginRunOf(harness: unknown, action: unknown, scopes: unknown): PluginRun | undefined {
-  if (!isHarnessKey(harness) || typeof action !== 'string' || !PLUGIN_ACTIONS.includes(action as PluginAction)) {
+  if (!isCliHarnessKey(harness) || typeof action !== 'string' || !PLUGIN_ACTIONS.includes(action as PluginAction)) {
     return undefined;
   }
   const named = scopes === undefined ? [] : scopes;
@@ -475,7 +479,7 @@ function folderOpen(): boolean {
  * is refused as every start is, no pick opened.
  */
 async function installPlugin(context: vscode.ExtensionContext, harness: unknown, scopes: unknown): Promise<void> {
-  if (!isHarnessKey(harness)) {
+  if (!isCliHarnessKey(harness)) {
     return;
   }
   if (harness !== 'claude') {
@@ -592,7 +596,7 @@ function harnessName(key: string): string {
  * box writes nothing; a store that cannot be written is told in an error notification.
  */
 async function addHarnessValue(context: vscode.ExtensionContext, target: vscode.WebviewPanel, harness: unknown, kind: unknown): Promise<void> {
-  if (settingsPanel !== target || !isHarnessKey(harness) || !isListKind(kind)) {
+  if (settingsPanel !== target || !isCliHarnessKey(harness) || !isListKind(kind)) {
     return;
   }
   const read = readListsOf(context);
@@ -624,7 +628,7 @@ async function addHarnessValue(context: vscode.ExtensionContext, target: vscode.
  * no harness, a kind naming no list, or an entry the list does not offer writes nothing.
  */
 async function removeHarnessValue(context: vscode.ExtensionContext, target: vscode.WebviewPanel, harness: unknown, kind: unknown, value: unknown): Promise<void> {
-  if (settingsPanel !== target || !isHarnessKey(harness) || !isListKind(kind) || typeof value !== 'string') {
+  if (settingsPanel !== target || !isCliHarnessKey(harness) || !isListKind(kind) || typeof value !== 'string') {
     return;
   }
   const read = readListsOf(context);
@@ -638,7 +642,7 @@ async function removeHarnessValue(context: vscode.ExtensionContext, target: vsco
 function editList(
   context: vscode.ExtensionContext,
   target: vscode.WebviewPanel,
-  harness: HarnessKey,
+  harness: CliHarnessKey,
   kind: ListKind,
   edit: 'add' | 'remove',
   value: string,
@@ -940,7 +944,7 @@ function listedEditor(
 }
 
 /** The harnesses a line's harness dropdown picks between, by key, each with the command its lines open with. */
-const SWITCHABLE: readonly { key: HarnessKey; cli: SwitchableHarness }[] = [
+const SWITCHABLE: readonly { key: CliHarnessKey; cli: SwitchableHarness }[] = [
   { key: 'claude', cli: 'claude' },
   { key: 'antigravity', cli: 'agy' },
   { key: 'codex', cli: 'codex' },

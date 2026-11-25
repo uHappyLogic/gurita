@@ -51,7 +51,7 @@
 // may be no name a recipe or line carries, since the looped run, the rule file, and the override
 // list name a line by it alone. This module imports nothing from `vscode`.
 
-import { HARNESSES, Harness as CheckedHarness } from './harnessCheck';
+import { CLI_HARNESSES, CliHarnessKey, HARNESSES, Harness as CheckedHarness } from './harnessCheck';
 import { HarnessOffer, LineValues, SwitchableHarness, harnessChoices, readLine, readSkill, replaceEffort, replaceModel, rewriteHarness } from './lineValues';
 import {
   Recipe,
@@ -182,7 +182,7 @@ export function resettableVariants(store: VariantStore, recipe: string): ReadVar
  * that gets no harness control.
  */
 export interface LineEditor {
-  harness: CheckedHarness['key'];
+  harness: CliHarnessKey;
   model: string;
   effort?: string;
   harnesses?: CheckedHarness['key'][];
@@ -202,7 +202,7 @@ export function lineEditor(line: string): LineEditor | undefined {
   if (read === undefined || read.model === undefined) {
     return undefined;
   }
-  const harness = HARNESSES.find((each) => each.cli === read.harness)?.key;
+  const harness = CLI_HARNESSES.find((each) => each.cli === read.harness)?.key;
   if (harness === undefined) {
     return undefined;
   }

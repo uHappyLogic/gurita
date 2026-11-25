@@ -1070,14 +1070,21 @@ test("the Settings window's first opening runs the check once for the session, e
   await checkPosted('running', from);
   const checked = await checkPosted('checked', from);
   assert.deepStrictEqual(checkRuns(stubbed.log), [{ argv: ['--project', root], cwd: root }], 'run once, from the project root');
+  const desktop = (checked.harnesses as Record<string, unknown>[])[3];
   assert.deepStrictEqual(checked, {
     state: 'checked',
     harnesses: [
       { key: 'claude', name: 'Claude Code', cli: 'claude', packaged: '2.0.0', installed: '2.0.0' },
       { key: 'antigravity', name: 'Antigravity', cli: 'agy', packaged: '2.0.0', installed: '1.9.0', failed: 'version' },
       { key: 'codex', name: 'Codex', cli: 'codex', packaged: '2.0.0', failed: 'cli' },
+      desktop,
     ],
   });
+  assert.deepStrictEqual(
+    [desktop.key, desktop.name, (desktop.application as { bundle: string }).bundle],
+    ['claude-desktop', 'Claude Desktop', '/Applications/Claude.app'],
+    "Claude Desktop's presence, read from its bundle on this machine, follows the script's three",
+  );
 
   from = posted.length;
   showSettings();
@@ -1111,13 +1118,14 @@ test("the Settings window's first opening runs the check once for the session, e
   const again = (await checkPosted('checked', from)) as { harnesses: { key: string; failed?: string }[] };
   assert.strictEqual(checkRuns(stubbed.log).length, 2, 'check again runs it afresh');
   assert.deepStrictEqual(
-    again.harnesses.map((each) => [each.key, each.failed]),
+    again.harnesses.slice(0, 3).map((each) => [each.key, each.failed]),
     [
       ['claude', undefined],
       ['antigravity', 'plugin'],
       ['codex', 'cli'],
     ],
   );
+  assert.deepStrictEqual(again.harnesses[3], desktop, "Claude Desktop's presence is read again with the check");
   from = posted.length;
   showSettings();
   assert.deepStrictEqual(await checkPosted('checked', from), again, 'the fresh result is the one kept');
@@ -1196,7 +1204,7 @@ test("disabling a harness is stored in the variant store's harness part and leav
     showSettings();
     assert.deepStrictEqual(await postedOf('harnessSettings', from), {
       type: 'harnessSettings',
-      settings: { state: 'read', enabled: { claude: true, antigravity: true, codex: true } },
+      settings: { state: 'read', enabled: { claude: true, antigravity: true, codex: true, 'claude-desktop': true } },
     }, 'every harness starts enabled, whatever its check reports');
     assert.ok(!fs.existsSync(store), 'nothing is written until a harness is disabled');
 
@@ -1205,7 +1213,7 @@ test("disabling a harness is stored in the variant store's harness part and leav
     send({ type: 'setHarnessEnabled', harness: 'antigravity', enabled: false });
     assert.deepStrictEqual(await postedOf('harnessSettings', from), {
       type: 'harnessSettings',
-      settings: { state: 'read', enabled: { claude: true, antigravity: false, codex: true } },
+      settings: { state: 'read', enabled: { claude: true, antigravity: false, codex: true, 'claude-desktop': true } },
     });
     const live = (await windowPosted(THETA, 'page', windowFrom)).mission as { recipes: { recipes: PostedEntry[] } };
     const narrowed = live.recipes.recipes;
@@ -1374,8 +1382,10 @@ codex exec "/gurita:finish-mission --mission <path>" -m gpt-5.5 -c model_reasoni
     send({ type: 'removeHarnessValue', harness: 'codex', kind: 'effort', value: 'high' });
     send({ type: 'addHarnessValue', harness: 'codex', kind: 'effort' });
     send({ type: 'addHarnessValue', harness: 'claude', kind: 'effort' });
+    send({ type: 'addHarnessValue', harness: 'claude-desktop', kind: 'model' });
+    send({ type: 'removeHarnessValue', harness: 'claude-desktop', kind: 'effort', value: 'high' });
     await new Promise((resolve) => setTimeout(resolve, 50));
-    assert.strictEqual(inputBoxes.length, boxes + 2, "only a known harness's model or effort list is asked for, Codex's effort list included");
+    assert.strictEqual(inputBoxes.length, boxes + 2, "only a known CLI's model or effort list is asked for, Codex's effort list included and Claude Desktop, which has none, not");
     assert.deepStrictEqual(posted.slice(from), [], 'no harness or list named, no entry offered, or a dismissed box writes and posts nothing');
     assert.strictEqual(fs.readFileSync(store, 'utf8'), before);
 

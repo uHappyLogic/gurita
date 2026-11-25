@@ -3,7 +3,19 @@ import * as assert from 'node:assert';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { harnessOutcomes, readPackagedVersion, switchCommands, versionAtLeast } from '../harnessCheck';
+import {
+  CLI_HARNESSES,
+  DESKTOP_BUNDLE,
+  HARNESSES,
+  desktopOutcome,
+  harnessOutcomes,
+  isCliHarnessKey,
+  readDesktopPresence,
+  readPackagedVersion,
+  runHarnessCheck,
+  switchCommands,
+  versionAtLeast,
+} from '../harnessCheck';
 
 const PASSING = { found: true, installed: true, version: '2.0.0' };
 
@@ -208,4 +220,118 @@ test('the packaged version is the recorded line, and undefined when the file can
   fs.writeFileSync(path.join(dir, 'plugin_version.txt'), '2.0.0\n');
   assert.strictEqual(readPackagedVersion(path.join(dir, 'plugin_version.txt')), '2.0.0');
   assert.strictEqual(readPackagedVersion(path.join(dir, 'missing.txt')), undefined);
+});
+
+/** A Claude Desktop bundle in a fresh directory, its `Info.plist` holding `plist` when given. */
+function desktopBundle(plist?: string): string {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-desktop-'));
+  const bundle = path.join(dir, 'Claude.app');
+  fs.mkdirSync(path.join(bundle, 'Contents'), { recursive: true });
+  if (plist !== undefined) {
+    fs.writeFileSync(path.join(bundle, 'Contents', 'Info.plist'), plist);
+  }
+  return bundle;
+}
+
+/** An XML `Info.plist` as Claude Desktop's bundle holds it, reading the version `version`. */
+function infoPlist(version: string): string {
+  return [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">',
+    '<plist version="1.0">',
+    '<dict>',
+    '    <key>CFBundleIdentifier</key>',
+    '    <string>com.anthropic.claudefordesktop</string>',
+    '    <key>CFBundleShortVersionString</key>',
+    `    <string>${version}</string>`,
+    '    <key>CFBundleVersion</key>',
+    '    <string>0.0.1</string>',
+    '</dict>',
+    '</plist>',
+    '',
+  ].join('\n');
+}
+
+test('Claude Desktop is the fourth harness, its command word claude-desktop, after the three CLIs', () => {
+  assert.deepStrictEqual(
+    HARNESSES.map((harness) => [harness.key, harness.name, harness.cli]),
+    [
+      ['claude', 'Claude Code', 'claude'],
+      ['antigravity', 'Antigravity', 'agy'],
+      ['codex', 'Codex', 'codex'],
+      ['claude-desktop', 'Claude Desktop', 'claude-desktop'],
+    ],
+  );
+  assert.deepStrictEqual(CLI_HARNESSES.map((harness) => harness.key), ['claude', 'antigravity', 'codex']);
+  assert.ok(isCliHarnessKey('codex') && !isCliHarnessKey('claude-desktop') && !isCliHarnessKey(undefined));
+  assert.strictEqual(DESKTOP_BUNDLE, '/Applications/Claude.app');
+  assert.deepStrictEqual(harnessOutcomes(print(PASSING), '2.0.0').map((outcome) => outcome.key), ['claude', 'antigravity', 'codex'], 'the script covers the CLIs alone');
+});
+
+test('a dated block of the hands-on check findings stands beside the Claude Desktop entry', () => {
+  const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'harnessCheck.ts'), 'utf8');
+  const block = source.slice(source.indexOf('// Hands-on check of Claude Desktop'), source.indexOf('export const DESKTOP_HARNESS'));
+  assert.ok(block.startsWith('// Hands-on check of Claude Desktop, 2026-11-25, on Claude Desktop 6.28899.6'), 'the day and the version checked');
+  for (const finding of ['What was passed:', 'What arrived:', '`claude://code/new`', '14,336 characters', '`--desktop`']) {
+    assert.ok(block.includes(finding), `the block names ${finding}`);
+  }
+});
+
+test("Claude Desktop's presence is read from its bundle: installed with the bundle's version, or not found", () => {
+  assert.deepStrictEqual(readDesktopPresence(desktopBundle(infoPlist('6.28899.6'))), { installed: true, version: '6.28899.6' });
+  assert.deepStrictEqual(readDesktopPresence(desktopBundle()), { installed: true }, 'a bundle with no Info.plist is installed, its version not read');
+  assert.deepStrictEqual(readDesktopPresence(desktopBundle('<plist><dict></dict></plist>')), { installed: true }, 'a plist naming no version');
+  const missing = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-desktop-')), 'Claude.app');
+  assert.deepStrictEqual(readDesktopPresence(missing), { installed: false });
+  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-desktop-')), 'Claude.app');
+  fs.writeFileSync(file, '');
+  assert.deepStrictEqual(readDesktopPresence(file), { installed: false }, 'a file that is no bundle directory');
+});
+
+test("Claude Desktop's presence is read through the file system, never through a command in the shell", () => {
+  for (const read of [readDesktopPresence, desktopOutcome]) {
+    assert.doesNotMatch(read.toString(), /execFile|execSync|spawn|child_process|\bexec\(/);
+  }
+});
+
+test("Claude Desktop's outcome makes its one presence check, its version information only, and no plugin or version check", () => {
+  assert.deepStrictEqual(desktopOutcome({ installed: true, version: '6.28899.6' }), {
+    key: 'claude-desktop',
+    name: 'Claude Desktop',
+    cli: 'claude-desktop',
+    application: { bundle: '/Applications/Claude.app', version: '6.28899.6' },
+  });
+  assert.deepStrictEqual(desktopOutcome({ installed: true, version: '0.0.1' }).failed, undefined, 'any version passes, compared with nothing');
+  assert.deepStrictEqual(desktopOutcome({ installed: false }, '/elsewhere/Claude.app'), {
+    key: 'claude-desktop',
+    name: 'Claude Desktop',
+    cli: 'claude-desktop',
+    application: { bundle: '/elsewhere/Claude.app' },
+    failed: 'application',
+  });
+  const outcome = desktopOutcome({ installed: true });
+  for (const field of ['installed', 'packaged', 'detail', 'scopes', 'disabled', 'source'] as const) {
+    assert.strictEqual(outcome[field], undefined, `no ${field}`);
+  }
+});
+
+test("a finished check gives Claude Desktop's outcome after the script's three, read from the bundle", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-check-'));
+  const script = path.join(dir, 'check.js');
+  fs.writeFileSync(script, `process.stdout.write(${JSON.stringify(print(PASSING))});\n`);
+  const bundle = desktopBundle(infoPlist('6.28899.6'));
+  const result = await runHarnessCheck(script, dir, '2.0.0', process.execPath, bundle);
+  assert.strictEqual(result.state, 'checked');
+  assert.deepStrictEqual(
+    result.state === 'checked' ? result.harnesses.map((outcome) => [outcome.key, outcome.failed]) : [],
+    [
+      ['claude', undefined],
+      ['antigravity', undefined],
+      ['codex', undefined],
+      ['claude-desktop', undefined],
+    ],
+  );
+  assert.deepStrictEqual(result.state === 'checked' ? result.harnesses[3].application : undefined, { bundle, version: '6.28899.6' });
+  const absent = await runHarnessCheck(script, dir, '2.0.0', process.execPath, path.join(dir, 'Claude.app'));
+  assert.strictEqual(absent.state === 'checked' ? absent.harnesses[3].failed : undefined, 'application');
 });

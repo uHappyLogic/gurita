@@ -38,7 +38,18 @@ function settingsView(page: Page): FakeElement | undefined {
   return drawn[0];
 }
 
-/** A harness check as the extension posts it: Claude Code passing, Antigravity on another version, Codex not found. */
+/** Claude Desktop's outcome as the extension posts it: installed, its bundle reading its version. */
+const DESKTOP = {
+  key: 'claude-desktop',
+  name: 'Claude Desktop',
+  cli: 'claude-desktop',
+  application: { bundle: '/Applications/Claude.app', version: '6.28899.6' },
+};
+
+/** Claude Desktop's row as the window draws it while installed: its key, no failed check, its name and status. */
+const DESKTOP_ROW: [string, string | undefined, string[]] = ['claude-desktop', undefined, ['Claude Desktop', 'Installed: Claude Desktop 6.28899.6 at /Applications/Claude.app.']];
+
+/** A harness check as the extension posts it: Claude Code passing, Antigravity on another version, Codex not found, Claude Desktop installed. */
 const CHECKED = {
   type: 'harnessCheck',
   check: {
@@ -47,6 +58,7 @@ const CHECKED = {
       { key: 'claude', name: 'Claude Code', cli: 'claude', installed: '2.0.0', packaged: '2.0.0' },
       { key: 'antigravity', name: 'Antigravity', cli: 'agy', failed: 'version', installed: '1.9.0', packaged: '2.0.0' },
       { key: 'codex', name: 'Codex', cli: 'codex', failed: 'cli', packaged: '2.0.0' },
+      DESKTOP,
     ],
   },
 };
@@ -121,6 +133,7 @@ test('the window names beside each harness the check that failed, or that every 
     ['claude', undefined, ['Claude Code', 'Every check passes: Gurita 2.0.0 is installed, the packaged version.']],
     ['antigravity', 'version', ['Antigravity', 'Installed version older than the packaged one: installed 1.9.0, packaged 2.0.0.']],
     ['codex', 'cli', ['Codex', "CLI not found: the runner's shell finds no codex command."]],
+    DESKTOP_ROW,
   ]);
   page.send({
     type: 'harnessCheck',
@@ -130,6 +143,7 @@ test('the window names beside each harness the check that failed, or that every 
         { key: 'claude', name: 'Claude Code', cli: 'claude', failed: 'plugin', packaged: '2.0.0' },
         { key: 'antigravity', name: 'Antigravity', cli: 'agy', failed: 'plugin', packaged: '2.0.0', detail: 'the listing exited with status 1: boom' },
         { key: 'codex', name: 'Codex', cli: 'codex', failed: 'version', packaged: '2.0.0' },
+        DESKTOP,
       ],
     },
   });
@@ -137,6 +151,7 @@ test('the window names beside each harness the check that failed, or that every 
     ['claude', 'plugin', ['Claude Code', 'Gurita plugin not installed.']],
     ['antigravity', 'plugin', ['Antigravity', 'Gurita plugin not installed: the listing exited with status 1: boom']],
     ['codex', 'version', ['Codex', 'Installed version older than the packaged one: installed unknown, packaged 2.0.0.']],
+    DESKTOP_ROW,
   ]);
   page.send({
     type: 'harnessCheck',
@@ -146,6 +161,7 @@ test('the window names beside each harness the check that failed, or that every 
         { key: 'claude', name: 'Claude Code', cli: 'claude', installed: '2.1.0', packaged: '2.0.0' },
         { key: 'antigravity', name: 'Antigravity', cli: 'agy', installed: '2.0.0', packaged: '2.0.0' },
         { key: 'codex', name: 'Codex', cli: 'codex', failed: 'version', installed: '1.9.0', packaged: '2.0.0' },
+        DESKTOP,
       ],
     },
   });
@@ -153,6 +169,7 @@ test('the window names beside each harness the check that failed, or that every 
     ['claude', undefined, ['Claude Code', 'Every check passes: Gurita 2.1.0 is installed, newer than the packaged 2.0.0.']],
     ['antigravity', undefined, ['Antigravity', 'Every check passes: Gurita 2.0.0 is installed, the packaged version.']],
     ['codex', 'version', ['Codex', 'Installed version older than the packaged one: installed 1.9.0, packaged 2.0.0.']],
+    DESKTOP_ROW,
   ]);
 });
 
@@ -177,6 +194,7 @@ test("the window names Claude Code's detected scopes, the one in effect first wi
           { key: 'claude', name: 'Claude Code', cli: 'claude', packaged: '2.0.0', ...claude },
           { key: 'antigravity', name: 'Antigravity', cli: 'agy', installed: '2.0.0', packaged: '2.0.0' },
           { key: 'codex', name: 'Codex', cli: 'codex', failed: 'cli', packaged: '2.0.0' },
+          DESKTOP,
         ],
       },
     });
@@ -185,6 +203,7 @@ test("the window names Claude Code's detected scopes, the one in effect first wi
     ['claude', 'In effect at user scope.'],
     ['antigravity', undefined],
     ['codex', undefined],
+    ['claude-desktop', undefined],
   ]);
   assert.deepStrictEqual(harnessRows(page)[0], ['claude', undefined, ['Claude Code', 'Every check passes: Gurita 2.0.0 is installed, the packaged version.']]);
 
@@ -226,6 +245,7 @@ test('the window says a disabled Antigravity or Codex copy must be enabled in th
           { key: 'claude', name: 'Claude Code', cli: 'claude', installed: '2.0.0', packaged: '2.0.0', scopes: ['user'] },
           { key: 'antigravity', name: 'Antigravity', cli: 'agy', packaged: '2.0.0', ...antigravity },
           { key: 'codex', name: 'Codex', cli: 'codex', packaged: '2.0.0', ...codex },
+          DESKTOP,
         ],
       },
     });
@@ -236,10 +256,12 @@ test('the window says a disabled Antigravity or Codex copy must be enabled in th
   assert.deepStrictEqual(harnessRows(page).slice(1), [
     ['antigravity', 'plugin', ['Antigravity', 'Gurita plugin disabled: the copy is disabled and must be enabled in Antigravity itself, with agy plugin enable gurita.']],
     ['codex', 'plugin', ['Codex', 'Gurita plugin disabled: the copy is disabled and must be enabled in Codex itself, through its own plugin settings.']],
+    DESKTOP_ROW,
   ]);
   assert.deepStrictEqual(harnessScopeLines(page).slice(1), [
     ['antigravity', undefined],
     ['codex', undefined],
+    ['claude-desktop', undefined],
   ], 'no scopes line for a harness with no scopes');
   assert.deepStrictEqual(updateControls(page).map(([harness]) => harness), ['claude'], 'a disabled copy loses its Update control');
   assert.deepStrictEqual(
@@ -252,6 +274,7 @@ test('the window says a disabled Antigravity or Codex copy must be enabled in th
   assert.deepStrictEqual(harnessRows(page).slice(1), [
     ['antigravity', 'plugin', ['Antigravity', 'Gurita plugin not installed.']],
     ['codex', 'plugin', ['Codex', 'Gurita plugin not installed: the listing did not finish']],
+    DESKTOP_ROW,
   ], 'not installed stays told apart from disabled');
 });
 
@@ -280,6 +303,7 @@ test('the window states the other source a Claude Code or Codex copy comes from 
           { key: 'claude', name: 'Claude Code', cli: 'claude', installed: '2.0.0', packaged: '2.0.0', scopes: ['project', 'user'], ...claude },
           { key: 'antigravity', name: 'Antigravity', cli: 'agy', installed: '2.0.0', packaged: '2.0.0' },
           { key: 'codex', name: 'Codex', cli: 'codex', packaged: '2.0.0', ...codex },
+          DESKTOP,
         ],
       },
     });
@@ -289,6 +313,7 @@ test('the window states the other source a Claude Code or Codex copy comes from 
     ['claude', undefined, undefined],
     ['antigravity', undefined, undefined],
     ['codex', undefined, undefined],
+    ['claude-desktop', undefined, undefined],
   ], 'the distribution repository, or no source read, draws no source');
   const before = drawnButtons();
 
@@ -327,6 +352,7 @@ test('the window states the other source a Claude Code or Codex copy comes from 
       'The Gurita plugin comes from another source: the local directory /work/gurita/hosts/codex, not the distribution repository uHappyLogic/gurita-codex. To switch Codex to its distribution repository, run:',
       'codex plugin marketplace remove gurita\ncodex plugin marketplace add uHappyLogic/gurita-codex\ncodex plugin add gurita@gurita',
     ],
+    ['claude-desktop', undefined, undefined],
   ]);
   assert.deepStrictEqual(harnessRows(page)[0], ['claude', undefined, ['Claude Code', 'Every check passes: Gurita 2.0.0 is installed, the packaged version.']], 'the status line is unchanged');
   assert.deepStrictEqual(harnessScopeLines(page)[0], ['claude', 'In effect at project scope; also installed at user scope.'], 'the scopes line is unchanged');
@@ -381,6 +407,7 @@ test('an Update control is drawn for every harness whose check found its CLI and
           { key: 'claude', name: 'Claude Code', cli: 'claude', packaged: '2.0.0', ...claude },
           { key: 'antigravity', name: 'Antigravity', cli: 'agy', packaged: '2.0.0', ...antigravity },
           { key: 'codex', name: 'Codex', cli: 'codex', packaged: '2.0.0', ...codex },
+          DESKTOP,
         ],
       },
     });
@@ -407,6 +434,7 @@ test('an Update control is drawn for every harness whose check found its CLI and
       'Every check passes: Gurita 2.0.0 is installed, the packaged version.',
       'Every check passes: Gurita 2.1.0 is installed, newer than the packaged 2.0.0.',
       'Installed version older than the packaged one: installed 1.9.0, packaged 2.0.0.',
+      DESKTOP_ROW[2][1],
     ],
     'the check line still says whether the versions differ',
   );
@@ -439,6 +467,7 @@ test('a click on Update posts the update at once, on Claude Code over every dete
         { key: 'claude', name: 'Claude Code', cli: 'claude', installed: '2.0.0', packaged: '2.0.0', scopes: ['local', 'user', 'project'] },
         { key: 'antigravity', name: 'Antigravity', cli: 'agy', failed: 'version', installed: '1.9.0', packaged: '2.0.0' },
         { key: 'codex', name: 'Codex', cli: 'codex', installed: '2.0.0', packaged: '2.0.0' },
+        DESKTOP,
       ],
     },
   });
@@ -507,6 +536,7 @@ function sendOutcomes(page: Page, claude: Record<string, unknown>, antigravity: 
         { key: 'claude', name: 'Claude Code', cli: 'claude', packaged: '2.0.0', ...claude },
         { key: 'antigravity', name: 'Antigravity', cli: 'agy', packaged: '2.0.0', ...antigravity },
         { key: 'codex', name: 'Codex', cli: 'codex', packaged: '2.0.0', ...codex },
+        DESKTOP,
       ],
     },
   });
@@ -682,12 +712,13 @@ function harnessToggle(page: Page, key: string): FakeElement {
 
 test('the window shows each harness enabled with its disable control, whatever its check reports or while it runs', () => {
   const page = loadSettings();
-  page.send(harnessSettings({ claude: true, antigravity: true, codex: true }));
+  page.send(harnessSettings({ claude: true, antigravity: true, codex: true, 'claude-desktop': true }));
   assert.ok(texts(page).includes('Checking the harnesses…'));
   const all: [string, string, string][] = [
     ['claude', 'Enabled', 'Disable'],
     ['antigravity', 'Enabled', 'Disable'],
     ['codex', 'Enabled', 'Disable'],
+    ['claude-desktop', 'Enabled', 'Disable'],
   ];
   assert.deepStrictEqual(enabledRows(page), all, 'drawn while the check runs');
   page.send(CHECKED);
@@ -699,11 +730,12 @@ test('the window shows each harness enabled with its disable control, whatever i
 
 test("a harness's control posts the state it asks for and the view shows only the state the extension posts back", () => {
   const page = loadSettings();
-  page.send(harnessSettings({ claude: true, antigravity: false, codex: true }));
+  page.send(harnessSettings({ claude: true, antigravity: false, codex: true, 'claude-desktop': true }));
   assert.deepStrictEqual(enabledRows(page), [
     ['claude', 'Enabled', 'Disable'],
     ['antigravity', 'Disabled', 'Enable'],
     ['codex', 'Enabled', 'Disable'],
+    ['claude-desktop', 'Enabled', 'Disable'],
   ]);
   assert.strictEqual(harnessToggle(page, 'codex').title, "Leave every variant with a line on Codex out of the mission pages' action lists");
   assert.strictEqual(harnessToggle(page, 'antigravity').title, 'List the variants with a line on Antigravity on the mission pages again');
@@ -726,7 +758,50 @@ test('harness settings that could not be read are named in the window, with no c
     ['claude', undefined, undefined],
     ['antigravity', undefined, undefined],
     ['codex', undefined, undefined],
+    ['claude-desktop', undefined, undefined],
   ]);
+});
+
+test("Claude Desktop's row shows its one presence check, its version as information only, and keeps its enabled state and switch", () => {
+  const page = loadSettings();
+  page.send(CHECKED);
+  page.send(harnessSettings({ claude: true, antigravity: true, codex: true, 'claude-desktop': false }));
+  assert.deepStrictEqual(harnessRows(page)[3], DESKTOP_ROW, 'listed fourth, after the three CLIs');
+  assert.deepStrictEqual(enabledRows(page)[3], ['claude-desktop', 'Disabled', 'Enable']);
+  assert.strictEqual(harnessToggle(page, 'claude-desktop').title, 'List the variants with a line on Claude Desktop on the mission pages again');
+  const count = page.posted.length;
+  harnessToggle(page, 'claude-desktop').click();
+  assert.deepStrictEqual(page.posted.slice(count), [{ type: 'setHarnessEnabled', harness: 'claude-desktop', enabled: true }]);
+
+  const desktop = (application: Record<string, unknown>, failed?: string) =>
+    page.send({ type: 'harnessCheck', check: { state: 'checked', harnesses: [...CHECKED.check.harnesses.slice(0, 3), { ...DESKTOP, application, ...(failed === undefined ? {} : { failed }) }] } });
+  desktop({ bundle: '/Applications/Claude.app', version: '0.0.1' });
+  assert.deepStrictEqual(harnessRows(page)[3], ['claude-desktop', undefined, ['Claude Desktop', 'Installed: Claude Desktop 0.0.1 at /Applications/Claude.app.']], 'any version passes');
+  desktop({ bundle: '/Applications/Claude.app' });
+  assert.deepStrictEqual(harnessRows(page)[3], ['claude-desktop', undefined, ['Claude Desktop', 'Installed: Claude Desktop at /Applications/Claude.app, its version not read.']]);
+  desktop({ bundle: '/Applications/Claude.app' }, 'application');
+  assert.deepStrictEqual(harnessRows(page)[3], ['claude-desktop', 'application', ['Claude Desktop', 'Application not found: no Claude Desktop at /Applications/Claude.app.']]);
+  const row = settingsView(page)?.all().find((each) => each.tagName === 'li' && each.dataset.harness === 'claude-desktop');
+  assert.ok(row?.has('failed'), 'a failed presence check is drawn on its row');
+  assert.deepStrictEqual(enabledRows(page)[3], ['claude-desktop', 'Disabled', 'Enable'], 'a failed presence check changes no state');
+});
+
+test('Claude Desktop gets no scopes, source, Install, or Update, installed or not', () => {
+  const page = loadSettings();
+  for (const outcome of [DESKTOP, { ...DESKTOP, failed: 'application', application: { bundle: '/Applications/Claude.app' } }]) {
+    page.send({ type: 'workspace', folderOpen: true });
+    page.send({ type: 'harnessCheck', check: { state: 'checked', harnesses: [...CHECKED.check.harnesses.slice(0, 3), outcome] } });
+    page.send(harnessSettings({ claude: true, antigravity: true, codex: true, 'claude-desktop': true }));
+    const row = settingsView(page)?.all().find((each) => each.tagName === 'li' && each.dataset.harness === 'claude-desktop');
+    assert.ok(row !== undefined);
+    assert.deepStrictEqual(
+      row.all().filter((each) => each.tagName === 'button').map((each) => each.textContent),
+      ['Disable'],
+      'its enabled switch is its one control',
+    );
+    assert.deepStrictEqual(row.all().filter((each) => each.has('harness-scopes') || each.has('harness-source')), []);
+  }
+  assert.deepStrictEqual(updateControls(page).map(([harness]) => harness), ['antigravity'], 'a CLI keeps its Update control beside it');
 });
 
 /** Each harness's lists as the extension posts them. */

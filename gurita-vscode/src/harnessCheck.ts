@@ -14,7 +14,15 @@
 // For Claude Code and Codex, when the Gurita copy or the marketplace named `gurita` comes from a
 // source other than the harness's distribution repository, the outcome names the source the script
 // found and the CLI commands that would switch the harness to that repository; Antigravity's
-// listing names no source, and its outcome carries none. This module imports nothing from `vscode`.
+// listing names no source, and its outcome carries none.
+//
+// Claude Desktop, the fourth harness, is an application rather than a CLI: the script covers it not
+// at all, and its one check, made beside the script's in place of the CLI check, is whether Claude
+// Desktop is installed, read from its application bundle at `/Applications/Claude.app` through the
+// file system, never through a command in the shell, the bundle's version read from its
+// `Contents/Info.plist` as information only, compared with nothing. Its outcome makes no plugin or
+// version check of a Gurita copy, and a failed presence check fails as `application`, which the
+// side-bar view's plugin notice does not count. This module imports nothing from `vscode`.
 
 import { execFile } from 'node:child_process';
 import * as fs from 'node:fs';
@@ -28,19 +36,54 @@ export const CHECK_SCRIPT = 'harness_check.py';
 /** The longest a check may run before it is stopped, beyond the script's own session limit. */
 const CHECK_TIMEOUT_MS = 150_000;
 
-/** One harness the check covers: its key in the script's print, its name, and its CLI. */
+/** The key of a harness that is a CLI, the check script covers, and the Gurita plugin is installed on. */
+export type CliHarnessKey = 'claude' | 'antigravity' | 'codex';
+
+/**
+ * One harness the settings view lists: its key, in the script's print for a CLI, its name, and the
+ * command word a line on it opens with, its CLI for a CLI and for Claude Desktop a word naming no CLI.
+ */
 export interface Harness {
-  key: 'claude' | 'antigravity' | 'codex';
+  key: CliHarnessKey | 'claude-desktop';
   name: string;
   cli: string;
 }
 
-/** The three harnesses, in the order the settings view lists them. */
-export const HARNESSES: readonly Harness[] = [
+/** The three harnesses that are CLIs, in the order the settings view lists them. */
+export const CLI_HARNESSES: readonly (Harness & { key: CliHarnessKey })[] = [
   { key: 'claude', name: 'Claude Code', cli: 'claude' },
   { key: 'antigravity', name: 'Antigravity', cli: 'agy' },
   { key: 'codex', name: 'Codex', cli: 'codex' },
 ];
+
+// Hands-on check of Claude Desktop, 2026-11-25, on Claude Desktop 6.28899.6
+// (`com.anthropic.claudefordesktop`, `/Applications/Claude.app`, its bundle updated that evening
+// from the 5.11492.5 first read), which registers the URL scheme `claude`.
+// What was passed: nothing; the 6.28899.6 bundle was read statically, with no link opened. Its
+// handler of `claude://code/new` takes the prompt from `q`, or from `prompt` when `q` is
+// absent, cut at 14,336 characters, takes each `folder`, and forwards beyond those only
+// `environment` and `runner_pool`, or, where no `folder` is given, an SSH target named by
+// `ssh_host`, `ssh_port`, and `ssh_folder`, so no parameter of that link names a model, an effort,
+// or a permission mode; the application's own Finder service opens
+// `claude://code/new?folder=<folder>&source=services`. The `claude` CLI on the machine, 2.1.332,
+// lists the option `--desktop`, `Open in the Claude Desktop app instead of the terminal (with
+// --continue or --resume <id> to pick the session)`.
+// What arrived: not observed. Whether a prompt passed either way arrives prefilled or already
+// sent, and in which folder the session opens, has not been observed.
+// A later re-check updates this block in place.
+/** Claude Desktop, the harness that is an application, its lines opening with `claude-desktop`. */
+export const DESKTOP_HARNESS: Harness = { key: 'claude-desktop', name: 'Claude Desktop', cli: 'claude-desktop' };
+
+/** The four harnesses, in the order the settings view lists them, Claude Desktop last. */
+export const HARNESSES: readonly Harness[] = [...CLI_HARNESSES, DESKTOP_HARNESS];
+
+/** The application bundle Claude Desktop's presence is read from. */
+export const DESKTOP_BUNDLE = '/Applications/Claude.app';
+
+/** Whether `value` is the key of a harness that is a CLI, the script checks and the plugin is installed on. */
+export function isCliHarnessKey(value: unknown): value is CliHarnessKey {
+  return CLI_HARNESSES.some((harness) => harness.key === value);
+}
 
 /** The distribution repository of each harness whose source the check reads, by its key. */
 export const DISTRIBUTION_REPOSITORIES: Readonly<Partial<Record<Harness['key'], string>>> = {
@@ -62,8 +105,17 @@ export interface OtherSource {
   commands: string[];
 }
 
-/** The check of a harness that failed first: its CLI, its installed plugin, or that copy's version being older. */
-export type FailedCheck = 'cli' | 'plugin' | 'version';
+/**
+ * The check of a harness that failed first: for a CLI, the CLI, its installed plugin, or that
+ * copy's version being older; for Claude Desktop, its one check, the application being installed.
+ */
+export type FailedCheck = 'cli' | 'plugin' | 'version' | 'application';
+
+/** Claude Desktop's presence as its bundle reads: whether it is installed, and the bundle's version when it reads one. */
+export interface DesktopPresence {
+  installed: boolean;
+  version?: string;
+}
 
 /** One harness's outcome as the settings view draws it. */
 export interface HarnessOutcome {
@@ -90,6 +142,11 @@ export interface HarnessOutcome {
   disabled?: true;
   /** Set when the copy or the `gurita` marketplace comes from another source; Claude Code's and Codex's alone. */
   source?: OtherSource;
+  /**
+   * Claude Desktop's alone, marking the harness that is an application: the bundle its presence was
+   * read from and, when the bundle reads one, its version, shown as information only.
+   */
+  application?: { bundle: string; version?: string };
 }
 
 /** What a check gave: every harness's outcome, or the cause it could not be run. */
@@ -218,7 +275,7 @@ export function harnessOutcomes(stdout: string, packaged: string | undefined): H
   if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
     throw new Error(`the harness check printed no JSON object: ${stdout.trim()}`);
   }
-  return HARNESSES.map((harness) => {
+  return CLI_HARNESSES.map((harness) => {
     const printed = printedHarness((parsed as Record<string, unknown>)[harness.key], harness.key);
     const outcome: HarnessOutcome = { key: harness.key, name: harness.name, cli: harness.cli };
     if (packaged !== undefined) {
@@ -254,12 +311,60 @@ export function harnessOutcomes(stdout: string, packaged: string | undefined): H
 }
 
 /**
- * Runs the check script `script` with `python` from the project root `root`, the packaged version
- * `packaged` the installed copies are compared with, and gives every harness's outcome, or the
- * cause the check could not be run: the script's stderr when it ran and failed, the spawn error
- * when it could not be started, or why its print was not in its form.
+ * Claude Desktop's presence, read from its application bundle `bundle` through the file system
+ * alone: installed when the bundle is a directory, its version the `CFBundleShortVersionString`
+ * of its `Contents/Info.plist`, left out when that file cannot be read or holds none.
  */
-export function runHarnessCheck(script: string, root: string, packaged: string | undefined, python = 'python3'): Promise<CheckResult> {
+export function readDesktopPresence(bundle: string = DESKTOP_BUNDLE): DesktopPresence {
+  let installed = false;
+  try {
+    installed = fs.statSync(bundle).isDirectory();
+  } catch {
+    installed = false;
+  }
+  if (!installed) {
+    return { installed };
+  }
+  let plist: string;
+  try {
+    plist = fs.readFileSync(`${bundle}/Contents/Info.plist`, 'utf8');
+  } catch {
+    return { installed };
+  }
+  const match = plist.match(/<key>\s*CFBundleShortVersionString\s*<\/key>\s*<string>\s*([^<]*?)\s*<\/string>/);
+  return match === null || match[1] === '' ? { installed } : { installed, version: match[1] };
+}
+
+/**
+ * Claude Desktop's outcome from its presence `presence`, read from the bundle `bundle`: its one
+ * check failing as `application` when it is not installed, and no plugin or version check made.
+ */
+export function desktopOutcome(presence: DesktopPresence, bundle: string = DESKTOP_BUNDLE): HarnessOutcome {
+  const application: { bundle: string; version?: string } = { bundle };
+  if (presence.installed && presence.version !== undefined) {
+    application.version = presence.version;
+  }
+  const outcome: HarnessOutcome = { key: DESKTOP_HARNESS.key, name: DESKTOP_HARNESS.name, cli: DESKTOP_HARNESS.cli, application };
+  if (!presence.installed) {
+    outcome.failed = 'application';
+  }
+  return outcome;
+}
+
+/**
+ * Runs the check script `script` with `python` from the project root `root`, the packaged version
+ * `packaged` the installed copies are compared with, and gives every harness's outcome, Claude
+ * Desktop's read from its bundle `bundle` beside the script's three, or the cause the check could
+ * not be run: the script's stderr when it ran and failed, the spawn error when it could not be
+ * started, or why its print was not in its form.
+ */
+export function runHarnessCheck(
+  script: string,
+  root: string,
+  packaged: string | undefined,
+  python = 'python3',
+  bundle: string = DESKTOP_BUNDLE,
+): Promise<CheckResult> {
   return new Promise((resolve) => {
     execFile(
       python,
@@ -272,7 +377,7 @@ export function runHarnessCheck(script: string, root: string, packaged: string |
           return;
         }
         try {
-          resolve({ state: 'checked', harnesses: harnessOutcomes(stdout, packaged) });
+          resolve({ state: 'checked', harnesses: [...harnessOutcomes(stdout, packaged), desktopOutcome(readDesktopPresence(bundle), bundle)] });
         } catch (caught) {
           resolve({ state: 'failed', cause: caught instanceof Error ? caught.message : String(caught) });
         }

@@ -19,8 +19,7 @@
 // workspace folder is open.
 
 import * as vscode from 'vscode';
-import { HARNESSES } from './harnessCheck';
-import { HarnessKey } from './harnessSettings';
+import { CliHarnessKey, HARNESSES } from './harnessCheck';
 
 /** The install script, relative to the extension's root, beside the runner. */
 export const INSTALL_SCRIPT = 'install_plugin.py';
@@ -65,7 +64,7 @@ export function claudeScopePicks(scopes: readonly string[], folderOpen: boolean)
 
 /** One install or update run: the harness, the action, and, on Claude Code, the scopes it acts at. */
 export interface PluginRun {
-  harness: HarnessKey;
+  harness: CliHarnessKey;
   action: PluginAction;
   /** The Claude Code scopes the run acts at, empty on Antigravity and Codex. */
   scopes: string[];
@@ -109,7 +108,7 @@ export function registerPluginRuns(context: vscode.ExtensionContext, ended: (run
 }
 
 /** The name the Settings window gives the harness `key`. */
-function harnessName(key: HarnessKey): string {
+function harnessName(key: CliHarnessKey): string {
   return HARNESSES.find((harness) => harness.key === key)?.name ?? key;
 }
 

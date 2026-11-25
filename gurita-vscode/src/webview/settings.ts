@@ -5,7 +5,12 @@
 // Harnesses, Models and efforts, Variants, and Single-task lines, each drawn from what the
 // extension last posted for it and redrawn whenever it posts it again.
 //
-// Under Harnesses the window lists Claude Code, Antigravity, and Codex, each with the checks it
+// Under Harnesses the window lists Claude Code, Antigravity, Codex, and Claude Desktop. Claude
+// Desktop, an application rather than a CLI, gets its one check alone, whether it is installed,
+// read from its application bundle, with the bundle's version shown as information only when it
+// passes and the bundle it was looked for at when it fails, the failure drawn on its row alone; it
+// gets no scopes, source, Install, or Update, and keeps its enabled state and control as every
+// harness does. Each CLI is listed with the checks it
 // passed or the one that failed first, named: CLI not found, Gurita plugin not installed, or
 // installed version older than the packaged one, with the versions read. For Claude Code it also
 // names every scope a Gurita copy applying to the project was detected at: the winning scope first,
@@ -90,8 +95,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
 (() => {
   type RecipeGroup = 'shipped' | 'project' | 'own';
 
-  /** The check of a harness that failed first: its CLI, its installed plugin, or that copy's version. */
-  type FailedCheck = 'cli' | 'plugin' | 'version';
+  /** The check of a harness that failed first: its CLI, its installed plugin, or that copy's version; Claude Desktop's application. */
+  type FailedCheck = 'cli' | 'plugin' | 'version' | 'application';
 
   /** One harness's outcome, as the extension posts it. */
   interface HarnessOutcome {
@@ -108,6 +113,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
     disabled?: true;
     /** The other source the copy or the `gurita` marketplace comes from, with the commands that switch it to the distribution repository. */
     source?: { found: string; repository: string; commands: string[] };
+    /** Claude Desktop's alone: the bundle its presence was read from and the version it reads, when it reads one. */
+    application?: { bundle: string; version?: string };
   }
 
   /** The harness check: running, every harness's outcome, or the cause it could not be run. */
@@ -252,11 +259,12 @@ declare function acquireVsCodeApi(): VsCodeApi;
     ['model', 'Models', 'Add model'],
     ['effort', 'Efforts', 'Add effort'],
   ];
-  /** The three harnesses the window lists, in its order, each with its key and its name. */
+  /** The four harnesses the window lists, in its order, each with its key and its name. */
   const HARNESSES: [string, string][] = [
     ['claude', 'Claude Code'],
     ['antigravity', 'Antigravity'],
     ['codex', 'Codex'],
+    ['claude-desktop', 'Claude Desktop'],
   ];
   /** The control that updates a harness's installed Gurita copy. */
   const UPDATE_LABEL = 'Update';
@@ -268,11 +276,12 @@ declare function acquireVsCodeApi(): VsCodeApi;
   const DISABLED_LABEL = 'Disabled';
   const ENABLE_LABEL = 'Enable';
   const DISABLE_LABEL = 'Disable';
-  /** The name of each of a harness's three checks, as the window names the one that failed. */
+  /** The name of each of a harness's checks, as the window names the one that failed. */
   const FAILED_CHECKS: Record<FailedCheck, string> = {
     cli: 'CLI not found',
     plugin: 'Gurita plugin not installed',
     version: 'Installed version older than the packaged one',
+    application: 'Application not found',
   };
   /** What the window says of a harness's copy that is installed but disabled, by the harness's key. */
   const DISABLED_COPY_LINES: Record<string, string> = {
@@ -317,8 +326,24 @@ declare function acquireVsCodeApi(): VsCodeApi;
     return node;
   }
 
+  /**
+   * What Claude Desktop's one check gave: installed, with the bundle's version when it reads one, or
+   * not found at the bundle it was looked for at.
+   */
+  function applicationStatus(application: { bundle: string; version?: string }, failed: boolean): string {
+    if (failed) {
+      return `${FAILED_CHECKS.application}: no Claude Desktop at ${application.bundle}.`;
+    }
+    return application.version !== undefined
+      ? `Installed: Claude Desktop ${application.version} at ${application.bundle}.`
+      : `Installed: Claude Desktop at ${application.bundle}, its version not read.`;
+  }
+
   /** What a harness's checks gave: every check passing, or the one that failed first, named, with what it read. */
   function harnessStatus(outcome: HarnessOutcome): string {
+    if (outcome.application !== undefined) {
+      return applicationStatus(outcome.application, outcome.failed !== undefined);
+    }
     const installed = outcome.installed ?? 'unknown';
     const packaged = outcome.packaged ?? 'unknown';
     if (outcome.failed === undefined) {
@@ -514,7 +539,9 @@ declare function acquireVsCodeApi(): VsCodeApi;
         item.dataset.failed = outcome.failed;
       }
       item.append(element('span', outcome?.name ?? name, 'harness-name'));
-      if (outcome !== undefined) {
+      if (outcome !== undefined && outcome.application !== undefined) {
+        item.append(element('span', harnessStatus(outcome), 'harness-status'));
+      } else if (outcome !== undefined) {
         item.append(element('span', harnessStatus(outcome), 'harness-status'));
         const scopes = harnessScopes(outcome);
         if (scopes !== undefined) {
@@ -534,7 +561,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
       if (settings?.state === 'read') {
         item.append(drawEnabled(key, outcome?.name ?? name, settings.enabled[key] !== false));
       }
-      const source = outcome === undefined ? undefined : drawSource(outcome);
+      const source = outcome === undefined || outcome.application !== undefined ? undefined : drawSource(outcome);
       if (source !== undefined) {
         item.append(source);
       }
@@ -550,7 +577,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
     }
     const controls = element('div', undefined, 'controls');
     const again = button(CHECK_AGAIN_LABEL, 'control', () => vscode.postMessage({ type: 'checkHarnesses' }));
-    again.title = "Run the harness check again: each harness's CLI, its Gurita plugin, and that copy's version";
+    again.title = "Run the harness check again: each CLI, its Gurita plugin, and that copy's version, and whether Claude Desktop is installed";
     again.disabled = check === undefined || check.state === 'running' || run !== undefined;
     again.dataset.focus = 'check-again';
     controls.append(again);

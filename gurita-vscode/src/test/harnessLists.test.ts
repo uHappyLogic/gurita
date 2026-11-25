@@ -88,7 +88,7 @@ test('an added entry follows the derived ones and a removed one leaves the offer
     antigravity: { models: ['gemini-4-argon'], efforts: ['medium'] },
     codex: { models: ['gpt-5.5', 'gpt-5.5-mini', 'gpt-5.5-codex'], efforts: ['xhigh', 'low'] },
   });
-  assert.deepStrictEqual(harnessStates(store, FILE), { claude: false, antigravity: true, codex: true }, 'the enabled state is kept');
+  assert.deepStrictEqual(harnessStates(store, FILE), { claude: false, antigravity: true, codex: true, 'claude-desktop': true }, 'the enabled state is kept');
 });
 
 test('adding a removed derived entry takes it out of the removed ones, and removing an added entry takes it out of the added ones', () => {

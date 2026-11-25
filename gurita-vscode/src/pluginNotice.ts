@@ -3,8 +3,10 @@
 // harness that is enabled and whose CLI is found fails its install or version check, the Gurita
 // plugin not installed, its listing unreadable, its copy installed but disabled, or that copy older
 // than the packaged version, and while the check could not be run at all. A harness that is
-// disabled, or whose CLI is not found, never counts, and a check not yet finished stands no row.
-// This module imports nothing from `vscode`.
+// disabled, or whose CLI is not found, never counts, nor does Claude Desktop, whose one check, the
+// application's presence, makes no plugin or version check and whose failure is drawn on its row
+// in the Settings window alone; a check not yet finished stands no row. This module imports
+// nothing from `vscode`.
 
 import { CheckResult, HarnessOutcome } from './harnessCheck';
 import { HarnessStates } from './harnessSettings';

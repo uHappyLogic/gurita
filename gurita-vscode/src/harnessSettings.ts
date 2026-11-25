@@ -1,6 +1,6 @@
 // Each harness's settings, kept in the part of the per-user variant store file set aside for
 // harness values (`harnesses` in `variantStore.ts`), one object keyed by the harness's key in the
-// settings view, `claude`, `antigravity`, or `codex`.
+// settings view, `claude`, `antigravity`, `codex`, or `claude-desktop`.
 //
 // Its enabled state: the object holds `"enabled": false` once the person disables the harness.
 // Every harness starts enabled, whatever its check reports and whatever recipes run on it, and
@@ -10,7 +10,8 @@
 // list a mission window is posted (`pageRecipes` in `recipes.ts`), while the buttons that run a recipe by its
 // fixed name and the looped run's named single-task lines are untouched.
 //
-// Its model list and its one effort list for the whole harness: each list is derived from the
+// Its model list and its one effort list for the whole harness, kept for the three CLIs alone, since
+// no line on Claude Desktop carries a model or an effort: each list is derived from the
 // values the lines of the shipped recipes, the own recipes, and the stored variants carry, in that
 // order of first appearance, `--model` and `--effort` on a `claude` or `agy` line, and `-m` and the
 // config override `-c model_reasoning_effort=<level>` on a `codex` line, as `lineValues.ts` reads
@@ -26,7 +27,7 @@
 // A key the part holds that names no harness, and every other field of a harness's object, is
 // kept as read. This module imports nothing from `vscode`.
 
-import { HARNESSES, Harness as CheckedHarness } from './harnessCheck';
+import { CLI_HARNESSES, CliHarnessKey, HARNESSES, Harness as CheckedHarness } from './harnessCheck';
 import { Harness as LineHarness, readLine } from './lineValues';
 import { readRecipes } from './recipes';
 import { VariantStore, VariantStoreError, readVariantStore, writeVariantStore } from './variantStore';
@@ -46,8 +47,8 @@ export interface HarnessList {
   efforts: string[];
 }
 
-/** Each harness's lists, by its key. */
-export type HarnessLists = Record<HarnessKey, HarnessList>;
+/** Each CLI harness's lists, by its key; Claude Desktop has none. */
+export type HarnessLists = Record<CliHarnessKey, HarnessList>;
 
 /** The overlay's fields of each list in a harness's object: the entries added and the entries removed. */
 const OVERLAY: Readonly<Record<ListKind, { added: string; removed: string }>> = {
@@ -137,23 +138,24 @@ export function isListKind(value: unknown): value is ListKind {
   return value === 'model' || value === 'effort';
 }
 
-/** The harness key of the lines that open with the command `cli`. */
-function keyOf(cli: LineHarness): HarnessKey {
-  return (HARNESSES.find((harness) => harness.cli === cli) as CheckedHarness).key;
+/** The harness key of the lines that open with the command `cli`, or undefined for a harness with no lists. */
+function keyOf(cli: LineHarness): CliHarnessKey | undefined {
+  return CLI_HARNESSES.find((harness) => harness.cli === cli)?.key;
 }
 
 /** Each harness's lists as `lines` carry them, each distinct and in the order of first appearance, with no overlay. */
 export function derivedLists(lines: Iterable<string>): HarnessLists {
   const lists = {} as HarnessLists;
-  for (const harness of HARNESSES) {
+  for (const harness of CLI_HARNESSES) {
     lists[harness.key] = { models: [], efforts: [] };
   }
   for (const line of lines) {
     const read = readLine(line);
-    if (read === undefined) {
+    const key = read === undefined ? undefined : keyOf(read.harness);
+    if (read === undefined || key === undefined) {
       continue;
     }
-    const list = lists[keyOf(read.harness)];
+    const list = lists[key];
     if (read.model !== undefined && !list.models.includes(read.model)) {
       list.models.push(read.model);
     }
@@ -187,7 +189,7 @@ export function harnessLists(store: VariantStore, file: string, lines: Iterable<
   const part = harnessPart(store, file);
   const derived = derivedLists(lines);
   const lists = {} as HarnessLists;
-  for (const harness of HARNESSES) {
+  for (const harness of CLI_HARNESSES) {
     const entry = part[harness.key];
     const each = derived[harness.key];
     lists[harness.key] = { models: overlaid(each.models, entry, 'model'), efforts: overlaid(each.efforts, entry, 'effort') };
@@ -203,7 +205,7 @@ function checkedEdit(kind: ListKind, value: string): void {
 }
 
 /** The store with one harness's object `entry` given the overlay fields of `kind`, an empty field left out. */
-function withOverlay(store: VariantStore, part: Record<string, unknown>, key: HarnessKey, kind: ListKind, added: string[], removed: string[]): VariantStore {
+function withOverlay(store: VariantStore, part: Record<string, unknown>, key: CliHarnessKey, kind: ListKind, added: string[], removed: string[]): VariantStore {
   const entry = { ...(isRecord(part[key]) ? (part[key] as Record<string, unknown>) : {}) };
   delete entry[OVERLAY[kind].added];
   delete entry[OVERLAY[kind].removed];
@@ -221,7 +223,7 @@ function withOverlay(store: VariantStore, part: Record<string, unknown>, key: Ha
  * out of the removed entries, and added as an entry of its own only when no line carries it. Every
  * other value of the harness part is kept as read.
  */
-export function withListValueAdded(store: VariantStore, file: string, lines: Iterable<string>, key: HarnessKey, kind: ListKind, value: string): VariantStore {
+export function withListValueAdded(store: VariantStore, file: string, lines: Iterable<string>, key: CliHarnessKey, kind: ListKind, value: string): VariantStore {
   checkedEdit(kind, value);
   const part = harnessPart(store, file);
   const derived = derivedLists(lines)[key];
@@ -239,7 +241,7 @@ export function withListValueAdded(store: VariantStore, file: string, lines: Ite
  * taken out of the added entries, and recorded as removed only when a line carries it. Every other
  * value of the harness part is kept as read.
  */
-export function withListValueRemoved(store: VariantStore, file: string, lines: Iterable<string>, key: HarnessKey, kind: ListKind, value: string): VariantStore {
+export function withListValueRemoved(store: VariantStore, file: string, lines: Iterable<string>, key: CliHarnessKey, kind: ListKind, value: string): VariantStore {
   checkedEdit(kind, value);
   const part = harnessPart(store, file);
   const derived = derivedLists(lines)[key];
@@ -277,7 +279,7 @@ export function editHarnessList(
   shippedFile: string,
   ownFile: string | undefined,
   storeFile: string,
-  key: HarnessKey,
+  key: CliHarnessKey,
   kind: ListKind,
   edit: 'add' | 'remove',
   value: string,
