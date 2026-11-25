@@ -96,5 +96,9 @@ The mission-definition tool refuses, after normalization and before it creates a
 
 `embed --alternatives` refuses an alternative whose id holds `"`, `$`, a backtick, or `\`, a fixed set of the id's own, checked independently of whatever `add` refuses in a Short Title; a slash stays legal because an id names no file. The check runs at embed only, so ids already in a document stand and loading a document checks no id character. The alternatives agent's rendering rule names the four characters as ones an id may not hold, so a refusal does not spend the return's one repair. No call site gains an escaping rule.
 
+### Lifted line option cut
+
+`embed --alternatives` refuses an `<alternative>` whose id, after the tool's whitespace folding, holds ` — `, with one `Error:` line naming the id and the document unchanged, pinned by a test in the embed suite that reproduces the `Wait — then decide` case. `embed --recommendation` needs no check of its own, since its option must already name one of the block's ids. The three parse sites (the compact view's `"${pick%% — *}"`, the sweep's option taken as a literal from that print, and RECORDED OPTION in `answer-with-recommendation-procedure.md` and `answer-open-question-with-alternative`) and `lift`'s joined line stay exactly as they are. Ids already embedded are left as they stand, and the alternatives agent's rendering rule is not changed for this refusal, so an agent that writes such an id spends its one repair on it. CLAUDE.md records the refusal and its reason.
+
 ## Out of Scope
 
