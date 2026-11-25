@@ -3,7 +3,7 @@
   "displayName": "Gurita for VS Code",
   "description": "Gurita is a plugin for Claude Code, Codex, and Antigravity that settles a mission's questions before handing its work to agents, and this extension adds a side-bar view and windows over the plugin's missions, questions, and recipes, doing nothing unless the plugin is installed.",
   "publisher": "BusyMinds",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "license": "MIT",
   "icon": "media/icon.png",
   "repository": {

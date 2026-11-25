@@ -2,6 +2,19 @@
 
 The release notes of Gurita for VS Code, one entry per version published to the Visual Studio Marketplace and Open VSX, newest first.
 
+## 0.3.0 — 2026-11-25
+
+### Tracker improvements and next release
+
+- Recipes are now called actions where you run them, and action recipes in the Settings window. The requirements chain is renamed Approve all standing recommendations and review again and no longer has a mixed-agent variant.
+- Question cards render backtick code, put the alternative button on its own row, and add a First button to the pager. The Answer with recommendation button is gone.
+- Mission pages open with an introduction, a Show goal button, and a headed workflow diagram. They show a run indicator, an Ask in mission context button, a description on each action row, notices when the scope gate is held or there are uncommitted changes, task briefs, and completed tasks linked to their commits.
+- The Missions side-bar view gains rows for plugin notices and for offering the workflow bootstrap, plus one Finished missions row with Capture principles. Define mission opens the new mission's window, Gurita: Open Mission… is in the Command Palette, and missions are re-read whenever the git state changes.
+- Runs take their input in a multi-line panel, and the new `gurita.autoCloseFinishedRuns` setting closes finished runs.
+- A project's own `gurita_recipes.md` is read as a third recipe source.
+- Codex joins the harness dropdown, with a shipped `codex exec` single-task line.
+- The listing is a short showcase with three screenshots and a new demo, and links a full usage reference.
+
 ## 0.2.0 — 2026-11-24
 
 ### Marketplace and Open VSX publication
