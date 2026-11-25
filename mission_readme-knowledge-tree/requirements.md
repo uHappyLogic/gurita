@@ -84,5 +84,9 @@ Each file at the repository root that can carry prose describes itself in its ow
 
 The tree holds with the plugin as it stands, and its correctness does not depend on `mission_project-defined-knowledge-placement/`: a runner reaches a node only by following the root's own instructions, and a later mission's lasting changes reach a node only through its tasks or the update skill. In addition, the root's rules on where knowledge lives and how nodes are read are written as plain directions a runner could follow: which node a given area's lasting knowledge goes to, and which node to read before working in a folder. Once a plugin that follows such directions lands, `finish-mission` and the context-reading runners use them with no further change to the tree; until then those runners do nothing with them. Neither mission waits on the other.
 
+### Home of core rules
+
+The compressed rules governing files under `core/` are split by subfolder into a `README.md` in each of `core/tools/`, `core/shared/`, `core/skills/`, and `core/agents/`. Each is kept out of every host tree by listing it in the existing per-host `exclude` key of every `scripts/hosts/<host>/settings.toml`, with no change to the build's Python. The root describes `core/` and points at each of the four, and the rule against rationale stays in force for every rendered file.
+
 ## Out of Scope
 
