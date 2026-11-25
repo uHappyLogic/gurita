@@ -2,16 +2,11 @@
 
 This page lists the 19 design claims Gurita makes, in six groups, each with the
 design that makes it true and one metric for a test. The claims are written in
-ASD-STE100 Simplified Technical English, a controlled register whose short
-sentences and one-meaning-per-word vocabulary keep each claim unambiguous, so
-that it reads the same to a reader and to the author of a test. Each **Metric**
-line names the test that would check its claim. The repository's test suite
-runs only three of these tests: the test of claim 11, against the open-question
-tool, the task-list tool, and the fold tool; the first part of the test of
-claim 2, against the one shell call of the batch answer skill; and the second
-part of the test of claim 12, against the commit tool, the shell call of the
-batch answer skill, and the shell calls of task completion. No suite runs the
-other tests yet.
+ASD-STE100 Simplified Technical English, so that each claim reads the same to a
+reader and to the author of a test. Each **Metric** line names the test that
+would check its claim. Gurita's own test suite runs three of these tests: the
+test of claim 11, the first part of the test of claim 2, and the second part of
+the test of claim 12. No suite runs the other tests yet.
 
 ## Decisions
 
@@ -28,50 +23,53 @@ other tests yet.
   answer was made: manual, recommendation, or alternative. A revert of that
   commit opens the question again.
 - **Metric:** Commits per decision (must be 1), and the result of a revert test.
-  The `tests/` suite runs the first part of this test on the shell call of
-  the batch answer skill.
 
 ### 3. The person decides. The machine gives advice only.
 
 - **Design:** A recommendation is advice. A principle changes the weight of an
   option. It does not block an option. The user can record a different
-  alternative. A goal change shows its effect on the decisions, but does not
-  change them.
+  alternative or an answer of their own. A goal change removes the
+  recommendations that it makes out of date, but it does not change a
+  recorded decision.
 - **Metric:** The count of decisions recorded without a user command (must be
   0, unless the user started a batch skill).
 
 ### 4. Advice comes from the live project and shows its sources.
 
-- **Design:** The recommender reads the project, not its memory. Its real
-  alternatives are distinct and cover the decision. Each two alternatives are
-  different in substance. Together they cover the full decision, not only the
-  words of the question. This includes the option not to do the thing, when
-  that option is possible. Each alternative has one advantage and one drawback.
-  It gives one recommendation with a direct reason. It names each principle it
-  applied and each sibling recommendation it used.
+- **Design:** The alternatives and the recommendation come from the live
+  project and the mission's requirements, not from memory. The alternatives
+  are distinct and cover the decision. Each two alternatives are different in
+  substance. Together they cover the full decision, not only the words of the
+  question. This includes the option not to do the thing, when that option is
+  possible. Each alternative has one key advantage and one key drawback. The
+  recommender gives one recommendation with a direct reason. It names each
+  principle it applied and each sibling recommendation it used.
 - **Metric:** Judge score for alternative quality, and the count of
   recommendations without a clear option.
 
 ### 5. Advice gets better with each mission.
 
-- **Design:** The capture skill reads the decisions where the user did not
-  accept the recommendation. It writes the reasons as principles in one store.
-  The recommender reads that store. Principle citations are separate elements,
-  so the recorded decision text stays clean.
+- **Design:** The capture skill reads the answers of a mission, and mainly the
+  answers where the user did not accept the recommendation. It writes the
+  reasons as principles in one store for the project. The recommender reads
+  that store. The recorded decision text does not cite the principles.
 - **Metric:** Agreement between the recommendation and the recorded decision,
   with and without the store.
 
 ### 6. Related questions are answered in the correct order.
 
 - **Design:** A recommendation names each sibling recommendation it depends on.
-  The batch answer skill walks that graph from its origins. When an answer
-  agrees with a dependent question, the cascade removes the dependency tag.
-  When it does not agree, the cascade removes the children of the dependent
-  question. A recommendation can also depend on an answer without a tag. A
-  hand answer names each recommendation that it makes out of date, and the
-  same cascade removes the children of those questions in the same write. A
-  goal change removes each recommendation that it makes out of date, and
-  keeps the alternatives. That removal does not continue to the dependents.
+  The batch answer skill answers the questions in that order, from the
+  questions that depend on nothing. When an answer is the option that a
+  dependent recommendation assumed, the dependent recommendation stays. When
+  it is not, the dependent recommendation is removed and its alternatives
+  stay, and the same occurs to the questions that depend on it. A
+  recommendation can also depend on an answer without a stated dependency. A
+  hand answer names each recommendation that it makes out of date, and these
+  recommendations are removed in the same way. A goal change or a refresh of
+  the starting state removes each recommendation that it makes out of date,
+  and keeps the alternatives. That removal does not continue to the
+  dependents.
 - **Metric:** Golden-file result on a seeded graph, and the count of recorded
   decisions with an out-of-date reason.
 
@@ -81,11 +79,10 @@ other tests yet.
 
 - **Design:** Task derivation makes a coverage matrix before it writes the
   tasks. Task completion derives an acceptance bar and verifies the work
-  against it. Then the task-list tool removes the task from the task list.
-  The commit of the task records the bar as its body, with one bullet for
-  each criterion. The subject of that commit gives the task title, and its
-  diff keeps the text of the task. The missions tool reads these commits
-  from the git log.
+  against it. Then the task leaves the task list. The commit of the task
+  records the bar as its body, with one bullet for each criterion. The
+  subject of that commit gives the task title, and its diff keeps the text
+  of the task. Gurita reads these commits back from the git log.
 - **Metric:** Recall of requirement IDs in the tasks and in the verified
   bullets of the task commits.
 
@@ -123,60 +120,40 @@ other tests yet.
 - **Design:** The files of the live missions and the git log hold the full
   record. The finish commit of a mission removes the mission directory,
   and the body of that commit is the summary of the mission. The files of
-  the mission stay in the parent of that commit. The read-only missions
-  tool reads the finished missions and the completed tasks from the git
-  log. A new session reads these records and can answer questions about the
-  project. No chat transcript is necessary.
+  the mission stay in the parent of that commit. Gurita reads the finished
+  missions and the completed tasks back from the git log. A new session
+  reads these records and can answer questions about the project. No chat
+  transcript is necessary.
 - **Metric:** Score of a new session on a fixed question bank about the
   project.
 
 ### 11. The records are machine-readable.
 
-- **Design:** Open questions are one XML document for each mission. A
-  stdlib tool creates the document empty with the mission. After that, the
-  open-question tool is the only writer of the document. Each answer, cascade,
-  prune, and embed is a tool call. The tool validates the input and writes the whole
-  document again in one canonical form. The task list is the same. The same
-  stdlib tool creates it with the mission. After that, the task-list tool
-  is the only writer of the task list. Each derivation, submission, and
-  removal is a tool call. The tool writes the whole file again in one
-  canonical layout. A removal changes only the task list, and a failed
-  removal changes nothing. A completed task has no file. Its record is its
-  task commit. The read-only missions tool reads these commits from the git
-  log and prints one line for each task, with fields that tabs separate.
-  The decisions in `requirements.md` are prose, and no tool is the only
-  writer of that file. The batch answer skill writes each decision with the
-  stdlib fold tool. That tool has two subcommands. The `fold` subcommand adds the decision, the
-  heading of its subsection when that heading is new, and the blank lines
-  around them. The `replace` subcommand writes a new body below the heading
-  of one subsection that exists. It does not make a new subsection. The batch
-  answer skill uses `replace` only for a question that asks which of two
-  conflicting decisions stands. For each such question, it changes one
-  subsection only: the subsection of the decision that does not stand. Each
-  subcommand changes no other byte of the file.
-- **Metric:** Golden-file diff of the document after an answer, a cascade, or
-  a prune, of the task list after each task-list write, and of
-  `requirements.md` after each fold and each replace. The `tests/` suite runs
-  this test on the open-question tool, on the task-list tool, and on the fold
-  tool.
+- **Design:** The open questions of a mission are one XML document. After
+  the mission is defined, only Gurita's open-question tool writes that
+  document, and it writes it in one canonical form. The task list is the
+  same: only Gurita's task-list tool writes it, in one canonical layout, and
+  a failed write changes nothing. A completed task has no file. Its record
+  is its task commit. The decisions in `requirements.md` are prose that a
+  person can also edit. When the batch answer skill records a decision, it
+  changes only the bytes of that decision. For a question that asks which of
+  two conflicting decisions stands, it writes again the decision that does
+  not stand, and changes nothing else.
+- **Metric:** Golden-file diff of the question document after an answer, a
+  cascade, or a prune, of the task list after each task-list write, and of
+  `requirements.md` after each recorded decision.
 
 ### 12. Repository hygiene is structural.
 
-- **Design:** Each commit records only its own paths. Each skill gives its
-  paths to one commit tool. The tool stages only those paths, never all
-  files, and commits them with the same paths as its pathspec. Thus a change
-  of another run, staged or not, stays out of the commit. A task subagent
-  stages nothing. It writes the paths of its task to one file, and the
-  orchestrator commits the task from that file. When a git write fails
-  because another run holds the git lock, the tool tries the write again,
-  for a maximum of approximately 4 seconds. Each commit subject has a marker
-  that names the skill function. A pass that changes nothing makes no
-  commit. A failed run leaves its partial work in the tree for the next run.
-  The console shows one status line and does not repeat the diff.
+- **Design:** Each commit records only its own paths, never all files. Thus a
+  change of another run, staged or not, stays out of the commit. When
+  another run holds the git lock, the commit tries again for a few seconds.
+  Each commit subject has a marker that names the skill function. A pass
+  that changes nothing makes no commit. A failed run leaves its partial work
+  in the tree for the next run. The console shows one status line and does
+  not repeat the diff.
 - **Metric:** Count of unknown subjects, commits with a path from outside
-  their own change set, and empty commits (each must be 0). The `tests/`
-  suite runs the second part of this test on the commit tool, on the shell
-  call of the batch answer skill, and on the shell calls of task completion.
+  their own change set, and empty commits (each must be 0).
 
 ## Efficiency
 
@@ -185,20 +162,10 @@ other tests yet.
 - **Design:** One subagent does one task or one alternative set, and then
   stops. The orchestrator holds no work context. It gets a bare DONE or a
   bare FAILED only. An alternative set never comes back in the message: the
-  subagent writes it to one scratch file outside the repository. One fixed
-  shell call embeds and commits all the files that have landed, with one
-  commit for each question. Each host tree says how often that call runs.
-  On Claude Code and Antigravity, it runs each time the end of a subagent
-  wakes the orchestrator. On Codex, it runs one time for each round of
-  subagents, and one more time when that round has repairs. The
-  orchestrator reads no alternative set and keeps no list of files. The
-  batch recommend and answer skills dispatch no agent. They read the
-  question set one time for each run, not one time for each question.
-  The recommend skill writes all its picks in one fixed shell call. That
-  call embeds and lifts each block, makes one commit with the lifted lines
-  as its body, and sorts the document. Thus the runner uses no tool turn
-  for each block. Task bodies are minimal. A shared procedure loads only when a step needs
-  it.
+  subagent writes it to one file outside the repository, and the orchestrator
+  records it without reading it. The batch recommend and answer skills
+  dispatch no agent. They read the question set one time for each run, not
+  one time for each question. Task bodies are minimal.
 - **Metric:** Tokens per task, orchestrator context size as the task count
   increases, and total cost per mission.
 
@@ -206,11 +173,9 @@ other tests yet.
 
 - **Design:** The batch skills recommend, answer, and complete all items in one
   run. They gather the items once and run strictly in sequence. The user starts
-  them and reads the git log after. The recommend skill writes, commits, and
-  sorts in one shell call. It makes one more call only to send again the
-  blocks that the tool refused. Thus a run has a maximum of two calls and
-  two annotation commits. For each commit that lands, the call prints one
-  fixed marker line, and the status line comes from these marker lines.
+  them and reads the git log after. Each run ends with one fixed first line,
+  so a script that runs the skills one after another can tell how each run
+  ended.
 - **Metric:** Missions completed with 0 user turns after the start, and their
   scores on the other claims.
 
@@ -220,66 +185,55 @@ other tests yet.
 
 - **Design:** A failed task leaves its partial work in the tree, and the next
   run continues from it. A bad subagent return gets one repair, then a skip,
-  never a run stop. All the repairs from one batch go out together, at once.
-  When a subagent's file never lands, the run reports "no annotation landed"
-  for that question, and the next run tries it again. The alternatives pass
-  deletes no scratch file, so a refused return stays available for
-  inspection. The tool refuses a bad recommendation for its block only, and
-  the call prints that block's Error line. The other blocks land and
-  commit. The recommend skill corrects all refused blocks and sends them
-  again together, one time only. When the tool refuses a block again, the
-  run skips it and reports its Error line and the remedy: run the pass
+  never a run stop. When the alternatives of a question never arrive, the
+  run reports "no annotation landed" for that question, and the next run
+  tries it again. A refused recommendation stops only its own question, and
+  the other recommendations are recorded. The recommend skill corrects the
+  refused recommendations and sends them again one time. When one is refused
+  again, the run skips it and reports the error and the remedy: run the pass
   again. The answer skill records the decision before it removes the
   question, so an interruption leaves a safe superset.
 - **Metric:** Result of a kill-and-resume test: work continued, not done again.
 
 ### 16. When in doubt, Gurita keeps the record and flags it.
 
-- **Design:** When the cascade is not sure, it strips the dependent question
-  and does not answer it. When a hand answer or a goal change is possibly
-  the cause of an out-of-date recommendation, the skill strips that
-  recommendation and keeps the alternatives. Review flags a possibly
-  resolved question and does not delete it. Bootstrap never overwrites a
+- **Design:** When Gurita is not sure that an answer is the option a
+  dependent recommendation assumed, it removes that recommendation and keeps
+  the alternatives, so the next recommendation pass picks again. When a hand
+  answer, a goal change, or a refresh of the starting state possibly makes a
+  recommendation out of date, the skill removes that recommendation and keeps
+  the alternatives. Review flags a possibly resolved question and does not
+  delete it. Bootstrap changes only its own workflow section of the context
   file. Capture writes the principle store, but commits only after the user
-  reads the diff. On rejection, it restores the snapshot.
+  reads the diff. On rejection, it restores the store as it was.
 - **Metric:** Count of records lost without a user command (must be 0).
 
 ## Engineering
 
 ### 17. One source of truth, no drift.
 
-- **Design:** The runtime layer is written once, in `core/`. Each host tree is
-  a build of it. Each shared procedure is referenced and never restated. The
-  build gate fails on any drift, locally and in CI.
+- **Design:** The skills, agents, procedures, and tools are written once.
+  Each host's copy of the plugin is a build of that one source. Each shared
+  procedure is referenced and never restated. A check fails when a host's
+  copy is different from a new build.
 - **Metric:** Result of the drift gate on each commit, and the count of
   restated procedures (must be 0).
 
 ### 18. The same behaviour on each host.
 
-- **Design:** No core file names a host. A host difference reaches core only
-  as a named slot. Each host definition gives the slot's value, inline in its
-  settings or in a file under its `slots/` directory. No core sentence names
-  a capability and leaves the runtime to select a branch. Thus each host
-  tree describes only its own mechanism, and no tree names the mechanism of
-  another host. For example, the wait and the repair of the alternatives
-  pass are slots. On Claude Code, the subagents run in the background, and
-  the pass embeds the landed files each time the end of a subagent wakes it.
-  A repair continues the same agent with `SendMessage`. On Antigravity, one
-  `invoke_subagent` call starts all the subagents, and each final message
-  wakes the pass. A repair continues the same agent with `send_message`. On
-  Codex, the pass dispatches rounds up to the thread cap and waits for each
-  round with `wait_agent`. A repair continues the same agent with
-  `followup_task`. Each host is a declarative definition, with no
-  host-specific code.
+- **Design:** Each host gets the same skills with the same steps. Where hosts
+  do one step differently, for example how they run subagents together and
+  wait for them, the copy for each host describes only that host's own
+  mechanism and names no other host.
 - **Metric:** Same case scores on each host tree.
 
 ### 19. Each skill does one thing, on an explicit command.
 
-- **Design:** Gurita runs only by slash command. Each skill has one function. To
-  record an answer, to change the goal, and to review the questions are 3
-  different skills. Task completion is the only function that has both a skill
-  and an agent. They use the same procedure and differ only in where it runs:
-  inline or isolated.
+- **Design:** Gurita runs only when the user invokes a skill. Each skill has
+  one function. To record an answer, to change the goal, and to review the
+  questions are 3 different skills. Task completion is the only function that
+  has both a skill and an agent. They use the same procedure and differ only
+  in where it runs: inline or isolated.
 - **Metric:** Count of file changes outside the skill's declared paths (must
   be 0).
 

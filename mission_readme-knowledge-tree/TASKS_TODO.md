@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Rewrite The Design Claims As User Content
-
-Rewrite `docs/design-claims.md`, its nineteen claims, so that it holds only what a user of the plugin needs: maintainer-facing material is cut outright and moved to no other file, and a mechanic already stated by a runtime file, a tool's `--help` or docstring, a test, or the build's docstring is dropped and restated nowhere. Verified by reading every claim that stays against the plugin as it stands for accuracy, and by every link into the page from the root `README.md` and the other docs pages still resolving.
-
----
-
 ## Write The Docs Folder Node
 
 Write `docs/README.md`, the maintainer-facing node covering `docs/`, in the fixed node parts (purpose, then rules, commands, and pointers, each of those three present only when filled) and at most 12,000 bytes: its rules state that the pages carry user content only and that a mechanic already stated by a runtime file, a tool's `--help` or docstring, or a test is cut and not restated, and its pointers, each a line of the fixed pointer form with a when-to-follow note of at most 400 bytes, lead to the four pages and to the sources the pages defer to. Verified by the node holding only the allowed headings in their order, staying within both byte limits, and every pointer's path and heading anchor resolving.
