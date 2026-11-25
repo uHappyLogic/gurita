@@ -88,5 +88,9 @@ Each section of the answer sweep's batched call captures its decision heading on
 
 The separator between a Short Title and the text after it becomes the first `.` followed by whitespace, not any `.`, so `CLAUDE.md wording. answer` splits after `wording`. `add` refuses a new Short Title holding a `.` followed by whitespace or ending in `.`. The parse steps of `answer-open-question` and `answer-open-question-with-alternative` and their no-separator fixed line, with its `docs/skill-reference.md` row, are reworded to the dot-space form. Every recipe and usage line, already written as `<Short Title>. <…>`, stays byte-identical, so dotted file names stay legal in titles and the installed extension keeps working with no release.
 
+### Mission path characters
+
+The mission-definition tool refuses, after normalization and before it creates anything, a scope holding whitespace or any character a shell reads as syntax in an unquoted word in bash or zsh: `"`, `'`, a backtick, `$`, `\`, `(`, `)`, `[`, `]`, `{`, `}`, `*`, `?`, `;`, `&`, `|`, `<`, `>`, `!`, and `~`, `#`, or `=` opening the scope. The refusal is one `Error:` line naming the scope, pinned by one test, and every other character is accepted. The fixed calls keep writing `<MISSION_DIR>` unquoted, `resolve-mission.md` keeps reading the flag's value as the one whitespace-separated token, and the extension's lines are unchanged. A mission already defined under such a scope is left as it stands.
+
 ## Out of Scope
 
