@@ -88,5 +88,9 @@ The tree holds with the plugin as it stands, and its correctness does not depend
 
 The compressed rules governing files under `core/` are split by subfolder into a `README.md` in each of `core/tools/`, `core/shared/`, `core/skills/`, and `core/agents/`. Each is kept out of every host tree by listing it in the existing per-host `exclude` key of every `scripts/hosts/<host>/settings.toml`, with no change to the build's Python. The root describes `core/` and points at each of the four, and the rule against rationale stays in force for every rendered file.
 
+### Update skill job
+
+One run of the update skill brings the nodes up to date with the commits made since its last run and repairs the check's failures. The anchor is the latest commit under the skill's own subject marker, found in the log, as the missions tool's `since` finds the starting state's; with no anchor, the first run compares every node with its folder. The run updates in place the nodes of the folders those commits changed and the pointer notes above them, keeping every still-true sentence byte-identical, and repairs every check failure; it re-compresses a node only as far as a budget failure forces. It writes and commits under its marker, which moves the anchor.
+
 ## Out of Scope
 
