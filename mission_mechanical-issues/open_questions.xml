@@ -1,1 +1,89 @@
-<open-questions/>
+<open-questions>
+  <open-question id="Short Title refused characters">
+    <question>This mission refuses a new Short Title holding a `/` at `add`, because the alternatives agent writes its return to a file named by the title. Most fixed calls also substitute the title inside a double-quoted shell argument, where `&quot;`, `$`, a backtick, and `\` are special, and only the answer sweep&apos;s batched call states an escaping rule for it. Which further characters, if any, does `add` refuse in a new Short Title: none, those four, or everything outside an allow-list of letters, digits, spaces, and a fixed set of punctuation?</question>
+  </open-question>
+  <open-question id="Short Title rule statement">
+    <question>Once `add` refuses certain characters in a new Short Title, where is the rule stated: only in the open-question tool&apos;s help text and `Error:` line, with the review pass&apos;s Short Title rule naming the refusal as it names the duplicate-id refusal, or also as a statement in that rule of what a Short Title may hold, so the author writes a valid title the first time?</question>
+  </open-question>
+  <open-question id="Existing invalid Short Titles">
+    <question>The refusal of characters in a Short Title runs only at `add`, so a block authored before it keeps its title, and a title holding a `/` fails the alternatives agent&apos;s file write on every run, leaving the block without alternatives. What happens to an existing block whose Short Title a new `add` would refuse: is it left as it stands, to be re-authored by hand, or does the review pass re-author it under a valid title as cleanup?</question>
+  </open-question>
+  <open-question id="Task title characters">
+    <question>A task&apos;s `##` heading is substituted into double-quoted shell arguments (`--subject &quot;Task-completion: &lt;TASK_NAME&gt;&quot;` in both completion calls, the title arguments of `submit-task` and of the task-list tool&apos;s `remove`), where `&quot;`, `$`, a backtick, and `\` are special; only `submit-task` states an escaping rule, and this repository&apos;s recorded headings already hold a double quote. Does the task-list tool refuse those characters in a new task title, as `add` refuses characters in a Short Title, or are task titles handled another way or left as they are?</question>
+  </open-question>
+  <open-question id="Commit body quoting">
+    <question>The commit procedure shows a commit body as the double-quoted literal `--body &quot;&lt;BODY&gt;&quot;`, where a backtick or `$` expands and a `&quot;` ends the argument, and the skills following it pass Markdown text there (the finish summary, a hand answer&apos;s rationale, a lifted line); many recorded bodies hold such characters, so each runner has been changing the quoting on its own. How does a body reach the commit tool from the commit procedure: captured from a quoted heredoc and passed as a quoted variable, as the completion calls do, read by the tool from standard input or a file, or written as a literal under a stated escaping rule?</question>
+  </open-question>
+  <open-question id="Decision heading quoting">
+    <question>The answer sweep passes a decision&apos;s `###` heading to the fold tool as the double-quoted literal `--section &quot;&lt;Heading&gt;&quot;`, under its rule that `&quot;`, `$`, a backtick, and `\` are escaped by a backslash; an unescaped backticked heading runs its text as a command, exits 0, and creates a mangled subsection, so correctness rests on each runner&apos;s escaping. Does the heading keep reaching the tool as an escaped literal, or does it reach it another way: a value captured from a quoted heredoc, standard input, or a file?</question>
+  </open-question>
+  <open-question id="Answer text separator">
+    <question>`answer-open-question` and `answer-open-question-with-alternative` split their text on the first `.`, the Short Title before it, so a Short Title holding a dot (three recorded titles open with `CLAUDE.md`) cannot be named to either, and the answer lines of the extension&apos;s recipes and of the usage documents are built on that form. What separates a Short Title from the text after it: is a `.` refused in a new Short Title, is the title matched as the longest existing Short Title the text opens with, or is the separator changed to one a Short Title cannot hold?</question>
+  </open-question>
+  <open-question id="Discuss line note">
+    <question>The discuss line of the extension&apos;s shipped recipes and of the hand-use document appends `. &lt;note&gt;` to the Short Title, but `discuss-open-question` reads the whole text after the flag as the Short Title, so a non-empty note reaches `locate` as part of the title and the run is refused. Does `discuss-open-question` gain a rule separating a note from the Short Title, or do those discuss lines drop the note?</question>
+  </open-question>
+  <open-question id="Mission path characters">
+    <question>The mission-definition tool accepts a scope holding a space, parentheses, or brackets, while every fixed call writes `&lt;MISSION_DIR&gt;` unquoted and the `--mission` value is read as the one whitespace-separated token after the flag, so such a mission cannot be named or breaks the shell call. Where are a mission path&apos;s characters stopped: at definition, the tool refusing a scope that holds whitespace or a shell-active character, or at each use, every fixed call quoting the path and the flag&apos;s value read by another rule?</question>
+  </open-question>
+  <open-question id="Commit call project paths">
+    <question>Project file paths are written unquoted on the commit tool&apos;s command line (`&lt;PATHS&gt;` in the commit procedure, the recorded paths in the inline completion call), so a path holding a space or a shell-active character breaks the call, while the completion agent&apos;s path file, read line-exact, is unaffected. How do such paths reach the commit tool: quoted under a rule stated where the command is shown, through the path-file form for every caller, or as they do now?</question>
+  </open-question>
+  <open-question id="Alternative id characters">
+    <question>An alternative&apos;s id is a free-form label the alternatives agent writes, checked at `embed --alternatives` only as non-empty and unique within its block, and it is later substituted into the double-quoted `--option &quot;&lt;Option&gt;&quot;` argument, where `&quot;`, `$`, a backtick, and `\` are special. Does `embed --alternatives` refuse those characters in an alternative id, as `add` refuses characters in a Short Title, or are ids handled another way or left unchecked?</question>
+  </open-question>
+  <open-question id="Lifted line option cut">
+    <question>The answer sweep&apos;s compact view and the two single-question lift paths take the option id from a lifted line as the text before its first spaced em dash, so an alternative id that itself holds ` — ` is cut short and the call that follows is refused. How is that closed: is ` — ` refused in an alternative id at `embed --alternatives`, is the id obtained without parsing it out of the lifted line, or is the case left as it is?</question>
+  </open-question>
+  <open-question id="Folded body heading lines">
+    <question>The fold tool writes a `fold` or `replace` body verbatim and reads every column-0 `## ` line as the end of `## Decisions` and every column-0 `### ` line inside it as a subsection heading, so a decision body holding such a line exits 0 and silently restructures `requirements.md`. Does the tool refuse a body holding a column-0 `## ` or `### ` line, which is a stop for the answer sweep&apos;s batched call, or is such a line accepted, as the task-list tool&apos;s equivalent is, on the ground that the commit&apos;s diff shows it?</question>
+  </open-question>
+  <open-question id="Leading dash in titles">
+    <question>Titles are positional arguments with no `--` written ahead of them, so a Short Title or task title opening with `-` can be read as an option: `add` and the task-list tool&apos;s `insert` given a title opening `-h` print the help text, exit 0, and write nothing, and `insert` given one opening `--before=` exits 2. No recorded title opens with `-`. Is this closed, by `--` written ahead of the positional arguments in every fixed call or by refusing a leading `-` where a title is created, or only recorded as accepted?</question>
+  </open-question>
+  <open-question id="Heredoc delimiter clause">
+    <question>A body line reading `EOF` ends a `&lt;&lt;&apos;EOF&apos;` heredoc, and the lines after it run as shell commands. The answer sweep, the recommendation pass, both completion calls, and `define-mission-goal` tell the runner to pick a delimiter line the text does not contain; the review pass&apos;s `add`, `derive-tasks`&apos; `initialize`, and `submit-task`&apos;s `insert` do not, and no recorded body holds such a line. Do those three sites gain the same clause, or is the gap left as it is and recorded as accepted?</question>
+  </open-question>
+  <open-question id="Hand-rendered attribute quoting">
+    <question>The recommendation pass renders the `question` and `option` attributes of `&lt;depends-on&gt;` and `&lt;recommendation&gt;` by hand, its prose naming only `&amp;` and `&lt;` as characters to write as entities, so a `&quot;` in a Short Title or an alternative id yields a fragment the tool refuses as malformed XML. How is a `&quot;` kept from breaking those attributes: by the pass&apos;s prose naming it as a character to write as an entity, by refusing it where titles and ids are created, or is the case left as it is?</question>
+  </open-question>
+  <open-question id="Concurrent dispatch limit">
+    <question>On Claude Code the alternatives pass sends every dispatch in one message with no cap, and the host refuses each dispatch past 20 running at once; no step of the pass covers a refused dispatch, and in 3 of 41 affected sessions the refused questions were never sent again and stayed bare. How does the pass meet the limit: by dispatching in rounds of a stated size, which writes into the host&apos;s slot value a limit the host can change, or by keeping its one message and gaining a stated step that sends a refused dispatch again as agents end?</question>
+  </open-question>
+  <open-question id="Completed-task read size">
+    <question>The missions tool&apos;s `tasks --with-body` print is unbounded, and five skills run it on their mission directory unconditionally; in field runs 106 of 834 such calls printed more than the host keeps inline (about 30 KB to 262 KB), so the print was written to a file the runner then had to read. Does the `tasks` read get a bound, in the tool (as `missions` has `--last N`) or through a narrower call at the readers, or is the print left whole and the cost accepted?</question>
+  </open-question>
+  <open-question id="Project record read size">
+    <question>`discuss-mission-goal` runs the missions tool&apos;s `record .` once per goal conversation, unbounded, and the print grows with every finished mission; in field runs 12 of 53 such calls printed more than the host keeps inline and were written to a file the runner then had to read. Does the `record` read get a bound, in the tool or in the call the skill makes, or is the print left whole and the cost accepted?</question>
+  </open-question>
+  <open-question id="Mission document read size">
+    <question>The missions tool&apos;s `show` prints one mission&apos;s `requirements.md` whole, and in field runs 10 of 65 such calls printed more than the host keeps inline and were written to a file the runner then had to read. Is the `show` print left whole and the cost accepted, or does the read change: a narrower print from the tool, or another way of reading the document?</question>
+  </open-question>
+  <open-question id="Compact view size">
+    <question>The answer sweep&apos;s compact view prints every block&apos;s id and question text and three lines per walked block in one shell call, so its size follows the question document; in field runs 12 of 118 views exceeded what the host keeps inline and were written to a file the runner then had to read. Is the view left whole and the cost accepted, or is its print reduced or divided?</question>
+  </open-question>
+  <open-question id="Joined read separators">
+    <question>A runner that joins two reads in one shell call often writes `echo ====` between them, and zsh reads a word opening with `=` as a command lookup, fails it, and abandons the rest of the line, so the second read never runs; 153 field calls failed that way, 74 of them the alternatives agent joining its `locate` and its `list --with-question`, which its file shows as two calls, and nothing tells the other runners not to write such a separator. How is this closed, and for which runners: by a sentence ruling joined reads or the separator out, at the agent&apos;s two reads alone or wherever a runner makes several reads, or by showing the agent&apos;s reads in a joined form with a separator every shell accepts?</question>
+  </open-question>
+  <open-question id="Removed path commit">
+    <question>After a task removes a file with `git rm` or renames one with `git mv`, the commit tool&apos;s `git add` of the old path fails because the index no longer holds it, and the task&apos;s commit is refused; a file removed with a plain `rm` commits, and the completion procedure says nothing of how a task deletes or renames a file. How does a removed or renamed path get committed: does the commit tool stage only the paths the working tree or the index still holds and let its pathspec commit record the staged removal, or are runners told to remove and rename with plain commands?</question>
+  </open-question>
+  <open-question id="Exit 128 retry scope">
+    <question>The commit tool repeats every git write that exits 128, up to 16 attempts over about four seconds, reading only the exit status and never git&apos;s message, so a failure no lock caused, such as a pathspec matching no file, is repeated to the last attempt before its error prints. Does the tool keep repeating every exit 128, or does it stop at once on one no lock caused, which needs it to read git&apos;s message text or to tell the two cases apart some other way?</question>
+  </open-question>
+  <open-question id="Queued task revision">
+    <question>The task-list tool, the only writer of `TASKS_TODO.md`, can initialize, insert, and remove but cannot rewrite a section already in the list, and in field runs the list was changed by hand eleven times, most of them a `complete-all-tasks` session rewording a later task&apos;s brief after a finding. How is a queued task&apos;s brief revised: through a new subcommand rewriting one section&apos;s body, as a stated `remove` and `insert` at the same position, or by hand edits accepted for the list?</question>
+  </open-question>
+  <open-question id="Agent return without token">
+    <question>In field runs 15 of 1,945 `complete-task` agents ended on neither `DONE` nor `FAILED:`, most of them a turn ended while waiting on a background process, and `complete-all-tasks` stops its run on a fixed line when an agent returns no status. Is this closed, by a rule in the agent&apos;s file or a step in the orchestrator, or only recorded as accepted?</question>
+  </open-question>
+  <open-question id="Summary above done token">
+    <question>The `complete-task` agent&apos;s file rules out any payload above its bare `DONE`, yet since 2026-11-18 58 of 415 `DONE` returns carried a summary above the token; the orchestrator reads the last line only, so the cost is the text it has to hold. Is this closed by a change to the agent&apos;s file, or only recorded as accepted?</question>
+  </open-question>
+  <open-question id="Markup in alternative text">
+    <question>Eight alternatives returns were refused as malformed XML in field runs, seven for a mismatched tag and one for a raw element such as `&lt;Link&gt;` written in an alternative&apos;s text, each costing its one repair; the agent&apos;s rendering rule names `&amp;` and `&lt;` as the characters to write as entities. Is this closed, by a change to the agent&apos;s rendering rule or to what the tool accepts, or only recorded as accepted?</question>
+  </open-question>
+  <open-question id="Draft record in history">
+    <question>`ideas/mechanical_issues.md` stands only as a staged, uncommitted addition beside the staged deletion of `ideas/short_title_characters.md`, the one form of the draft `HEAD` holds, and the mission ends with the draft deleted from `ideas/`; its transcript and history counts are reproduced by no file in the tree. Is the draft committed before it is deleted, so that history keeps its evidence, or does it leave without ever being committed, the earlier draft&apos;s deletion committed alone?</question>
+  </open-question>
+</open-questions>
