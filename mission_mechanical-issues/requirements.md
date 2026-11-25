@@ -92,5 +92,9 @@ The separator between a Short Title and the text after it becomes the first `.` 
 
 The mission-definition tool refuses, after normalization and before it creates anything, a scope holding whitespace or any character a shell reads as syntax in an unquoted word in bash or zsh: `"`, `'`, a backtick, `$`, `\`, `(`, `)`, `[`, `]`, `{`, `}`, `*`, `?`, `;`, `&`, `|`, `<`, `>`, `!`, and `~`, `#`, or `=` opening the scope. The refusal is one `Error:` line naming the scope, pinned by one test, and every other character is accepted. The fixed calls keep writing `<MISSION_DIR>` unquoted, `resolve-mission.md` keeps reading the flag's value as the one whitespace-separated token, and the extension's lines are unchanged. A mission already defined under such a scope is left as it stands.
 
+### Alternative id characters
+
+`embed --alternatives` refuses an alternative whose id holds `"`, `$`, a backtick, or `\`, a fixed set of the id's own, checked independently of whatever `add` refuses in a Short Title; a slash stays legal because an id names no file. The check runs at embed only, so ids already in a document stand and loading a document checks no id character. The alternatives agent's rendering rule names the four characters as ones an id may not hold, so a refusal does not spend the return's one repair. No call site gains an escaping rule.
+
 ## Out of Scope
 
