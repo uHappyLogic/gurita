@@ -1,0 +1,88 @@
+source	kind	line
+init-mission-base-workflow	success	Workflow bootstrapped.
+init-mission-base-workflow	no-op	Workflow already bootstrapped — the guidance section is present.
+init-mission-base-workflow	no-op	Bootstrap committed nothing — the guidance already matched the last commit.
+define-mission-goal	success	Mission defined.
+define-mission-goal	no-op	Mission not committed — its directory held no uncommitted file.
+define-mission-goal	stop	Mission not defined — no git work tree at the workspace root.
+define-mission-goal	stop	Mission not defined — no suitable python3 interpreter.
+define-mission-goal	stop	Mission not defined — no --at scope was given.
+define-mission-goal	stop	Mission not defined — the definition tool failed.
+specify-mission-starting-state	success	Starting state recorded.
+specify-mission-starting-state	no-op	Starting state unchanged — nothing committed.
+specify-mission-starting-state	no-op	Starting state current — the ground has not moved since it was recorded.
+review-mission-requirements	success	Requirements reviewed.
+review-mission-requirements	no-op	Requirements unchanged — the review found nothing to reshape.
+review-mission-requirements	verdict	Requirements converged — ready for task derivation.
+review-mission-requirements	stop	Review stopped — the missions record could not be read.
+discuss-open-question	stop	Cannot discuss: no open question matches the title.
+answer-open-question,answer-open-question-with-recommendation,answer-open-question-with-alternative	success	Answer recorded.
+answer-open-question	stop	Answer not recorded — the input has no ". " separator.
+answer-open-question	stop	Answer not recorded — "record the recommendation" is retired here.
+answer-open-question	stop	Answer not recorded — no open question matches the title.
+answer-open-question-with-recommendation	stop	Recommendation not recorded — the lift was refused.
+answer-open-question-with-alternative	stop	Alternative not recorded — the lift was refused.
+answer-open-question-with-alternative	stop	Alternative not recorded — the recording core stopped.
+answer-all-open-questions-with-recommendation	success	Recommendations recorded.
+answer-all-open-questions-with-recommendation	no-op	No recommendations recorded — no question carries one.
+answer-all-open-questions-with-recommendation	no-op	No recommendations recorded — every pick was stripped before its turn.
+answer-all-open-questions-with-recommendation	stop	Sweep stopped — the question gather failed.
+answer-all-open-questions-with-recommendation	stop	Sweep stopped — the mission files already held changes.
+answer-all-open-questions-with-recommendation	stop	Sweep stopped — an answer could not be recorded.
+modify-mission-goal	success	Goal revised.
+modify-mission-goal	no-op	Goal unchanged — the revision matched the existing goal.
+modify-mission-goal	stop	Goal revision stopped — clearing the undermined picks failed.
+capture-mission-principle-updates	success	Principles captured.
+capture-mission-principle-updates	no-op	Nothing captured or committed — no answer commit touches the mission.
+capture-mission-principle-updates	no-op	Nothing captured or committed — no answer generalizes or contradicts the store.
+capture-mission-principle-updates	no-op	Nothing captured or committed — the store already holds what the mission teaches.
+capture-mission-principle-updates	no-op	Nothing captured or committed — the rewrite was declined and the store restored.
+capture-mission-principle-updates	stop	Capture stopped — no mission path was given.
+capture-mission-principle-updates	stop	Capture stopped — no mission directory matches the path.
+capture-mission-principle-updates	stop	Capture stopped — declined at a start-of-run guard.
+provide-alternatives-to-all-open-questions	success	Alternatives embedded.
+provide-alternatives-to-all-open-questions	no-op	No alternatives embedded — the document holds no questions.
+provide-alternatives-to-all-open-questions	no-op	No alternatives embedded — every question already carries a set.
+provide-alternatives-to-all-open-questions	no-op	No alternatives embedded — every dispatched question was skipped.
+provide-alternatives-to-all-open-questions	stop	Alternatives pass stopped — the question list failed.
+recommend-all-open-questions	success	Recommendations embedded.
+recommend-all-open-questions	success	Questions reordered.
+recommend-all-open-questions	no-op	No recommendations embedded — the document holds no questions.
+recommend-all-open-questions	no-op	Nothing embedded or reordered — every question already carries a recommendation.
+recommend-all-open-questions	no-op	Nothing embedded or reordered — every question to pick was skipped.
+recommend-all-open-questions	stop	Recommendation pass stopped — the question list failed.
+recommend-all-open-questions	stop	Recommendation pass stopped — some questions lack alternatives.
+derive-tasks	success	Tasks derived.
+derive-tasks	no-op	No tasks derived — every requirement is already satisfied.
+derive-tasks	no-op	No tasks derived — the list matched the task file already.
+derive-tasks	stop	Cannot derive tasks: the following open questions must be resolved first:
+derive-tasks	stop	Cannot derive tasks: the starting-state refresh could not be committed.
+derive-tasks	stop	Cannot derive tasks: the open-question check failed.
+derive-tasks	stop	Cannot derive tasks: the completed-task read failed.
+derive-tasks	stop	Cannot derive tasks: the task-list tool refused the list.
+submit-task	success	Task submitted.
+submit-task	no-op	Task not submitted — the task file was unchanged.
+submit-task	stop	Task not submitted — the starting-state refresh could not be committed.
+submit-task	stop	Task not submitted — the completed-task read failed.
+submit-task	stop	Task not submitted — an existing task already covers it.
+submit-task	stop	Task not submitted — the issue is not a task for this mission.
+submit-task	stop	Task not submitted — the issue is too vague to author.
+submit-task	stop	Task not submitted — the task-list tool refused the insert.
+complete-all-tasks	success	All tasks completed.
+complete-all-tasks	no-op	No tasks to complete — the task list is empty.
+complete-all-tasks	stop	Task run stopped — a task failed.
+complete-all-tasks	stop	Task run stopped — a task agent returned no status.
+complete-all-tasks	stop	Task run stopped — a completed task could not be committed.
+complete-task	success	Task completed.
+complete-task	no-op	No task completed — no file changed.
+finish-mission	success	Mission finished.
+finish-mission	no-op	Nothing to finish — no changes to commit.
+finish-mission	stop	Cannot finish the mission: the completed-task read failed.
+finish-mission	stop	Cannot finish the mission: the following open questions must be resolved first:
+finish-mission	stop	Cannot finish the mission: the open-question check failed.
+finish-mission	stop	Cannot finish the mission: tasks remain to be completed.
+shared/resolve-mission.md	stop	No mission resolved — pass --mission with a live mission's path.
+shared/check-scope-gate.md	stop	Scope gate closed — the scope is held or could not be checked.
+shared/complete-procedure.md	stop	No task matches the given name.
+shared/starting-state-procedure.md	stop	Starting state stopped — a missions-tool read failed.
+shared/starting-state-procedure.md	stop	Starting state stopped — clearing the undermined picks failed.

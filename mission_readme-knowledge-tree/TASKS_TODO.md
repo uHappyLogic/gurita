@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Move Fixed Console Lines Into A Data File
-
-Turn the `## Fixed console lines` table of `docs/skill-reference.md` into a tracked tab-separated file of `source`, `kind`, and `line` fields, one row per line, beside `tests/test_fixed_console_lines.py`, the section keeping its preamble as the page's description of the convention and pointing at the file. The test reads the file in place of the table, `gurita-vscode/scripts/bundle.js` writes `bundled/fixed_lines.tsv` from it by selecting columns with no Markdown parsing, and the extension release skill's diff path and the path `gurita-vscode/BUILDING.md` names follow the file, `runner.py` staying unchanged. Verified by both pytest runs and the extension's `npm test` passing and by the bundled `fixed_lines.tsv` being byte-identical to the one built before the change.
-
----
-
 ## Rewrite The Skill Reference As User Content
 
 Rewrite `docs/skill-reference.md` so that each of its 22 entries holds only what a user of the plugin needs: maintainer-facing material is cut outright and moved to no other file, and a mechanic already stated by a runtime file, a tool's `--help` or docstring, a test, or the build's docstring is dropped and restated nowhere. Verified by reading every entry against its skill's or agent's file under `core/` for accuracy, and by every link into the page from the root `README.md`, `CONTRIBUTING.md`, the extension's documents, and the other docs pages still resolving.

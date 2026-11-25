@@ -1,14 +1,17 @@
-"""Every fixed console line the `## Fixed console lines` table of docs/skill-reference.md lists,
-checked against the committed host trees: each listed line stands verbatim in the rendered file
-of every source its row names, in every tree, as a whole line of a fenced block or as a whole
-inline code span, and no line is listed twice. A stop a shared procedure owns is one row under
-that procedure, and a success line several skills share is one row naming them all, so the check
-that no line repeats is also the check that no two conditions share a line. Besides each
-success, no-op, and stop line, the table lists the review's convergence verdict line, printed
-below its still-open list rather than as the first line. The lines are a
-contract a harness matches a headless run's final message against, so a skill file and its row
-change together or this test fails. The test only reads files, so it runs under both
-interpreters."""
+"""Every fixed console line tests/fixed_console_lines.tsv lists, checked against the committed host
+trees: each listed line stands verbatim in the rendered file of every source its row names, in
+every tree, as a whole line of a fenced block or as a whole inline code span, and no line is
+listed twice. The file is tab-separated, a `source`, `kind`, and `line` header and then one row
+per line, its source field one skill name or `shared/` procedure path or several joined by
+commas; the `## Fixed console lines` section of docs/skill-reference.md describes the convention
+and points at it, and gurita-vscode/scripts/bundle.js writes the extension's bundled copy from it.
+A stop a shared procedure owns is one row under that procedure, and a success line several skills
+share is one row naming them all, so the check that no line repeats is also the check that no
+two conditions share a line. Besides each success, no-op, and stop line, the file lists the
+review's convergence verdict line, printed below its still-open list rather than as the first
+line. The lines are a contract a harness matches a headless run's final message against, so a
+skill file and its row change together or this test fails. The test only reads files, so it runs
+under both interpreters."""
 
 import re
 from pathlib import Path
@@ -16,48 +19,37 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-REFERENCE = REPO_ROOT / "docs" / "skill-reference.md"
+LINES_FILE = Path(__file__).resolve().parent / "fixed_console_lines.tsv"
 HOSTS = REPO_ROOT / "hosts"
-SECTION = "## Fixed console lines"
+HEADER = ["source", "kind", "line"]
 KINDS = ("success", "no-op", "stop", "verdict")
 
-CODE_SPAN = re.compile(r"`([^`]+)`")
 BACKTICK_RUN = re.compile(r"`+")
 PLACEHOLDER = re.compile(r"<[^<>]*>")
 
 
-# --- the table ---------------------------------------------------------------------------------
+# --- the data file -----------------------------------------------------------------------------
 
 
-def section_lines():
-    """The lines of skill-reference.md from the section heading to the next `## ` heading."""
-    lines = REFERENCE.read_text(encoding="utf-8").splitlines()
-    assert lines.count(SECTION) == 1, f"{REFERENCE.name} holds {lines.count(SECTION)} {SECTION!r} headings, not one"
-    start = lines.index(SECTION) + 1
-    end = next((index for index in range(start, len(lines)) if lines[index].startswith("## ")), len(lines))
-    return lines[start:end]
-
-
-def table_rows():
-    """Every body row of the section's table as (sources, kind, line)."""
+def file_rows():
+    """Every row of the data file below its header as (sources, kind, line)."""
+    lines = LINES_FILE.read_text(encoding="utf-8").split("\n")
+    assert lines[-1] == "", f"{LINES_FILE.name} does not end in a newline"
+    lines = lines[:-1]
+    assert lines and lines[0].split("\t") == HEADER, f"{LINES_FILE.name} does not open with the header {HEADER}"
     rows = []
-    for text in section_lines():
-        if not text.startswith("|"):
-            continue
-        cells = [cell.strip() for cell in text.strip().strip("|").split("|")]
-        if cells == ["Source", "Kind", "Line"] or all(set(cell) <= set("-:") for cell in cells):
-            continue
-        assert len(cells) == 3, f"a table row of {len(cells)} cells, not three: {text}"
-        source_cell, kind, line_cell = cells
-        line = re.fullmatch(r"`([^`]+)`", line_cell)
-        assert line, f"a Line cell that is not one code span: {line_cell}"
-        sources = CODE_SPAN.findall(source_cell)
-        assert sources, f"a Source cell naming no source: {source_cell}"
-        rows.append((tuple(sources), kind, line.group(1)))
+    for text in lines[1:]:
+        fields = text.split("\t")
+        assert len(fields) == 3, f"a row of {len(fields)} fields, not three: {text!r}"
+        source_field, kind, line = fields
+        sources = tuple(source.strip() for source in source_field.split(","))
+        assert all(sources), f"a source field naming no source: {source_field!r}"
+        assert line, f"a row with an empty line field: {text!r}"
+        rows.append((sources, kind, line))
     return rows
 
 
-ROWS = table_rows()
+ROWS = file_rows()
 
 
 def row_id(row):
@@ -122,8 +114,8 @@ def test_every_host_tree_is_checked():
     assert sorted({root.relative_to(HOSTS).parts[0] for root in roots}) == hosts
 
 
-def test_table_lists_lines():
-    assert ROWS, f"the {SECTION!r} table lists no line"
+def test_file_lists_lines():
+    assert ROWS, f"{LINES_FILE.name} lists no line"
 
 
 @pytest.mark.parametrize("row", ROWS, ids=row_id)

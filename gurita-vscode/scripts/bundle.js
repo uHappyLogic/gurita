@@ -1,8 +1,8 @@
 // The extension's own build step, run from the `vscode:prepublish` script so that every
 // `vsce package` runs it. It copies the plugin's missions tool and the extension's own shipped
 // recipe file, `shipped_recipes.md`, verbatim into `bundled/`, and writes beside them
-// `fixed_lines.tsv`: one line per row of the `## Fixed console lines` table of
-// docs/skill-reference.md, its kind, a tab, and its line,
+// `fixed_lines.tsv`: one line per row of the plugin's fixed console line file,
+// tests/fixed_console_lines.tsv, its kind field, a tab, and its line field, selected by column,
 // and `plugin_version.txt`: the repository's `VERSION`, the plugin version the package is
 // built from, as one line. It empties `bundled/` first, so the package carries no file an earlier
 // build wrote. Nothing it writes is tracked.
@@ -19,8 +19,8 @@ const COPIES = [
   [path.join(REPO_ROOT, 'core', 'tools', 'missions.py'), 'missions.py'],
   [path.join(EXTENSION_ROOT, 'shipped_recipes.md'), 'shipped_recipes.md'],
 ];
-const REFERENCE = path.join(REPO_ROOT, 'docs', 'skill-reference.md');
-const SECTION = '## Fixed console lines';
+const LINES_FILE = path.join(REPO_ROOT, 'tests', 'fixed_console_lines.tsv');
+const HEADER = 'source\tkind\tline';
 const KINDS = new Set(['success', 'no-op', 'stop', 'verdict']);
 const FIXED_LINES = 'fixed_lines.tsv';
 const VERSION_FILE = path.join(REPO_ROOT, 'VERSION');
@@ -32,43 +32,30 @@ function fail(message) {
 }
 
 function fixedLineRows() {
-  const lines = fs.readFileSync(REFERENCE, 'utf8').split(/\r?\n/);
-  const headings = lines.filter((line) => line === SECTION).length;
-  if (headings !== 1) {
-    fail(`${REFERENCE} holds ${headings} ${JSON.stringify(SECTION)} headings, not one`);
+  const lines = fs.readFileSync(LINES_FILE, 'utf8').split('\n');
+  if (lines.pop() !== '') {
+    fail(`${LINES_FILE} does not end in a newline`);
   }
-  const start = lines.indexOf(SECTION) + 1;
-  let end = lines.findIndex((line, index) => index >= start && line.startsWith('## '));
-  if (end === -1) {
-    end = lines.length;
+  if (lines.shift() !== HEADER) {
+    fail(`${LINES_FILE} does not open with the header ${JSON.stringify(HEADER)}`);
   }
   const rows = [];
-  for (const text of lines.slice(start, end)) {
-    if (!text.startsWith('|')) {
-      continue;
+  for (const text of lines) {
+    const fields = text.split('\t');
+    if (fields.length !== 3) {
+      fail(`a row of ${fields.length} fields, not three: ${JSON.stringify(text)}`);
     }
-    const cells = text.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map((cell) => cell.trim());
-    if (cells.join('|') === 'Source|Kind|Line' || cells.every((cell) => /^[-:]*$/.test(cell))) {
-      continue;
-    }
-    if (cells.length !== 3) {
-      fail(`a table row of ${cells.length} cells, not three: ${text}`);
-    }
-    const [, kind, lineCell] = cells;
+    const [, kind, line] = fields;
     if (!KINDS.has(kind)) {
-      fail(`a table row of unknown kind ${JSON.stringify(kind)}: ${text}`);
+      fail(`a row of unknown kind ${JSON.stringify(kind)}: ${JSON.stringify(text)}`);
     }
-    const line = /^`([^`]+)`$/.exec(lineCell);
-    if (!line) {
-      fail(`a Line cell that is not one code span: ${lineCell}`);
+    if (line === '') {
+      fail(`a row with an empty line field: ${JSON.stringify(text)}`);
     }
-    if (line[1].includes('\t')) {
-      fail(`a line holding a tab: ${line[1]}`);
-    }
-    rows.push(`${kind}\t${line[1]}`);
+    rows.push(`${kind}\t${line}`);
   }
   if (rows.length === 0) {
-    fail(`${REFERENCE} lists no fixed console line`);
+    fail(`${LINES_FILE} lists no fixed console line`);
   }
   return rows;
 }

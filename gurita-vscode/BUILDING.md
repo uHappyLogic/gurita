@@ -55,8 +55,8 @@ Every Node command runs under Node 22 through nvm, in a subshell, from the repos
 - `npm run package` runs `vsce package`, which first runs the `vscode:prepublish` script: the
   compile, then `scripts/bundle.js`, the extension's own build step, which copies
   `core/tools/missions.py` and the extension's shipped recipe file, `gurita-vscode/shipped_recipes.md`,
-  verbatim into a freshly emptied `bundled/` and writes `bundled/fixed_lines.tsv` from the `## Fixed console lines` table of
-  `docs/skill-reference.md`, one `kind<TAB>line` row per table line, and
+  verbatim into a freshly emptied `bundled/` and writes `bundled/fixed_lines.tsv` from the plugin's fixed console line file,
+  `tests/fixed_console_lines.tsv`, one `kind<TAB>line` row per row of that file, and
   `bundled/plugin_version.txt`, the repository's `VERSION` as one line. Every package therefore
   carries the missions tool, the recipes, the fixed lines, and the plugin version of the
   checkout it was built from.

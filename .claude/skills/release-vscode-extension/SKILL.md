@@ -190,7 +190,7 @@ and look its tag up:
 ```bash
 cat VERSION
 git rev-parse --verify --quiet 'refs/tags/<PLUGIN_VERSION>'
-git diff --name-only '<PLUGIN_VERSION>' HEAD -- core/tools/missions.py docs/skill-reference.md VERSION
+git diff --name-only '<PLUGIN_VERSION>' HEAD -- core/tools/missions.py tests/fixed_console_lines.tsv VERSION
 ```
 
 `<PLUGIN_VERSION>` is the line `VERSION` holds. The check passes when the tag resolves and the
