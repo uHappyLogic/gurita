@@ -84,5 +84,9 @@ The full hands-on check of Claude Desktop is run before the answers that hinge o
 
 When an action's prompt is past the limit Claude Desktop accepts and the action runs in a VS Code terminal instead, the extension builds the terminal line itself before starting the run: the Desktop line with its opening word replaced by `claude` and every other word kept as stored (the quoted `/gurita:` prompt, `--model`, `--effort`, the `--dangerously-skip-permissions` flag where present, and the trailing `# interactive` mark). The resulting interactive `claude "/gurita:<skill> …"` line goes to `startChain` as an ordinary one-line chain, honouring any flag the line still holds and opening Claude Code on its own defaults when the line holds only its prompt. `runner.py` is unchanged and never sees the Desktop word.
 
+### Desktop line opening word
+
+A Claude Desktop line opens with the plain product-qualified word `claude-desktop`, the fourth entry of the command-word list, and that one word is what the Settings window's line editor shows, `~/.gurita/variants.json` stores, and `gurita-vscode/USAGE.md` documents. It is a plain word matched by exact equality beside `claude`, `agy`, and `codex`, carrying no sigil or other syntax of its own.
+
 ## Out of Scope
 
