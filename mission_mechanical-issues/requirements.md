@@ -168,5 +168,9 @@ The open-question tool's help text and `Error:` line state the Short Title rule.
 
 `discuss-open-question` gains a parse rule at its step 0: after the `--mission` strip, the text is split on the same separator the hand-answer skills use, the part before it the Short Title passed to `locate` and the part after it, trimmed, an optional note the discussion takes as the user's opening remark on the question; text holding no separator is the Short Title alone with no note. One separator rule then serves every skill that takes a Short Title followed by text. The discuss lines in `gurita-vscode/shipped_recipes.md`, `snippets/GURITA_USAGE.md`, and `gurita-vscode/USAGE.md` and the extension's note prompt and empty-note drop stay as they are.
 
+### Commit call project paths
+
+The commit tool's path-file reader gains `-` for standard input, and only the inline completion call passes its recorded paths and `<MISSION_DIR>/TASKS_TODO.md` as `--path-file -` fed by a quoted heredoc, one path per line, the same line-exact form the agent's path file already has. The commit procedure's command stays unquoted, with the recorded reason that its paths are plugin-named. The change is pinned by commit-tool tests and the completion call's fixed-call test.
+
 ## Out of Scope
 
