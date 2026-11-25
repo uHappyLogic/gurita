@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Task List Replace Subcommand
-
-Add a `replace` subcommand to the task-list tool, `task_list.py replace <MISSION_DIR> "<Task Title>"`, that rewrites the body of the one section whose title it matches exactly after whitespace and case folding, the new body on stdin as a quoted heredoc, keeping the section's heading, its position, and its `---`, and refusing an unmatched or shared title or an empty body with the file unchanged; the title cannot change. It gives the draft's REVISE entry a tool call, so the tool stays the list's only writer; verified by a new `tests/` file pinning the subcommand, with the help text and CLAUDE.md's task-list invariant naming the fourth subcommand.
-
----
-
 ## Queued Task Revision in the Completion Procedure
 
 Add a stated step to `core/shared/complete-procedure.md` allowing its runner, after a finding, to rewrite a later queued task's brief through the task-list tool's one `replace` call, the revision riding in the running task's `Task-completion:` commit since `TASKS_TODO.md` is already on the agent's path file and in the inline call's pathspec. Field runs rewrote the list by hand for want of such a step; verified by the rebuilt procedure showing the full fixed command, with `--check` and both pytest runs passing and CLAUDE.md recording the step.
