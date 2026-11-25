@@ -116,5 +116,9 @@ The clause telling the runner to pick a delimiter line the text does not contain
 
 The Claude Code value of `ALTERNATIVES_CONCURRENCY` keeps its one uncapped message and gains a stated step: a dispatch the host refuses for its concurrent-subagent limit is held as pending, despite the refusal message's "Do not retry", and each time the run wakes with an ended agent it sends one held question again per agent that ended, the resent agent's file landing like any other for the next batch call. No number is written into the slot value, so the step keeps working if the host changes its limit. The Antigravity and Codex values and `core/` stay unchanged.
 
+### Completed-task read size
+
+The missions tool's `tasks` query gains a flag that prints every task line but the bars of only the N newest tasks (for example, `--with-body --bodies N`). An older task prints as its title line alone, the form a commit with no body already takes, so one parser reads the result. All five readers (`finish-mission`, `derive-tasks`, `ask-in-mission-context`, `submit-task`, `discuss-new-task`) pass one literal N in their fixed call, so every completed task's title stays in front of every reader and the duplicate checks stay complete while the cost of the bars is capped.
+
 ## Out of Scope
 
