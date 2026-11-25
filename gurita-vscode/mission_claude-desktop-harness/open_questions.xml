@@ -127,6 +127,36 @@
   </open-question>
   <open-question id="Uncarried line values">
     <question>When an action is sent to Claude Desktop and Desktop takes no model, effort, or permission mode from outside, what becomes of the `--model`, `--effort`, and bypass-permission values the action&apos;s line carries: are they dropped without sign, or is the person shown, in the Settings window or on the action&apos;s button, that the Desktop session will not carry them?</question>
+    <alternative id="Documented drop only">
+      The line keeps its `--model`, `--effort`, and bypass flag as written, and on a send to Claude Desktop whichever of them Desktop does not take (as the hands-on check finds) is dropped with no sign anywhere in the extension&apos;s windows or buttons; `gurita-vscode/USAGE.md` states once, where it documents the Desktop harness, that a Desktop session runs on Desktop&apos;s own model, effort, and permission mode and which line values it does not carry.
+      <advantage>Adds no UI, no state, and no test beyond the send itself, keeping the fire-and-forget feature as small as the goal frames it, and the values stay on the line unchanged for when the same variant is run in a terminal again.</advantage>
+      <drawback>A person who picked a variant for its model or effort, or for its bypass flag, gets a session that silently differs: every shipped single-interactive-line variant carries `--dangerously-skip-permissions`, `--model`, and `--effort`, so an `Execute tasks` sent to Desktop runs `complete-all-tasks` under Desktop&apos;s permission prompts and its default model with nothing in VS Code saying so.</drawback>
+    </alternative>
+    <alternative id="Shown in Settings">
+      The line keeps its values; where the Settings window lets a person select Claude Desktop for an action&apos;s line, that line (or its variant) is marked with the values it carries that Desktop does not take, named as they stand on the line (for example the model, the effort, and the bypass flag), only those the hands-on check finds uncarried; the action&apos;s button and the send show nothing.
+      <advantage>Tells the person at the one moment a deliberate choice is made, with the exact values, and adds no clutter to the mission pages&apos; buttons, which keep their current look.</advantage>
+      <drawback>Reaches only someone who opens the Settings window: a Desktop selection made earlier, or a shipped variant used from a button, still sends without sign at the click; where the mark can sit depends on the selection mechanism a sibling question owns.</drawback>
+    </alternative>
+    <alternative id="Shown on the button">
+      The line keeps its values; whenever an action&apos;s selected variant goes to Claude Desktop, its button in the page (its label, variant dropdown entry, or hover text) shows that the Desktop session will not carry the line&apos;s model, effort, or bypass values, naming those the hands-on check finds uncarried; the Settings window shows nothing of it.
+      <advantage>Tells the person right where and when they are about to send, every time, including for a selection made long before or remembered in `workspaceState`.</advantage>
+      <drawback>Adds wording to buttons that today carry none of their lines&apos; details, across the six button sites in `src/pane.ts` and `src/finishedWindow.ts`, and gives no sign at the moment the Desktop selection is made in Settings.</drawback>
+    </alternative>
+    <alternative id="Settings and button">
+      The line keeps its values; both the Settings window, where Desktop is selected for the line, and the action&apos;s button, while its selected variant goes to Desktop, show the values the line carries that Desktop does not take, naming those the hands-on check finds uncarried.
+      <advantage>Covers both the moment of choosing and the moment of sending, so no path to a Desktop send leaves the person unaware that the line&apos;s model, effort, or bypass flag will not apply.</advantage>
+      <drawback>Two indicators to build, keep consistent, and test for one fact, the largest UI cost of the told options; the Settings half depends on the selection mechanism a sibling question owns.</drawback>
+    </alternative>
+    <alternative id="Shown at send">
+      The line keeps its values and neither the Settings window nor the button shows anything; when a click sends the action to Claude Desktop, a notice in VS Code names the line&apos;s values the Desktop session will not carry, only those the hands-on check finds uncarried.
+      <advantage>Tells the person once per send, at the exact moment the values are dropped, with no lasting change to any window&apos;s or button&apos;s layout.</advantage>
+      <drawback>The person learns of it only after the session is already opening, too late to choose a terminal variant instead, and it repeats on every send; it rides beside whatever the person sees after the click, which the Desktop send feedback sibling question owns.</drawback>
+    </alternative>
+    <alternative id="Stripped at selection">
+      The premise that the line goes on carrying values Desktop does not take is rejected: when a line is set to go to Claude Desktop, the stored line is rewritten without whichever of `--model`, `--effort`, and the bypass flag Desktop does not take, so nothing is uncarried and no indicator is needed; what the line text shows is what the session gets.
+      <advantage>The line is truthful by construction, so the Settings window&apos;s line editor already shows exactly what the Desktop session carries, with no separate indicator to build or keep in step.</advantage>
+      <drawback>Switching the line back to a terminal harness loses the values the person had set, and the rewrite applies only if Desktop is selected by rewriting a line, which the Desktop selection mechanism sibling question owns; a shipped variant sent to Desktop without a rewrite would still drop its values without sign.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Over-long Desktop prompt">
     <question>What does Gurita for VS Code do when an action&apos;s prompt, with the values the person typed written into it (a goal, an issue description, a question), is longer than Claude Desktop accepts from outside, the `claude://code/new` link cutting its prompt at 14,336 characters?</question>
