@@ -80,5 +80,9 @@ Each file at the repository root that can carry prose describes itself in its ow
 
 `docs/` serves the plugin's users alone, and each page is rewritten to user content. The maintainer-facing material is cut outright rather than moved to the nodes: where a mechanic is already stated by a runtime file, a tool's `--help` or docstring, a test, or the build's docstring, the page drops it and nothing restates it, a node pointing at those sources instead. The fixed console lines table follows its own decision.
 
+### Placement mission dependency
+
+The tree holds with the plugin as it stands, and its correctness does not depend on `mission_project-defined-knowledge-placement/`: a runner reaches a node only by following the root's own instructions, and a later mission's lasting changes reach a node only through its tasks or the update skill. In addition, the root's rules on where knowledge lives and how nodes are read are written as plain directions a runner could follow: which node a given area's lasting knowledge goes to, and which node to read before working in a folder. Once a plugin that follows such directions lands, `finish-mission` and the context-reading runners use them with no further change to the tree; until then those runners do nothing with them. Neither mission waits on the other.
+
 ## Out of Scope
 
