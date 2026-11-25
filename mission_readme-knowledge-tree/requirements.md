@@ -44,5 +44,9 @@ The scope's overview lists ten finished missions, the oldest finished on 2026-11
 
 ## Decisions
 
+### Fixed-lines table location
+
+The fixed console lines table stops being a Markdown table in `docs/skill-reference.md` and becomes a tracked data file of `source`, `kind`, and `line` fields, one row per line, for example a tab-separated file beside the test or at a stated path. `tests/test_fixed_console_lines.py` reads that file in place of the table, and `gurita-vscode/scripts/bundle.js` writes `bundled/fixed_lines.tsv` from it by selecting columns, with no Markdown parsing. The preamble's prose moves to whatever node or page describes the convention, which points at the file. The extension release skill's diff path and the path `gurita-vscode/BUILDING.md` names follow the file, and `runner.py` keeps reading the same `kind<TAB>line` bundle, so it stays unchanged.
+
 ## Out of Scope
 
