@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import * as assert from 'node:assert';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { harnessChoices, readLine, readPrompt, readSkill, replaceEffort, replaceModel, rewriteHarness } from '../lineValues';
+import { claudeCodeLine, harnessChoices, readLine, readPrompt, readSkill, replaceEffort, replaceModel, rewriteHarness } from '../lineValues';
 import { Recipe, SLOT_LINE, isHeadless, parseShippedRecipes } from '../recipes';
 
 const SHIPPED_RECIPES = path.join(__dirname, '..', '..', 'shipped_recipes.md');
@@ -566,4 +566,20 @@ test("a line's prompt is its first command's /gurita: or $gurita: word as the sh
   assert.strictEqual(readPrompt('claude-desktop; # interactive'), undefined);
   assert.strictEqual(readPrompt('echo "/gurita:x"'), undefined);
   assert.strictEqual(readPrompt('claude-desktop "/gurita:x"; claude "/gurita:y"'), '/gurita:x', 'only the first command is read');
+});
+
+test('a Claude Desktop line runs in a terminal with its opening word replaced by claude and every other word kept as stored', () => {
+  assert.strictEqual(claudeCodeLine(DESKTOP_LINE), 'claude "/gurita:complete-all-tasks --mission <path>"; # interactive');
+  assert.strictEqual(
+    claudeCodeLine("  claude-desktop '/gurita:ask-in-mission-context --mission <path> <question>' --model=fable --effort xhigh --dangerously-skip-permissions; # interactive"),
+    "  claude '/gurita:ask-in-mission-context --mission <path> <question>' --model=fable --effort xhigh --dangerously-skip-permissions; # interactive",
+    'flags, quoting, and leading space kept as stored',
+  );
+  assert.strictEqual(claudeCodeLine('"claude-desktop" "/gurita:x"; # interactive'), 'claude "/gurita:x"; # interactive', 'the opening word as written is replaced');
+  const fallback = claudeCodeLine('claude-desktop "/gurita:x --mission <path>" --model opus --effort high; # interactive') as string;
+  assert.deepStrictEqual(readLine(fallback), { harness: 'claude', model: 'opus', effort: 'high' });
+  assert.strictEqual(readPrompt(fallback), '/gurita:x --mission <path>');
+  for (const line of ['claude "/gurita:x"; # interactive', 'claude-desktops "/gurita:x"; # interactive', 'echo claude-desktop', '']) {
+    assert.strictEqual(claudeCodeLine(line), undefined, line);
+  }
 });

@@ -139,3 +139,32 @@ test('the link is passed to open as an execFile child, its outcome success or th
   assert.strictEqual(calls.length, 3, 'nothing is checked beforehand, each send one call');
   answer = undefined;
 });
+
+test('a prompt is too long for Claude Desktop only past 14,336 characters, counted in UTF-16 code units as Desktop counts them', () => {
+  assert.strictEqual(desktop.DESKTOP_PROMPT_LIMIT, 14336);
+  assert.strictEqual(desktop.tooLongForDesktop('x'.repeat(14336)), false, 'a prompt at the limit is within it');
+  assert.strictEqual(desktop.tooLongForDesktop('x'.repeat(14337)), true);
+  assert.strictEqual(desktop.tooLongForDesktop(''), false);
+  assert.strictEqual(desktop.tooLongForDesktop('😀'.repeat(7168)), false, '7,168 astral characters are 14,336 code units');
+  assert.strictEqual(desktop.tooLongForDesktop(`${'😀'.repeat(7168)}x`), true);
+  const values = { path: 'mission_alpha/', 'Short Title': 'Pane Layout', note: 'n'.repeat(14336) };
+  const line = 'claude-desktop "/gurita:discuss-open-question --mission <path> <Short Title>. <note>"; # interactive';
+  assert.strictEqual(desktop.tooLongForDesktop(desktop.desktopPrompt(line, values)), true, 'measured with its typed values written in');
+  assert.strictEqual(desktop.tooLongForDesktop(desktop.desktopPrompt(line, { ...values, note: '' })), false);
+});
+
+test('the fallback line is the Desktop line opening with claude, every other word kept as stored', () => {
+  assert.strictEqual(
+    desktop.desktopFallbackLine('claude-desktop "/gurita:complete-all-tasks --mission <path>"; # interactive'),
+    'claude "/gurita:complete-all-tasks --mission <path>"; # interactive',
+    'a line holding only its prompt opens Claude Code on its own defaults',
+  );
+  assert.strictEqual(
+    desktop.desktopFallbackLine(
+      'claude-desktop "/gurita:discuss-open-question --mission <path> <Short Title>. <note>" --model "opus" --effort high --dangerously-skip-permissions; # interactive',
+    ),
+    'claude "/gurita:discuss-open-question --mission <path> <Short Title>. <note>" --model "opus" --effort high --dangerously-skip-permissions; # interactive',
+    'a line still holding flags keeps every one of them',
+  );
+  assert.strictEqual(desktop.desktopFallbackLine('claude "/gurita:x"; # interactive'), undefined, 'only a Desktop line has one');
+});

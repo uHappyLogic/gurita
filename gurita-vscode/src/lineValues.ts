@@ -43,7 +43,9 @@
 // inside the quoted prompt or after the line's closing `;` is never read. The skill a line runs
 // is read from the same first command: the name after the first `/gurita:` or `$gurita:` opening a
 // word of its arguments or a part of one, the quoted prompt being one word, and the line's prompt
-// (`readPrompt`) is that word as the shell reads it. This module imports nothing from `vscode`.
+// (`readPrompt`) is that word as the shell reads it. A Claude Desktop line whose prompt is too long
+// for Desktop runs in a terminal as the line `claudeCodeLine` gives, its opening word replaced by
+// `claude` and every other word kept as stored. This module imports nothing from `vscode`.
 
 /** The harnesses a line can run on that are CLIs, each named by the command a line opens with. */
 const CLI_LINE_HARNESSES = ['claude', 'agy', 'codex'] as const;
@@ -293,6 +295,20 @@ export function readPrompt(line: string): string | undefined {
     return undefined;
   }
   return promptWord(command)?.text;
+}
+
+/**
+ * The interactive Claude Code line a Claude Desktop line runs as in a terminal: the line with its
+ * opening word, as written, replaced by `claude` and every other word kept as stored (its quoted
+ * prompt, any `--model`, `--effort`, or bypass flag it still holds, and its trailing `# interactive`
+ * mark); undefined for a line that is not a Claude Desktop line.
+ */
+export function claudeCodeLine(line: string): string | undefined {
+  const opening = words(line)[0];
+  if (opening === undefined || opening.text !== DESKTOP) {
+    return undefined;
+  }
+  return `${line.slice(0, opening.start)}claude${line.slice(opening.end)}`;
 }
 
 /** Writes `value` as a shell word in the quoting the replaced word used, quoting it where it needs it. */

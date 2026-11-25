@@ -8,14 +8,21 @@
 // its git and Python reads; neither the `claude` CLI nor its `--desktop` option is used, so the
 // bundled runner never sees the Desktop word. The send is fire-and-forget: its one outcome is the
 // opener's, success or the cause it reported, read from that call alone with no check made
-// beforehand. This module imports nothing from `vscode`.
+// beforehand. Desktop's link handler cuts its prompt at 14,336 characters, counted as JavaScript
+// counts a string's length, in UTF-16 code units, once the link is decoded; a prompt past that
+// limit (`tooLongForDesktop`) is not sent, and its line runs in a terminal instead as
+// `desktopFallbackLine` gives it, the opening word replaced by `claude` and every other word kept
+// as stored. This module imports nothing from `vscode`.
 
 import { execFile } from 'node:child_process';
-import { readLine, readPrompt } from './lineValues';
+import { claudeCodeLine, readLine, readPrompt } from './lineValues';
 import { dropEmptyOptional, writeValues } from './placeholders';
 
 /** The link Claude Desktop opens a new Code session from. */
 export const DESKTOP_LINK = 'claude://code/new';
+
+/** The length at which the `claude://code/new` link's handler cuts its prompt, in UTF-16 code units. */
+export const DESKTOP_PROMPT_LIMIT = 14336;
 
 /** The macOS opener the link is passed to. */
 export const OPENER = 'open';
@@ -32,6 +39,24 @@ export function desktopLine(lines: readonly string[]): string | undefined {
  */
 export function desktopPrompt(line: string, values: Readonly<Record<string, string>>): string {
   return writeValues(readPrompt(dropEmptyOptional(line, values)) ?? '', values);
+}
+
+/**
+ * Whether `prompt` is past the limit Claude Desktop accepts, measured as Desktop measures it: its
+ * JavaScript length, in UTF-16 code units, above 14,336. A prompt at the limit is within it.
+ */
+export function tooLongForDesktop(prompt: string): boolean {
+  return prompt.length > DESKTOP_PROMPT_LIMIT;
+}
+
+/**
+ * The line a Claude Desktop line runs as in a VS Code terminal when its prompt is too long for
+ * Desktop: an interactive `claude` line, the Desktop line's opening word replaced by `claude` and
+ * every other word kept as stored, so it opens Claude Code on its own defaults when the line holds
+ * only its prompt and honours any flag it still holds.
+ */
+export function desktopFallbackLine(line: string): string | undefined {
+  return claudeCodeLine(line);
 }
 
 /**

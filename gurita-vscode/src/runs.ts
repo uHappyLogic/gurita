@@ -28,10 +28,23 @@
 // disabled for it, and after a send that went out VS Code shows nothing, Claude Desktop coming to
 // the front being the sign, while a send the opener reports failed is shown as one error
 // notification saying the action could not be sent to Claude Desktop and carrying the cause the
-// opener reported. A send for a mission whose run is going is refused as a click is.
+// opener reported. A send for a mission whose run is going is refused as a click is. A prompt past
+// the 14,336 characters at which Desktop's link cuts it, measured with its typed values written
+// in, is not sent: the action runs in a terminal instead, without asking, as an ordinary tracked
+// chain of one line, the Desktop line with its opening word replaced by `claude`, its values typed
+// and set in the terminal's environment as every run's are, and one notice tells the person the
+// prompt was too long for Claude Desktop.
 
 import * as vscode from 'vscode';
-import { desktopLine, desktopLink, desktopPrompt, openDesktopLink } from './desktop';
+import {
+  DESKTOP_PROMPT_LIMIT,
+  desktopFallbackLine,
+  desktopLine,
+  desktopLink,
+  desktopPrompt,
+  openDesktopLink,
+  tooLongForDesktop,
+} from './desktop';
 import { buildLine, sessionEnvironment } from './placeholders';
 import { RunningRuns } from './running';
 
@@ -159,13 +172,25 @@ export function desktopSendFailed(recipe: string, cause: string): string {
   return `The action "${recipe}" could not be sent to Claude Desktop: ${cause}`;
 }
 
+/** The notice an action whose prompt is too long for Claude Desktop shows as it runs in a terminal instead. */
+export function desktopPromptTooLong(recipe: string, length: number): string {
+  return (
+    `The prompt of the action "${recipe}" is too long for Claude Desktop ` +
+    `(${length.toLocaleString('en-US')} characters, past its limit of ${DESKTOP_PROMPT_LIMIT.toLocaleString('en-US')}), ` +
+    'so it runs in a terminal instead.'
+  );
+}
+
 /**
  * Starts the action `recipe` of `lines` with `values`, as `startChain` takes them, unless its lines
  * are one line opening with `claude-desktop`: that line is sent to Claude Desktop instead, unless a
  * run for `mission` is running, its prompt with `values` written in carried with `root` as `folder`
  * in the `claude://code/new` link passed to `open`, no terminal created and no run held, and
- * `closed` never called. The promise settles once the send's outcome is known, a failed send shown
- * in one error notification carrying the cause the opener reported, and at once for a chain.
+ * `closed` never called. A prompt past the limit Desktop accepts is not sent: the line with its
+ * opening word replaced by `claude` is started by `startChain` as a one-line chain with `values`
+ * and `closed`, after one notice saying the prompt was too long for Claude Desktop. The promise
+ * settles once the send's outcome is known, a failed send shown in one error notification carrying
+ * the cause the opener reported, and at once for a chain.
  */
 export async function startAction(
   context: vscode.ExtensionContext,
@@ -184,7 +209,14 @@ export async function startAction(
   if (mission !== undefined && refuseWhileRunning(mission)) {
     return;
   }
-  const cause = await openDesktopLink(desktopLink(desktopPrompt(line, values), root));
+  const prompt = desktopPrompt(line, values);
+  const fallback = desktopFallbackLine(line);
+  if (tooLongForDesktop(prompt) && fallback !== undefined) {
+    void vscode.window.showInformationMessage(desktopPromptTooLong(recipe, prompt.length));
+    startChain(context, root, mission, recipe, [fallback], values, closed);
+    return;
+  }
+  const cause = await openDesktopLink(desktopLink(prompt, root));
   if (cause !== undefined) {
     void vscode.window.showErrorMessage(desktopSendFailed(recipe, cause));
   }

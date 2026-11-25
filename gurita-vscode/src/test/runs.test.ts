@@ -13,6 +13,7 @@ interface StubTerminal {
   name: string;
   shown: number;
   args?: string[];
+  env?: Record<string, string>;
 }
 
 /** The `gurita` settings the stub answers with, a key absent standing for a setting left unset. */
@@ -36,8 +37,8 @@ let closeListener: ((terminal: StubTerminal) => void) | undefined;
 
 const stub = {
   window: {
-    createTerminal(options: { name: string; shellArgs?: string[] }): StubTerminal {
-      const terminal = { name: options.name, shown: 0, args: [...(options.shellArgs ?? [])], show(): void {} };
+    createTerminal(options: { name: string; shellArgs?: string[]; env?: Record<string, string> }): StubTerminal {
+      const terminal = { name: options.name, shown: 0, args: [...(options.shellArgs ?? [])], env: { ...(options.env ?? {}) }, show(): void {} };
       terminal.show = () => {
         terminal.shown += 1;
       };
@@ -216,6 +217,69 @@ test('every other action starts its chain as before, a Desktop line in a chain o
   const two = created[created.length - 1];
   assert.strictEqual(two.args?.[two.args.length - 1], 'echo after');
   close(two);
+});
+
+/** The `discuss-open-question` values whose prompt, sent from `DESKTOP_LINE`, is exactly `length` characters long. */
+function valuesOfPromptLength(length: number): Record<string, string> {
+  const base = '/gurita:discuss-open-question --mission mission_delta/ Pane Layout. ';
+  return { path: 'mission_delta/', 'Short Title': 'Pane Layout', note: 'n'.repeat(length - base.length) };
+}
+
+test('a prompt at the 14,336 characters Claude Desktop accepts is sent to it as usual, with no notice', async () => {
+  opened.length = 0;
+  notifications.length = 0;
+  errors.length = 0;
+  events.length = 0;
+  const count = created.length;
+  const values = valuesOfPromptLength(14336);
+  await runs.startAction(context, '/project', 'mission_delta/', 'discuss-open-question', [DESKTOP_LINE], values);
+  assert.strictEqual(opened.length, 1, 'the prompt at the limit goes to Claude Desktop');
+  const sent = new URL(opened[0].args[0]).searchParams.get('q');
+  assert.strictEqual(sent?.length, 14336);
+  assert.strictEqual(sent, `/gurita:discuss-open-question --mission mission_delta/ Pane Layout. ${values.note}`);
+  assert.strictEqual(created.length, count, 'no terminal is created');
+  assert.deepStrictEqual(runs.runningMissions(), []);
+  assert.deepStrictEqual(events, []);
+  assert.deepStrictEqual(notifications, [], 'no notice');
+  assert.deepStrictEqual(errors, []);
+});
+
+test('a prompt past the limit is not sent: the one-line claude chain starts as a tracked run with its values typed, and one notice says it was too long', async () => {
+  opened.length = 0;
+  notifications.length = 0;
+  errors.length = 0;
+  events.length = 0;
+  const count = created.length;
+  const values = valuesOfPromptLength(14337);
+  let closedCalls = 0;
+  await runs.startAction(context, '/project', 'mission_delta/', 'discuss-open-question', [DESKTOP_LINE], values, () => closedCalls++);
+  assert.deepStrictEqual(opened, [], 'nothing is sent to Claude Desktop');
+  assert.strictEqual(created.length, count + 1, 'one terminal is created, without asking');
+  const terminal = created[created.length - 1];
+  assert.deepStrictEqual(terminal.args, [
+    '/extension/runner.py',
+    'chain',
+    '--close-when-finished',
+    '--',
+    'claude "/gurita:discuss-open-question --mission ${GURITA_PATH} ${GURITA_SHORT_TITLE}. ${GURITA_NOTE}"; # interactive',
+  ], 'an ordinary one-line chain of the Desktop line opening with claude, built as every run line is');
+  assert.deepStrictEqual(terminal.env, {
+    GURITA_PATH: 'mission_delta/',
+    GURITA_SHORT_TITLE: 'Pane Layout',
+    GURITA_NOTE: values.note,
+  }, 'the values are typed, set in the terminal environment');
+  assert.strictEqual(terminal.name, 'Gurita: discuss-open-question (mission_delta/)');
+  assert.deepStrictEqual(runs.runningMissions(), ['mission_delta/'], 'the run is tracked for its mission');
+  assert.deepStrictEqual(events, ['started mission_delta/']);
+  assert.deepStrictEqual(notifications, [runs.desktopPromptTooLong('discuss-open-question', 14337)], 'one notice');
+  assert.strictEqual(
+    notifications[0],
+    'The prompt of the action "discuss-open-question" is too long for Claude Desktop (14,337 characters, past its limit of 14,336), so it runs in a terminal instead.',
+  );
+  assert.deepStrictEqual(errors, []);
+  close(terminal);
+  assert.strictEqual(closedCalls, 1, "the starter's close callback is called as for any run");
+  assert.deepStrictEqual(runs.runningMissions(), []);
 });
 
 const LOOP_ARGS = ['/extension/runner.py', 'loop', '--mission', 'mission_gamma/', '--', '<single-task line>'];
