@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Refuse Unsafe Characters in New Task Titles
-
-Make the task-list tool refuse a new task title holding `"`, `$`, a backtick, or `\`, or opening with `-`, at both points where a title is created, `insert`'s title argument and every heading `initialize` reads from its heredoc, each refusal one `Error:` line naming the character with the file left unchanged and the help text stating the refused set, while sections already standing in a list keep their headings and no call gains an escaping rule or a `--`. It closes the draft's task-title and DASH entries for the double-quoted positions a title is copied into; verified by a test per creation point in the task-list suite, with CLAUDE.md's task-list invariant recording the refusal.
-
----
-
 ## Task List Replace Subcommand
 
 Add a `replace` subcommand to the task-list tool, `task_list.py replace <MISSION_DIR> "<Task Title>"`, that rewrites the body of the one section whose title it matches exactly after whitespace and case folding, the new body on stdin as a quoted heredoc, keeping the section's heading, its position, and its `---`, and refusing an unmatched or shared title or an empty body with the file unchanged; the title cannot change. It gives the draft's REVISE entry a tool call, so the tool stays the list's only writer; verified by a new `tests/` file pinning the subcommand, with the help text and CLAUDE.md's task-list invariant naming the fourth subcommand.

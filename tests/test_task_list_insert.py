@@ -186,3 +186,59 @@ def test_an_anchor_two_sections_share_is_refused(run_task_list, task_list_dir, f
     before = snapshot(target)
     message = refused(run_task_list("insert", str(target), "New Task", flag, "TWIN", stdin=b"A body.\n"), target, before)
     assert 'are titled "TWIN"; the title names no single section' in message
+
+
+# --- unsafe characters in the new title ---------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "title, shown",
+    [
+        ('Quote "The" Parser', "a '\"'"),
+        ("Pay $HOME Rent", 'a "$"'),
+        ("Run `make` First", "a backtick"),
+        ("Escape A\\Path", 'a "\\"'),
+    ],
+)
+def test_a_title_holding_a_shell_quoted_character_is_refused(run_task_list, task_list_dir, title, shown):
+    target = task_list_dir()
+    before = snapshot(target)
+    message = refused(run_task_list("insert", str(target), title, "--end", stdin=b"A body.\n"), target, before)
+    assert message == (
+        f'Error: the task title "{title}" contains {shown}, '
+        "which a double-quoted shell argument does not carry as written\n"
+    )
+
+
+@pytest.mark.parametrize("args", [("  -Leading Dash", "--end"), ("--end", "--", "-h")])
+def test_a_title_opening_with_a_dash_is_refused(run_task_list, task_list_dir, args):
+    target = task_list_dir()
+    before = snapshot(target)
+    message = refused(run_task_list("insert", str(target), *args, stdin=b"A body.\n"), target, before)
+    folded = "-h" if "-h" in args else "-Leading Dash"
+    assert message == f'Error: the task title "{folded}" opens with a "-", which a command line reads as an option\n'
+
+
+def test_the_character_refusal_precedes_the_task_list_read(run_task_list, task_list_dir):
+    target = task_list_dir()
+    (target / task_list.TODO_NAME).unlink()
+    result = run_task_list("insert", str(target), "Cost $5", "--end", stdin=b"A body.\n")
+    assert result.returncode == 1
+    assert b'contains a "$"' in result.stderr
+    assert list(target.iterdir()) == []
+
+
+@pytest.mark.parametrize("title", ["Inner-Hyphen Task", "Edit task_list.py", "It's A Task", "Unicode — Dash", "Tail -"])
+def test_titles_without_a_refused_character_are_accepted(run_task_list, task_list_dir, title):
+    target = task_list_dir(todo=b"# TASKS TODO\n\n")
+    silent(run_task_list("insert", str(target), title, "--end", stdin=b"A body.\n"))
+    assert titles_of(target) == [title]
+
+
+def test_standing_headings_with_refused_characters_keep_working_as_anchors(run_task_list, task_list_dir):
+    standing = b'# TASKS TODO\n\n## Old "Quoted" $Task\n\nOne.\n\n---\n\n## -Old Dash\n\nTwo.\n\n---\n'
+    target = task_list_dir(todo=standing)
+    silent(run_task_list("insert", str(target), "New Task", "--after", 'Old "Quoted" $Task', stdin=b"A body.\n"))
+    assert titles_of(target) == ['Old "Quoted" $Task', "New Task", "-Old Dash"]
+    silent(run_task_list("remove", str(target), "-Old Dash"))
+    assert titles_of(target) == ['Old "Quoted" $Task', "New Task"]

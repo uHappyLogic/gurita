@@ -101,6 +101,49 @@ def test_a_refusal_late_in_the_list_writes_none_of_the_earlier_sections(run_task
     assert 'titles two sections "Derive The First Task" and "Derive The First Task"' in message
 
 
+@pytest.mark.parametrize(
+    "title, reason",
+    [
+        ('Quote "The" Parser', "contains a '\"'"),
+        ("Pay $HOME Rent", 'contains a "$"'),
+        ("Run `make` First", "contains a backtick"),
+        ("Escape A\\Path", 'contains a "\\"'),
+    ],
+)
+def test_initialize_refuses_a_heading_holding_a_shell_quoted_character(run_task_list, task_list_dir, title, reason):
+    target = task_list_dir()
+    before = snapshot(target)
+    stdin = LIST + f"\n## {title}\n\nThe brief.\n\n---\n".encode("utf-8")
+    message = refused(run_task_list("initialize", str(target), stdin=stdin), target, before)
+    assert message == (
+        f'Error: the section titled "{title}" on standard input {reason}, '
+        "which a double-quoted shell argument does not carry as written\n"
+    )
+
+
+def test_initialize_refuses_a_heading_opening_with_a_dash(run_task_list, task_list_dir):
+    target = task_list_dir()
+    before = snapshot(target)
+    stdin = b"##   -Leading Dash\n\nThe brief.\n\n---\n\n" + LIST
+    message = refused(run_task_list("initialize", str(target), stdin=stdin), target, before)
+    assert message == 'Error: the section titled "-Leading Dash" on standard input opens with a "-", which a command line reads as an option\n'
+
+
+def test_initialize_replaces_standing_unsafe_headings_with_no_refusal(run_task_list, task_list_dir):
+    target = task_list_dir(todo=b'# TASKS TODO\n\n## Old "Quoted" $Task\n\nOne.\n\n---\n\n## -Old Dash\n\nTwo.\n\n---\n')
+    silent(run_task_list("initialize", str(target), stdin=LIST))
+    assert todo_of(target) == CANONICAL
+
+
+def test_initialize_accepts_headings_without_a_refused_character(run_task_list, task_list_dir):
+    target = task_list_dir()
+    stdin = b"## Inner-Hyphen Task\n\nOne.\n\n---\n\n## Edit task_list.py, It's \xe2\x80\x94 Fine -\n\nTwo.\n\n---\n"
+    silent(run_task_list("initialize", str(target), stdin=stdin))
+    assert todo_of(target) == (
+        "# TASKS TODO\n\n## Inner-Hyphen Task\n\nOne.\n\n---\n\n## Edit task_list.py, It's \u2014 Fine -\n\nTwo.\n\n---\n"
+    )
+
+
 def test_initialize_refuses_a_missing_todo_file(run_task_list, task_list_dir):
     target = task_list_dir()
     (target / task_list.TODO_NAME).unlink()

@@ -32,8 +32,12 @@ A TASK_TITLE is matched against the "## " headings only by exact equality after
 whitespace-folding and case-folding; a partial title, a title two sections share, or one
 no section carries is refused. initialize and insert refuse an empty title or body, and a
 title whose folded form equals one TASKS_TODO.md already holds (for initialize, one the
-list itself repeats). No other rule of the task format is checked: titles and bodies are written
-as given.
+list itself repeats). They also refuse a new title holding a '"', a "$", a backtick, or a
+"\\", or opening with a "-" — the characters a double-quoted shell argument or a command
+line would read as something other than text — checked only where a title is created (the
+title argument of insert, every heading initialize reads), so the sections a list already
+holds keep their headings and remove and the anchors match them as before. No other rule of
+the task format is checked: titles and bodies are written as given.
 
 A free-text body (the list of initialize, the section body of insert) travels on standard
 input, never as an argument: the tool reads sys.stdin.buffer to end of file exactly once
@@ -282,6 +286,32 @@ def find_section(task_file, path, title):
     return matches[0]
 
 
+SHELL_QUOTED_CHARACTERS = ('"', "$", "`", "\\")
+
+
+def check_title_characters(title, subject):
+    """Refuse a new title holding a character a later position reads as syntax.
+
+    A task title is copied into the double-quoted shell argument of every fixed call that
+    names the task and is passed as a positional argument no call writes "--" ahead of, so
+    each refusal names the character it found; subject names the title, the title included.
+    """
+    for character in title:
+        if character in SHELL_QUOTED_CHARACTERS:
+            if character == "`":
+                shown = "a backtick"
+            elif character == '"':
+                shown = "a '\"'"
+            else:
+                shown = f'a "{character}"'
+            raise ToolError(
+                f"{subject} contains {shown}, "
+                "which a double-quoted shell argument does not carry as written"
+            )
+    if title.startswith("-"):
+        raise ToolError(f'{subject} opens with a "-", which a command line reads as an option')
+
+
 def check_new_title(task_file, path, title):
     """Refuse a title whose folded form a section of the file already carries."""
     wanted = title_key(title)
@@ -309,6 +339,7 @@ def cmd_initialize(args):
     for position, section in enumerate(sections, start=1):
         if not section.title:
             raise ToolError(f"section {position} of the task list on standard input has an empty title")
+        check_title_characters(section.title, f"the section titled \"{section.title}\" on standard input")
         if not section.body:
             raise ToolError(f"the section titled \"{section.title}\" on standard input has an empty body")
         key = title_key(section.title)
@@ -323,6 +354,7 @@ def cmd_insert(args):
     title = fold(args.task_title)
     if not title:
         raise ToolError("the task title is empty")
+    check_title_characters(title, f"the task title \"{title}\"")
     path = todo_path(args.mission_dir)
     task_file = load_todo(args.mission_dir)
     body = trimmed(lines_of(read_body("the task body")))
@@ -375,14 +407,17 @@ def build_parser():
         "replace TASKS_TODO.md with its heading and the whole ordered list of sections read "
         "from standard input in the file's own form (a \"## <Task Title>\" heading, the body, "
         "a \"---\" line); every section is validated first, so the list lands whole or the file "
-        "is left unchanged",
+        "is left unchanged; a heading holding a '\"', a \"$\", a backtick, or a \"\\\", or "
+        "opening with a \"-\", is refused",
     )
 
     insert_parser = add_subcommand(
         "insert",
         cmd_insert,
         "put one new section into TASKS_TODO.md, its heading the given title and its body read "
-        "from standard input, at the one position the required flag names",
+        "from standard input, at the one position the required flag names; a TASK_TITLE "
+        "whose folded form holds a '\"', a \"$\", a backtick, or a \"\\\", or opens with a "
+        "\"-\", is refused",
     )
     insert_parser.add_argument(
         "task_title",
