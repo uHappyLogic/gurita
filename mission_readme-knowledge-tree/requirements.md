@@ -100,5 +100,9 @@ The three limits are fixed numbers, each applying uniformly: the root `CLAUDE.md
 
 A re-evaluation may end in a rule being dropped, never in one being changed. A rule is dropped only when its subject no longer exists in the tree or the history it guards is closed, for example the pre-split missions and the pre-flip `TASKS_DONE.md` note; every other rule, the accepted-limitation entries included, keeps binding exactly as it does today. Each drop is decided in this mission before tasks are derived: a review pass authors one open question per candidate, so the recorded decisions list every rule that leaves, every rule they do not list survives, and no runner completing a task chooses a drop. A drop changes no runtime file, tool, or test.
 
+### Core node build checks
+
+The build's `host-name-in-core` and `old-word-in-core` checks stay exactly as they are and scan the four `README.md` nodes under `core/` like every other file there, so the no-build-change clause holds. Every rule placed in a `core/` node is worded so that it names no host and carries no "milestone". A host is named by its mechanism (its tool names, config keys, file names, or a phrase such as "a host that dispatches in capped rounds") or by its definition directory path (`scripts/hosts/<host>/`, which the check reads as an identifier and passes). A milestone citation becomes a date, a commit hash, or a mission path, or it is dropped as history. No rule text leaves `core/` because it names a host or a milestone.
+
 ## Out of Scope
 
