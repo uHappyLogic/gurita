@@ -39,7 +39,11 @@
 //
 // Claude Desktop's outcome is read beside the script's, from its application bundle
 // (`harnessCheck.ts`), and the window's model and effort lists, as its install and update runs,
-// cover the three CLIs alone.
+// cover the three CLIs alone. Claude Desktop is offered only in a local macOS window, by the fixed
+// rule `desktopOffered` reads from the window (`desktopOfferedHere`), with no probe of the
+// application: every ready message tells the page, with whether a folder is open, whether it is
+// offered, and where it is not the page draws no row for it, no line editor offers it, and a pick
+// of it writes nothing.
 //
 // The window enables and disables each harness, Claude Desktop included: a click of a harness's enable or disable control
 // writes that state to the harness part of the variant store file and posts it again. Every
@@ -128,7 +132,7 @@ import {
 } from './harnessSettings';
 import { HarnessOffer, SwitchableHarness } from './lineValues';
 import { CHECK_SCRIPT, CheckResult, CliHarnessKey, HARNESSES, PLUGIN_VERSION_FILE, isCliHarnessKey, readPackagedVersion, runHarnessCheck } from './harnessCheck';
-import { pageShell, recipeFiles, recipesChanged, startLiveRead, startingRoot, webviewOptions } from './pane';
+import { desktopOfferedHere, pageShell, recipeFiles, recipesChanged, startLiveRead, startingRoot, webviewOptions } from './pane';
 import {
   CLAUDE_SCOPES,
   PLUGIN_ACTIONS,
@@ -198,7 +202,7 @@ type LinesRead = ({ state: 'read' } & SettingsLines) | { state: 'failed'; cause:
 type SettingsMessage =
   | { type: 'harnessCheck'; check: HarnessCheck }
   | { type: 'pluginRun'; run: PluginRun | null }
-  | { type: 'workspace'; folderOpen: boolean }
+  | { type: 'workspace'; folderOpen: boolean; desktopOffered: boolean }
   | { type: 'harnessSettings'; settings: HarnessSettings }
   | { type: 'harnessLists'; lists: HarnessListsRead }
   | { type: 'variants'; variants: VariantsRead }
@@ -408,7 +412,7 @@ async function postLists(context: vscode.ExtensionContext, target: vscode.Webvie
 function settingsReady(context: vscode.ExtensionContext, target: vscode.WebviewPanel): void {
   void postLists(context, target);
   void post(target, { type: 'pluginRun', run: pluginRunGoing() ?? null });
-  void post(target, { type: 'workspace', folderOpen: folderOpen() });
+  void post(target, { type: 'workspace', folderOpen: folderOpen(), desktopOffered: desktopOfferedHere() });
   if (harnessCheck === undefined) {
     void checkHarnesses(context);
     return;
@@ -668,7 +672,7 @@ function readVariantList(context: vscode.ExtensionContext): VariantsRead {
   try {
     const files = recipeFiles(context);
     const base = readRecipes(files.shipped, files.own, undefined, files.project);
-    return { state: 'read', recipes: settingsRecipes(base, readVariantStore(files.store), files.store, Object.values(BUTTON_RECIPES)) };
+    return { state: 'read', recipes: settingsRecipes(base, readVariantStore(files.store), files.store, Object.values(BUTTON_RECIPES), desktopOfferedHere()) };
   } catch (error) {
     return { state: 'failed', cause: error instanceof Error ? error.message : String(error) };
   }

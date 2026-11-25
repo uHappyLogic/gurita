@@ -54,7 +54,17 @@ const notices: string[] = [];
 // The person's own recipe file and variant store are read from a home of the test's own.
 process.env.HOME = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-finished-home-')));
 
+/** The window's remote name as the stub's editor reports it: `undefined`, a local window, unless a test sets one. */
+const env = { remoteName: undefined as string | undefined };
+
+/** The platform the extension host really runs on, put back by a test that stands on another one. */
+const realPlatform = Object.getOwnPropertyDescriptor(process, 'platform') as PropertyDescriptor;
+// The extension host stands on macOS here wherever the suite runs, so Claude Desktop is offered
+// unless a test stands the window elsewhere.
+Object.defineProperty(process, 'platform', { ...realPlatform, value: 'darwin' });
+
 const stub = {
+  env,
   Uri: {
     joinPath: (base: { path: string }, ...segments: string[]) => ({ path: [base.path, ...segments].join('/') }),
     from: (components: StubUri): StubUri => ({ scheme: components.scheme, path: components.path, query: components.query }),

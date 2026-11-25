@@ -119,7 +119,11 @@ class StubEventEmitter<T> {
 const workspace = { folders: undefined as { uri: { fsPath: string } }[] | undefined };
 const packaged = new Map<string, string>();
 
+/** The window's remote name as the stub's editor reports it: `undefined`, a local window, unless a test sets one. */
+const env = { remoteName: undefined as string | undefined };
+
 const stub = {
+  env,
   Uri: {
     joinPath: (...parts: unknown[]) => ({ parts }),
     file: (fsPath: string) => ({ fsPath }),

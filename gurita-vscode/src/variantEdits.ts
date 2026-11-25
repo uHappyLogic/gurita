@@ -34,8 +34,8 @@
 // effort control, every other line shown as its text, read-only; one of these lines, headless or
 // interactive, a Codex one opening `codex exec` or a bare `codex '$gurita:…'`, gets a harness
 // control picking between Claude Code, Antigravity, and Codex, Claude Desktop after them on the
-// line of a variant holding exactly one line, an interactive one, and any other Codex line keeps its
-// harness. A harness pick (`replaceLineHarness`) rewrites the
+// line of a variant holding exactly one line, an interactive one, in a window Claude Desktop is
+// offered in, a local macOS one, and any other Codex line keeps its harness. A harness pick (`replaceLineHarness`) rewrites the
 // line onto the picked harness as `rewriteHarness` in `lineValues.ts` does, with that harness's
 // lists as the settings view offers them, and stores the changed line as a model or effort pick
 // is stored. Each line is also posted
@@ -294,9 +294,17 @@ export interface SettingsRecipe {
  * hidden by a record. A recipe every variant of which is hidden stays listed, so its variants can
  * be reset. The named single-task lines, whose default holds one headless `<Task Title>` line, are
  * left out, and so is no recipe for its stage or for a disabled harness. `fixed` names the recipes
- * the fixed-name buttons run.
+ * the fixed-name buttons run. `desktopOffered` is whether Claude Desktop is offered in the window
+ * (`desktopOffered` in `harnessCheck.ts`): where it is not, no line editor offers it, a line
+ * already opening with `claude-desktop` staying listed as its text.
  */
-export function settingsRecipes(base: readonly Recipe[], store: VariantStore, file: string, fixed: readonly string[]): SettingsRecipe[] {
+export function settingsRecipes(
+  base: readonly Recipe[],
+  store: VariantStore,
+  file: string,
+  fixed: readonly string[],
+  desktopOffered = true,
+): SettingsRecipe[] {
   const overlaid = overlayVariantStore(base, store, file);
   const names = [...base.map((recipe) => recipe.name), ...overlaid.map((recipe) => recipe.name)].filter(
     (name, index, all) => all.indexOf(name) === index,
@@ -309,7 +317,7 @@ export function settingsRecipes(base: readonly Recipe[], store: VariantStore, fi
     if (shown === undefined || defaultVariant(shown).singleTask) {
       continue;
     }
-    const variants = settingsVariants(base, store, name, recipe, recipe?.variants ?? []);
+    const variants = settingsVariants(base, store, name, recipe, recipe?.variants ?? [], desktopOffered);
     listed.push({ name, group: shown.group, fixed: fixed.includes(name), variants, hidden: hiddenVariants(store, name, variants) });
   }
   return listed;
@@ -318,7 +326,8 @@ export function settingsRecipes(base: readonly Recipe[], store: VariantStore, fi
 /**
  * The variants `variants` of the overlaid recipe `recipe`, named `name`, as the settings view lists
  * them: each with its lines, their editors and rows, whether it is the recipe's default, and, for a
- * stored one, the variant it was made from while that variant's lines can still be read.
+ * stored one, the variant it was made from while that variant's lines can still be read, Claude
+ * Desktop offered by no line editor unless `desktopOffered` is set.
  */
 function settingsVariants(
   base: readonly Recipe[],
@@ -326,6 +335,7 @@ function settingsVariants(
   name: string,
   recipe: Recipe | undefined,
   variants: readonly Variant[],
+  desktopOffered = true,
 ): SettingsVariant[] {
   const standing = recipe === undefined ? undefined : defaultVariant(recipe);
   return variants.map((variant): SettingsVariant => {
@@ -334,7 +344,7 @@ function settingsVariants(
     return {
       ...variantTarget(variant),
       lines: [...variant.lines],
-      editors: variant.lines.map((line) => lineEditor(line, variant.singleInteractive) ?? null),
+      editors: variant.lines.map((line) => lineEditor(line, desktopOffered && variant.singleInteractive) ?? null),
       rows: variant.lines.map((line) => lineRow(line) ?? null),
       isDefault: variant === standing,
       ...(resettable ? { from: source } : {}),

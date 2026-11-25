@@ -8,7 +8,9 @@
 // `enabled`, is enabled, and the harness check never writes the state. A disabled harness acts on
 // the mission page's recipe list alone: a variant with at least one line on it is left out of the
 // list a mission window is posted (`pageRecipes` in `recipes.ts`), while the buttons that run a recipe by its
-// fixed name and the looped run's named single-task lines are untouched.
+// fixed name and the looped run's named single-task lines are untouched. Outside a local macOS
+// window, where Claude Desktop is not offered, its lines are left out wherever a disabled
+// harness's are, whatever state the part holds for it (`disabledCommands`).
 //
 // Its model list and its one effort list for the whole harness, kept for the three CLIs alone, since
 // no line on Claude Desktop carries a model or an effort: each list is derived from the
@@ -27,7 +29,7 @@
 // A key the part holds that names no harness, and every other field of a harness's object, is
 // kept as read. This module imports nothing from `vscode`.
 
-import { CLI_HARNESSES, CliHarnessKey, HARNESSES, Harness as CheckedHarness } from './harnessCheck';
+import { CLI_HARNESSES, CliHarnessKey, DESKTOP_HARNESS, HARNESSES, Harness as CheckedHarness } from './harnessCheck';
 import { Harness as LineHarness, readLine } from './lineValues';
 import { readRecipes } from './recipes';
 import { VariantStore, VariantStoreError, readVariantStore, writeVariantStore } from './variantStore';
@@ -111,9 +113,15 @@ export function harnessStates(store: VariantStore, file: string): HarnessStates 
   return states;
 }
 
-/** The commands the lines of the disabled harnesses open with, in the settings view's order. */
-export function disabledCommands(states: HarnessStates): LineHarness[] {
-  return HARNESSES.filter((harness) => !states[harness.key]).map((harness) => harness.cli as LineHarness);
+/**
+ * The commands the lines the pages leave out open with, in the settings view's order: those of the
+ * disabled harnesses, and Claude Desktop's `claude-desktop` whatever its state when `desktopOffered`
+ * is not set, the window not being a local macOS one (`desktopOffered` in `harnessCheck.ts`).
+ */
+export function disabledCommands(states: HarnessStates, desktopOffered = true): LineHarness[] {
+  return HARNESSES.filter((harness) => !states[harness.key] || (!desktopOffered && harness.key === DESKTOP_HARNESS.key)).map(
+    (harness) => harness.cli as LineHarness,
+  );
 }
 
 /** The store with the harness `key` enabled or disabled, every other value of the harness part kept as read. */

@@ -5,7 +5,9 @@
 // Harnesses, Models and efforts, Variants, and Single-task lines, each drawn from what the
 // extension last posted for it and redrawn whenever it posts it again.
 //
-// Under Harnesses the window lists Claude Code, Antigravity, Codex, and Claude Desktop. Claude
+// Under Harnesses the window lists Claude Code, Antigravity, Codex, and Claude Desktop, the last
+// only while the extension posts it offered, the window being a local macOS one; elsewhere it gets
+// no row and no harness dropdown offers it, whatever the extension posts. Claude
 // Desktop, an application rather than a CLI, gets its one check alone, whether it is installed,
 // read from its application bundle, with the bundle's version shown as information only when it
 // passes and the bundle it was looked for at when it fails, the failure drawn on its row alone; it
@@ -220,7 +222,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
   type SettingsMessage =
     | { type: 'harnessCheck'; check: HarnessCheck }
     | { type: 'pluginRun'; run: PluginRun | null }
-    | { type: 'workspace'; folderOpen: boolean }
+    | { type: 'workspace'; folderOpen: boolean; desktopOffered: boolean }
     | { type: 'harnessSettings'; settings: HarnessSettings }
     | { type: 'harnessLists'; lists: HarnessLists }
     | { type: 'variants'; variants: VariantsRead }
@@ -267,6 +269,10 @@ declare function acquireVsCodeApi(): VsCodeApi;
     ['codex', 'Codex'],
     ['claude-desktop', 'Claude Desktop'],
   ];
+  /** The harnesses the window lists and its dropdowns may offer: all four, Claude Desktop only while the extension posts it offered. */
+  function listedHarnesses(): [string, string][] {
+    return HARNESSES.filter(([key]) => key !== 'claude-desktop' || desktopOffered);
+  }
   /** The control that updates a harness's installed Gurita copy. */
   const UPDATE_LABEL = 'Update';
   /** The control that installs the Gurita plugin on a harness. */
@@ -300,6 +306,11 @@ declare function acquireVsCodeApi(): VsCodeApi;
   let pluginRun: PluginRun | undefined;
   /** Whether a workspace folder is open, as the extension last posted it; none counted until it is posted. */
   let folderOpen = false;
+  /**
+   * Whether Claude Desktop is offered in the window, a local macOS one, as the extension last posted
+   * it; not offered until it is posted.
+   */
+  let desktopOffered = false;
   /** Each harness's enabled state the extension last posted; undefined until one is posted. */
   let harnessSettings: HarnessSettings | undefined;
   /** Each harness's lists the extension last posted; undefined until they are posted. */
@@ -532,7 +543,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
     }
     const run = pluginRun;
     const list = element('ul', undefined, 'harness-list');
-    for (const [key, name] of HARNESSES) {
+    for (const [key, name] of listedHarnesses()) {
       const outcome = check?.state === 'checked' ? check.harnesses.find((each) => each.key === key) : undefined;
       const item = element('li', undefined, outcome === undefined ? 'harness' : outcome.failed === undefined ? 'harness passed' : 'harness failed');
       item.dataset.harness = key;
@@ -705,8 +716,9 @@ declare function acquireVsCodeApi(): VsCodeApi;
   }
 
   /**
-   * The harness dropdown of a line posted with the harnesses it offers, in the window's order, and
-   * standing on the harness the line runs on; a pick of another posts it for the line.
+   * The harness dropdown of a line posted with the harnesses it offers, in the window's order, Claude
+   * Desktop left out while it is not offered, and standing on the harness the line runs on; a pick
+   * of another it offers posts it for the line.
    */
   function harnessDropdown(
     recipe: string,
@@ -720,14 +732,15 @@ declare function acquireVsCodeApi(): VsCodeApi;
     choice.setAttribute('aria-label', `The harness of line ${lineIndex + 1} of ${variant.name} in ${recipe}`);
     choice.title = 'Pick the harness this line runs on';
     choice.dataset.focus = `line-harness-${focus}-${lineIndex}`;
-    for (const [key, name] of HARNESSES.filter(([key]) => offered.includes(key))) {
+    const listed = listedHarnesses().filter(([key]) => offered.includes(key));
+    for (const [key, name] of listed) {
       const option = element('option', name);
       option.value = key;
       option.selected = key === current;
       choice.append(option);
     }
     choice.addEventListener('change', () => {
-      if (choice.value !== current && offered.includes(choice.value)) {
+      if (choice.value !== current && listed.some(([key]) => key === choice.value)) {
         vscode.postMessage({ type: 'replaceLineHarness', recipe, variant: variantTarget(variant), line: lineIndex, harness: choice.value });
       }
     });
@@ -1006,6 +1019,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
       pluginRun = message.run ?? undefined;
     } else if (message.type === 'workspace') {
       folderOpen = message.folderOpen === true;
+      desktopOffered = message.desktopOffered === true;
     } else if (message.type === 'harnessSettings') {
       harnessSettings = message.settings;
     } else if (message.type === 'harnessLists') {

@@ -5,9 +5,17 @@ import { FakeElement, Page, loadScript, stylesheetRules } from './fakePage';
 // The Settings window's page script, compiled as the window loads it, run against the small
 // stand-in for the DOM in `fakePage.ts`, so the drawn settings can be walked.
 
-/** Loads the compiled script of the Settings window into a fresh page, as the window does each time it is shown. */
-function loadSettings(): Page {
-  return loadScript('settings.js');
+/**
+ * Loads the compiled script of the Settings window into a fresh page, as the window does each time
+ * it is shown, and, unless `desktopOffered` is false, posts it what a ready message in a local
+ * macOS window is answered with first: no folder open and Claude Desktop offered.
+ */
+function loadSettings(desktopOffered = true): Page {
+  const page = loadScript('settings.js');
+  if (desktopOffered) {
+    page.send({ type: 'workspace', folderOpen: false, desktopOffered: true });
+  }
+  return page;
 }
 
 function buttons(page: Page): FakeElement[] {
@@ -553,7 +561,7 @@ function postedInstallScopes(page: Page): unknown {
 
 test('an Install control is drawn for Antigravity or Codex holding no copy and for Claude Code while a scope holds no applying copy, and none for a missing CLI, a disabled Antigravity or Codex copy, or a copy from another source', () => {
   const page = loadSettings();
-  page.send({ type: 'workspace', folderOpen: true });
+  page.send({ type: 'workspace', folderOpen: true, desktopOffered: true });
   assert.deepStrictEqual(installControls(page), [], 'none while no check result is posted');
   page.send({ type: 'harnessCheck', check: { state: 'running' } });
   assert.deepStrictEqual(installControls(page), [], 'none while the check runs');
@@ -605,20 +613,20 @@ test('an Install control is drawn for Antigravity or Codex holding no copy and f
 
 test('with no workspace folder open Claude Code is offered an install at user scope alone, and none while user holds a copy', () => {
   const page = loadSettings();
-  page.send({ type: 'workspace', folderOpen: false });
+  page.send({ type: 'workspace', folderOpen: false, desktopOffered: true });
   sendOutcomes(page, { failed: 'plugin' }, { failed: 'cli' }, { failed: 'cli' });
   assert.deepStrictEqual(postedInstallScopes(page), ['user'], 'user alone is offered');
   assert.strictEqual(installControl(page, 'claude').title, 'Install the Gurita plugin on Claude Code from the latest published release at user scope');
   assert.ok(!texts(page).some((text) => /project|local/.test(text) && text.includes('scope')), 'nothing on the page names project or local');
   sendOutcomes(page, { installed: '2.0.0', scopes: ['user'] }, { failed: 'cli' }, { failed: 'cli' });
   assert.deepStrictEqual(installControls(page), [], 'none while user holds a copy');
-  page.send({ type: 'workspace', folderOpen: true });
+  page.send({ type: 'workspace', folderOpen: true, desktopOffered: true });
   assert.deepStrictEqual(postedInstallScopes(page), ['project', 'local'], 'project and local are offered once a folder is open');
 });
 
 test('a click on Install posts the install at once, on Claude Code with the scopes on offer, and the control is drawn disabled while an install or update run is going', () => {
   const page = loadSettings();
-  page.send({ type: 'workspace', folderOpen: true });
+  page.send({ type: 'workspace', folderOpen: true, desktopOffered: true });
   sendOutcomes(page, { installed: '2.0.0', scopes: ['user'] }, { failed: 'plugin' }, { failed: 'plugin' });
   for (const [key, posted] of [
     ['claude', { type: 'installPlugin', harness: 'claude', scopes: ['project', 'local'] }],
@@ -789,7 +797,7 @@ test("Claude Desktop's row shows its one presence check, its version as informat
 test('Claude Desktop gets no scopes, source, Install, or Update, installed or not', () => {
   const page = loadSettings();
   for (const outcome of [DESKTOP, { ...DESKTOP, failed: 'application', application: { bundle: '/Applications/Claude.app' } }]) {
-    page.send({ type: 'workspace', folderOpen: true });
+    page.send({ type: 'workspace', folderOpen: true, desktopOffered: true });
     page.send({ type: 'harnessCheck', check: { state: 'checked', harnesses: [...CHECKED.check.harnesses.slice(0, 3), outcome] } });
     page.send(harnessSettings({ claude: true, antigravity: true, codex: true, 'claude-desktop': true }));
     const row = settingsView(page)?.all().find((each) => each.tagName === 'li' && each.dataset.harness === 'claude-desktop');
@@ -1299,6 +1307,54 @@ test("a line posted with Claude Desktop among its harnesses draws it last in its
   assert.deepStrictEqual(page.posted.slice(count), [
     { type: 'replaceLineHarness', recipe: 'Execute tasks', variant: { name: 'Normal difficulty', origin: 'shipped' }, line: 0, harness: 'claude-desktop' },
   ], 'a pick not offered posts nothing');
+});
+
+test('outside a local macOS window Claude Desktop gets no row under Harnesses and no harness dropdown offers it, whatever the extension posts', () => {
+  const execute = 'claude "/gurita:complete-all-tasks --mission <path>" --dangerously-skip-permissions --model "opus" --effort high; # interactive';
+  const variants = {
+    type: 'variants',
+    variants: {
+      state: 'read',
+      recipes: [
+        {
+          name: 'Execute tasks',
+          group: 'shipped',
+          fixed: false,
+          variants: [
+            {
+              name: 'Normal difficulty',
+              origin: 'shipped',
+              lines: [execute],
+              editors: [{ harness: 'claude', model: 'opus', effort: 'high', harnesses: [...H3, 'claude-desktop'] }],
+              rows: [{ skill: 'complete-all-tasks', interactive: true, harness: 'claude' }],
+              isDefault: true,
+            },
+          ],
+          hidden: [],
+        },
+      ],
+    },
+  };
+  for (const told of [false, true]) {
+    const page = loadSettings(false);
+    if (told) {
+      page.send({ type: 'workspace', folderOpen: true, desktopOffered: false });
+    }
+    page.send(CHECKED);
+    page.send(harnessSettings({ claude: true, antigravity: true, codex: true, 'claude-desktop': true }));
+    page.send(harnessListsMessage(LISTS));
+    page.send(variants);
+    const when = told ? 'told it is not offered' : 'before the extension tells it is offered';
+    assert.deepStrictEqual(harnessRows(page).map(([key]) => key), ['claude', 'antigravity', 'codex'], `${when}, it gets no row though the check carries its outcome`);
+    assert.deepStrictEqual(enabledRows(page).map(([key]) => key), ['claude', 'antigravity', 'codex'], 'and no enabled switch');
+    assert.deepStrictEqual(lineRows(page)[0][1][0], ['line-harness', ['Claude Code', 'Antigravity', 'Codex'], 'Claude Code'], `${when}, the dropdown offers the three CLIs alone`);
+    const count = page.posted.length;
+    focused(page, 'line-harness-0-0-0').change('claude-desktop');
+    assert.deepStrictEqual(page.posted.slice(count), [], 'a pick of it posts nothing');
+    page.send({ type: 'workspace', folderOpen: true, desktopOffered: true });
+    assert.deepStrictEqual(harnessRows(page)[3], DESKTOP_ROW, 'told it is offered, its row is drawn');
+    assert.deepStrictEqual(lineRows(page)[0][1][0], ['line-harness', ['Claude Code', 'Antigravity', 'Codex', 'Claude Desktop'], 'Claude Code'], 'and the dropdown offers it');
+  }
 });
 
 test("a pick in a line's harness dropdown posts the line and the harness, Codex offered on a headless line alone, a line without both flags getting none, and the row is redrawn only from what the extension posts", () => {

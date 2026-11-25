@@ -7,6 +7,7 @@ import {
   CLI_HARNESSES,
   DESKTOP_BUNDLE,
   HARNESSES,
+  desktopOffered,
   desktopOutcome,
   harnessOutcomes,
   isCliHarnessKey,
@@ -266,6 +267,26 @@ test('Claude Desktop is the fourth harness, its command word claude-desktop, aft
   assert.ok(isCliHarnessKey('codex') && !isCliHarnessKey('claude-desktop') && !isCliHarnessKey(undefined));
   assert.strictEqual(DESKTOP_BUNDLE, '/Applications/Claude.app');
   assert.deepStrictEqual(harnessOutcomes(print(PASSING), '2.0.0').map((outcome) => outcome.key), ['claude', 'antigravity', 'codex'], 'the script covers the CLIs alone');
+});
+
+test('Claude Desktop is offered only on macOS in a local window: darwin with no remote name', () => {
+  assert.strictEqual(desktopOffered('darwin', undefined), true, 'a local macOS window');
+  assert.strictEqual(desktopOffered('darwin', ''), true, 'an empty remote name is a local window');
+  for (const remote of ['wsl', 'ssh-remote', 'dev-container']) {
+    assert.strictEqual(desktopOffered('darwin', remote), false, `a ${remote} window on macOS`);
+    assert.strictEqual(desktopOffered('linux', remote), false, `a ${remote} window`);
+  }
+  for (const platform of ['linux', 'win32', 'freebsd']) {
+    assert.strictEqual(desktopOffered(platform, undefined), false, `a local ${platform} window`);
+  }
+});
+
+test('the rule offering Claude Desktop reads the window alone, with no probe of the application', () => {
+  const source = fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'harnessCheck.ts'), 'utf8');
+  const start = source.indexOf('export function desktopOffered(');
+  const body = source.slice(start, source.indexOf('\n}\n', start));
+  assert.ok(start >= 0);
+  assert.doesNotMatch(body, /fs\.|execFile|DESKTOP_BUNDLE|readDesktopPresence/, 'it reads no bundle and runs no command');
 });
 
 test('a dated block of the hands-on check findings stands beside the Claude Desktop entry', () => {

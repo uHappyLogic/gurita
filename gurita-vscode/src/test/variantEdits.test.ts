@@ -32,7 +32,7 @@ import {
   settingsRecipes,
   variantTarget,
 } from '../variantEdits';
-import { emptyVariantStore, readVariantStore } from '../variantStore';
+import { emptyVariantStore, parseVariantStore, readVariantStore } from '../variantStore';
 
 const FIXTURES = path.join(__dirname, '..', '..', 'src', 'test', 'fixtures', 'recipes');
 const SHIPPED = path.join(FIXTURES, 'shipped.md');
@@ -598,6 +598,33 @@ test('the harness dropdown offers Claude Desktop on the line of a variant holdin
   assert.ok(
     lines.lines.every((line) => line.variants.every((variant) => variant.editors.every((editor) => editor !== null && !editor.harnesses?.includes('claude-desktop')))),
     'no single-task line is offered Claude Desktop',
+  );
+});
+
+test('outside a local macOS window no line editor offers Claude Desktop, a line already on it staying listed as its text', () => {
+  const shipped = parseShippedRecipes(fs.readFileSync(SHIPPED_RECIPES, 'utf8'), SHIPPED_RECIPES);
+  const desktop = 'claude-desktop "/gurita:complete-all-tasks --mission <path>"; # interactive';
+  const store = parseVariantStore(
+    JSON.stringify({ variants: [{ recipe: 'Execute tasks', name: 'custom 1', from: { name: 'Normal difficulty', origin: 'shipped' }, lines: [desktop] }] }),
+    '/home/x/.gurita/variants.json',
+  );
+  const offered = (desktopOffered: boolean) =>
+    settingsRecipes(shipped, store, '/home/x/.gurita/variants.json', [], desktopOffered).flatMap((recipe) =>
+      recipe.variants.flatMap((variant) =>
+        variant.editors.flatMap((editor, index) => (editor?.harnesses?.includes('claude-desktop') ? [`${recipe.name}/${variant.name}/${index}`] : [])),
+      ),
+    );
+  assert.strictEqual(offered(true).length, 7, 'offered, the seven one-interactive-line variants offer it');
+  assert.deepStrictEqual(offered(false), [], 'not offered, no line editor offers it');
+  const execute = settingsRecipes(shipped, store, '/home/x/.gurita/variants.json', [], false).find((recipe) => recipe.name === 'Execute tasks');
+  assert.deepStrictEqual(
+    execute?.variants.map((variant) => [variant.name, variant.editors[0]?.harnesses ?? null]),
+    [
+      ['Normal difficulty', ['claude', 'antigravity', 'codex']],
+      ['Critical tasks', ['claude', 'antigravity', 'codex']],
+      ['custom 1', null],
+    ],
+    'the three CLIs are still offered, and a stored Desktop line is shown as its text',
   );
 });
 

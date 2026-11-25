@@ -77,6 +77,19 @@ export const DESKTOP_HARNESS: Harness = { key: 'claude-desktop', name: 'Claude D
 /** The four harnesses, in the order the settings view lists them, Claude Desktop last. */
 export const HARNESSES: readonly Harness[] = [...CLI_HARNESSES, DESKTOP_HARNESS];
 
+/**
+ * Whether Claude Desktop is offered in a window whose extension host runs on `platform`, as
+ * `process.platform` reads it, and whose remote name is `remoteName`, as `vscode.env.remoteName`
+ * reads it: only on macOS in a local window, `darwin` with no remote name. The rule is fixed and
+ * read from the window alone, with no probe of the application. In a local Linux window and in
+ * every remote window, Remote-WSL and SSH among them, Claude Desktop is not offered: it is no row
+ * under Harnesses and no choice in the harness dropdown, and no variant whose line opens with
+ * `claude-desktop` is selectable for an action.
+ */
+export function desktopOffered(platform: string, remoteName: string | undefined): boolean {
+  return platform === 'darwin' && !remoteName;
+}
+
 /** The application bundle Claude Desktop's presence is read from. */
 export const DESKTOP_BUNDLE = '/Applications/Claude.app';
 

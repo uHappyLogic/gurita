@@ -112,7 +112,17 @@ function closeTerminal(terminal: StubTerminal, code: number | undefined): void {
 const workspace = { folders: undefined as { uri: { fsPath: string } }[] | undefined };
 const packaged = new Map<string, string>();
 
+/** The window's remote name as the stub's editor reports it: `undefined`, a local window, unless a test sets one. */
+const env = { remoteName: undefined as string | undefined };
+
+/** The platform the extension host really runs on, put back by a test that stands on another one. */
+const realPlatform = Object.getOwnPropertyDescriptor(process, 'platform') as PropertyDescriptor;
+// The extension host stands on macOS here wherever the suite runs, so Claude Desktop is offered
+// unless a test stands the window elsewhere.
+Object.defineProperty(process, 'platform', { ...realPlatform, value: 'darwin' });
+
 const stub = {
+  env,
   Uri: {
     joinPath: (...parts: unknown[]) => ({ parts }),
     file: (fsPath: string) => ({ fsPath }),
@@ -803,7 +813,7 @@ test('with no workspace folder open the window is told so, and the scope pick of
   const readyFrom = window.posted.length;
   sendSettings({ type: 'ready' });
   await until(() => postedOf(window, 'workspace', readyFrom).length > 0, 'the ready message is answered');
-  assert.deepStrictEqual(postedOf(window, 'workspace', readyFrom), [{ type: 'workspace', folderOpen: true }], 'a ready message is told a folder is open');
+  assert.deepStrictEqual(postedOf(window, 'workspace', readyFrom), [{ type: 'workspace', folderOpen: true, desktopOffered: true }], 'a ready message is told a folder is open');
 
   const folders = workspace.folders;
   workspace.folders = undefined;
@@ -811,7 +821,7 @@ test('with no workspace folder open the window is told so, and the scope pick of
     const closedFrom = window.posted.length;
     sendSettings({ type: 'ready' });
     await until(() => postedOf(window, 'workspace', closedFrom).length > 0, 'the ready message is answered');
-    assert.deepStrictEqual(postedOf(window, 'workspace', closedFrom), [{ type: 'workspace', folderOpen: false }], 'a ready message is told no folder is open');
+    assert.deepStrictEqual(postedOf(window, 'workspace', closedFrom), [{ type: 'workspace', folderOpen: false, desktopOffered: true }], 'a ready message is told no folder is open');
 
     const picks = quickPicks.length;
     pickAnswers.push(undefined);
@@ -902,6 +912,51 @@ test('a Claude Desktop pick in the harness dropdown stores the line rewritten as
     );
     assert.deepStrictEqual(listed?.variants.map((each) => each.name), ['Normal difficulty', 'Critical tasks', 'custom 1'], 'the shipped variant stays listed beside its custom');
   } finally {
+    if (kept === undefined) {
+      fs.rmSync(store, { force: true });
+    } else {
+      fs.writeFileSync(store, kept);
+    }
+  }
+});
+
+test('outside a local macOS window the window is told Claude Desktop is not offered, no line editor offers it, and a pick of it writes nothing', async () => {
+  const window = openWindow();
+  const store = path.join(home, '.gurita', 'variants.json');
+  const kept = fs.existsSync(store) ? fs.readFileSync(store, 'utf8') : undefined;
+  /** Whether any line editor of the variants posted from `from` on offers Claude Desktop. */
+  const desktopEditors = (from: number): string[] =>
+    (postedOf(window, 'variants', from)[0].variants as { recipes: { name: string; variants: { name: string; editors: ({ harnesses?: string[] } | null)[] }[] }[] }).recipes.flatMap(
+      (recipe) => recipe.variants.filter((variant) => variant.editors.some((editor) => editor?.harnesses?.includes('claude-desktop'))).map((variant) => `${recipe.name}/${variant.name}`),
+    );
+  try {
+    let from = window.posted.length;
+    sendSettings({ type: 'ready' });
+    await until(() => postedOf(window, 'workspace', from).length > 0 && postedOf(window, 'variants', from).length > 0, 'the ready message is answered');
+    assert.strictEqual(postedOf(window, 'workspace', from)[0].desktopOffered, true, 'a local macOS window is told it is offered');
+    assert.ok(desktopEditors(from).includes('Execute tasks/Normal difficulty'), 'and its line editors offer it');
+    for (const [platform, remoteName] of [
+      ['linux', undefined],
+      ['linux', 'wsl'],
+      ['darwin', 'ssh-remote'],
+    ] as const) {
+      Object.defineProperty(process, 'platform', { ...realPlatform, value: platform });
+      env.remoteName = remoteName;
+      const where = `on ${platform}${remoteName === undefined ? ' in a local window' : ` in a ${remoteName} window`}`;
+      from = window.posted.length;
+      sendSettings({ type: 'ready' });
+      await until(() => postedOf(window, 'workspace', from).length > 0 && postedOf(window, 'variants', from).length > 0, 'the ready message is answered');
+      assert.deepStrictEqual(postedOf(window, 'workspace', from), [{ type: 'workspace', folderOpen: true, desktopOffered: false }], `${where} the window is told it is not offered`);
+      assert.deepStrictEqual(desktopEditors(from), [], `${where} no line editor offers it`);
+      from = window.posted.length;
+      sendSettings({ type: 'replaceLineHarness', recipe: 'Execute tasks', variant: { name: 'Normal difficulty', origin: 'shipped' }, line: 0, harness: 'claude-desktop' });
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      assert.strictEqual(fs.existsSync(store) ? fs.readFileSync(store, 'utf8') : undefined, kept, `${where} a pick of it writes nothing`);
+      assert.deepStrictEqual(postedOf(window, 'variants', from), [], 'and posts nothing');
+    }
+  } finally {
+    Object.defineProperty(process, 'platform', { ...realPlatform, value: 'darwin' });
+    env.remoteName = undefined;
     if (kept === undefined) {
       fs.rmSync(store, { force: true });
     } else {

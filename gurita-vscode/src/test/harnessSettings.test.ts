@@ -49,6 +49,51 @@ test('Claude Desktop keeps an enabled state of its own under its key, claude-des
   assert.deepStrictEqual(Object.keys(harnessLists(emptyVariantStore(), FILE, ['claude --model opus --effort high "/gurita:x"'])), ['claude', 'antigravity', 'codex']);
 });
 
+test("outside a local macOS window Claude Desktop's lines are left out whatever its state, beside the disabled harnesses'", () => {
+  const enabled = { claude: true, antigravity: true, codex: true, 'claude-desktop': true };
+  assert.deepStrictEqual(disabledCommands(enabled, true), [], 'offered and enabled, nothing is left out');
+  assert.deepStrictEqual(disabledCommands(enabled, false), ['claude-desktop'], 'not offered, its lines are left out though it is enabled');
+  assert.deepStrictEqual(disabledCommands({ ...enabled, antigravity: false }, false), ['agy', 'claude-desktop'], "in the settings view's order");
+  assert.deepStrictEqual(disabledCommands({ ...enabled, 'claude-desktop': false }, false), ['claude-desktop'], 'named once');
+  const desktop = 'claude-desktop "/gurita:complete-all-tasks --mission <path>"; # interactive';
+  const recipes = parseShippedRecipes(
+    [
+      '## Recipes',
+      '',
+      '### Execute tasks',
+      '#### Claude Code',
+      '```',
+      'claude "/gurita:complete-all-tasks --mission <path>" --model "opus" --effort high; # interactive',
+      '```',
+      '#### Desktop',
+      '```',
+      desktop,
+      '```',
+      '### discuss-new-task',
+      '#### Claude Code',
+      '```',
+      'claude "/gurita:discuss-new-task --mission <path> <issue description>" --model "opus" --effort high; # interactive',
+      '```',
+      '#### Desktop',
+      '```',
+      'claude-desktop "/gurita:discuss-new-task --mission <path> <issue description>"; # interactive',
+      '```',
+      '',
+    ].join('\n'),
+    '/x/shipped_recipes.md',
+  );
+  const listed = (disabled: readonly string[]) =>
+    pageRecipes(recipes, ['path'], new Map([['Execute tasks', 'Desktop']]), disabled as never).map((entry) => entry.variants.map((each) => each.name));
+  assert.deepStrictEqual(listed(disabledCommands(enabled, true)), [['Claude Code', 'Desktop']], 'offered, the Desktop variant is listed');
+  assert.deepStrictEqual(listed(disabledCommands(enabled, false)), [['Claude Code']], "not offered, it leaves the page's list, a remembered selection of it giving way");
+  const button = (disabled: readonly string[]) => {
+    const found = buttonRecipe(recipes, BUTTON_RECIPES.discussTask, ['path', 'issue description'], 'Desktop', disabled as never);
+    return found.state === 'found' ? [found.variants.map((each) => each.name), found.variant.name] : found.state;
+  };
+  assert.deepStrictEqual(button(disabledCommands(enabled, true)), [['Claude Code', 'Desktop'], 'Desktop']);
+  assert.deepStrictEqual(button(disabledCommands(enabled, false)), [['Claude Code'], 'Claude Code'], "and the fixed-name button's dropdown");
+});
+
 test('a harness part not in its form is refused, naming the file', () => {
   for (const harnesses of [[], 'off', { claude: false }, { codex: { enabled: 'no' } }]) {
     const store = parseVariantStore(JSON.stringify({ harnesses }), FILE);

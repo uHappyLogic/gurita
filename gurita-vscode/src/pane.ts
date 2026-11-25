@@ -115,6 +115,9 @@
 // still listed and otherwise on the first listed variant, the remembered selection kept for when
 // the harness is enabled again. The fixed-name buttons' dropdowns leave such a variant out in the
 // same way, and the looped run's preview, overrides, and lines keep every named single-task line.
+// Outside a local macOS window (`desktopOfferedHere`), Claude Desktop is not offered: a variant
+// with a line opening with `claude-desktop` is left out of the page's lists and the fixed-name
+// buttons' and mission-starting rows' dropdowns as a disabled harness's is, whatever its state.
 // Every edit the window makes re-reads the recipes and posts every shown mission window again, the
 // failure state again while it stands, so the pages' dropdowns and the fixed-name buttons'
 // dropdowns and labels show it at once.
@@ -199,6 +202,7 @@ import {
 } from './selections';
 import { variantStoreFile } from './variantStore';
 import { disabledCommands, readHarnessStates } from './harnessSettings';
+import { desktopOffered } from './harnessCheck';
 import { Harness } from './lineValues';
 import { FileEventKind, RefreshBatch, RefreshQueue, WATCHED_PATTERN, eventEffect, gitEventEffect, gitWatches } from './refresh';
 import { OPTIONAL_PLACEHOLDERS } from './placeholders';
@@ -944,9 +948,22 @@ export function recipeFiles(context: vscode.ExtensionContext, root = sessionRoot
   };
 }
 
-/** The commands of the harnesses the Settings window disabled, read afresh from the variant store file. */
+/**
+ * Whether Claude Desktop is offered in this window, by the fixed rule `desktopOffered` reads from
+ * it: the extension host on macOS, `process.platform` being `darwin`, in a local window, with no
+ * `vscode.env.remoteName`. Nothing of the application is probed.
+ */
+export function desktopOfferedHere(): boolean {
+  return desktopOffered(process.platform, vscode.env.remoteName);
+}
+
+/**
+ * The commands of the harnesses the Settings window disabled, read afresh from the variant store
+ * file, with Claude Desktop's beside them in a window it is not offered in (`desktopOfferedHere`),
+ * so no variant whose line opens with `claude-desktop` is listed or selectable there.
+ */
 function readDisabled(): Harness[] {
-  return disabledCommands(readHarnessStates(variantStoreFile(os.homedir())));
+  return disabledCommands(readHarnessStates(variantStoreFile(os.homedir())), desktopOfferedHere());
 }
 
 /**

@@ -165,7 +165,17 @@ interface StubDocument {
 /** Every text document the stub's editor showed in an editor tab, in order, with the options it was shown with. */
 const shownDocuments: { document: StubDocument; options: unknown }[] = [];
 
+/** The window's remote name as the stub's editor reports it: `undefined`, a local window, unless a test sets one. */
+const env = { remoteName: undefined as string | undefined };
+
+/** The platform the extension host really runs on, put back by a test that stands on another one. */
+const realPlatform = Object.getOwnPropertyDescriptor(process, 'platform') as PropertyDescriptor;
+// The extension host stands on macOS here wherever the suite runs, so Claude Desktop is offered
+// unless a test stands the window elsewhere.
+Object.defineProperty(process, 'platform', { ...realPlatform, value: 'darwin' });
+
 const stub = {
+  env,
   Uri: {
     joinPath: (...parts: unknown[]) => ({ parts }),
     file: (fsPath: string) => ({ fsPath }),
@@ -3405,6 +3415,90 @@ test("every action of a mission's page and the New mission row whose variant is 
     }
     assert.deepStrictEqual(notifications, ['The action "Desktop review" could not be sent to Claude Desktop: No application knows how to open URL claude://code/new.']);
     assert.strictEqual(execFileSync('git', ['status', '--porcelain', '--ignored'], { cwd: root, encoding: 'utf8' }), '', "nothing is written into the project's tree");
+  } finally {
+    process.env.HOME = home;
+  }
+});
+
+test('outside a local macOS window no variant whose line opens with claude-desktop is listed or selectable for an action, on the page, its buttons, or the New mission row', async () => {
+  const home = process.env.HOME;
+  const fakeHome = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-home-'));
+  process.env.HOME = fakeHome;
+  try {
+    const root = project(DESK);
+    fs.writeFileSync(path.join(root, DESK, 'open_questions.xml'), SELECTION_QUESTIONS);
+    git(root, 'add', '.');
+    git(root, 'commit', '-q', '-m', 'Questions');
+    const files = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-pane-recipes-'));
+    fs.writeFileSync(path.join(files, 'shipped_recipes.md'), BUTTON_SHIPPED_TEXT);
+    fs.writeFileSync(path.join(files, 'recipes.md'), DESKTOP_OWN_TEXT);
+    fs.mkdirSync(path.join(fakeHome, '.gurita'));
+    // The Desktop variant picked as the default of every fixed-name button recipe and enabled, as in a local macOS window.
+    const fixed = ['discuss-open-question', 'answer-open-question-with-alternative', 'discuss-new-task', 'ask-in-mission-context', 'discuss-mission-goal'];
+    fs.writeFileSync(
+      path.join(fakeHome, '.gurita', 'variants.json'),
+      JSON.stringify({ defaults: fixed.map((recipe) => ({ recipe, name: 'Desktop', origin: 'own' })), harnesses: { 'claude-desktop': { enabled: true } } }),
+    );
+    packaged.set('bundled/missions.py', path.join(__dirname, '..', '..', '..', 'core', 'tools', 'missions.py'));
+    packaged.set('bundled/shipped_recipes.md', path.join(files, 'shipped_recipes.md'));
+    packaged.set('runner.py', path.join(__dirname, '..', '..', 'runner.py'));
+    workspace.folders = [{ uri: { fsPath: root } }];
+    workspace.settings = { ownRecipesFile: path.join(files, 'recipes.md') };
+    workspaceState.clear();
+
+    /** The page's recipe names, the variants each fixed-name button and the New mission row offer, and the one each stands on. */
+    const offers = async () => {
+      const from = openWindow(DESK).posts.length;
+      send({ type: 'refresh' });
+      const message = await windowPosted(DESK, 'page', from);
+      const mission = message.mission as { recipes: { recipes: PostedEntry[] } };
+      const buttons = postedButtons(message);
+      const offered = (key: string) => {
+        const button = buttons[key];
+        return button.state === 'offered' ? [button.variants.map((each) => each.name), button.variants[button.selected].name] : button.state;
+      };
+      const goal = pane.startingOffers(context).discussGoal;
+      return {
+        recipes: mission.recipes.recipes.map((entry) => entry.name),
+        discussQuestion: offered('discussQuestion'),
+        discussTask: offered('discussTask'),
+        askMission: offered('askMission'),
+        discussGoal: goal.state === 'offered' ? [goal.variants.map((each) => each.name), goal.variants[goal.selected].name] : goal.state,
+      };
+    };
+    const local = await offers();
+    assert.ok(local.recipes.includes('Desktop review'), 'in a local macOS window the Desktop variant is listed');
+    assert.deepStrictEqual(local.discussTask, [['default', 'Desktop'], 'Desktop'], 'and selectable on a fixed-name button');
+    assert.deepStrictEqual(local.discussGoal, [['default', 'Desktop'], 'Desktop'], 'and on the New mission row');
+
+    for (const [platform, remoteName] of [
+      ['linux', undefined],
+      ['linux', 'wsl'],
+      ['darwin', 'ssh-remote'],
+    ] as const) {
+      Object.defineProperty(process, 'platform', { ...realPlatform, value: platform });
+      env.remoteName = remoteName;
+      const where = `on ${platform}${remoteName === undefined ? ' in a local window' : ` in a ${remoteName} window`}`;
+      try {
+        const elsewhere = await offers();
+        assert.ok(!elsewhere.recipes.includes('Desktop review'), `${where} the page lists no Desktop variant, though Claude Desktop is enabled`);
+        assert.deepStrictEqual(elsewhere.recipes, local.recipes.filter((name) => name !== 'Desktop review'), 'every other recipe stays listed');
+        for (const key of ['discussQuestion', 'discussTask', 'askMission', 'discussGoal'] as const) {
+          assert.deepStrictEqual(elsewhere[key], [['default'], 'default'], `${where} ${key} offers no Desktop variant, its pick giving way to the default`);
+        }
+        const opens = desktopOpens.length;
+        const terminals = created.length;
+        send({ type: 'runRecipe', mission: DESK, recipe: 'Desktop review', variant: 'default' });
+        send({ type: 'taskButton', mission: DESK, variant: 'Desktop' });
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        assert.strictEqual(desktopOpens.length, opens, `${where} a click naming a Desktop variant sends nothing to Claude Desktop`);
+        assert.strictEqual(created.length, terminals, 'and starts no run');
+      } finally {
+        Object.defineProperty(process, 'platform', { ...realPlatform, value: 'darwin' });
+        env.remoteName = undefined;
+      }
+    }
+    assert.deepStrictEqual(await offers(), local, 'back in a local macOS window the Desktop variants are listed and selected again');
   } finally {
     process.env.HOME = home;
   }

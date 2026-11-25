@@ -129,7 +129,11 @@ function newRecord(viewType: string, title: string, restored: boolean): StubPane
   return { viewType, title, restored, visible: true, reveals: 0, html: '', posted: [], disposed: false };
 }
 
+/** The window's remote name as the stub's editor reports it: `undefined`, a local window, unless a test sets one. */
+const env = { remoteName: undefined as string | undefined };
+
 const stub = {
+  env,
   Uri: {
     joinPath: (...parts: unknown[]) => ({ parts }),
     file: (fsPath: string) => ({ fsPath }),
