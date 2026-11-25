@@ -1,6 +1,41 @@
 <open-questions>
   <open-question id="Short Title refused characters">
     <question>This mission refuses a new Short Title holding a `/` at `add`, because the alternatives agent writes its return to a file named by the title. Most fixed calls also substitute the title inside a double-quoted shell argument, where `&quot;`, `$`, a backtick, and `\` are special, and only the answer sweep&apos;s batched call states an escaping rule for it. Which further characters, if any, does `add` refuse in a new Short Title: none, those four, or everything outside an allow-list of letters, digits, spaces, and a fixed set of punctuation?</question>
+    <alternative id="Slash Only">
+      `add` refuses no character beyond the `/` the mission already refuses: `&quot;`, `$`, backtick, `\`, and control characters are all accepted in a new Short Title, and every fixed call keeps substituting the title as an unescaped literal inside double quotes, the double-quoted positions recorded as an accepted gap.
+      <advantage>No title anyone writes is refused for a character that has never broken anything here: every id in this repository&apos;s history uses only letters, digits, spaces, `-`, and `.` (one escaping test fixture aside), and the tool, its help text, and the review pass&apos;s rule gain nothing beyond the slash check.</advantage>
+      <drawback>A title holding `&quot;`, `$`, a backtick, or `\` still breaks or silently changes the argument at every double-quoted call but the sweep&apos;s, a backtick running its text as a command, and a control character passes `add` and leaves `open_questions.xml` malformed so that every later tool call on the mission is refused (checked on 2026-11-25 with `\x01`); whether a `&quot;` also breaks the recommendation pass&apos;s hand-rendered attributes depends on how that sibling question settles.</drawback>
+    </alternative>
+    <alternative id="Escaping Rule Instead">
+      `add` refuses no character beyond `/`; instead the sweep&apos;s rule, that every title written inside double quotes has any `&quot;`, `$`, backtick, or `\` escaped by a backslash, is stated at every other fixed call and procedure step that substitutes a Short Title (the review pass&apos;s `add` and `remove`, the recommendation pass&apos;s `embed`, `lift`, and `printf`, the answer core&apos;s `locate`, `remove`, and `lift`, the `strip` calls); control characters stay accepted.
+      <advantage>No title is ever refused, and the shell positions are closed where they break, in the same form the sweep already uses and its batched-call test already pins, so the set of characters a title may hold stays open.</advantage>
+      <drawback>Correctness rests on every runner escaping correctly at a dozen sites, most of them in calls no fixed-call test extracts, which is the per-runner escaping the tools exist to remove; a control character still corrupts the document at `add`, and whether a `&quot;` still breaks the hand-rendered attributes depends on how that sibling question settles.</drawback>
+    </alternative>
+    <alternative id="Control Characters Only">
+      `add` refuses, beside `/`, every control character (C0 and DEL) in the folded title, the one class that makes the tool itself write a malformed document; `&quot;`, `$`, backtick, and `\` stay accepted and the double-quoted positions stay as they are, recorded as an accepted gap.
+      <advantage>It closes the one failure that damages state rather than one call, a title that leaves `open_questions.xml` unreadable to every later tool call, at the cost of refusing nothing a person would write, so no recorded or plausible title is affected.</advantage>
+      <drawback>The four double-quote characters keep breaking or silently changing every fixed call but the sweep&apos;s, a backtick running as a command, and whether a `&quot;` breaks the hand-rendered attributes depends on how that sibling question settles.</drawback>
+    </alternative>
+    <alternative id="Escaping Rule And Controls">
+      `add` refuses, beside `/`, every control character (C0 and DEL); the four double-quote characters stay accepted and the sweep&apos;s backslash-escaping rule is stated at every other fixed call and procedure step that substitutes a Short Title.
+      <advantage>The document can no longer be corrupted by a title, and the shell positions are closed without refusing any printable character, so a title may still hold a quote, a dollar sign, or a backslash.</advantage>
+      <drawback>The shell positions still rest on every runner escaping correctly at a dozen sites, most of them untested, and the rule must be written into each of them; whether a `&quot;` still breaks the hand-rendered attributes depends on how that sibling question settles.</drawback>
+    </alternative>
+    <alternative id="Four Quote Characters">
+      `add` refuses, beside `/`, the four characters special inside double quotes, `&quot;`, `$`, backtick, and `\`, in the folded title, a deny-list of five; control characters stay accepted and the fixed calls stay as shown, with no escaping rule needed for a new title.
+      <advantage>It closes both named uses of the title, the file name and the double-quoted argument, with one check of the same shape as the slash refusal, refusing characters no recorded title has ever held, so every call site stays exactly as shown.</advantage>
+      <drawback>A control character still passes `add` and leaves the document unreadable to every later call, and the deny-list names only the failures found so far, so a position found later needs another addition; blocks authored before it keep their titles, a case a sibling question owns.</drawback>
+    </alternative>
+    <alternative id="Four Plus Controls">
+      `add` refuses, beside `/`, the four double-quote characters `&quot;`, `$`, backtick, and `\` and every control character (C0 and DEL) in the folded title; the fixed calls stay as shown, with no escaping rule needed for a new title.
+      <advantage>Every failure known for a Short Title is closed at its one creation point, the file name, the double-quoted argument, and the malformed document, while every printable character outside the four stays allowed, so no title a person would plausibly write is refused.</advantage>
+      <drawback>It is still a deny-list of the failures found so far, so a later-found position needs another addition, and the refusal message and the review pass&apos;s rule must name a longer set; blocks authored before it keep their titles, a case a sibling question owns.</drawback>
+    </alternative>
+    <alternative id="Allow-List">
+      `add` refuses every character of the folded title outside an allow-list: letters and digits as Unicode classes them, the space, and a fixed set of punctuation (for instance `-`, `_`, `.`, `,`, `&apos;`, `(`, `)`, `:`, `?`), which leaves out `/`, the four double-quote characters, control characters, and any other symbol; the fixed calls stay as shown.
+      <advantage>It closes the whole class rather than the failures found so far, so a position discovered later cannot break on a character a title may hold, and every recorded title, which uses only letters, digits, spaces, `-`, and `.`, still passes.</advantage>
+      <drawback>It refuses characters no one has shown to break anything (an em dash, `&amp;`, `+`, `#`), the punctuation set is one more fixed list the tool and the review pass&apos;s rule must state, and whether `.` and a leading `-` belong in it depends on how the separator and leading-dash sibling questions settle.</drawback>
+    </alternative>
   </open-question>
   <open-question id="Short Title rule statement">
     <question>Once `add` refuses certain characters in a new Short Title, where is the rule stated: only in the open-question tool&apos;s help text and `Error:` line, with the review pass&apos;s Short Title rule naming the refusal as it names the duplicate-id refusal, or also as a statement in that rule of what a Short Title may hold, so the author writes a valid title the first time?</question>
