@@ -1,0 +1,24 @@
+## Purpose
+
+This node is for maintainers of `.claude/`, this repository's own Claude Code project directory. Two things are tracked here. `settings.json` holds the project settings, enabling the plugin `gurita@gurita` from the directory marketplace under `.claude-plugin/` and the `skill-creator` plugin. `skills/` holds the maintainer-only skills: `release-plugin/SKILL.md`, which cuts a plugin release, and `release-vscode-extension/SKILL.md`, which cuts a release of the VS Code extension. Each skill's `SKILL.md` is the one place its procedure is documented, opening with `name` and `description` frontmatter, so this node holds only the rules that keep the folder's skills apart from the plugin's and the two releases apart from each other. `settings.local.json`, a machine's own settings, is never committed.
+
+## Rules
+
+- **Maintainer skills live under `.claude/skills/`, outside `core/`, so no host renders them.** The host build renders only `core/` and the host definitions, so a skill here never reaches a `hosts/<host>/` tree, a distribution repository, or a consuming project, and it names this repository's own paths, hosts, and remotes freely. Reason: releasing the plugin is work on this repository only, and a skill under `core/` would ship to every user and fall under the rendered-file rules. Retired forms: a release skill under `core/skills/`.
+- **Each release skill is the single place its procedure is documented.** No release procedure is restated in another file: a node, the root context file, `CONTRIBUTING.md`, or a page points at the skill instead. Reason: a release runs from the skill's steps, and a second statement of them drifts unseen. Retired forms: release prose written beside the skill.
+- **The plugin and the extension are released apart.** `/release-plugin` makes one `Release: <VERSION>` commit and publishes under bare `MAJOR.MINOR.PATCH` tags, with no `v` prefix anywhere; `/release-vscode-extension` makes one `Extension-release: <VERSION>` commit and pushes a `gurita-vscode-<VERSION>` tag whose publish workflow publishes the extension, publishing nothing itself and reading no token. Each skill's tag lookups match only its own form, and the extension is never released by `/release-plugin`. Reason: the extension carries a version of its own, independent of `VERSION`, and a tag of one form must never stand in for a release of the other. Retired forms: `v`-prefixed plugin tags; an extension release made by `/release-plugin`.
+- **A release is resumed by re-running it with the same version.** Both skills detect a resumption from a `HEAD` subject naming that version and pick the run up from the first step that did not complete, so neither has a rollback or a hand-run recovery command, and every pre-flight check is a hard stop that changes nothing and is never waived. Reason: published refs cannot be rolled back, and a gate worked around is a broken release. Retired forms: none recorded.
+- → `scripts/README.md#rules` — The `VERSION` rule and the release commit's scope (version slots and the `CHANGELOG.md` entry only), the distribution repositories, and the traffic token. Read it before changing what `/release-plugin` writes.
+
+## Commands
+
+- `/release-plugin X.Y.Z` — release the plugin at that version, after every pre-flight and version gate passes.
+- `/release-vscode-extension X.Y.Z` — release the extension at that version by pushing its tag.
+
+## Pointers
+
+- → `.claude/skills/release-plugin/SKILL.md` — The plugin release: its gates, the changelog entry, the release commit, and publishing every host tree. Follow it for any plugin release.
+- → `.claude/skills/release-vscode-extension/SKILL.md` — The extension release: its checks, the bundled plugin state it requires, the tag push, and the watched publish run. Follow it for any extension release.
+- → `.github/workflows/publish-vscode-extension.yml` — The workflow the extension's tag starts, which builds, tests, and publishes to both registries. Read it before changing how the extension is published.
+- → `gurita-vscode/CHANGELOG.md` — The extension's release notes, prepended by its release skill. Read it to see what the last extension release carried.
+- → `.claude-plugin/README.md` — The directory marketplace that `settings.json` enables the plugin from. Read it before changing how this repository installs its own plugin.

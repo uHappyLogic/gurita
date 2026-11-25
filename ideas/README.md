@@ -1,0 +1,15 @@
+## Purpose
+
+This node is for maintainers of `ideas/`, the design drafts that precede any mission, versioned so that they can be revised in the open. Two drafts stand here. `benchmark.md` designs a benchmark that is a separate project, taking Gurita as an input and measuring it across scenarios, each a way of delivering one project paired with one model strategy. `kepala.md` drafts the name of an orchestrator that would run the plugin's missions, Kepala, the head of the octopus whose arms are Gurita, together with a potential outline of its work. A draft is neither a mission nor a decision: nothing in the plugin reads it, no skill or tool writes it, and nothing in it binds work until a mission's recorded decisions take it up.
+
+## Rules
+
+- **A draft leaves `ideas/` once it is carried out or its entries are recorded elsewhere, its text standing in git history.** The plugin's naming draft was removed once the renames it planned shipped as the 2.0.0 release, the parts still open moving into `kepala.md` first; the mechanical-issues draft was removed by a task once each of its entries had its outcome recorded, a fix or an acceptance with its reason; the extension's improvements tracker and design drafts left the same way. A citation of a removed draft, such as a rule naming a draft's entry, is read at the parent of the commit that removed it. Reason: a draft still standing reads as pending work, and once its content is shipped or recorded it only drifts from what holds. Retired forms: a carried-out draft kept in place, a draft's content copied into another file instead of recorded as a decision or an outcome.
+- **A draft points at the plugin's documents rather than restating values from them.** Where a draft rests on what a Gurita document says, its skill reference, usage documentation, or design claims, it names that document, and the plugin's words are used as they stand when the draft is written. Reason: a value copied into a draft goes stale as the plugin changes, while the document it came from is kept current. Retired forms: none recorded.
+- **A mission whose core is a draft stands in `ideas/`.** It is defined with `--at ideas`, so its directory is `ideas/mission_<slug>/` and its scope is this folder, as the extension's design-draft revision mission was. Reason: a mission stands directly in the directory holding the core of its work, never placed higher for caution. Retired forms: none recorded.
+- → `core/skills/README.md#rules` — The `define-mission-goal` placement rule: the scope holds the work's core, never its footprint, as deep as the core allows. Read it before placing a mission on a draft.
+
+## Pointers
+
+- → `ideas/benchmark.md` — The benchmark design: scenarios, the operator standing in for the stakeholder, scoring, and the two phases. Read it before any work on measuring the plugin.
+- → `ideas/kepala.md` — The orchestrator's name, what was checked and rejected, and a potential outline of its work. Read it before any work on running missions above the plugin.
