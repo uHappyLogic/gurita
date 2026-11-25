@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Sweep Sections Capture the Decision Heading
-
-In the answer sweep's batched call, have each section capture its decision heading once from a quoted heredoc in the group-fed form `{ heading="$(cat)"; } <<'EOF'`, the heading on the one line inside and the delimiter clause covering the new heredoc, and pass it on as `--section "$heading"` to `fold` or `replace`, so the runner escapes nothing in the heading while the fold tool, its required `--section` argument, and its contract stay unchanged. It closes the draft's HEADING entry, where a backticked heading ran a command inside the double quotes; verified by `tests/test_sweep_batched_call.py` filling a raw backticked heading through the new form, with CLAUDE.md recording the fix.
-
----
-
 ## Refuse Shell-Syntax Characters in Mission Scopes
 
 Make the mission-definition tool refuse, after normalization and before it creates anything, a scope holding whitespace or any of `"`, `'`, a backtick, `$`, `\`, `(`, `)`, `[`, `]`, `{`, `}`, `*`, `?`, `;`, `&`, `|`, `<`, `>`, `!`, or `~`, `#`, or `=` opening the scope, with one `Error:` line naming the scope, every other character accepted and a mission already defined under such a scope left as it stands. It closes the draft's PATH entry at definition, since every fixed call writes `<MISSION_DIR>` unquoted and the `--mission` value is one whitespace-separated token; verified by one test pinning the refusal, with CLAUDE.md recording it.

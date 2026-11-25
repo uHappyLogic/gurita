@@ -35,6 +35,10 @@ SECTION_OPENING = "if pick="
 SECTION_CLOSING = "fi &&"
 FOOTER_HEADER = "echo 'completeness walk'"
 DECISION_PLACEHOLDER = "<the decision>"
+HEADING_PLACEHOLDER = "<Heading>"
+# The heredoc each section captures its decision heading from, and the argument it passes on.
+HEADING_CAPTURE = "  { heading=\"$(cat)\"; } <<'EOF' &&"
+HEADING_ARGUMENT = '--section "$heading"'
 NEW_BODY_PLACEHOLDER = "<the new body>"
 # The opening the review pass gives every conflict question and the sweep tests by exact prefix.
 CONFLICT_OPENING = "Which conflicting decision stands:"
@@ -69,8 +73,9 @@ NEW_BODY = (
 )
 
 # What the runner composes in step 3a for each walked question: for an ordinary question the
-# heading its decision lands under (an existing subsection, or a new one holding characters the
-# double quotes must escape) and the decision itself, and for the conflict question the losing
+# heading its decision lands under (an existing subsection, or a new one holding a backticked
+# command, `$`, a quote, and a backslash, which the runner writes raw into the heading's
+# heredoc, escaping nothing) and the decision itself, and for the conflict question the losing
 # entry's heading and the whole new body of its subsection. The eviction section is composed
 # and run, but its lift fails once the storage section's remove has stripped its pick, so its
 # decision never lands.
@@ -81,7 +86,7 @@ COMPOSED = {
         "  crash mid-write cannot corrupt the store.",
     ),
     RETRY: (
-        'Retry `$MAX_RETRIES` "budget"',
+        'The retry\'s `true` `$MAX_RETRIES` "budget" \\ cap',
         "A failed read is retried three times, `${MAX_RETRIES}` and $(cmd) kept verbatim, before\n"
         "its last error is reported.",
     ),
@@ -174,7 +179,9 @@ def double_quoted(value):
 def compose(questions):
     """The call written out for the given (Short Title, heading, text, option, conflict)
     questions, in the order given: one filled question section each, its decision as the text,
-    or for a conflict question one filled conflict section, its new body as the text."""
+    or for a conflict question one filled conflict section, its new body as the text. The
+    heading is written raw as its heredoc's one line; the Short Title and option are written
+    inside the template's double quotes under the step's escaping rule."""
     opening, section, footer = split_call(batched_call())
     conflict = conflict_section()
     lines = list(opening)
@@ -183,11 +190,11 @@ def compose(questions):
         for line in template:
             if line == placeholder:
                 lines.extend(text.splitlines())
+            elif line == HEADING_PLACEHOLDER:
+                lines.append(heading)
             else:
                 lines.append(
-                    line.replace("<Short Title>", double_quoted(title))
-                    .replace("<Heading>", double_quoted(heading))
-                    .replace("<Option>", double_quoted(option))
+                    line.replace("<Short Title>", double_quoted(title)).replace("<Option>", double_quoted(option))
                 )
     lines.extend(footer)
     call = "\n".join(lines).replace("<MISSION_DIR>", MISSION) + "\n"
@@ -322,6 +329,33 @@ def test_the_conflict_section_holds_one_replace_where_the_question_section_folds
         (write, write.replace(FOLD_COMMAND, REPLACE_COMMAND)),
         (DECISION_PLACEHOLDER, NEW_BODY_PLACEHOLDER),
     ]
+
+
+def test_each_section_captures_its_heading_from_a_quoted_heredoc_and_passes_only_the_capture():
+    _, ordinary = split_call(batched_call())[:2]
+    for section, command in ((ordinary, FOLD_COMMAND), (conflict_section(), REPLACE_COMMAND)):
+        assert section.count(HEADING_PLACEHOLDER) == 1
+        start = section.index(HEADING_CAPTURE)
+        assert section[start + 1 : start + 3] == [HEADING_PLACEHOLDER, "EOF"]
+        write = section[start + 3]
+        assert command in write and f"{command}<MISSION_DIR> {HEADING_ARGUMENT} <<'EOF' &&" in write
+        assert not any('"<Heading>"' in line for line in section)
+    prose = " ".join(sweep_text().split())
+    assert "The heading is written exactly as it stands, nothing in it escaped" in prose
+    assert "pick, for each heredoc, a delimiter line the heading or the decision does not contain" in prose
+
+
+def test_a_raw_backticked_heading_survives_the_capture_but_not_the_double_quoted_argument(tmp_path, environment, run_call):
+    heading = COMPOSED[RETRY][0]
+    _, section, _ = split_call(batched_call())
+    start = section.index(HEADING_CAPTURE)
+    capture = section[start : start + 3]
+    captured = "\n".join([capture[0], heading, capture[2]]) + "\n" + "printf '%s' \"$heading\"\n"
+    assert run_call(tmp_path, environment, captured) == (0, heading, "")
+    # The retired form, the heading written raw inside the argument's double quotes, ran the
+    # backticked command and expanded the variable, so the heading reached the tool altered.
+    status, stdout, _ = run_call(tmp_path, environment, f'printf \'%s\' "{heading}"\n')
+    assert stdout != heading
 
 
 # --- the fixture's conflict question --------------------------------------------------------
