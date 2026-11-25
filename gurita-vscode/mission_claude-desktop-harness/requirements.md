@@ -76,5 +76,9 @@ Claude Desktop's row under Harnesses keeps the Enabled or Disabled state and its
 
 After a send that went out, VS Code shows nothing; Claude Desktop coming to the front is the sign. A failed send is detected only from the outcome of the send call itself (the opener's returned result or the exit status of the command that opens the session), with no check made beforehand, and is shown as one error message (`showErrorMessage`, as the extension's other failures use) saying the action could not be sent to Claude Desktop and carrying the cause the call reported.
 
+### Hands-on check timing
+
+The full hands-on check of Claude Desktop is run before the answers that hinge on its outcome are given, with its findings written into `## Relevant starting state`, and not as the mission's first task after task derivation. Only the questions whose answer hinges on what the check finds wait for it; a question whose answer holds whatever it finds (how Desktop is selected for an action, the Harnesses row, the listing texts, the send feedback) is recommended and answered ahead of the check, each through a single-question answer skill rather than the whole-mission sweep.
+
 ## Out of Scope
 
