@@ -84,5 +84,9 @@ The commit procedure's shown command changes to the form the completion calls al
 
 Each section of the answer sweep's batched call captures its decision heading once from a quoted heredoc in the group-fed form the completion calls use for the bar (`{ heading="$(cat)"; } <<'EOF'`, the heading on the one line inside) and passes it on as `--section "$heading"` to `fold` or `replace`. The runner escapes nothing in the heading, and the delimiter clause covers the new heredoc. The fold tool, its required `--section` argument, and its contract stay unchanged, and the batched-call test fills a raw backticked heading through the new form.
 
+### Answer text separator
+
+The separator between a Short Title and the text after it becomes the first `.` followed by whitespace, not any `.`, so `CLAUDE.md wording. answer` splits after `wording`. `add` refuses a new Short Title holding a `.` followed by whitespace or ending in `.`. The parse steps of `answer-open-question` and `answer-open-question-with-alternative` and their no-separator fixed line, with its `docs/skill-reference.md` row, are reworded to the dot-space form. Every recipe and usage line, already written as `<Short Title>. <…>`, stays byte-identical, so dotted file names stay legal in titles and the installed extension keeps working with no release.
+
 ## Out of Scope
 
