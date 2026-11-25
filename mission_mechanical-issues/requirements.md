@@ -176,5 +176,9 @@ The commit tool's path-file reader gains `-` for standard input, and only the in
 
 The attributes are left as they are. Nothing changes at the recommendation pass, the agent, or the tool: a `"` in a hand-rendered attribute keeps yielding a fragment the tool refuses, and the pass's existing step 6 corrects the refused block against its `Error:` line and re-sends it once. CLAUDE.md records the entry as accepted, with the reason that the refusal is never silent and is corrected by the re-send, and that no new title or id can carry a `"` wherever the creation-time refusals cover it; the acceptance is meant as never, not later.
 
+### Exit 128 retry scope
+
+The commit tool keeps repeating every git write that exits 128 on the present schedule (16 attempts, 0.25 seconds apart), reading only the exit status and no message text. A failure no lock caused, such as `git add` of a pathspec matching no file, is still repeated to the last attempt before its `Error:` line prints. The committing invariant stays as written, and CLAUDE.md records the entry as accepted with its reason: no lock is ever missed over git's wording or locale, and the cost is about four seconds before a failure that ends the call anyway, with git's own message still printed whole.
+
 ## Out of Scope
 
