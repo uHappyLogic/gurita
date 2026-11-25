@@ -1,6 +1,6 @@
 """The decision on standard input is opaque Markdown: written verbatim with only its leading and
 trailing blank lines trimmed, adding no bullet, bold lead, or wrapping, a heading line in it
-kept as given, and a decision the section already holds folded again."""
+kept as given unless it opens at column 0 with "## " or "### ", and a decision the section already holds folded again."""
 
 import pytest
 
@@ -61,9 +61,9 @@ def test_a_bullet_with_a_bold_lead_is_written_as_given(run_requirements, require
     assert fold(run_requirements, target, decision) == landed(decision)
 
 
-def test_heading_lines_in_the_decision_are_kept(run_requirements, requirements_dir):
+def test_heading_lines_the_file_model_does_not_read_as_structure_are_kept(run_requirements, requirements_dir):
     target = requirements_dir(ORIGINAL)
-    decision = b"### A heading inside the decision\n\nText under it.\n\n## Even a section heading\n"
+    decision = b"#### A deeper heading inside the decision\n\nText under it.\n\n ## An indented heading\n##Unspaced\n#\n"
     assert fold(run_requirements, target, decision) == landed(decision)
 
 

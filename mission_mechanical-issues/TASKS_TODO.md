@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Refuse Heading Lines in Folded Bodies
-
-Make the fold tool refuse a `fold` or `replace` body holding a column-0 `## ` or `### ` line, with the file unchanged, and add one sentence to the answer core's fold step, the one home of a decision's content rules, that a folded decision or rewritten entry holds no such line. It closes the draft's FOLDBODY entry, where a body holding a `## Out of Scope` line left the file with two headings of that name; verified by tests in the fold tool's suite reproducing that case for both subcommands, with CLAUDE.md's fold-tool invariant recording the refusal and where the rule lives.
-
----
-
 ## Sweep Sections Capture the Decision Heading
 
 In the answer sweep's batched call, have each section capture its decision heading once from a quoted heredoc in the group-fed form `{ heading="$(cat)"; } <<'EOF'`, the heading on the one line inside and the delimiter clause covering the new heredoc, and pass it on as `--section "$heading"` to `fold` or `replace`, so the runner escapes nothing in the heading while the fold tool, its required `--section` argument, and its contract stay unchanged. It closes the draft's HEADING entry, where a backticked heading ran a command inside the double quotes; verified by `tests/test_sweep_batched_call.py` filling a raw backticked heading through the new form, with CLAUDE.md recording the fix.

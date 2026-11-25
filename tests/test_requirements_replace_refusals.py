@@ -1,5 +1,6 @@
 """The replace's refusals: a heading no "## Decisions" subsection carries, named in the Error line
-and never created, plus the refusals it shares with the fold (an empty heading or body, a missing
+and never created, plus the refusals it shares with the fold (an empty heading or body, a body holding a line that opens at column 0 with "## " or
+"### ", a missing
 or non-UTF-8 requirements.md, and a file holding no column-0 "## Decisions" heading or more than
 one), each one Error line with exit 1 and the file byte-for-byte unchanged."""
 
@@ -142,3 +143,33 @@ def test_a_file_holding_more_than_one_decisions_heading_is_refused(run_requireme
     assert_refused(result, 'column-0 "## Decisions" headings')
     assert numbers in result.stderr.decode("utf-8")
     assert (target / NAME).read_bytes() == original
+
+
+# --- a heading line in the body ---------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "body, named",
+    [
+        (b"A new body.\n\n## Out of Scope\n\nA stray section.\n", '"## Out of Scope"'),
+        (b"### A stray subsection\n\nA new body.\n", '"### A stray subsection"'),
+        (b"A new body.\r\n## Out of Scope\r\n", '"## Out of Scope"'),
+        (b"A new body.\n\n### First stray\n\n## Second stray\n", '"### First stray"'),
+    ],
+    ids=["section-heading", "subsection-heading", "crlf", "the-first-is-named"],
+)
+def test_a_body_holding_a_heading_line_is_refused(run_requirements, requirements_dir, body, named):
+    target = requirements_dir()
+    before = (target / NAME).read_bytes()
+    result = run_requirements("replace", str(target), "--section", "Prose decision", stdin=body)
+    assert_refused(result, "the new subsection body on standard input holds the heading line " + named)
+    assert (target / NAME).read_bytes() == before
+
+
+def test_the_out_of_scope_case_leaves_one_heading_of_that_name(run_requirements, requirements_dir):
+    target = requirements_dir()
+    before = (target / NAME).read_bytes()
+    assert before.count(b"\n## Out of Scope\n") == 1
+    result = run_requirements("replace", str(target), "--section", "Prose decision", stdin=b"A new body.\n\n## Out of Scope\n")
+    assert_refused(result, '"## Out of Scope"')
+    assert (target / NAME).read_bytes() == before

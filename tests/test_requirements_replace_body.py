@@ -1,6 +1,6 @@
 """The new body on standard input is opaque Markdown: written verbatim in place of the old body
 with only its leading and trailing blank lines trimmed, adding no bullet, bold lead, or wrapping,
-a heading line in it kept as given, and a body equal to the one standing written back unchanged."""
+a heading line in it kept as given unless it opens at column 0 with "## " or "### ", and a body equal to the one standing written back unchanged."""
 
 import pytest
 
@@ -61,9 +61,9 @@ def test_bullets_with_bold_leads_are_written_as_given(run_requirements, requirem
     assert replace(run_requirements, target, body) == rewritten(body)
 
 
-def test_heading_lines_in_the_body_are_kept(run_requirements, requirements_dir):
+def test_heading_lines_the_file_model_does_not_read_as_structure_are_kept(run_requirements, requirements_dir):
     target = requirements_dir(ORIGINAL)
-    body = b"### A heading inside the body\n\nText under it.\n\n## Even a section heading\n"
+    body = b"#### A deeper heading inside the body\n\nText under it.\n\n ## An indented heading\n##Unspaced\n#\n"
     assert replace(run_requirements, target, body) == rewritten(body)
 
 
