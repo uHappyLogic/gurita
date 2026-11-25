@@ -111,7 +111,7 @@ Now look for questions the documents don't yet capture — paying special attent
 
 Add only genuinely new questions — don't re-raise anything already present (you just inventoried them in step 1), and do not invent requirements: only annotate gaps relative to what is already written.
 
-Author each new finding as one `add` call, the question text as its heredoc body:
+Author each new finding as one `add` call, the question text as its heredoc body (the delimiter is quoted so nothing inside is expanded; pick a delimiter line the question text does not contain):
 
 ```
 python3 ${CLAUDE_PLUGIN_ROOT}/tools/open_questions.py add <MISSION_DIR> "<Short Title>" <<'EOF'

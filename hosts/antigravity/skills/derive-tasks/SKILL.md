@@ -143,7 +143,7 @@ Directly ahead of the write, follow `~/.gemini/config/plugins/gurita/shared/chec
 
 Write every brief as one task section, using the template and the authoring guidelines from `~/.gemini/config/plugins/gurita/shared/task-format.md` exactly: its `##` title heading, its description, and its trailing `---`. The brief you decomposed in step 5 *is* the task body; writing it down is a transcription into that format, not a second authoring pass that adds detail.
 
-Then run this one fixed shell call, written out in full exactly as shown, with only `<MISSION_DIR>` (in the subject too, the mission path exactly as resolved, trailing slash included) and the sections replaced — every brief's section in the heredoc, **in dependency order**, so the finished file reads top-to-bottom in that order:
+Then run this one fixed shell call, written out in full exactly as shown, with only `<MISSION_DIR>` (in the subject too, the mission path exactly as resolved, trailing slash included) and the sections replaced — every brief's section in the heredoc, **in dependency order**, so the finished file reads top-to-bottom in that order (the delimiter is quoted so nothing inside is expanded; pick a delimiter line the sections do not contain):
 
 ```
 python3 ~/.gemini/config/plugins/gurita/tools/task_list.py initialize <MISSION_DIR> <<'EOF' &&

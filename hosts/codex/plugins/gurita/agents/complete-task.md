@@ -64,7 +64,8 @@ The call opens by capturing the acceptance bar, in the form the procedure's step
 from the first quoted heredoc into `bar`: the heredoc feeds the `{ … }` group rather than
 sitting inside the `$( )`, the form every shell parses alike whatever apostrophes or
 parentheses the bar holds, and the delimiter is quoted so nothing inside is expanded (pick a
-delimiter line the bar does not contain). The test that follows refuses a bar holding no
+delimiter line the bar does not contain, and one the paths do not contain for the path heredoc
+below). The test that follows refuses a bar holding no
 non-blank line: it prints `acceptance bar empty` and ends the call before anything is removed
 or written, so write the bar's bullets into the heredoc and run the call again. The removal
 command is exactly the one the procedure's step 5 shows. Only after it succeeds does the call

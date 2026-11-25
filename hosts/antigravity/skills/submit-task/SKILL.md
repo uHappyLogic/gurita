@@ -177,7 +177,9 @@ fi
 ```
 
 Every title in the call (the new title in both places, and any anchor) is written inside
-double quotes, with any `"`, `$`, `` ` ``, or `\` it holds escaped by a backslash. After the
+double quotes, with any `"`, `$`, `` ` ``, or `\` it holds escaped by a backslash. The body's
+heredoc delimiter is quoted so nothing inside is expanded (pick a delimiter line the
+description does not contain). After the
 `&&` the call runs the one command of the shared commit procedure at
 `~/.gemini/config/plugins/gurita/shared/commit-procedure.md`, the plugin's commit tool, with
 `Task-submission: <New Task Title>` as its subject, no body, and this skill's own change set,
