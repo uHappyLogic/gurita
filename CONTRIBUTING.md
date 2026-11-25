@@ -2,7 +2,7 @@
 
 ## Contributor workflow
 
-A change to Gurita arrives as a **contributor-run mission on a maintainer-reserved slot**: you propose it, the maintainer reserves a mission for it, and you run that mission in your fork with Gurita's own workflow before opening the pull request. There is no plain-pull-request tier: a small fix is filed as an [issue](https://github.com/uHappyLogic/gurita/issues/new/choose) for the maintainer to make. The design invariants a change must preserve live in [`CLAUDE.md`](CLAUDE.md#invariants-to-preserve-when-editing-skills); read the ones that touch what you are changing before you start.
+A change to Gurita arrives as a **contributor-run mission on a maintainer-reserved slot**: you propose it, the maintainer reserves a mission for it, and you run that mission in your fork with Gurita's own workflow before opening the pull request. There is no plain-pull-request tier: a small fix is filed as an [issue](https://github.com/uHappyLogic/gurita/issues/new/choose) for the maintainer to make. The rules a change must preserve live in the repository's knowledge tree: the root [`CLAUDE.md`](CLAUDE.md) holds those that bind everywhere and one pointer per top-level folder, and each folder's own rules stand in that folder's node, its `README.md` or, where that name is taken or rendered, its description in the root. Before you start, read the nodes on the way down to what you are changing and every rule their pointers lead to from there.
 
 The handoff, one step per act:
 

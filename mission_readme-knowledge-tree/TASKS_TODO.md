@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Repoint Outside References To The Tree
-
-Bring the three statements outside the tree that name the outgoing file's sections in line with it: `CONTRIBUTING.md`'s link to `CLAUDE.md#invariants-to-preserve-when-editing-skills`, the pull-request template's checkbox that `CLAUDE.md` is touched only for lasting changes, and the statement in `.claude/skills/release-plugin/SKILL.md` that no release prose lives in `CLAUDE.md` or `README.md`, each saying where that knowledge lives now. Verified by no tracked file outside the mission directories and `hosts/` linking a heading the root no longer holds, and by each of the three reading true against the root and its nodes.
-
----
-
 ## Add The Knowledge Tree Check
 
 Add a test under `tests/`, reading tracked files only so that it runs in both pytest runs, that fails when a pointer line's path or heading anchor does not resolve; when a tracked top-level folder, the root `mission_*/` directories left out, has neither a `README.md` node nor a description in the root; when a deeper `README.md` node is pointed at from neither its parent folder's node nor the nearest ancestor's; when the root `CLAUDE.md` exceeds 20,000 bytes, a `README.md` node 12,000 bytes, or a when-to-follow note 400 bytes; when the root, a node, or one of the root's folder descriptions holds a heading outside its allowed set and order; or when a tracked `.github/README.md` exists, that message naming GitHub's front-page precedence as the reason. Verified by each failure reproduced on a synthetic tree, by the test passing on the repository in both pytest runs with any node it fails repaired in the same task, and by the nodes covering the check stating it within their limits.

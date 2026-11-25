@@ -7,9 +7,10 @@ description: Cut a Gurita plugin release for a given MAJOR.MINOR.PATCH version, 
 
 Releases the Gurita plugin at a maintainer-supplied `MAJOR.MINOR.PATCH` version. This
 `SKILL.md` is the single place the release procedure is documented — no release prose lives
-in `CLAUDE.md` or `README.md`. It is a maintainer-only, project-local skill: it lives under
-`.claude/skills/`, outside `core/`, so no host build renders it into a `hosts/<host>/` tree
-and it never reaches a consuming project.
+in any other file: the knowledge tree's `.claude/README.md` node points at this skill, and
+neither the root `CLAUDE.md` nor any other node or `README.md` restates it. It is a
+maintainer-only, project-local skill: it lives under `.claude/skills/`, outside `core/`, so no
+host build renders it into a `hosts/<host>/` tree and it never reaches a consuming project.
 
 Every plugin tag and release is a bare `MAJOR.MINOR.PATCH`, with no `v` prefix anywhere in
 the history — the legacy `v.0.9.x` and `v0.9.7` tags were renamed to their bare form on
