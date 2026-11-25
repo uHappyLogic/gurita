@@ -184,7 +184,9 @@ ALTERNATIVES_REPAIR = { file = "slots/ALTERNATIVES_REPAIR.md" }
 # returns: whether it waits once for every return or batches each time it wakes.
 # Claude Code sends every dispatch together, so the wording names no cap. Every dispatch runs
 # in the background and each agent's ending wakes the session, so the run batches each time it
-# wakes rather than waiting once.
+# wakes rather than waiting once. The host refuses a dispatch past its limit on concurrent
+# subagents, so the value holds each refused question as pending and resends one per ended
+# agent on each wake-up, naming no number so it keeps working if the limit changes.
 ALTERNATIVES_CONCURRENCY = { file = "slots/ALTERNATIVES_CONCURRENCY.md" }
 # AGENT_WRITE_TOOLS: frontmatter lines added to both agent files, standing at the start of
 # the frontmatter's closing line so each line the value carries ends in its own newline and an
