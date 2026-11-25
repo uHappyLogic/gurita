@@ -68,5 +68,9 @@ No other live mission's scope overlaps this one's: `live` lists this mission alo
 
 The open-question tool's `add` refuses, beside `/`, a new Short Title whose folded form holds `"`, `$`, a backtick, `\`, or any control character (C0 and DEL). The fixed calls stay as shown and gain no escaping rule for a new title: the one check at the point a title is created closes the file name, the double-quoted shell argument, and the control character that leaves the document unreadable, and it refuses no title a person would write.
 
+### Existing invalid Short Titles
+
+No runner acts on an existing block whose Short Title a new `add` would refuse. The check runs at `add` alone: `load_document` keeps validating ids for duplicates only, the review pass gains no rule for such a block, and the alternatives pass dispatches it as it does any bare block. The alternatives agent's path-separator clause stays, reworded as the case of a block authored before the refusal, so a `/` title keeps ending in a `FAILED:` whose reason names the separator in each run's advisory. Re-authoring is left to the operator, who runs the open-question tool's existing `remove` and `add` with a valid title, the document never edited by hand; the plugin ships no migration for a form an earlier copy left.
+
 ## Out of Scope
 
