@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Rewrite The Skill Reference As User Content
-
-Rewrite `docs/skill-reference.md` so that each of its 22 entries holds only what a user of the plugin needs: maintainer-facing material is cut outright and moved to no other file, and a mechanic already stated by a runtime file, a tool's `--help` or docstring, a test, or the build's docstring is dropped and restated nowhere. Verified by reading every entry against its skill's or agent's file under `core/` for accuracy, and by every link into the page from the root `README.md`, `CONTRIBUTING.md`, the extension's documents, and the other docs pages still resolving.
-
----
-
 ## Rewrite The Workflow Page As User Content
 
 Rewrite `docs/workflow.md`, its six phases, `## How skills commit`, and the answer-principle-learning loop, so that it holds only what a user of the plugin needs: maintainer-facing material is cut outright and moved to no other file, and a mechanic already stated by a runtime file, a tool's `--help` or docstring, a test, or the build's docstring is dropped and restated nowhere. Verified by reading the page against the skills and shared procedures under `core/` for accuracy, and by every link into the page from the root `README.md`, `CONTRIBUTING.md`, the extension's documents, and the other docs pages still resolving.
