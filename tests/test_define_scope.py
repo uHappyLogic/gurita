@@ -1,7 +1,8 @@
 """define_mission.py placement: the required --at scope, normalized lexically and printed in its
 canonical repo-relative form, the root spelled "." or "./"; an empty, absolute, or climbing scope
 and one missing from the working tree or not a directory refused on one Error line naming it as
-given; the mission directory created directly in the scope, with no container and nothing else;
+given; a scope holding whitespace or a shell-syntax character (~, #, and = only opening it) refused
+the same way before anything is created, every other character accepted; the mission directory created directly in the scope, with no container and nothing else;
 and no number, the directory named mission_ and its slug alone."""
 
 import os
@@ -132,6 +133,76 @@ def test_an_empty_absolute_or_climbing_scope_is_refused_naming_it_as_given(run_d
     assert (result.returncode, result.stdout) == (1, b"")
     assert result.stderr == f"Error: {reason}\n".encode("utf-8")
     assert tree(root) == ["pkg/"]
+
+
+@pytest.mark.parametrize(
+    ("scope", "named"),
+    [
+        ("docs/User Guide", "whitespace"),
+        ("tab\there", "whitespace"),
+        ("line\nbreak", "whitespace"),
+        ("no\u00a0break", "whitespace"),
+        ('say"hi', "'\"'"),
+        ("it's", '"\'"'),
+        ("back`tick", "'`'"),
+        ("cost$5", "'$'"),
+        ("back\\slash", "'\\\\'"),
+        ("app/(dash)/[id]", "'('"),
+        ("close)", "')'"),
+        ("[id]", "'['"),
+        ("id]", "']'"),
+        ("{a,b}", "'{'"),
+        ("b}", "'}'"),
+        ("star*", "'*'"),
+        ("what?", "'?'"),
+        ("semi;colon", "';'"),
+        ("and&", "'&'"),
+        ("pipe|", "'|'"),
+        ("in<", "'<'"),
+        ("out>", "'>'"),
+        ("bang!", "'!'"),
+    ],
+)
+def test_a_scope_holding_whitespace_or_shell_syntax_is_refused_before_anything_is_created(
+    run_define, workspace, scope, named
+):
+    root = workspace()
+    (root / scope).mkdir(parents=True)
+    before = tree(root)
+    result = run_define("--at", scope, "--title", "First", stdin=GOAL, cwd=root)
+    assert (result.returncode, result.stdout) == (1, b"")
+    reason = (
+        f"the scope {scope} given as --at holds {named}, which a shell reads as syntax in an unquoted "
+        "mission path; nothing was written"
+    )
+    assert result.stderr == f"Error: {' '.join(reason.split())}\n".encode("utf-8")
+    assert tree(root) == before
+
+
+@pytest.mark.parametrize(("scope", "named"), [("~home", "'~'"), ("./#hash", "'#'"), ("=equals/sub", "'='")])
+def test_a_scope_opening_with_a_tilde_hash_or_equals_sign_is_refused(run_define, workspace, scope, named):
+    root = workspace()
+    (root / scope).mkdir(parents=True)
+    before = tree(root)
+    result = run_define("--at", scope, "--title", "First", stdin=GOAL, cwd=root)
+    assert (result.returncode, result.stdout) == (1, b"")
+    assert result.stderr == (
+        f"Error: the scope {scope} given as --at opens with {named}, which a shell reads as syntax in an "
+        "unquoted mission path; nothing was written\n"
+    ).encode("utf-8")
+    assert tree(root) == before
+
+
+@pytest.mark.parametrize(
+    "scope",
+    ["pkg/~tilde", "pkg/#hash", "pkg/a=b", "a~b#c=d", "dots.and_under-dash", "at@plus+comma,", "per%cent^:colon", "ünï/日本"],
+)
+def test_every_other_scope_character_is_accepted(run_define, workspace, scope):
+    root = workspace()
+    (root / scope).mkdir(parents=True)
+    _, path = printed(run_define("--at", scope, "--title", "First", stdin=GOAL, cwd=root))
+    assert path == scope + "/mission_first/"
+    assert (root / path / "requirements.md").is_file()
 
 
 @pytest.mark.parametrize("scope", ["missing", "missing/", "./pkg/missing", "pkg//missing/./"])

@@ -1,11 +1,5 @@
 # TASKS TODO
 
-## Refuse Shell-Syntax Characters in Mission Scopes
-
-Make the mission-definition tool refuse, after normalization and before it creates anything, a scope holding whitespace or any of `"`, `'`, a backtick, `$`, `\`, `(`, `)`, `[`, `]`, `{`, `}`, `*`, `?`, `;`, `&`, `|`, `<`, `>`, `!`, or `~`, `#`, or `=` opening the scope, with one `Error:` line naming the scope, every other character accepted and a mission already defined under such a scope left as it stands. It closes the draft's PATH entry at definition, since every fixed call writes `<MISSION_DIR>` unquoted and the `--mission` value is one whitespace-separated token; verified by one test pinning the refusal, with CLAUDE.md recording it.
-
----
-
 ## Bars Bound on the Tasks Query
 
 Give the missions tool's `tasks` query a flag beside `--with-body` (the decision's example is `--bodies N`) that prints every task line but the bars of only the N newest tasks, an older task printing as its title line alone, the form a commit with no body already takes, so one parser reads the result. It bounds the draft's BIGREAD cost for `tasks` while every completed task's title stays in the print; verified by tests in the missions-tool suite, with the tool's help text stating the flag.
