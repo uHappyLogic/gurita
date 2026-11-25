@@ -152,5 +152,9 @@ The `complete-task` agent's file gains one host-neutral rule aimed at the record
 
 The `complete-task` agent's file changes in its `## Return protocol` section only. The return changes from "exactly one of these as the final line" to a final message that is exactly the one line and nothing else, `DONE` or `FAILED: <reason>`, matching how the alternatives agent's file words its own return ("the bare token `DONE` as your final message and nothing else", with any remaining thinking done in an earlier turn). No sentence is added at step 5. `complete-all-tasks` keeps reading the last line only, so its verdict and its no-status stop stay as they are. CLAUDE.md records the entry as fixed by this rewording. No tool and no fixed call changes, so no test is added.
 
+### Markup in alternative text
+
+The entry is recorded as accepted. Nothing changes in the alternatives agent's file, the corrective message, or the tool. CLAUDE.md records the acceptance with its reason: eight refused returns in the field runs, each recovered by the pass's one repair, whose `Error:` line names the position that failed, and a question whose repair is refused again is left bare by the closing `list --without-alternatives` for the next run, so a refused file never reaches the document and no wrong state can result.
+
 ## Out of Scope
 
