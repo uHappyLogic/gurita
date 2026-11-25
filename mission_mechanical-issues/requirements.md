@@ -124,5 +124,9 @@ The missions tool's `tasks` query gains a flag that prints every task line but t
 
 The missions tool stays unchanged, and `discuss-mission-goal` replaces its `record .` with the two-tier read the starting-state procedure already uses: one fixed, unconditional `missions .` overview (one line per mission, its state, date, path, and title), then, at the runner's discretion, `summary` on a mission whose line bears on the goal, or `record <path>` on the directory the goal concerns once the placement is in view. The unconditional read thereby drops to one line per mission while still naming every mission recorded.
 
+### Mission document read size
+
+The whole print is accepted. `show MISSION_PATH` stays exactly as it is, printing the mission's `requirements.md` whole, and its three callers (the starting-state procedure's deeper read, the review pass's discretionary follow-up, and the completion procedure's past-work `show`) keep their commands unchanged; a print past the host's inline limit keeps landing in the host's file for the runner to read. CLAUDE.md's missions-tool invariant records the acceptance with its reason, as it records the unbounded `tasks` print: the print is bounded by one document and taken only at a caller's discretion, and the starting state it carries is the as-of its decisions are read back with, so a narrower print would cut context the read is taken for.
+
 ## Out of Scope
 
