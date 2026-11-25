@@ -92,5 +92,9 @@ The compressed rules governing files under `core/` are split by subfolder into a
 
 One run of the update skill brings the nodes up to date with the commits made since its last run and repairs the check's failures. The anchor is the latest commit under the skill's own subject marker, found in the log, as the missions tool's `since` finds the starting state's; with no anchor, the first run compares every node with its folder. The run updates in place the nodes of the folders those commits changed and the pointer notes above them, keeping every still-true sentence byte-identical, and repairs every check failure; it re-compresses a node only as far as a budget failure forces. It writes and commits under its marker, which moves the anchor.
 
+### Byte budget values
+
+The three limits are fixed numbers, each applying uniformly: the root `CLAUDE.md` at most 20,000 bytes, every `README.md` node at most 12,000 bytes, and every pointer's when-to-follow note at most 400 bytes, two or three short sentences. A note counts inside the size of the file holding it, so the root's thirteen pointers take at most about 5,200 bytes of its budget.
+
 ## Out of Scope
 
