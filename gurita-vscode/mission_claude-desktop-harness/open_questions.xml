@@ -88,4 +88,13 @@
       <drawback>The person learns of it only after the session is already opening, too late to choose a terminal variant instead, and it repeats on every send; it rides beside whatever the person sees after the click, which the Desktop send feedback sibling question owns.</drawback>
     </alternative>
   </open-question>
+  <open-question id="Over-long fallback line">
+    <question>The Over-long Desktop prompt decision runs an action in a VS Code terminal, as an ordinary tracked run, when its prompt is past the limit Claude Desktop accepts, while the Desktop selection mechanism decision has a Claude Desktop line open with a word of its own that names no CLI, so the stored line cannot be run in a terminal as it stands. Which command line does the terminal run for that action?</question>
+  </open-question>
+  <open-question id="Desktop line opening word">
+    <question>The Desktop selection mechanism decision has a Claude Desktop line open with a word of its own that names no CLI, and does not say what that word is. Which word opens a Claude Desktop line, as the Settings window&apos;s line editor shows it, `~/.gurita/variants.json` stores it, and `gurita-vscode/USAGE.md` documents it?</question>
+  </open-question>
+  <open-question id="Linux opener conflict">
+    <question>Which conflicting decision stands: &quot;Desktop harness availability&quot; or &quot;Session opening mechanism&quot;? The first offers Claude Desktop only where the extension host runs on macOS in a local window and says that in a local Linux window it is not offered and never selectable for an action. The second passes the `claude://code/new` link to the operating system&apos;s opener and names `xdg-open` on Linux beside `open` on macOS, a send from Linux that the first rules out.</question>
+  </open-question>
 </open-questions>
