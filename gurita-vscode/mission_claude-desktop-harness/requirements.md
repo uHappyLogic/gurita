@@ -80,5 +80,9 @@ After a send that went out, VS Code shows nothing; Claude Desktop coming to the 
 
 The full hands-on check of Claude Desktop is run before the answers that hinge on its outcome are given, with its findings written into `## Relevant starting state`, and not as the mission's first task after task derivation. Only the questions whose answer hinges on what the check finds wait for it; a question whose answer holds whatever it finds (how Desktop is selected for an action, the Harnesses row, the listing texts, the send feedback) is recommended and answered ahead of the check, each through a single-question answer skill rather than the whole-mission sweep.
 
+### Over-long fallback line
+
+When an action's prompt is past the limit Claude Desktop accepts and the action runs in a VS Code terminal instead, the extension builds the terminal line itself before starting the run: the Desktop line with its opening word replaced by `claude` and every other word kept as stored (the quoted `/gurita:` prompt, `--model`, `--effort`, the `--dangerously-skip-permissions` flag where present, and the trailing `# interactive` mark). The resulting interactive `claude "/gurita:<skill> …"` line goes to `startChain` as an ordinary one-line chain, honouring any flag the line still holds and opening Claude Code on its own defaults when the line holds only its prompt. `runner.py` is unchanged and never sees the Desktop word.
+
 ## Out of Scope
 
