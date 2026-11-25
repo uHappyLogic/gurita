@@ -164,5 +164,9 @@ The draft is committed before task derivation, by one hand commit outside the wo
 
 The open-question tool's help text and `Error:` line state the Short Title rule. The review pass's Short Title bullet gains one clause naming the refusal and listing the characters `add` refuses, framed as a refusal in the shape of the duplicate-id clause it already carries: the tool refuses a title holding any of them, its `Error:` line names the one found, and the author picks another title.
 
+### Discuss line note
+
+`discuss-open-question` gains a parse rule at its step 0: after the `--mission` strip, the text is split on the same separator the hand-answer skills use, the part before it the Short Title passed to `locate` and the part after it, trimmed, an optional note the discussion takes as the user's opening remark on the question; text holding no separator is the Short Title alone with no note. One separator rule then serves every skill that takes a Short Title followed by text. The discuss lines in `gurita-vscode/shipped_recipes.md`, `snippets/GURITA_USAGE.md`, and `gurita-vscode/USAGE.md` and the extension's note prompt and empty-note drop stay as they are.
+
 ## Out of Scope
 
