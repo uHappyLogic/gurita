@@ -52,5 +52,9 @@ The fixed console lines table stops being a Markdown table in `docs/skill-refere
 
 A rule governing files in more than one folder is stated once and whole (its rule, its reason, and its retired forms) in the node of the folder holding what it chiefly governs, and the node of every other folder it touches carries a pointer to it with a when-to-follow note. This holds for every spanning rule and is itself written, as one project-wide rule, into the root's rules on where knowledge lives: the slot rule stands in the node covering `core/` or `scripts/hosts/`, the fixed console lines in the one covering the skills or the table, and each tool's rule where the tool is described, with a pointer from `tests/`. No spanning rule is restated in a second node, and the chief folder is judged once per rule, when the rule is placed.
 
+### Placement decision timing
+
+Before tasks are derived, the recorded decisions settle the home only of each item the recorded placement rules leave open or ambiguous, for example a rule governing files in several folders, a rule about `core/`, or a section with no obvious single folder. A review pass names those items once it has read the placement rules against the 35 invariants and the other sections of today's `CLAUDE.md`. Every other item's home is left to the runner completing its task, who places it under the recorded rules, so no full map from item to destination is recorded.
+
 ## Out of Scope
 
