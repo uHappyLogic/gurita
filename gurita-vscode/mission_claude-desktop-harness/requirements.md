@@ -72,5 +72,9 @@ The extension sends an action to Claude Desktop through the `claude://code/new` 
 
 Claude Desktop's row under Harnesses keeps the Enabled or Disabled state and its switch, and makes one check of its own in place of the CLI check: whether Claude Desktop is installed on the machine, read from the application bundle (`/Applications/Claude.app`, its version taken from the bundle as information only) or from a registered handler of the `claude` URL scheme, never through a command in the shell. The row makes no plugin check and no version check of a Gurita copy and carries no Install or Update control. A failed presence check is drawn on the row only and is not counted by the side-bar view's plugin notice, which counts plugin and version failures.
 
+### Desktop send feedback
+
+After a send that went out, VS Code shows nothing; Claude Desktop coming to the front is the sign. A failed send is detected only from the outcome of the send call itself (the opener's returned result or the exit status of the command that opens the session), with no check made beforehand, and is shown as one error message (`showErrorMessage`, as the extension's other failures use) saying the action could not be sent to Claude Desktop and carrying the cause the call reported.
+
 ## Out of Scope
 
