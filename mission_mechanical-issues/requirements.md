@@ -160,5 +160,9 @@ The entry is recorded as accepted. Nothing changes in the alternatives agent's f
 
 The draft is committed before task derivation, by one hand commit outside the workflow's markers (in the form of `f66bcaf8 Record the Short Title characters draft` and `fe355c4d Add the VS Code extension improvements tracker`), path-scoped to `ideas/mechanical_issues.md` and `ideas/short_title_characters.md`, so the one commit records the new draft replacing the earlier one. The mission's own deletion task later removes `ideas/mechanical_issues.md` under its `Task-completion:` commit, whose diff then shows the draft's full text as removed lines, so history keeps the draft's evidence at a fixed commit.
 
+### Short Title rule statement
+
+The open-question tool's help text and `Error:` line state the Short Title rule. The review pass's Short Title bullet gains one clause naming the refusal and listing the characters `add` refuses, framed as a refusal in the shape of the duplicate-id clause it already carries: the tool refuses a title holding any of them, its `Error:` line names the one found, and the author picks another title.
+
 ## Out of Scope
 
