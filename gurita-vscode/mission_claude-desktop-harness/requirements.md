@@ -88,5 +88,9 @@ When an action's prompt is past the limit Claude Desktop accepts and the action 
 
 A Claude Desktop line opens with the plain product-qualified word `claude-desktop`, the fourth entry of the command-word list, and that one word is what the Settings window's line editor shows, `~/.gurita/variants.json` stores, and `gurita-vscode/USAGE.md` documents. It is a plain word matched by exact equality beside `claude`, `agy`, and `codex`, carrying no sigil or other syntax of its own.
 
+### Check stop conditions
+
+No stop list beyond the goal's is fixed ahead of the hands-on check: a finding that no prompt can be passed is the only one that stops the mission outright. A finding that the session cannot be opened on the project's folder, that the `/gurita:` skills are not available in a Desktop session, or of something nobody foresaw is weighed when it is found, as a goal revision or a new open question, deciding then whether the mission stops, narrows, or goes on with a hand step.
+
 ## Out of Scope
 
