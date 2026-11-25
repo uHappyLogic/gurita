@@ -72,5 +72,9 @@ The open-question tool's `add` refuses, beside `/`, a new Short Title whose fold
 
 No runner acts on an existing block whose Short Title a new `add` would refuse. The check runs at `add` alone: `load_document` keeps validating ids for duplicates only, the review pass gains no rule for such a block, and the alternatives pass dispatches it as it does any bare block. The alternatives agent's path-separator clause stays, reworded as the case of a block authored before the refusal, so a `/` title keeps ending in a `FAILED:` whose reason names the separator in each run's advisory. Re-authoring is left to the operator, who runs the open-question tool's existing `remove` and `add` with a valid title, the document never edited by hand; the plugin ships no migration for a form an earlier copy left.
 
+### Task title characters
+
+The task-list tool refuses a new task title holding `"`, `$`, a backtick, or `\` at both points where a title is created: `insert`'s title argument (`submit-task`) and every heading `initialize` reads from its heredoc (`derive-tasks`). Each refusal is one `Error:` line naming the character, with the file left unchanged, and the help text states the refused set. The completion calls, the completion procedure's `remove`, and the orchestrator's `--subject` stay as shown, with no escaping rule added; `submit-task` keeps its existing rule for the anchors it names. Sections already standing in a list keep their headings.
+
 ## Out of Scope
 
