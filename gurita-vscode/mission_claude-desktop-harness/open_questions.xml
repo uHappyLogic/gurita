@@ -55,41 +55,6 @@
       <drawback>It is the strictest bar and the likeliest to end the mission with nothing built, even where a hand step (picking the folder once, installing the plugin in Desktop once) would have made the feature work, which gives up the visual and sound artifacts the goal is after for a gap the person could close themselves.</drawback>
     </alternative>
   </open-question>
-  <open-question id="Session opening mechanism">
-    <question>Two ways of opening a Claude Desktop session from outside are known and neither has been tried: the `claude://code/new` link, which takes a prompt and a folder, and the `claude` CLI&apos;s `--desktop` option. Which does Gurita for VS Code use to send an action to Claude Desktop where the hands-on check finds that both pass a prompt?</question>
-    <applied-principle>Check tier claims against the live environment</applied-principle>
-    <recommendation option="Link through the OS opener">Read in the binary of the `claude` CLI 2.1.332, `--desktop` opens `claude://code/new?folder=&lt;cwd&gt;` for a new session, with no prompt, model, effort, or permission mode, so the link is the one route that carries a prompt and the CLI options would add a dependency for nothing; that CLI hands its link to `open` and reads the exit status, the same `execFile` child the extension already runs for git and its Python tools, which gives a failed send a cause to report where `openExternal` gives one boolean.</recommendation>
-    <alternative id="Link through the OS opener">
-      The same `claude://code/new` link, with the prompt&apos;s values written in and the project&apos;s root as `folder`, passed to the operating system&apos;s opener (`open` on macOS, `xdg-open` on Linux) as an `execFile` child, the way the extension already runs its git and Python reads. The `claude` CLI is not used.
-      <advantage>The opener&apos;s exit status and stderr are a failure signal Gurita can read, for example no application handling the `claude` scheme, and the extension keeps its existing pattern of `execFile` children with no openExternal call.</advantage>
-      <drawback>It has the link&apos;s costs: a new function to write values into the prompt, the 14,336-character cut, and no model, effort, or permission mode. The opener also runs on the extension host, which in a remote window is the remote machine, where no Claude.app runs, so where it works depends on the availability question. Each platform needs its own command.</drawback>
-    </alternative>
-    <alternative id="Link through openExternal">
-      The `claude://code/new` link only, the `claude` CLI not used: Gurita builds the link with the action&apos;s prompt, its placeholder values written into the text, as `q` and the project&apos;s root folder as `folder`, and hands it to `vscode.env.openExternal`, the extension&apos;s first call of that API.
-      <advantage>It depends on Claude Desktop alone, the scheme Claude.app registers and its own Finder service uses, with no CLI on the shell&apos;s path, and it starts no child process: VS Code&apos;s own API opens the link on the person&apos;s machine, including from a remote window.</advantage>
-      <drawback>Placeholder values live only in the terminal&apos;s `GURITA_*` variables today, so a new function has to write them into the prompt text. The link cuts the prompt at 14,336 characters and names no model, effort, or permission mode, so the line&apos;s flags cannot travel with it. The only sign of failure is openExternal&apos;s boolean. In a remote window the folder is a remote path, so this option&apos;s reach depends on where the harness is offered, which the availability question decides.</drawback>
-    </alternative>
-    <alternative id="CLI desktop in a terminal">
-      The `claude` CLI&apos;s `--desktop` option only. The action&apos;s one interactive line runs as today, through the bundled runner in a terminal at the project root, with `--desktop` added to its `claude` command and no run tracked. The link is not used.
-      <advantage>The line&apos;s text stays whole. The shell expands the `GURITA_*` variables, so no function writes values into the prompt and no 14,336-character link cut applies. The line&apos;s `--model`, `--effort`, and bypass flag ride on the same command wherever the CLI forwards them, and the folder is the terminal&apos;s working directory.</advantage>
-      <drawback>A VS Code terminal still opens, which the goal sets the Desktop session against, and the runner&apos;s run tracking has to be bypassed for this one kind of send. It needs `claude` on the session shell&apos;s path. Nobody has observed whether `--desktop` without `--continue` or `--resume` opens a new session with the prompt in place.</drawback>
-    </alternative>
-    <alternative id="CLI desktop in background">
-      The `claude` CLI&apos;s `--desktop` option only, run by the extension itself as a background child of the session shell at the project root. The line&apos;s `claude` command gets `--desktop` added, and the `GURITA_*` values are set in the child&apos;s environment. No terminal opens and the link is not used.
-      <advantage>No terminal opens, yet the shell still expands the values and the line&apos;s own flags travel with it. The child&apos;s exit status and stderr give a failure signal, and there is no link length cut.</advantage>
-      <drawback>It adds a new kind of child process. Nobody knows whether the CLI exits once it hands off to Desktop or stays running, and it needs `claude` on the session shell&apos;s path. In a remote window it runs on the remote host, so where it works depends on the availability question. Whether `--desktop` alone opens a new session with the prompt has not been observed.</drawback>
-    </alternative>
-    <alternative id="CLI where found, link otherwise">
-      Both mechanisms, chosen per send. When the harness check finds `claude` on the session shell&apos;s path, Gurita runs `--desktop` as a background child of the session shell at the project root. Otherwise it opens the `claude://code/new` link, with the values written into the prompt and the project&apos;s root as `folder`, through `vscode.env.openExternal`.
-      <advantage>Desktop is reachable for a person who has Claude.app but no CLI. Wherever the CLI is present, the send keeps the line&apos;s flags and avoids the link&apos;s prompt cut.</advantage>
-      <drawback>Two code paths to build, test, and document, with different carried values and different failure signals. The same action can then open differently on two machines, for example with or without the line&apos;s model, and the person cannot tell which route was taken.</drawback>
-    </alternative>
-    <alternative id="Decide on the check&apos;s findings">
-      No mechanism is fixed now. The choice is left to the hands-on check under one stated rule: use whichever mechanism, when tried, also carries more of the project&apos;s folder, the model, the effort, and the permission mode, and leaves the prompt prefilled rather than already sent. On a tie, use the link.
-      <advantage>The choice rests on what Claude Desktop is seen to do rather than on a static reading of its bundle and the CLI&apos;s help text, which so far has observed nothing that either route delivers.</advantage>
-      <drawback>The questions on feedback, over-long prompts, the Harnesses row, and remote availability are each shaped by the mechanism, so they stay unsettled or must be written to hold for either. How much that costs depends on when the check runs, which the timing question decides.</drawback>
-    </alternative>
-  </open-question>
   <open-question id="Uncarried line values">
     <question>When an action is sent to Claude Desktop and Desktop takes no model, effort, or permission mode from outside, what becomes of the `--model`, `--effort`, and bypass-permission values the action&apos;s line carries: are they dropped without sign, or is the person shown, in the Settings window or on the action&apos;s button, that the Desktop session will not carry them?</question>
     <alternative id="Stripped at selection">
@@ -126,7 +91,6 @@
   <open-question id="Desktop Harnesses row">
     <question>What does Claude Desktop&apos;s row under Harnesses in the Settings window hold, given that the three existing rows each check a CLI (the command found in the shell, a Gurita plugin copy read through the CLI&apos;s plugin listing, that copy&apos;s version against the packaged one) and carry Install and Update controls: which of those checks does the row make for an application that is no CLI, and does it carry Install and Update controls?</question>
     <applied-principle>Check tier claims against the live environment</applied-principle>
-    <depends-on question="Session opening mechanism" option="Link through the OS opener"/>
     <recommendation option="Presence check only">Whether the application is there is the one readiness fact the extension can read for itself, from the bundle&apos;s `Info.plist` as the `claude` CLI&apos;s own `--desktop` reads it, and it gives the row the first check every other row makes; drawing Claude Code&apos;s plugin outcome on the row would assert that Desktop sessions load that copy, which nobody has observed.</recommendation>
     <alternative id="Presence check only">
       The row keeps the Enabled or Disabled state and its switch, and makes one check of its own in place of the CLI check: whether Claude Desktop is installed on the machine, read from the application bundle (`/Applications/Claude.app`, with its version taken from the bundle as information only) or from a registered handler of the `claude` URL scheme, never through a command in the shell. It makes no plugin check and no version check of a Gurita copy, carries no Install or Update control, and a failed presence check is drawn on the row only, not counted by the side-bar view&apos;s plugin notice, which counts plugin and version failures.
@@ -152,7 +116,6 @@
   <open-question id="Desktop send feedback">
     <question>Sending an action to Claude Desktop is fire-and-forget, with no run tracked. What does the person see in VS Code after the click: anything at all on a send that went out, and what on a send that failed, such as Claude Desktop not being installed or the link not being handled?</question>
     <applied-principle>Report only unrecoverable signals</applied-principle>
-    <depends-on question="Session opening mechanism" option="Link through the OS opener"/>
     <depends-on question="Desktop Harnesses row" option="Presence check only"/>
     <recommendation option="Error on reported failure">A send that went out shows itself as Claude Desktop coming to the front, so a confirmation would repeat it, while a send the opener refused shows nowhere unless the extension reports it, which its usual error message does with the opener&apos;s own cause; a second presence check before every send would repeat what the person already sees where Desktop is listed.</recommendation>
     <alternative id="Error on reported failure">

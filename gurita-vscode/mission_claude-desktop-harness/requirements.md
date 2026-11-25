@@ -64,5 +64,9 @@ Claude Desktop is offered only where the extension host runs on macOS in a local
 
 No text outside `gurita-vscode/USAGE.md` comes to name Claude Desktop in this mission. The listing `README.md` (its opening paragraph, its Settings window paragraph, its "What the extension needs" list, and the `settings-window.png` still with its alt text), the manifest's `description`, and its `keywords` stay as they stand; they come to name Claude Desktop in whatever later work prepares the release that first ships the feature.
 
+### Session opening mechanism
+
+The extension sends an action to Claude Desktop through the `claude://code/new` link, with the prompt's values written in and the project's root as `folder`, passed to the operating system's opener (`open` on macOS, `xdg-open` on Linux) as an `execFile` child, the way the extension already runs its git and Python reads. The `claude` CLI and its `--desktop` option are not used.
+
 ## Out of Scope
 
