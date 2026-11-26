@@ -34,9 +34,9 @@
 // effort control, every other line shown as its text, read-only; one of these lines, headless or
 // interactive, a Codex one opening `codex exec` or a bare `codex '$gurita:…'`, gets a harness
 // control picking between Claude Code, Antigravity, and Codex, Claude Desktop after them on the
-// line of a variant holding exactly one line, headless or interactive, that is neither a
-// single-task line nor a looped recipe's (`Variant.singleLine`), in a window Claude Desktop is
-// offered in, a local macOS one, and any other Codex line keeps its harness. Under Variants the
+// last line of a variant, headless or interactive, the one line of a one-line variant included,
+// that is neither a single-task line nor a looped recipe's (`linePlace`), in a window Claude
+// Desktop is offered in, a local macOS one, and any other Codex line keeps its harness. Under Variants the
 // control picks a harness together with its form (`LineEditor.form` and `forms`): a variant's last
 // line, the one line of a one-line variant included, is offered each of the three CLIs headless
 // and interactive, and every earlier line the three headless alone, while the named single-task
@@ -229,16 +229,16 @@ export type LinePlace = 'last' | 'earlier';
  * both flags included. Its harness control picks between the harnesses `harnessChoices` gives the
  * line: Claude Code, Antigravity, and Codex for a headless or interactive line, and none for a
  * Codex line neither opening `codex exec` nor a bare `codex '$gurita:…'`. Claude Desktop is offered
- * after them only when `singleLine` is set, the line being the one line of a variant that holds
- * exactly one line, headless or interactive, and is neither single-task nor looped
- * (`Variant.singleLine`), and `rewriteHarness` rewrites the line onto it, so no line of a chain
- * and no single-task line is offered it. When
+ * after them only when `desktop` is set, the line being the last line of a variant, headless or
+ * interactive, the one line of a one-line variant included, that is neither single-task nor looped
+ * (`linePlace` giving `last`), and `rewriteHarness` rewrites the line onto it, so no earlier line
+ * of a chain and no single-task line is offered it. When
  * `place` is given and the line is in one of its harness's two forms (`readForm`), the control
  * picks the form too: the editor carries the line's form and the forms offered, both on the `last`
  * line and `headless` alone on an `earlier` one; with no `place`, as on a named single-task line or
  * a line of a looped recipe, or for a line in neither form, it picks a harness alone.
  */
-export function lineEditor(line: string, singleLine = false, place?: LinePlace): LineEditor | undefined {
+export function lineEditor(line: string, desktop = false, place?: LinePlace): LineEditor | undefined {
   const read = readLine(line);
   if (read === undefined || read.model === undefined) {
     return undefined;
@@ -253,9 +253,9 @@ export function lineEditor(line: string, singleLine = false, place?: LinePlace):
   const editor: LineEditor = read.effort === undefined ? { harness, model: read.model } : { harness, model: read.model, effort: read.effort };
   const choices = harnessChoices(line);
   if (choices !== undefined) {
-    const desktop = singleLine && desktopRewritable(line);
+    const toDesktop = desktop && desktopRewritable(line);
     editor.harnesses = HARNESSES.filter(
-      (each) => (choices as readonly string[]).includes(each.cli) || (desktop && each.key === DESKTOP_HARNESS.key),
+      (each) => (choices as readonly string[]).includes(each.cli) || (toDesktop && each.key === DESKTOP_HARNESS.key),
     ).map((each) => each.key);
     const form = place === undefined ? undefined : readForm(line);
     if (form !== undefined) {
@@ -391,7 +391,8 @@ function settingsVariants(
       ...variantTarget(variant),
       lines: [...variant.lines],
       editors: variant.lines.map(
-        (line, index) => lineEditor(line, desktopOffered && variant.singleLine, forms ? linePlace(variant, index) : undefined) ?? null,
+        (line, index) =>
+          lineEditor(line, desktopOffered && linePlace(variant, index) === 'last', forms ? linePlace(variant, index) : undefined) ?? null,
       ),
       rows: variant.lines.map((line) => lineRow(line) ?? null),
       isDefault: variant === standing,
@@ -635,11 +636,11 @@ export function replaceLineValue(
  * asked form writes nothing. A `form` is refused on a line of a single-task or looped variant, whose
  * form is kept (`linePlace`), on a line in neither form, and the interactive form on a line that is
  * not its variant's last, an earlier line of a chain made headless alone. Onto Claude Desktop, which
- * takes the interactive form alone, only the line of a variant holding exactly one line
- * (`Variant.singleLine`) is rewritten, headless or interactive, a headless one made interactive
- * with its `-p`, model, effort, and bypass flag dropped, while a line of a chain, a single-task
- * line, and a line of a looped recipe are refused, so a pick on a shipped, project, or own variant
- * stores the rewritten line as a `custom N` beside it.
+ * takes the interactive form alone, only a variant's last line, the one line of a one-line variant
+ * included (`linePlace` giving `last`), is rewritten, headless or interactive, a headless one made
+ * interactive with its `-p`, model, effort, and bypass flag dropped, while an earlier line of a
+ * chain, a single-task line, and a line of a looped recipe are refused, so a pick on a shipped,
+ * project, or own variant stores the rewritten line as a `custom N` beside it.
  */
 export function replaceLineHarness(
   storeFile: string,
@@ -661,8 +662,8 @@ export function replaceLineHarness(
   if (harness === 'claude-desktop' && (variant.singleTask || variant.looped)) {
     throw new VariantEditError(`${named} cannot be switched onto ${harness}: a single-task line and a line of a looped recipe cannot go to Claude Desktop.`);
   }
-  if (harness === 'claude-desktop' && !variant.singleLine) {
-    throw new VariantEditError(`${named} cannot be switched onto ${harness}: only a variant of one line can.`);
+  if (harness === 'claude-desktop' && linePlace(variant, index) !== 'last') {
+    throw new VariantEditError(`${named} cannot be switched onto ${harness}: only a variant's last line can.`);
   }
   if (harness === 'claude-desktop' && form === 'headless') {
     throw new VariantEditError(`${named} cannot be switched onto ${harness} headless: Claude Desktop takes the interactive form alone.`);

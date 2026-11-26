@@ -20,28 +20,38 @@
 // runner's `--close-when-finished`, so a chain that ran all its lines and a loop that ends with no
 // task remaining exit after their report and their terminal closes by itself; a run that stopped
 // still waits for a keypress.
-// An action whose variant is one line opening with `claude-desktop` starts no run: `startAction`,
-// through which every action that starts a chain goes, sends it to Claude Desktop instead
-// (`desktop.ts`), its prompt built with the typed values written in and carried in the
-// `claude://code/new` link with the project root as `folder`, passed to `open`. The send is
-// fire-and-forget: no terminal is created and no run is held, so the mission's page draws no button
-// disabled for it, and after a send that went out VS Code shows nothing, Claude Desktop coming to
-// the front being the sign, while a send the opener reports failed is shown as one error
-// notification saying the action could not be sent to Claude Desktop and carrying the cause the
-// opener reported. A send for a mission whose run is going is refused as a click is. A prompt past
-// the 14,336 characters at which Desktop's link cuts it, measured with its typed values written
-// in, is not sent: the action runs in a terminal instead, without asking, as an ordinary tracked
-// chain of one line, the Desktop line with its opening word replaced by `claude`, its values typed
-// and set in the terminal's environment as every run's are, and one notice tells the person the
-// prompt was too long for Claude Desktop.
+// An action whose variant ends in a line opening with `claude-desktop` does not run that line:
+// `startAction`, through which every action that starts a chain goes, sends it to Claude Desktop
+// instead (`desktop.ts`), its prompt built with the typed values written in and carried in the
+// `claude://code/new` link with the project root as `folder`, passed to `open`. A variant of that
+// one line is sent at once and starts no run. A chain runs its earlier lines first as an ordinary
+// tracked run, held and posted like any other until its terminal closes, the runner started with
+// `--finished-file` naming a file of the extension's own (`finishedSignal`), which it writes only
+// when the earlier lines all finished; the extension looks for that file while the run goes and
+// sends the last line as soon as it stands, without waiting for the terminal to close, and looks
+// once more when the terminal closes, so a run that finished and closed by itself is sent too. A
+// chain that stopped or ended early writes no file and sends nothing. The send is fire-and-forget:
+// no run is held for the session Desktop opens, and after a send that went out VS Code shows
+// nothing, Claude Desktop coming to the front being the sign, while a send the opener reports
+// failed is shown as one error notification saying the action could not be sent to Claude Desktop
+// and carrying the cause the opener reported. A send for a mission whose run is going is refused as
+// a click is. A last-line prompt past the 14,336 characters at which Desktop's link cuts it,
+// measured with its typed values written in, is not sent: the whole variant runs in a terminal
+// instead, without asking, as an ordinary tracked chain, its last line the Desktop line with its
+// opening word replaced by `claude`, its values typed and set in the terminal's environment as
+// every run's are, and one notice tells the person the prompt was too long for Claude Desktop. No
+// line handed to the runner opens with `claude-desktop`.
 
 import * as vscode from 'vscode';
 import {
   DESKTOP_PROMPT_LIMIT,
+  FINISHED_POLL_MS,
+  FinishedSignal,
   desktopFallbackLine,
   desktopLine,
   desktopLink,
   desktopPrompt,
+  finishedSignal,
   openDesktopLink,
   tooLongForDesktop,
 } from './desktop';
@@ -157,14 +167,32 @@ export function startChain(
   values: Readonly<Record<string, string>>,
   closed?: () => void,
 ): void {
-  if (mission !== undefined && refuseWhileRunning(mission)) {
-    return;
-  }
-  const filled = lines.map((line) => buildLine(line, values));
-  const terminal = launch(root, mission, recipe, [runnerFile(context), 'chain', '--', ...filled], sessionEnvironment(values));
-  if (closed !== undefined) {
+  const terminal = launchChain(context, root, mission, recipe, lines, values);
+  if (terminal !== undefined && closed !== undefined) {
     closers.set(terminal, closed);
   }
+}
+
+/**
+ * Starts the runner's `chain` as `startChain` does, the runner's `--finished-file` naming
+ * `finishedFile` when given, and returns its terminal, or undefined when a run for `mission` is
+ * running and nothing started.
+ */
+function launchChain(
+  context: vscode.ExtensionContext,
+  root: string | undefined,
+  mission: string | undefined,
+  recipe: string,
+  lines: readonly string[],
+  values: Readonly<Record<string, string>>,
+  finishedFile?: string,
+): vscode.Terminal | undefined {
+  if (mission !== undefined && refuseWhileRunning(mission)) {
+    return undefined;
+  }
+  const filled = lines.map((line) => buildLine(line, values));
+  const finishing = finishedFile === undefined ? [] : ['--finished-file', finishedFile];
+  return launch(root, mission, recipe, [runnerFile(context), 'chain', ...finishing, '--', ...filled], sessionEnvironment(values));
 }
 
 /** The error notification a send to Claude Desktop the opener reported failed shows, for the action `recipe`. */
@@ -182,15 +210,20 @@ export function desktopPromptTooLong(recipe: string, length: number): string {
 }
 
 /**
- * Starts the action `recipe` of `lines` with `values`, as `startChain` takes them, unless its lines
- * are one line opening with `claude-desktop`: that line is sent to Claude Desktop instead, unless a
- * run for `mission` is running, its prompt with `values` written in carried with `root` as `folder`
- * in the `claude://code/new` link passed to `open`, no terminal created and no run held, and
- * `closed` never called. A prompt past the limit Desktop accepts is not sent: the line with its
- * opening word replaced by `claude` is started by `startChain` as a one-line chain with `values`
- * and `closed`, after one notice saying the prompt was too long for Claude Desktop. The promise
- * settles once the send's outcome is known, a failed send shown in one error notification carrying
- * the cause the opener reported, and at once for a chain.
+ * Starts the action `recipe` of `lines` with `values`, as `startChain` takes them, unless its last
+ * line opens with `claude-desktop`: that line is sent to Claude Desktop instead, unless a run for
+ * `mission` is running, its prompt with `values` written in carried with `root` as `folder` in the
+ * `claude://code/new` link passed to `open`. The one line of a one-line variant is sent at once, no
+ * terminal created, no run held, and `closed` never called. The earlier lines of a chain are started
+ * first by `startChain`'s path as an ordinary tracked run with `values` and `closed`, the runner
+ * told to write a finished file once they all finished, and the last line is sent as soon as that
+ * file stands or, at the latest, when the run's terminal closes, at most once; a run that stopped
+ * writes no file and sends nothing. A prompt past the limit Desktop accepts is not sent: the
+ * variant, its last line with the opening word replaced by `claude`, is started by `startChain` as
+ * a chain with `values` and `closed`, after one notice saying the prompt was too long for Claude
+ * Desktop. The promise settles once a one-line variant's send is known, a failed send shown in one
+ * error notification carrying the cause the opener reported, and at once for a chain, whose later
+ * send is shown the same way.
  */
 export async function startAction(
   context: vscode.ExtensionContext,
@@ -209,17 +242,60 @@ export async function startAction(
   if (mission !== undefined && refuseWhileRunning(mission)) {
     return;
   }
+  const earlier = lines.slice(0, -1);
   const prompt = desktopPrompt(line, values);
   const fallback = desktopFallbackLine(line);
   if (tooLongForDesktop(prompt) && fallback !== undefined) {
     void vscode.window.showInformationMessage(desktopPromptTooLong(recipe, prompt.length));
-    startChain(context, root, mission, recipe, [fallback], values, closed);
+    startChain(context, root, mission, recipe, [...earlier, fallback], values, closed);
     return;
   }
-  const cause = await openDesktopLink(desktopLink(prompt, root));
-  if (cause !== undefined) {
-    void vscode.window.showErrorMessage(desktopSendFailed(recipe, cause));
+  const send = async (): Promise<void> => {
+    const cause = await openDesktopLink(desktopLink(prompt, root));
+    if (cause !== undefined) {
+      void vscode.window.showErrorMessage(desktopSendFailed(recipe, cause));
+    }
+  };
+  if (earlier.length === 0) {
+    await send();
+    return;
   }
+  let finished: FinishedSignal;
+  try {
+    finished = finishedSignal();
+  } catch (error) {
+    void vscode.window.showErrorMessage(desktopSendFailed(recipe, error instanceof Error ? error.message : String(error)));
+    return;
+  }
+  const terminal = launchChain(context, root, mission, recipe, earlier, values, finished.file);
+  if (terminal === undefined) {
+    finished.remove();
+    return;
+  }
+  let settled = false;
+  // Sends the last line once the finished file stands; at the terminal's close, `closing`, the run
+  // is over either way, so the signal is taken away whether or not it stands.
+  const settle = (closing: boolean): void => {
+    if (settled) {
+      return;
+    }
+    const ready = finished.finished();
+    if (!ready && !closing) {
+      return;
+    }
+    settled = true;
+    clearInterval(timer);
+    finished.remove();
+    if (ready) {
+      void send();
+    }
+  };
+  const timer = setInterval(() => settle(false), FINISHED_POLL_MS);
+  timer.unref?.();
+  closers.set(terminal, () => {
+    settle(true);
+    closed?.();
+  });
 }
 
 /** The bundled runner's path. */

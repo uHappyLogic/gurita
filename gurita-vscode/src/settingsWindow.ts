@@ -70,9 +70,9 @@
 // dropdown and, when it also carries the override, its effort dropdown, and every other line is
 // shown as its text, read-only; one of these lines, headless or interactive, a Codex one opening
 // `codex exec` or a bare `codex '$gurita:…'`, gets a harness dropdown offering Claude Code,
-// Antigravity, and Codex, Claude Desktop after them on the line of a variant holding exactly one
-// line, headless or interactive, that is neither a single-task line nor a looped recipe's, and any
-// other Codex line keeps its harness as text. Under Variants the
+// Antigravity, and Codex, Claude Desktop after them on a variant's last line, headless or
+// interactive, the one line of a one-line variant included, that is neither a single-task line nor
+// a looped recipe's, and any other Codex line keeps its harness as text. Under Variants the
 // dropdown picks a harness together with its form, each CLI headless and interactive on a variant's
 // last line and headless alone on every earlier line, while a named single-task line and a line of
 // a looped recipe pick a harness alone. A model or effort pick replaces the value the line carries
@@ -954,8 +954,8 @@ function listedEditor(
 
 /**
  * The harnesses a line's harness dropdown picks between, by key, each with the word its lines open
- * with: the three CLIs, and Claude Desktop, offered only on the line of a variant holding exactly
- * one line, headless or interactive, that is neither single-task nor looped (`lineEditor`).
+ * with: the three CLIs, and Claude Desktop, offered only on a variant's last line, headless or
+ * interactive, of a variant that is neither single-task nor looped (`lineEditor`).
  */
 const SWITCHABLE: readonly { key: CliHarnessKey | 'claude-desktop'; cli: SwitchableHarness }[] = [
   { key: 'claude', cli: 'claude' },
@@ -966,7 +966,7 @@ const SWITCHABLE: readonly { key: CliHarnessKey | 'claude-desktop'; cli: Switcha
 
 /**
  * Rewrites line `line` of the variant `variant` of the recipe `recipe` onto the harness `harness`,
- * Claude Code, Antigravity, Codex, or, on a variant of one line, headless or interactive, Claude
+ * Claude Code, Antigravity, Codex, or, on a variant's last line, headless or interactive, Claude
  * Desktop, whose rewrite makes the line interactive, drops its model, effort, and bypass flag, and
  * reads no lists, and, where `form` is
  * given, into that form, `headless` or `interactive`, picked in the line's harness dropdown in the

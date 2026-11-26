@@ -94,9 +94,10 @@
 // textarea with Run and Cancel, every other typed value from VS Code's own input box, one line per
 // value, and each value reaches its line only as its `GURITA_*` session variable. Every one of these
 // clicks, a recipe button's, a fixed-name button's, and a mission-starting row's, starts its run
-// through `startAction` (`runs.ts`), which sends a variant of one line opening with
-// `claude-desktop` to Claude Desktop instead, its prompt built with the typed values written in,
-// creating no terminal and holding no run. The discuss button always asks for an optional discussion note,
+// through `startAction` (`runs.ts`), which sends a variant's last line opening with
+// `claude-desktop` to Claude Desktop instead, its prompt built with the typed values written in, a
+// one-line variant creating no terminal and holding no run, and a chain sending its last line once
+// its earlier lines finished in their tracked run. The discuss button always asks for an optional discussion note,
 // the one value a box accepts empty: a note typed is carried after the Short Title as
 // `<Short Title>. <note>`, an empty one leaves the line as if it held no note, and Escape starts
 // nothing. While a chain started for a mission is running, from its start until its terminal

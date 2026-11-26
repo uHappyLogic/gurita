@@ -4,7 +4,7 @@
 Stdlib only, Python 3.9 or later, shipped in the extension's package beside its `bundled/`
 directory and runnable by hand outside the editor.
 
-    runner.py chain [--close-when-finished] -- LINE...
+    runner.py chain [--close-when-finished] [--finished-file FILE] -- LINE...
     runner.py loop --mission PATH --rules FILE --line NAME LINE... [--override TITLE NAME]... [--close-when-finished] -- LINE...
     runner.py preview --mission PATH --rules FILE --line NAME LINE...
 
@@ -34,7 +34,11 @@ the line read. Once the shell has exited the runner prints the line the run ende
 recipe line it stopped at, then waits for a keypress before exiting. With
 `--close-when-finished`, which the extension passes while its auto-close setting is on, a chain
 that ran all its lines exits after its report without waiting, while a chain that stopped or
-ended early still waits.
+ended early still waits. With `--finished-file FILE`, which the extension passes when it runs a
+chain's earlier lines ahead of a last line it sends to Claude Desktop, a chain that ran all its
+lines writes FILE, empty, as soon as its shell has exited and before its report, so the extension
+learns the lines finished without waiting for the terminal to close; a chain that stopped or ended
+early writes nothing, and a file that cannot be written is reported in one line beneath the report.
 
 The values a line references reach it through the environment the runner is started in, as
 `"$GURITA_*"` session variables; the command line carries none.
@@ -377,7 +381,17 @@ def wait_for_shell(process: "subprocess.Popen[bytes]") -> int:
             continue
 
 
-def run_chain(lines: List[str], close_when_finished: bool = False) -> int:
+def write_finished_file(path: str) -> Optional[str]:
+    """Write the empty file a finished chain leaves at `path`; the line reporting a failure, or None."""
+    try:
+        with open(path, "w", encoding="utf-8"):
+            pass
+    except OSError as error:
+        return f"The finished file {path} could not be written: {error.strerror}"
+    return None
+
+
+def run_chain(lines: List[str], close_when_finished: bool = False, finished_file: Optional[str] = None) -> int:
     fixed_lines = FIXED_LINES_FILE
     if any(line_kind(line) == HEADLESS for line in lines):
         read_fixed_lines(fixed_lines)
@@ -389,6 +403,10 @@ def run_chain(lines: List[str], close_when_finished: bool = False) -> int:
         printed, finished = report(lines, run_dir, status)
     finally:
         shutil.rmtree(run_dir, ignore_errors=True)
+    if finished and finished_file is not None:
+        failure = write_finished_file(finished_file)
+        if failure is not None:
+            printed.append(failure)
     sys.stdout.write("\n" + "\n".join(printed) + "\n")
     sys.stdout.flush()
     close_or_wait(finished, close_when_finished)
@@ -803,6 +821,12 @@ def build_parser() -> argparse.ArgumentParser:
         "line, or whose print holds none.",
     )
     add_close_when_finished(chain, "the chain ran all its lines")
+    chain.add_argument(
+        "--finished-file",
+        metavar="FILE",
+        help="write FILE, empty, once the chain ran all its lines, before its report; "
+        "a chain that stopped or ended early writes nothing",
+    )
     chain.add_argument("lines", nargs="+", metavar="LINE")
     check = commands.add_parser(
         "check",
@@ -872,7 +896,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     args = build_parser().parse_args(argv)
     try:
         if args.command == "chain":
-            return run_chain(args.lines, args.close_when_finished)
+            return run_chain(args.lines, args.close_when_finished, args.finished_file)
         if args.command == "loop":
             return run_loop(
                 args.mission,

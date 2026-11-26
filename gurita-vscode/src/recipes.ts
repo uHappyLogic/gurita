@@ -142,8 +142,6 @@ export interface Variant {
   lines: string[];
   /** Exactly one line, headless, holding `<Task Title>`. */
   singleTask: boolean;
-  /** Exactly one line, headless or interactive, and neither `singleTask` nor `looped`: the one kind of variant a line may go to Claude Desktop on. */
-  singleLine: boolean;
   /** Its last line is the slot line `<single-task line>`. */
   looped: boolean;
   /** The known placeholders its lines hold, by name, in order of first appearance. */
@@ -349,7 +347,6 @@ function variant(name: string, lines: readonly string[], origin: ReadOrigin, fil
     }
   }
   const singleTask = lines.length === 1 && isHeadless(lines[0]) && known.includes('Task Title');
-  const singleLine = lines.length === 1 && !singleTask && !looped;
   return {
     name,
     own: origin === 'own',
@@ -357,7 +354,6 @@ function variant(name: string, lines: readonly string[], origin: ReadOrigin, fil
     file,
     lines: [...lines],
     singleTask,
-    singleLine,
     looped,
     knownPlaceholders: known,
     unknownPlaceholders: unknown,

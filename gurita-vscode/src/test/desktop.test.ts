@@ -35,10 +35,12 @@ Module._load = load;
 
 const SHIPPED_RECIPES = path.join(__dirname, '..', '..', 'shipped_recipes.md');
 
-test('only a variant of one line opening with claude-desktop goes to Claude Desktop', () => {
+test("only a variant's last line opening with claude-desktop goes to Claude Desktop, a chain's included", () => {
   const line = 'claude-desktop "/gurita:complete-all-tasks --mission <path>"; # interactive';
+  const headless = 'claude -p "/gurita:derive-tasks --mission <path>" --model "fable" --effort xhigh;';
   assert.strictEqual(desktop.desktopLine([line]), line);
-  assert.strictEqual(desktop.desktopLine([line, line]), undefined, 'a chain of several lines does not');
+  assert.strictEqual(desktop.desktopLine([headless, headless, line]), line, "a chain's last line goes");
+  assert.strictEqual(desktop.desktopLine([line, headless]), undefined, 'a Desktop line before the last does not');
   assert.strictEqual(desktop.desktopLine([]), undefined);
   assert.strictEqual(desktop.desktopLine(['claude "/gurita:complete-all-tasks --mission <path>" --model "opus" --effort high; # interactive']), undefined);
   assert.strictEqual(desktop.desktopLine(['claude --desktop "/gurita:complete-all-tasks --mission <path>"; # interactive']), undefined);
@@ -84,7 +86,7 @@ test("every shipped variant of one line, headless or interactive, set to go to C
   const recipes = parseShippedRecipes(fs.readFileSync(SHIPPED_RECIPES, 'utf8'), SHIPPED_RECIPES);
   const sent: string[] = [];
   for (const variant of recipes.flatMap((recipe) => recipe.variants)) {
-    if (!variant.singleLine) {
+    if (variant.lines.length !== 1 || variant.singleTask || variant.looped) {
       continue;
     }
     const line = rewriteHarness(variant.lines[0], 'claude-desktop', { models: [], efforts: [] });
@@ -183,4 +185,43 @@ test('the fallback line is the Desktop line opening with claude, every other wor
     'a line still holding flags keeps every one of them',
   );
   assert.strictEqual(desktop.desktopFallbackLine('claude "/gurita:x"; # interactive'), undefined, 'only a Desktop line has one');
+});
+
+test("every shipped chain's last line, set to go to Claude Desktop, goes to it with its prompt, its earlier lines left to the terminal", () => {
+  const recipes = parseShippedRecipes(fs.readFileSync(SHIPPED_RECIPES, 'utf8'), SHIPPED_RECIPES);
+  const sent: string[] = [];
+  for (const variant of recipes.flatMap((recipe) => recipe.variants)) {
+    if (variant.lines.length < 2 || variant.singleTask || variant.looped) {
+      continue;
+    }
+    const last = rewriteHarness(variant.lines[variant.lines.length - 1], 'claude-desktop', { models: [], efforts: [] });
+    assert.ok(last !== undefined, variant.lines[variant.lines.length - 1]);
+    const lines = [...variant.lines.slice(0, -1), last];
+    assert.strictEqual(desktop.desktopLine(lines), last);
+    assert.ok(lines.slice(0, -1).every((line) => !line.startsWith('claude-desktop')), 'no earlier line opens with the Desktop word');
+    sent.push(desktop.desktopPrompt(last, { path: 'pkg/mission_alpha/' }));
+  }
+  assert.deepStrictEqual(sent, [
+    '/gurita:recommend-all-open-questions --mission pkg/mission_alpha/',
+    '/gurita:recommend-all-open-questions --mission pkg/mission_alpha/',
+    '/gurita:derive-tasks --mission pkg/mission_alpha/',
+    '/gurita:complete-all-tasks --mission pkg/mission_alpha/',
+    '/gurita:complete-all-tasks --mission pkg/mission_alpha/',
+  ]);
+});
+
+test('a finished signal names a file in a fresh directory of its own, standing only once written, and its removal takes the directory away', () => {
+  const signal = desktop.finishedSignal();
+  const directory = path.dirname(signal.file);
+  assert.ok(fs.statSync(directory).isDirectory());
+  assert.ok(path.basename(directory).startsWith('gurita-desktop-'));
+  assert.strictEqual(signal.finished(), false, 'nothing stands before the runner writes it');
+  fs.writeFileSync(signal.file, '');
+  assert.strictEqual(signal.finished(), true);
+  signal.remove();
+  assert.strictEqual(fs.existsSync(directory), false);
+  signal.remove();
+  const other = desktop.finishedSignal();
+  assert.notStrictEqual(other.file, signal.file, 'each signal has a file of its own');
+  other.remove();
 });

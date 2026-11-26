@@ -1,20 +1,26 @@
-// Sending an action to Claude Desktop. An action whose variant is one line opening with the word
-// `claude-desktop` (`desktopLine`) is not run in a terminal: its prompt, the line's quoted
-// `/gurita:` word as the shell reads it, is built with the typed values written in (`desktopPrompt`),
-// an empty optional placeholder dropped as a run's line drops it, and carried with the project's
-// root as `folder` in the `claude://code/new` link (`desktopLink`), Claude Desktop's own way of
-// opening a session from outside, whose handler takes the prompt from `q`. The link is passed to
-// `open`, the macOS opener, as an `execFile` child (`openDesktopLink`), the way the extension runs
-// its git and Python reads; neither the `claude` CLI nor its `--desktop` option is used, so the
-// bundled runner never sees the Desktop word. The send is fire-and-forget: its one outcome is the
-// opener's, success or the cause it reported, read from that call alone with no check made
-// beforehand. Desktop's link handler cuts its prompt at 14,336 characters, counted as JavaScript
-// counts a string's length, in UTF-16 code units, once the link is decoded; a prompt past that
-// limit (`tooLongForDesktop`) is not sent, and its line runs in a terminal instead as
+// Sending an action's last line to Claude Desktop. An action whose variant ends in a line opening
+// with the word `claude-desktop` (`desktopLine`) does not run that line in a terminal: its prompt,
+// the line's quoted `/gurita:` word as the shell reads it, is built with the typed values written in
+// (`desktopPrompt`), an empty optional placeholder dropped as a run's line drops it, and carried
+// with the project's root as `folder` in the `claude://code/new` link (`desktopLink`), Claude
+// Desktop's own way of opening a session from outside, whose handler takes the prompt from `q`. The
+// link is passed to `open`, the macOS opener, as an `execFile` child (`openDesktopLink`), the way
+// the extension runs its git and Python reads; neither the `claude` CLI nor its `--desktop` option
+// is used, so the bundled runner never sees the Desktop word. A variant of that one line is sent
+// outright; a chain's earlier lines run first in a terminal, the runner writing an empty finished
+// file (`finishedSignal`) once they all finished, and the last line is sent as soon as that file
+// stands, a chain that stopped writing none and so sending nothing. The send is fire-and-forget:
+// its one outcome is the opener's, success or the cause it reported, read from that call alone with
+// no check made beforehand. Desktop's link handler cuts its prompt at 14,336 characters, counted as
+// JavaScript counts a string's length, in UTF-16 code units, once the link is decoded; a prompt
+// past that limit (`tooLongForDesktop`) is not sent, and its line runs in a terminal instead as
 // `desktopFallbackLine` gives it, the opening word replaced by `claude` and every other word kept
 // as stored. This module imports nothing from `vscode`.
 
 import { execFile } from 'node:child_process';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
 import { claudeCodeLine, readLine, readPrompt } from './lineValues';
 import { dropEmptyOptional, writeValues } from './placeholders';
 
@@ -27,9 +33,38 @@ export const DESKTOP_PROMPT_LIMIT = 14336;
 /** The macOS opener the link is passed to. */
 export const OPENER = 'open';
 
-/** The line an action's `lines` send to Claude Desktop: its one line, when that line opens with `claude-desktop`, and undefined otherwise. */
+/**
+ * The line an action's `lines` send to Claude Desktop: its last line, the one line of a one-line
+ * variant included, when that line opens with `claude-desktop`, and undefined otherwise.
+ */
 export function desktopLine(lines: readonly string[]): string | undefined {
-  return lines.length === 1 && readLine(lines[0])?.harness === 'claude-desktop' ? lines[0] : undefined;
+  const last = lines[lines.length - 1];
+  return last !== undefined && readLine(last)?.harness === 'claude-desktop' ? last : undefined;
+}
+
+/** How often, in milliseconds, a chain's finished file is looked for while its earlier lines run. */
+export const FINISHED_POLL_MS = 200;
+
+/**
+ * The empty file the runner writes, through its `--finished-file`, once a chain's earlier lines
+ * all finished: `file` stands in a directory of its own made afresh under the system's temporary
+ * directory, `finished` tells whether it stands now, and `remove` takes the directory away.
+ */
+export interface FinishedSignal {
+  file: string;
+  finished(): boolean;
+  remove(): void;
+}
+
+/** A new finished signal, its directory made under the system's temporary directory and its file not yet written. */
+export function finishedSignal(): FinishedSignal {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'gurita-desktop-'));
+  const file = path.join(directory, 'finished');
+  return {
+    file,
+    finished: () => fs.existsSync(file),
+    remove: () => fs.rmSync(directory, { recursive: true, force: true }),
+  };
 }
 
 /**

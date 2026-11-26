@@ -75,6 +75,7 @@ Module._load = (request, parent, isMain) =>
   request === 'vscode' ? stub : request === 'node:child_process' ? childProcess : load(request, parent, isMain);
 const runs = require('../runs') as typeof import('../runs');
 Module._load = load;
+const { FINISHED_POLL_MS } = require('../desktop') as typeof import('../desktop');
 
 const context = {
   subscriptions: [] as unknown[],
@@ -307,6 +308,166 @@ test('a prompt past the limit is not sent: the one-line claude chain starts as a
   close(terminal);
   assert.strictEqual(closedCalls, 1, "the starter's close callback is called as for any run");
   assert.deepStrictEqual(runs.runningMissions(), []);
+});
+
+/** Waits until `condition` holds, failing with `message` after two seconds. */
+async function until(condition: () => boolean, message: string): Promise<void> {
+  const deadline = Date.now() + 2000;
+  while (!condition()) {
+    if (Date.now() > deadline) {
+      assert.fail(message);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+}
+
+/** Waits a few of the finished file's poll intervals, for a check that nothing happens. */
+function pollsPass(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 4 * FINISHED_POLL_MS));
+}
+
+const EARLIER = 'claude -p "/gurita:answer-all-open-questions-with-recommendation --mission <path>" --model "fable" --effort high;';
+const CHAIN_LAST = 'claude-desktop "/gurita:complete-all-tasks --mission <path>"; # interactive';
+
+/** The finished file a chain's runner was told to write, read from its terminal's arguments. */
+function finishedFileOf(terminal: StubTerminal): string {
+  const args = terminal.args ?? [];
+  const at = args.indexOf('--finished-file');
+  assert.ok(at >= 0, 'the runner is told to write a finished file');
+  return args[at + 1];
+}
+
+test("a chain ending in a claude-desktop line runs its earlier lines as a tracked run and sends the last line as soon as they finished, before the terminal closes", async () => {
+  opened.length = 0;
+  errors.length = 0;
+  notifications.length = 0;
+  events.length = 0;
+  let closedCalls = 0;
+  const count = created.length;
+  await runs.startAction(context, '/my project', 'lib/mission_alpha/', 'Prepare and Execute tasks', [EARLIER, EARLIER, CHAIN_LAST], { path: 'lib/mission_alpha/' }, () => closedCalls++);
+  assert.strictEqual(created.length, count + 1, 'one terminal runs the earlier lines');
+  const terminal = created[created.length - 1];
+  const file = finishedFileOf(terminal);
+  assert.deepStrictEqual(terminal.args, [
+    '/extension/runner.py',
+    'chain',
+    '--close-when-finished',
+    '--finished-file',
+    file,
+    '--',
+    'claude -p "/gurita:answer-all-open-questions-with-recommendation --mission ${GURITA_PATH}" --model "fable" --effort high;',
+    'claude -p "/gurita:answer-all-open-questions-with-recommendation --mission ${GURITA_PATH}" --model "fable" --effort high;',
+  ], 'the earlier lines alone, built as every run line is; the runner never sees the Desktop word');
+  assert.ok(!(terminal.args ?? []).some((arg) => arg.includes('claude-desktop')));
+  assert.deepStrictEqual(terminal.env, { GURITA_PATH: 'lib/mission_alpha/' });
+  assert.strictEqual(terminal.name, 'Gurita: Prepare and Execute tasks (lib/mission_alpha/)');
+  assert.deepStrictEqual(runs.runningMissions(), ['lib/mission_alpha/'], 'an ordinary tracked run');
+  assert.deepStrictEqual(events, ['started lib/mission_alpha/']);
+  assert.ok(fs.existsSync(path.dirname(file)) && !fs.existsSync(file), 'the finished file is not written yet');
+  await pollsPass();
+  assert.deepStrictEqual(opened, [], 'nothing is sent while the earlier lines run');
+
+  // The runner writes the file once the earlier lines all finished; the terminal stays open.
+  fs.writeFileSync(file, '');
+  await until(() => opened.length === 1, 'the last line is sent once the earlier lines finished');
+  assert.deepStrictEqual(opened, [
+    { file: 'open', args: ['claude://code/new?q=%2Fgurita%3Acomplete-all-tasks%20--mission%20lib%2Fmission_alpha%2F&folder=%2Fmy%20project'] },
+  ], 'the prompt with its values written in and the project root as folder');
+  assert.deepStrictEqual(runs.runningMissions(), ['lib/mission_alpha/'], 'sent without waiting for the terminal to close');
+  assert.strictEqual(closedCalls, 0);
+  await until(() => !fs.existsSync(path.dirname(file)), "the signal's directory is taken away once read");
+  assert.deepStrictEqual(errors, [], 'a send that went out shows nothing');
+  assert.deepStrictEqual(notifications, []);
+
+  close(terminal);
+  await pollsPass();
+  assert.strictEqual(opened.length, 1, 'the close sends nothing more');
+  assert.strictEqual(closedCalls, 1, "the starter's close callback is called as for any run");
+  assert.deepStrictEqual(runs.runningMissions(), []);
+  assert.deepStrictEqual(events, ['started lib/mission_alpha/', 'ended ']);
+});
+
+test('a chain whose earlier lines stopped writes no finished file and sends nothing, its terminal closing as any run does', async () => {
+  opened.length = 0;
+  errors.length = 0;
+  let closedCalls = 0;
+  await runs.startAction(context, '/project', 'mission_beta/', 'Prepare tasks', [EARLIER, CHAIN_LAST], { path: 'mission_beta/' }, () => closedCalls++);
+  const terminal = created[created.length - 1];
+  const file = finishedFileOf(terminal);
+  assert.deepStrictEqual(terminal.args?.slice(-2), ['--', 'claude -p "/gurita:answer-all-open-questions-with-recommendation --mission ${GURITA_PATH}" --model "fable" --effort high;']);
+  await pollsPass();
+  close(terminal);
+  await pollsPass();
+  assert.deepStrictEqual(opened, [], 'nothing is sent to Claude Desktop');
+  assert.deepStrictEqual(errors, []);
+  assert.strictEqual(closedCalls, 1);
+  assert.strictEqual(fs.existsSync(path.dirname(file)), false, "the signal's directory is taken away at the close");
+  assert.deepStrictEqual(runs.runningMissions(), []);
+});
+
+test('a chain that finished and closed its terminal by itself before the file was looked for is sent once, at the close', async () => {
+  opened.length = 0;
+  await runs.startAction(context, '/project', 'mission_beta/', 'Prepare tasks', [EARLIER, CHAIN_LAST], { path: 'mission_beta/' });
+  const terminal = created[created.length - 1];
+  fs.writeFileSync(finishedFileOf(terminal), '');
+  close(terminal);
+  await until(() => opened.length === 1, 'the close finds the finished file and sends');
+  await pollsPass();
+  assert.strictEqual(opened.length, 1, 'sent exactly once');
+  assert.strictEqual(new URL(opened[0].args[0]).searchParams.get('q'), '/gurita:complete-all-tasks --mission mission_beta/');
+});
+
+test("a chain's failed send is shown as the one error notification, and its run is left as it stands", async () => {
+  opened.length = 0;
+  errors.length = 0;
+  failOpen = { error: new Error('Command failed: open'), stderr: 'No application knows how to open URL claude://code/new.\n' };
+  try {
+    await runs.startAction(context, '/project', 'mission_beta/', 'Prepare tasks', [EARLIER, CHAIN_LAST], { path: 'mission_beta/' });
+    const terminal = created[created.length - 1];
+    fs.writeFileSync(finishedFileOf(terminal), '');
+    await until(() => errors.length === 1, 'the failed send is shown');
+    assert.deepStrictEqual(errors, [runs.desktopSendFailed('Prepare tasks', 'No application knows how to open URL claude://code/new.')]);
+    assert.strictEqual(opened.length, 1, 'the send is the one call made');
+    assert.deepStrictEqual(runs.runningMissions(), ['mission_beta/'], 'the earlier lines\' run is still tracked until its terminal closes');
+    close(terminal);
+  } finally {
+    failOpen = undefined;
+  }
+});
+
+test("a chain whose last-line prompt is past the limit runs whole in the terminal, its last line as an interactive claude line, with one notice and no finished file", async () => {
+  opened.length = 0;
+  notifications.length = 0;
+  const values = valuesOfPromptLength(14337);
+  await runs.startAction(context, '/project', 'mission_delta/', 'two', ['echo first', DESKTOP_LINE], values);
+  const terminal = created[created.length - 1];
+  assert.deepStrictEqual(terminal.args, [
+    '/extension/runner.py',
+    'chain',
+    '--close-when-finished',
+    '--',
+    'echo first',
+    'claude "/gurita:discuss-open-question --mission ${GURITA_PATH} ${GURITA_SHORT_TITLE}. ${GURITA_NOTE}"; # interactive',
+  ]);
+  assert.deepStrictEqual(notifications, [runs.desktopPromptTooLong('two', 14337)]);
+  assert.deepStrictEqual(runs.runningMissions(), ['mission_delta/']);
+  close(terminal);
+  await pollsPass();
+  assert.deepStrictEqual(opened, [], 'nothing is sent to Claude Desktop');
+});
+
+test('a chain ending in a claude-desktop line is refused while its mission runs, as a click is', async () => {
+  opened.length = 0;
+  notifications.length = 0;
+  runs.startChain(context, '/project', 'mission_gamma/', 'review', ['echo review'], { path: 'mission_gamma/' });
+  const going = created[created.length - 1];
+  const count = created.length;
+  await runs.startAction(context, '/project', 'mission_gamma/', 'Prepare tasks', [EARLIER, CHAIN_LAST], { path: 'mission_gamma/' });
+  assert.strictEqual(created.length, count, 'no terminal is created');
+  assert.deepStrictEqual(notifications, [runs.ALREADY_RUNNING]);
+  close(going);
+  await pollsPass();
+  assert.deepStrictEqual(opened, []);
 });
 
 const LOOP_ARGS = ['/extension/runner.py', 'loop', '--mission', 'mission_gamma/', '--', '<single-task line>'];

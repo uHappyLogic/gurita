@@ -554,7 +554,7 @@ test('only a claude or agy line carrying both --model and --effort gets model an
       assert.ok(source !== undefined);
       assert.deepStrictEqual(
         variant.editors,
-        variant.lines.map((line, index) => lineEditor(line, source.singleLine, linePlace(source, index)) ?? null),
+        variant.lines.map((line, index) => lineEditor(line, linePlace(source, index) === 'last', linePlace(source, index)) ?? null),
         `${recipe.name}: one editor or null per line, each given its place`,
       );
     }
@@ -640,7 +640,7 @@ test("a harness pick with a form stores the line rewritten onto that harness in 
       ['default', 'shipped', ['claude -p "/gurita:finish-mission --mission <path>" --dangerously-skip-permissions --model "opus" --effort high;']],
       ['custom 1', 'stored', ['claude "/gurita:finish-mission --mission <path>" --dangerously-skip-permissions --model "opus" --effort high; # interactive']],
     ], 'the shipped variant stays listed, the interactive line stored as custom 1');
-    assert.ok(byName(read(), 'Finish mission').variants[1].singleLine, 'custom 1 is still a variant of one line');
+    assert.strictEqual(byName(read(), 'Finish mission').variants[1].lines.length, 1, 'custom 1 is still a variant of one line');
     // Execute tasks' interactive line made headless on Antigravity.
     replaceLineHarness(file, shipped, 'Execute tasks', { name: 'Normal difficulty', origin: 'shipped' }, 0, 'agy', agy, 'headless');
     assert.deepStrictEqual(byName(read(), 'Execute tasks').variants[2].lines, [
@@ -686,12 +686,12 @@ test("a harness pick with a form stores the line rewritten onto that harness in 
   });
 });
 
-test('the harness dropdown offers Claude Desktop on the line of a variant holding exactly one line, headless or interactive, and on no line of a chain or single-task line', () => {
+test("the harness dropdown offers Claude Desktop on a variant's last line, headless or interactive, a chain's included, and on no earlier line of a chain or single-task line", () => {
   const all = ['claude', 'antigravity', 'codex'];
   const withDesktop = [...all, 'claude-desktop'];
   const interactive = 'claude "/gurita:complete-all-tasks --mission <path>" --dangerously-skip-permissions --model "opus" --effort high; # interactive';
   assert.deepStrictEqual(lineEditor(interactive, true), { harness: 'claude', model: 'opus', effort: 'high', harnesses: withDesktop });
-  assert.deepStrictEqual(lineEditor(interactive), { harness: 'claude', model: 'opus', effort: 'high', harnesses: all }, 'a line of a chain is not offered Claude Desktop');
+  assert.deepStrictEqual(lineEditor(interactive), { harness: 'claude', model: 'opus', effort: 'high', harnesses: all }, 'an earlier line of a chain is not offered Claude Desktop');
   assert.deepStrictEqual(
     lineEditor("codex '$gurita:complete-all-tasks --mission <path>' -m gpt-5.5 -c model_reasoning_effort=high; # interactive", true)?.harnesses,
     withDesktop,
@@ -704,7 +704,7 @@ test('the harness dropdown offers Claude Desktop on the line of a variant holdin
     "codex exec '$gurita:finish-mission --mission <path>' -m gpt-5.5;",
   ]) {
     assert.deepStrictEqual(lineEditor(line, true)?.harnesses, withDesktop, `the headless ${line} is offered Claude Desktop`);
-    assert.deepStrictEqual(lineEditor(line)?.harnesses, all, `${line} on a line of a chain is not`);
+    assert.deepStrictEqual(lineEditor(line)?.harnesses, all, `${line} on an earlier line of a chain is not`);
   }
   assert.deepStrictEqual(
     lineEditor('claude -p "/gurita:finish-mission --mission <path>" --model "opus" --effort high; # interactive', true)?.harnesses,
@@ -724,6 +724,11 @@ test('the harness dropdown offers Claude Desktop on the line of a variant holdin
     }
   }
   assert.deepStrictEqual(offered, [
+    'First run/default/3',
+    'Approve all standing recommendations and review again/default/3',
+    'Prepare tasks/default/1',
+    'Prepare and Execute tasks/Normal difficulty/2',
+    'Prepare and Execute tasks/Critical tasks/2',
     'Execute tasks/Normal difficulty/0',
     'Execute tasks/Critical tasks/0',
     'Finish mission/default/0',
@@ -736,7 +741,19 @@ test('the harness dropdown offers Claude Desktop on the line of a variant holdin
     'define-mission-goal/default/0',
     'init-mission-base-workflow/default/0',
     'capture-mission-principle-updates/default/0',
-  ], "every one-line variant's line, headless or interactive, is offered Claude Desktop, and no line of a chain is");
+  ], "every variant's last line, headless or interactive, a chain's and a one-line variant's alike, is offered Claude Desktop, and no earlier line of a chain is");
+  const firstRun = settingsRecipes(shipped, emptyVariantStore(), '/home/x/.gurita/variants.json', []).find((recipe) => recipe.name === 'First run');
+  assert.deepStrictEqual(
+    firstRun?.variants[0].editors.map((editor) => editor?.harnesses),
+    [all, all, all, withDesktop],
+    "First run's last line is offered Claude Desktop, its three earlier lines the three CLIs alone",
+  );
+  assert.deepStrictEqual(
+    firstRun?.variants[0].editors[3],
+    { harness: 'claude', model: 'fable', effort: 'xhigh', harnesses: withDesktop, form: 'interactive', forms: ['headless', 'interactive'] },
+  );
+  const prepare = settingsRecipes(shipped, emptyVariantStore(), '/home/x/.gurita/variants.json', []).find((recipe) => recipe.name === 'Prepare tasks');
+  assert.deepStrictEqual(prepare?.variants[0].editors[1]?.harnesses, withDesktop, "a chain's headless last line is offered it too");
   const finish = settingsRecipes(shipped, emptyVariantStore(), '/home/x/.gurita/variants.json', []).find((recipe) => recipe.name === 'Finish mission');
   assert.deepStrictEqual(
     finish?.variants[0].editors[0],
@@ -764,7 +781,7 @@ test('outside a local macOS window no line editor offers Claude Desktop, a line 
         variant.editors.flatMap((editor, index) => (editor?.harnesses?.includes('claude-desktop') ? [`${recipe.name}/${variant.name}/${index}`] : [])),
       ),
     );
-  assert.strictEqual(offered(true).length, 12, 'offered, the twelve one-line variants offer it');
+  assert.strictEqual(offered(true).length, 17, "offered, the last lines of the five chains' variants and of the twelve one-line variants offer it");
   assert.deepStrictEqual(offered(false), [], 'not offered, no line editor offers it');
   const execute = settingsRecipes(shipped, store, '/home/x/.gurita/variants.json', [], false).find((recipe) => recipe.name === 'Execute tasks');
   assert.deepStrictEqual(
@@ -778,7 +795,7 @@ test('outside a local macOS window no line editor offers Claude Desktop, a line 
   );
 });
 
-test('a Claude Desktop pick stores the line rewritten onto claude-desktop as a custom N beside the variant, and a line of a chain or a single-task line is refused', () => {
+test("a Claude Desktop pick stores the line rewritten onto claude-desktop as a custom N beside the variant, a chain's last line included, and an earlier line of a chain or a single-task line is refused", () => {
   withStore((file) => {
     const shipped = parseShippedRecipes(fs.readFileSync(SHIPPED_RECIPES, 'utf8'), SHIPPED_RECIPES);
     const none = { models: [], efforts: [] };
@@ -793,7 +810,7 @@ test('a Claude Desktop pick stores the line rewritten onto claude-desktop as a c
     ], 'the shipped variants stay listed, the pick added as custom 1');
     assert.deepStrictEqual(execute[2].lines, ['claude-desktop "/gurita:complete-all-tasks --mission <path>"; # interactive']);
     assert.deepStrictEqual(execute[2].from, { name: 'Normal difficulty', origin: 'shipped' });
-    assert.ok(execute[2].singleLine, 'the custom variant is still a variant of one line');
+    assert.strictEqual(execute[2].lines.length, 1, 'the custom variant is still a variant of one line');
     assert.deepStrictEqual(byName(read(), 'discuss-open-question').variants.map((each) => [each.name, each.lines]), [
       ['default', ['claude "/gurita:discuss-open-question --mission <path> <Short Title>. <note>" --dangerously-skip-permissions --model "fable" --effort xhigh; # interactive']],
       ['custom 1', ['claude-desktop "/gurita:discuss-open-question --mission <path> <Short Title>. <note>"; # interactive']],
@@ -807,18 +824,50 @@ test('a Claude Desktop pick stores the line rewritten onto claude-desktop as a c
       'the rewritten lines are stored in the variant store',
     );
     const before = fs.readFileSync(file, 'utf8');
-    refused(() => replaceLineHarness(file, shipped, 'First run', { name: 'default', origin: 'shipped' }, 3, 'claude-desktop', none), /only a variant of one line can/);
+    refused(() => replaceLineHarness(file, shipped, 'First run', { name: 'default', origin: 'shipped' }, 2, 'claude-desktop', none), /only a variant's last line can/);
     refused(
-      () => replaceLineHarness(file, shipped, 'Prepare and Execute tasks', { name: 'Normal difficulty', origin: 'shipped' }, 2, 'claude-desktop', none),
-      /only a variant of one line can/,
+      () => replaceLineHarness(file, shipped, 'Prepare and Execute tasks', { name: 'Normal difficulty', origin: 'shipped' }, 1, 'claude-desktop', none),
+      /only a variant's last line can/,
     );
-    refused(() => replaceLineHarness(file, shipped, 'Prepare tasks', { name: 'default', origin: 'shipped' }, 1, 'claude-desktop', none), /only a variant of one line can/);
+    refused(() => replaceLineHarness(file, shipped, 'Prepare tasks', { name: 'default', origin: 'shipped' }, 0, 'claude-desktop', none), /only a variant's last line can/);
     for (const name of ['Single task with Opus High (Claude Code)', 'Single task with Opus High (Antigravity)', 'Single task with GPT-6-Luna High (Codex)']) {
       refused(
         () => replaceLineHarness(file, shipped, name, { name: 'default', origin: 'shipped' }, 0, 'claude-desktop', none),
         /a single-task line and a line of a looped recipe cannot go to Claude Desktop/,
       );
     }
+    assert.strictEqual(fs.readFileSync(file, 'utf8'), before, 'a refused pick writes nothing');
+  });
+});
+
+test("a Claude Desktop pick on a chain's last line stores the chain as a custom N, its earlier lines unchanged and its last line rewritten onto claude-desktop", () => {
+  withStore((file) => {
+    const shipped = parseShippedRecipes(fs.readFileSync(SHIPPED_RECIPES, 'utf8'), SHIPPED_RECIPES);
+    const none = { models: [], efforts: [] };
+    const read = (): Recipe[] => overlayVariantStore(shipped, readVariantStore(file), file);
+    const firstRun = byName(shipped, 'First run').variants[0].lines;
+    replaceLineHarness(file, shipped, 'First run', { name: 'default', origin: 'shipped' }, 3, 'claude-desktop', none);
+    const stored = byName(read(), 'First run').variants;
+    assert.deepStrictEqual(stored.map((each) => [each.name, variantOrigin(each)]), [
+      ['default', 'shipped'],
+      ['custom 1', 'stored'],
+    ], 'the shipped chain stays listed, the pick added as custom 1');
+    assert.deepStrictEqual(stored[1].lines, [
+      ...firstRun.slice(0, 3),
+      'claude-desktop "/gurita:recommend-all-open-questions --mission <path>"; # interactive',
+    ], "the earlier lines are kept, the last made a Desktop line, its model, effort, and bypass flag dropped");
+    // A chain's headless last line is made interactive on Claude Desktop.
+    replaceLineHarness(file, shipped, 'Prepare tasks', { name: 'default', origin: 'shipped' }, 1, 'claude-desktop', none);
+    assert.deepStrictEqual(byName(read(), 'Prepare tasks').variants[1].lines, [
+      byName(shipped, 'Prepare tasks').variants[0].lines[0],
+      'claude-desktop "/gurita:derive-tasks --mission <path>"; # interactive',
+    ]);
+    // A Desktop pick of a headless form is still refused on a chain's last line.
+    const before = fs.readFileSync(file, 'utf8');
+    refused(
+      () => replaceLineHarness(file, shipped, 'Prepare and Execute tasks', { name: 'Normal difficulty', origin: 'shipped' }, 2, 'claude-desktop', none, 'headless'),
+      /Claude Desktop takes the interactive form alone/,
+    );
     assert.strictEqual(fs.readFileSync(file, 'utf8'), before, 'a refused pick writes nothing');
   });
 });
@@ -835,7 +884,7 @@ test("a Claude Desktop pick on a shipped one-line headless recipe stores its lin
       ['custom 1', 'stored', ['claude-desktop "/gurita:finish-mission --mission <path>"; # interactive']],
     ], 'the shipped variant stays listed, the Desktop line stored as custom 1');
     assert.deepStrictEqual(finish[1].from, { name: 'default', origin: 'shipped' });
-    assert.ok(finish[1].singleLine && !finish[1].singleTask, 'custom 1 is a variant of one line');
+    assert.ok(finish[1].lines.length === 1 && !finish[1].singleTask, 'custom 1 is a variant of one line');
     const expected: [string, string][] = [
       ['answer-open-question', 'claude-desktop "/gurita:answer-open-question --mission <path> <Short Title>. <answer text>"; # interactive'],
       ['answer-open-question-with-alternative', 'claude-desktop "/gurita:answer-open-question-with-alternative --mission <path> <Short Title>. <Alternative Id>"; # interactive'],

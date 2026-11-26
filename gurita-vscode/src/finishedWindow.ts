@@ -24,8 +24,8 @@
 // argument with no `--mission`, so nothing is typed; the shipped line is an interactive one, since
 // the skill asks for one confirmation before it commits. The run starts at the project root and is
 // held under the finished mission's path, so a second click while it is going starts nothing and
-// reveals its terminal; a variant of one line opening with `claude-desktop` is sent to Claude
-// Desktop instead, through `startAction` (`runs.ts`), and holds no run. A button whose recipe cannot be read or run is posted with no entry and its
+// reveals its terminal; a variant whose last line opens with `claude-desktop` sends that line to
+// Claude Desktop instead, through `startAction` (`runs.ts`), a variant of that one line holding no run. A button whose recipe cannot be read or run is posted with no entry and its
 // click tells why in an error notification. No serializer is registered for its view type, so a
 // window open before a restart or a window reload is not restored.
 
