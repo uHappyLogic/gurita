@@ -2,6 +2,18 @@
 
 The release notes of Gurita for VS Code, one entry per version published to the Visual Studio Marketplace and Open VSX, newest first.
 
+## 0.4.0 — 2026-11-26
+
+### Claude Desktop harness
+
+- Claude Desktop joins Harnesses as a fourth harness, with an Enabled or Disabled switch and a check that the Claude Desktop app is installed. It is offered only in a local macOS window.
+- A recipe line opening with `claude-desktop` runs in Claude Desktop. The line editor offers `Claude Desktop interactive` on the last line of any variant that is neither single-task nor looped, dropping the model, effort, and bypass values Desktop does not take.
+- The harness dropdown now picks a harness together with its form, switching a line between headless and interactive for Claude Code, Antigravity, and Codex. Interactive forms are offered on a variant's last line only.
+- A one-line Desktop action opens a new Claude Desktop session in the project folder with the prompt filled in. No run is tracked, and a failed send shows one error message.
+- A chain ending in a Desktop line runs its earlier lines in a tracked terminal run, then sends the last line to Claude Desktop once every earlier line has run. A stopped chain sends nothing.
+- A prompt longer than Claude Desktop's 14,336-character limit runs as an interactive `claude` session in a VS Code terminal instead, with a notice saying why.
+- The usage reference documents Claude Desktop: the harness row, the line word, the harness and form dropdown, sending, the chain hand-off, and the long-prompt fallback.
+
 ## 0.3.0 — 2026-11-25
 
 ### Tracker improvements and next release
