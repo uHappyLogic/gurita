@@ -22,7 +22,9 @@ form, so an extension tag never stands in for a plugin release.
 Nothing is written, committed, pushed, tagged, or published until every gate below has
 passed and the release notes have been composed. The pre-flight and version gates (steps 2
 and 3) are hard stops: on failure, report the specific reason and exit, having changed
-nothing. Never work around a gate, and never ask the maintainer to waive one.
+nothing tracked and nothing published. The one write before step 6 is step 2g's refresh of
+each selected host's installed plugin copy, which touches no tracked file. Never work around
+a gate, and never ask the maintainer to waive one.
 
 The release notes live in the repository: the `Release: <VERSION>` commit prepends them to
 `CHANGELOG.md` as the entry `## <VERSION> — <YYYY-MM-DD>`, and from that commit on the
@@ -107,7 +109,8 @@ git describe --tags --abbrev=0 --match '[0-9]*' --exclude=<VERSION>
 Run all seven checks. Each one blocks a route by which the release would tag something other
 than a fresh build of committed `core/`, publish into a place that does not exist or cannot
 run its traffic workflow, or ship any host's integration that host's installed CLI no longer
-runs, so any failure stops the run. None of them writes anything.
+runs, so any failure stops the run. None of them writes anything tracked. The only write is
+check g's refresh of the installed copies it is about to test, made outside the tracked tree.
 
 **a. The tracked working tree is clean.**
 
@@ -293,7 +296,57 @@ copy, and each pytest process seeds its fixture projects under a temporary direc
 own. A run takes minutes, its host's CLI driving real sessions, so running the hosts together
 makes the check as long as its slowest host rather than the sum of all of them.
 
-First make one directory for the run's logs, and call the path it prints `<LOG_DIR>`:
+**Refresh every selected host's installed copy first, always.** The suite stops before any
+test unless the copy a host's CLI loads equals that host's plugin directory in the committed
+built tree, file for file, and it never updates a copy itself. So before every run, bring each
+selected host's copy up to the committed tree the run is checking, at the current `VERSION`,
+since the release commit has not been made yet. Do this unattended, without asking, on every
+run, a resumption included. Never refresh an unselected host.
+
+First delete the git-ignored bytecode caches under `hosts/`. The suite compares every file in
+the working tree, ignored ones included, so a stray `__pycache__/` left by running a tool from
+`hosts/` would make even a correct copy fail the comparison. They are untracked and nothing
+reads them:
+
+```bash
+find hosts -name __pycache__ -type d -prune -exec rm -rf {} +
+```
+
+Then run the refresh for each selected host, and only those:
+
+- Claude Code: re-register the checkout as the directory marketplace and install from it.
+  Both commands are idempotent, and the copy then loads in place from `hosts/claude/`:
+
+  ```bash
+  claude plugin marketplace add "$(pwd)"
+  claude plugin install gurita@gurita
+  ```
+
+- Antigravity: replace the copy at its fixed global path with the committed tree. The
+  tracked tree is clean by step 2a, so `HEAD:hosts/antigravity` is the working tree:
+
+  ```bash
+  rm -rf ~/.gemini/config/plugins/gurita
+  mkdir -p ~/.gemini/config/plugins/gurita
+  git archive --format=tar HEAD:hosts/antigravity | tar -x -C ~/.gemini/config/plugins/gurita
+  ```
+
+- Codex: point the `gurita` marketplace at the checkout's `hosts/codex/`, then reinstall.
+  `marketplace add` refuses a marketplace already added from another source (such as the
+  published `gurita-codex` Git repository), so remove it first. If no marketplace was
+  registered, `remove` fails, which is harmless:
+
+  ```bash
+  codex plugin marketplace remove gurita || true
+  codex plugin marketplace add "$(pwd)/hosts/codex"
+  codex plugin add gurita@gurita
+  ```
+
+Run each host's commands one at a time and read their output. A non-zero exit from any
+command other than Codex's `remove` stops the release: report the host, the command, and its
+output. The suite's own comparison then confirms each refresh before any test runs.
+
+Then make one directory for the run's logs, and call the path it prints `<LOG_DIR>`:
 
 ```bash
 mktemp -d
@@ -329,11 +382,13 @@ failing tests, or the one `host suite prerequisite missing:` line the suite prin
 test when that host's CLI is not on `PATH`, the CLI reports no installed copy, or the copy is
 missing or differs from that host's plugin directory in the committed built tree (a fresh
 build, by step e) — `hosts/claude/`, `hosts/antigravity/`, or `hosts/codex/plugins/gurita/`.
-The remedy is the maintainer's, outside this skill — fix the integration, or bring the
-installed copy up to date by the host's documented install, as that line says — then re-run
-`/release-plugin <VERSION>`. The check keeps this step's no-write rule: the suite writes
-nothing to any installation it drives, and every process it starts runs in a seeded copy of
-the fixture project under a temporary directory, so nothing tracked changes.
+A copy that still differs after the refresh above means the refresh did not take, so report
+the refresh commands' output beside the stop line. The remedy is the maintainer's, outside
+this skill: fix the integration, or fix whatever kept the refresh from landing. Then re-run
+`/release-plugin <VERSION>`, which refreshes again. Apart from the refresh, the check writes
+nothing: the suite writes nothing to any installation it drives, and every process it starts
+runs in a seeded copy of the fixture project under a temporary directory, so nothing tracked
+changes.
 
 ### 3. Validate the version argument
 
