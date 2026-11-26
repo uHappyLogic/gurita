@@ -2,6 +2,33 @@
 
 Each entry is the notes of that version's [GitHub release](https://github.com/uHappyLogic/gurita/releases), verbatim, newest first, each prepended by `/release-plugin` in its `Release: <VERSION>` commit.
 
+## 2.1.0 — 2026-11-26
+
+### README knowledge tree
+
+- The repository's guidance is now a knowledge tree: a small root `CLAUDE.md` (still read through its `AGENTS.md` symlink) holding only what binds everywhere, and one `README.md` node per folder carrying that folder's rules, each with its reason and retired forms, reached through pointer lines of one fixed form.
+- The four `docs/` pages were rewritten as user content only, with the fixed console lines moved out of the skill reference into `tests/fixed_console_lines.tsv`.
+- A new test checks that every pointer resolves, every folder is covered, and every node keeps its shape and stays within its size budget.
+
+### Mechanical issues
+
+- Short Titles, alternative ids, task titles, and mission scopes are refused at creation when they hold characters that would break the shell arguments, file names, or separators they are later copied into.
+- Commits now record paths already removed or moved with `git rm` or `git mv`, and commit bodies and project paths pass through quoted heredocs, so their text is never mangled by the shell.
+- The fold tool refuses bodies holding `## ` or `### ` heading lines, and the hand-answer and discuss skills split their text on the first dot-space separator.
+- Completing a task can now revise a later queued task's brief, through the task-list tool's new `replace` subcommand.
+- The missions tool's `tasks` query takes `--bodies N`, which bounds how much of the completed-task record readers pull in, and `/discuss-mission-goal` reads that record in two tiers.
+- On Claude Code, the alternatives pass resends any dispatch the subagent limit refused, and the completion agent always ends its return with a bare final token.
+
+### VS Code extension draft revision
+
+- The VS Code extension design draft in `ideas/vscode_extension.md` now settles all its open questions, covering the extension's place in the repository, its name, its single-pane interface, its recipes, its bundled runner, and a looped task run.
+
+### ASCII art arms banner
+
+- The root README and every host's README now open with an ASCII-art banner of eight octopus arms, in violet and slate that read on both GitHub's light and dark themes, copied into every host tree beside its README.
+
+**Full Changelog**: https://github.com/uHappyLogic/gurita/compare/2.0.0...2.1.0
+
 ## 2.0.0 — 2026-11-18
 
 ### Rename Cairn to Gurita

@@ -1,6 +1,6 @@
 [project]
 name = "gurita-tooling"
-version = "2.0.0"
+version = "2.1.0"
 description = "Development tooling for the Gurita plugin (host build and version script)"
 requires-python = ">=3.11"
 dependencies = [
