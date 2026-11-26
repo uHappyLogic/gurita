@@ -920,6 +920,59 @@ test('a Claude Desktop pick in the harness dropdown stores the line rewritten as
   }
 });
 
+test("a harness pick with its form in the dropdown stores the line rewritten into that form as a custom N variant, and an interactive pick on a line that is not last writes nothing", async () => {
+  const window = openWindow();
+  const store = path.join(home, '.gurita', 'variants.json');
+  const kept = fs.existsSync(store) ? fs.readFileSync(store, 'utf8') : undefined;
+  try {
+    let from = window.posted.length;
+    sendSettings({ type: 'ready' });
+    await until(() => postedOf(window, 'variants', from).length > 0, 'the ready message is answered');
+    type Listed = { recipes: { name: string; variants: { name: string; lines: string[]; editors: ({ form?: string; forms?: string[] } | null)[] }[] }[] };
+    const firstRun = (postedOf(window, 'variants', from)[0].variants as Listed).recipes.find((each) => each.name === 'First run');
+    assert.deepStrictEqual(
+      firstRun?.variants[0].editors.map((editor) => [editor?.form, editor?.forms]),
+      [
+        ['headless', ['headless']],
+        ['headless', ['headless']],
+        ['headless', ['headless']],
+        ['interactive', ['headless', 'interactive']],
+      ],
+      'the window is posted each line with its form and the forms its dropdown offers',
+    );
+    from = window.posted.length;
+    sendSettings({ type: 'replaceLineHarness', recipe: 'First run', variant: { name: 'default', origin: 'shipped' }, line: 0, harness: 'claude', form: 'interactive' });
+    sendSettings({ type: 'replaceLineHarness', recipe: 'First run', variant: { name: 'default', origin: 'shipped' }, line: 1, harness: 'antigravity', form: 'interactive' });
+    sendSettings({ type: 'replaceLineHarness', recipe: 'Finish mission', variant: { name: 'default', origin: 'shipped' }, line: 0, harness: 'claude', form: 'sideways' });
+    sendSettings({ type: 'replaceLineHarness', recipe: 'Finish mission', variant: { name: 'default', origin: 'shipped' }, line: 0, harness: 'claude', form: 'headless' });
+    sendSettings({ type: 'replaceLineHarness', recipe: 'Single task with Opus High (Claude Code)', variant: { name: 'default', origin: 'shipped' }, line: 0, harness: 'claude', form: 'interactive' });
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    assert.strictEqual(
+      fs.existsSync(store) ? fs.readFileSync(store, 'utf8') : undefined,
+      kept,
+      "an interactive pick on a line that is not last, a form not offered, the entry the line stands on, or a form on a single-task line writes nothing",
+    );
+    assert.deepStrictEqual(postedOf(window, 'variants', from), [], 'and posts nothing');
+    from = window.posted.length;
+    sendSettings({ type: 'replaceLineHarness', recipe: 'Finish mission', variant: { name: 'default', origin: 'shipped' }, line: 0, harness: 'claude', form: 'interactive' });
+    await until(() => postedOf(window, 'variants', from).length > 0, 'the pick is posted to the window');
+    const stored = JSON.parse(fs.readFileSync(store, 'utf8')).variants as { recipe: string; name: string; lines: string[] }[];
+    assert.deepStrictEqual(
+      stored.filter((each) => each.recipe === 'Finish mission').map((each) => [each.name, each.lines]),
+      [['custom 1', ['claude "/gurita:finish-mission --mission <path>" --dangerously-skip-permissions --model "opus" --effort high; # interactive']]],
+      'the line rewritten into the interactive form is stored as custom 1 in the variant store',
+    );
+    const finish = (postedOf(window, 'variants', from)[0].variants as Listed).recipes.find((each) => each.name === 'Finish mission');
+    assert.deepStrictEqual(finish?.variants.map((each) => [each.name, each.editors[0]?.form]), [['default', 'headless'], ['custom 1', 'interactive']], 'the shipped variant stays listed beside its custom');
+  } finally {
+    if (kept === undefined) {
+      fs.rmSync(store, { force: true });
+    } else {
+      fs.writeFileSync(store, kept);
+    }
+  }
+});
+
 test('outside a local macOS window the window is told Claude Desktop is not offered, no line editor offers it, and a pick of it writes nothing', async () => {
   const window = openWindow();
   const store = path.join(home, '.gurita', 'variants.json');

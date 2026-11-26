@@ -519,6 +519,10 @@ const GAMMA = 'pkg/mission_gamma/';
 
 /** The harnesses a headless line's harness dropdown offers, by key. */
 const ALL_HARNESSES = ['claude', 'antigravity', 'codex'];
+/** What a headless line's editor under Variants adds: its form, and the forms offered on a variant's last line, both. */
+const LAST_LINE = { form: 'headless', forms: ['headless', 'interactive'] };
+/** And on an earlier line, headless alone. */
+const EARLIER_LINE = { form: 'headless', forms: ['headless'] };
 
 /** The shipped file the pane reads in the recipe-list test: one recipe section, as the reader takes it. */
 const SHIPPED_TEXT = `# Snippets
@@ -1419,7 +1423,7 @@ codex exec "/gurita:finish-mission --mission <path>" -m gpt-5.5 -c model_reasoni
     // A Codex line's effort dropdown offers Codex's effort list, and a pick rewrites the override's level.
     const listedCodex = (await postedVariants(opened)).find((each) => each.name === 'Codex finish');
     assert.ok(listedCodex !== undefined);
-    assert.deepStrictEqual((listedCodex.variants as EditedVariant[]).map((each) => each.editors), [[{ harness: 'codex', model: 'gpt-5.5', effort: 'high', harnesses: ALL_HARNESSES }]]);
+    assert.deepStrictEqual((listedCodex.variants as EditedVariant[]).map((each) => each.editors), [[{ harness: 'codex', model: 'gpt-5.5', effort: 'high', harnesses: ALL_HARNESSES, ...LAST_LINE }]]);
     send({ type: 'replaceLineValue', recipe: 'Codex finish', variant: { name: listedCodex.variants[0].name, origin: 'own' }, line: 0, kind: 'effort', value: 'max' });
     await new Promise((resolve) => setTimeout(resolve, 50));
     assert.strictEqual(fs.readFileSync(store, 'utf8'), before, 'an effort the Codex list does not offer writes nothing');
@@ -1429,7 +1433,7 @@ codex exec "/gurita:finish-mission --mission <path>" -m gpt-5.5 -c model_reasoni
     assert.ok(changedCodex !== undefined);
     const custom = changedCodex.variants[changedCodex.variants.length - 1] as EditedVariant;
     assert.deepStrictEqual(custom.lines, ['codex exec "/gurita:finish-mission --mission <path>" -m gpt-5.5 -c model_reasoning_effort=low;']);
-    assert.deepStrictEqual(custom.editors, [{ harness: 'codex', model: 'gpt-5.5', effort: 'low', harnesses: ALL_HARNESSES }]);
+    assert.deepStrictEqual(custom.editors, [{ harness: 'codex', model: 'gpt-5.5', effort: 'low', harnesses: ALL_HARNESSES, ...LAST_LINE }]);
   } finally {
     process.env.HOME = home;
   }
@@ -1673,11 +1677,11 @@ test("a pick in a line's dropdown on a shipped variant leaves it unchanged besid
     const shippedLines = listed[0].lines;
     assert.deepStrictEqual(listed.map((each) => [each.name, each.origin, each.editors]), [
       ['Claude Code', 'shipped', [
-        { harness: 'claude', model: 'fable', effort: 'xhigh', harnesses: ALL_HARNESSES },
-        { harness: 'claude', model: 'opus', effort: 'high', harnesses: ALL_HARNESSES },
-        { harness: 'claude', model: 'fable', effort: 'xhigh', harnesses: ALL_HARNESSES },
+        { harness: 'claude', model: 'fable', effort: 'xhigh', harnesses: ALL_HARNESSES, ...EARLIER_LINE },
+        { harness: 'claude', model: 'opus', effort: 'high', harnesses: ALL_HARNESSES, ...EARLIER_LINE },
+        { harness: 'claude', model: 'fable', effort: 'xhigh', harnesses: ALL_HARNESSES, ...LAST_LINE },
       ]],
-      ['Antigravity', 'shipped', [{ harness: 'antigravity', model: 'gemini-4-argon', effort: 'medium', harnesses: ALL_HARNESSES }]],
+      ['Antigravity', 'shipped', [{ harness: 'antigravity', model: 'gemini-4-argon', effort: 'medium', harnesses: ALL_HARNESSES, ...LAST_LINE }]],
       ['default', 'own', [null]],
     ], 'each line with both flags gets its editor, the own line carrying --model alone none');
     assert.deepStrictEqual(listed.map((each) => [each.name, each.rows]), [
@@ -1704,7 +1708,7 @@ test("a pick in a line's dropdown on a shipped variant leaves it unchanged besid
     ], 'the shipped variant stays listed and the default, custom 1 beside it');
     assert.deepStrictEqual(shown.variants[0].lines, shippedLines, 'the shipped variant is unchanged');
     assert.deepStrictEqual(shown.variants[3].lines, [shippedLines[0], changed, shippedLines[2]]);
-    assert.deepStrictEqual(shown.variants[3].editors[1], { harness: 'claude', model: 'fable', effort: 'high', harnesses: ALL_HARNESSES });
+    assert.deepStrictEqual(shown.variants[3].editors[1], { harness: 'claude', model: 'fable', effort: 'high', harnesses: ALL_HARNESSES, ...EARLIER_LINE });
     assert.deepStrictEqual(shown.variants[3].from, { name: 'Claude Code', origin: 'shipped' });
     assert.deepStrictEqual(shown.entry.variants.map((each) => each.name), ['Claude Code', 'Antigravity', 'default', 'custom 1'], "the mission page's dropdown lists custom 1 last");
     assert.strictEqual(selectedName(shown.entry), 'Claude Code', 'custom 1 is not selected');
@@ -1816,7 +1820,7 @@ test("a pick in a line's harness dropdown rewrites the line onto the picked harn
     ], 'a shipped variant gets a custom 1 holding the rewritten line beside it');
     assert.deepStrictEqual(shown.variants.map((each) => [each.name, each.origin]), [['Claude Code', 'shipped'], ['Antigravity', 'shipped'], ['default', 'own'], ['custom 1', 'stored']]);
     assert.deepStrictEqual(shown.variants[0].lines, shippedLines, 'the shipped variant is unchanged');
-    assert.deepStrictEqual(shown.variants[3].editors[0], { harness: 'antigravity', model: 'gemini-4-argon', effort: 'medium', harnesses: ALL_HARNESSES }, "the redrawn row's dropdowns stand on Antigravity");
+    assert.deepStrictEqual(shown.variants[3].editors[0], { harness: 'antigravity', model: 'gemini-4-argon', effort: 'medium', harnesses: ALL_HARNESSES, ...EARLIER_LINE }, "the redrawn row's dropdowns stand on Antigravity");
     assert.deepStrictEqual(shown.variants[3].rows[0], { skill: 'review-mission-requirements', interactive: false, harness: 'antigravity' });
     assert.deepStrictEqual(shown.entry.lines, shippedLines, "the page's button still runs the selected shipped variant");
     const entry = await entryAfter({ type: 'selectVariant', mission: SIGMA, recipe: 'First run', variant: 'custom 1' }, SIGMA, 'First run');
@@ -1834,7 +1838,7 @@ test("a pick in a line's harness dropdown rewrites the line onto the picked harn
     shown = await pick({ type: 'replaceLineHarness', recipe: 'First run', variant: { name: 'Antigravity', origin: 'shipped' }, line: 0, harness: 'claude' });
     assert.strictEqual(shown.variants[4].name, 'custom 2');
     assert.strictEqual(shown.variants[4].lines[0], 'claude -p "/gurita:review-mission-requirements --mission <path>" --model "fable" --effort xhigh;');
-    assert.deepStrictEqual(shown.variants[4].editors[0], { harness: 'claude', model: 'fable', effort: 'xhigh', harnesses: ALL_HARNESSES });
+    assert.deepStrictEqual(shown.variants[4].editors[0], { harness: 'claude', model: 'fable', effort: 'xhigh', harnesses: ALL_HARNESSES, ...LAST_LINE });
     shown = await pick({ type: 'replaceLineHarness', recipe: 'First run', variant: copy, line: 0, harness: 'claude' });
     assert.strictEqual(shown.variants[3].lines[0], shippedLines[0], 'the way back gives the shipped line');
 
@@ -1862,7 +1866,7 @@ test("a pick in a line's harness dropdown rewrites the line onto the picked harn
     shown = await pick({ type: 'replaceLineHarness', recipe: 'First run', variant: copy, line: 0, harness: 'codex' });
     const onCodex = "codex exec '$gurita:review-mission-requirements --mission <path>' -m \"gpt-5.5\";";
     assert.strictEqual(stored().variants[0].lines[0], onCodex);
-    assert.deepStrictEqual(shown.variants[3].editors[0], { harness: 'codex', model: 'gpt-5.5', harnesses: ALL_HARNESSES }, 'a Codex line without the override gets no effort dropdown');
+    assert.deepStrictEqual(shown.variants[3].editors[0], { harness: 'codex', model: 'gpt-5.5', harnesses: ALL_HARNESSES, ...EARLIER_LINE }, 'a Codex line without the override gets no effort dropdown');
     assert.deepStrictEqual(shown.variants[3].rows[0], { skill: 'review-mission-requirements', interactive: false, harness: 'codex' });
     inputBoxes.length = 0;
 
@@ -1873,7 +1877,7 @@ test("a pick in a line's harness dropdown rewrites the line onto the picked harn
     assert.deepStrictEqual((await postedLists(effortsFrom)).codex, { models: ['gpt-5.5'], efforts: ['high'] });
     shown = await pick({ type: 'replaceLineHarness', recipe: 'First run', variant: copy, line: 1, harness: 'codex' });
     assert.strictEqual(stored().variants[0].lines[1], "codex exec '$gurita:provide-alternatives-to-all-open-questions --mission <path>' -m \"gpt-5.5\" -c model_reasoning_effort=high;");
-    assert.deepStrictEqual(shown.variants[3].editors[1], { harness: 'codex', model: 'gpt-5.5', effort: 'high', harnesses: ALL_HARNESSES });
+    assert.deepStrictEqual(shown.variants[3].editors[1], { harness: 'codex', model: 'gpt-5.5', effort: 'high', harnesses: ALL_HARNESSES, ...EARLIER_LINE });
     inputBoxes.length = 0;
 
     // Codex back to Claude Code: a line without the override takes the first listed effort, the shipped line given back.

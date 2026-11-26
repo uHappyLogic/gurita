@@ -28,17 +28,22 @@
 // `settingsRecipes`'s: every recipe but the named single-task lines, each with its listed
 // variants, its default marked, each stored one with the variant a reset returns it to, and the
 // variants a hiding record hides, and each variant's lines
-// with the line editor each one gets (`lineEditor`): only a `claude` or `agy` line carrying both
+// with the line editor each one gets (`lineEditor`), each given its place in its variant: only a `claude` or `agy` line carrying both
 // `--model` and `--effort` gets model and effort controls, and a `codex` line carrying `-m` its
 // model control and, when it also carries the override `-c model_reasoning_effort=<level>`, its
 // effort control, every other line shown as its text, read-only; one of these lines, headless or
 // interactive, a Codex one opening `codex exec` or a bare `codex '$gurita:…'`, gets a harness
 // control picking between Claude Code, Antigravity, and Codex, Claude Desktop after them on the
 // line of a variant holding exactly one line, an interactive one, in a window Claude Desktop is
-// offered in, a local macOS one, and any other Codex line keeps its harness. A harness pick (`replaceLineHarness`) rewrites the
-// line onto the picked harness as `rewriteHarness` in `lineValues.ts` does, with that harness's
-// lists as the settings view offers them, and stores the changed line as a model or effort pick
-// is stored. Each line is also posted
+// offered in, a local macOS one, and any other Codex line keeps its harness. Under Variants the
+// control picks a harness together with its form (`LineEditor.form` and `forms`): a variant's last
+// line, the one line of a one-line variant included, is offered each of the three CLIs headless
+// and interactive, and every earlier line the three headless alone, while the named single-task
+// lines and the lines of a looped recipe pick a harness alone, their form kept. A harness pick
+// (`replaceLineHarness`) rewrites the line onto the picked harness as `rewriteHarness` in
+// `lineValues.ts` does, with that harness's lists as the settings view offers them, then into the
+// picked form as `rewriteForm` does, an interactive form refused on a line that is not its
+// variant's last, and stores the changed line as a model or effort pick is stored. Each line is also posted
 // with the row it is drawn as (`lineRow`): a line of a known harness whose first command runs a
 // `gurita:` skill is drawn as the skill's name, marked interactive when the line is not headless,
 // with its harness beside it, and every other line keeps its text. The named single-task lines
@@ -53,7 +58,20 @@
 // list name a line by it alone. This module imports nothing from `vscode`.
 
 import { CLI_HARNESSES, CliHarnessKey, DESKTOP_HARNESS, HARNESSES, Harness as CheckedHarness } from './harnessCheck';
-import { HarnessOffer, LineValues, SwitchableHarness, harnessChoices, readLine, readSkill, replaceEffort, replaceModel, rewriteHarness } from './lineValues';
+import {
+  HarnessOffer,
+  LineForm,
+  LineValues,
+  SwitchableHarness,
+  harnessChoices,
+  readForm,
+  readLine,
+  readSkill,
+  replaceEffort,
+  replaceModel,
+  rewriteForm,
+  rewriteHarness,
+} from './lineValues';
 import {
   Recipe,
   Variant,
@@ -180,14 +198,27 @@ export function resettableVariants(store: VariantStore, recipe: string): ReadVar
  * lists its dropdowns offer, the model the line carries, and the effort it carries, left out for a
  * Codex line written without the effort override, which gets its model control alone, and the
  * keys of the harnesses its harness control picks between, its own among them, left out for a line
- * that gets no harness control.
+ * that gets no harness control. A line whose harness control picks a form too also carries its own
+ * form and the forms the control offers on each of the three CLIs, Claude Desktop being offered
+ * interactive alone; a line whose control picks a harness alone, keeping its form, carries neither.
  */
 export interface LineEditor {
   harness: CliHarnessKey;
   model: string;
   effort?: string;
   harnesses?: CheckedHarness['key'][];
+  /** The line's own form, `headless` or `interactive`, where its harness control picks a form too. */
+  form?: LineForm;
+  /** The forms its harness control offers on each CLI: both on a variant's last line, `headless` alone on an earlier one. */
+  forms?: LineForm[];
 }
+
+/**
+ * Where a line stands in its variant, for the forms its harness control offers: `last`, the
+ * variant's last line, the one line of a one-line variant included, offered both forms, and
+ * `earlier`, any line before it, offered the headless form alone.
+ */
+export type LinePlace = 'last' | 'earlier';
 
 /**
  * The line editor `line` gets: model and effort controls for a `claude` or `agy` line carrying
@@ -199,9 +230,13 @@ export interface LineEditor {
  * Codex line neither opening `codex exec` nor a bare `codex '$gurita:…'`. Claude Desktop is offered
  * after them only when `singleInteractive` is set, the line being the one line of a variant that
  * holds exactly one line, an interactive one (`Variant.singleInteractive`), and `rewriteHarness`
- * rewrites the line onto it, so no line of a chain and no headless line is offered it.
+ * rewrites the line onto it, so no line of a chain and no headless line is offered it. When
+ * `place` is given and the line is in one of its harness's two forms (`readForm`), the control
+ * picks the form too: the editor carries the line's form and the forms offered, both on the `last`
+ * line and `headless` alone on an `earlier` one; with no `place`, as on a named single-task line or
+ * a line of a looped recipe, or for a line in neither form, it picks a harness alone.
  */
-export function lineEditor(line: string, singleInteractive = false): LineEditor | undefined {
+export function lineEditor(line: string, singleInteractive = false, place?: LinePlace): LineEditor | undefined {
   const read = readLine(line);
   if (read === undefined || read.model === undefined) {
     return undefined;
@@ -220,6 +255,11 @@ export function lineEditor(line: string, singleInteractive = false): LineEditor 
     editor.harnesses = HARNESSES.filter(
       (each) => (choices as readonly string[]).includes(each.cli) || (desktop && each.key === DESKTOP_HARNESS.key),
     ).map((each) => each.key);
+    const form = place === undefined ? undefined : readForm(line);
+    if (form !== undefined) {
+      editor.form = form;
+      editor.forms = place === 'last' ? ['headless', 'interactive'] : ['headless'];
+    }
   }
   return editor;
 }
@@ -291,7 +331,9 @@ export interface SettingsRecipe {
  * the store `store`, read from `file`, laid over it: every recipe in the merged order, the ones only
  * the store holds after them, each with its listed variants, its default marked, each stored one
  * with the variant it was made from while that variant's lines can still be read, and the variants
- * hidden by a record. A recipe every variant of which is hidden stays listed, so its variants can
+ * hidden by a record. Each line of a variant that is neither single-task nor looped gets a harness
+ * control picking a form too, given its place in the variant (`lineEditor`), the last line both
+ * forms and every earlier line the headless one alone. A recipe every variant of which is hidden stays listed, so its variants can
  * be reset. The named single-task lines, whose default holds one headless `<Task Title>` line, are
  * left out, and so is no recipe for its stage or for a disabled harness. `fixed` names the recipes
  * the fixed-name buttons run. `desktopOffered` is whether Claude Desktop is offered in the window
@@ -317,7 +359,7 @@ export function settingsRecipes(
     if (shown === undefined || defaultVariant(shown).singleTask) {
       continue;
     }
-    const variants = settingsVariants(base, store, name, recipe, recipe?.variants ?? [], desktopOffered);
+    const variants = settingsVariants(base, store, name, recipe, recipe?.variants ?? [], desktopOffered, true);
     listed.push({ name, group: shown.group, fixed: fixed.includes(name), variants, hidden: hiddenVariants(store, name, variants) });
   }
   return listed;
@@ -327,7 +369,8 @@ export function settingsRecipes(
  * The variants `variants` of the overlaid recipe `recipe`, named `name`, as the settings view lists
  * them: each with its lines, their editors and rows, whether it is the recipe's default, and, for a
  * stored one, the variant it was made from while that variant's lines can still be read, Claude
- * Desktop offered by no line editor unless `desktopOffered` is set.
+ * Desktop offered by no line editor unless `desktopOffered` is set, and a form offered beside each
+ * harness only when `forms` is set and the variant is neither single-task nor looped (`linePlace`).
  */
 function settingsVariants(
   base: readonly Recipe[],
@@ -336,6 +379,7 @@ function settingsVariants(
   recipe: Recipe | undefined,
   variants: readonly Variant[],
   desktopOffered = true,
+  forms = false,
 ): SettingsVariant[] {
   const standing = recipe === undefined ? undefined : defaultVariant(recipe);
   return variants.map((variant): SettingsVariant => {
@@ -344,12 +388,26 @@ function settingsVariants(
     return {
       ...variantTarget(variant),
       lines: [...variant.lines],
-      editors: variant.lines.map((line) => lineEditor(line, desktopOffered && variant.singleInteractive) ?? null),
+      editors: variant.lines.map(
+        (line, index) => lineEditor(line, desktopOffered && variant.singleInteractive, forms ? linePlace(variant, index) : undefined) ?? null,
+      ),
       rows: variant.lines.map((line) => lineRow(line) ?? null),
       isDefault: variant === standing,
       ...(resettable ? { from: source } : {}),
     };
   });
+}
+
+/**
+ * The place line `index` of `variant` stands in, for the forms its harness control offers: `last`
+ * for the variant's last line and `earlier` for every line before it, and undefined for every line
+ * of a single-task variant and of a looped one, whose harness control picks no form.
+ */
+export function linePlace(variant: Variant, index: number): LinePlace | undefined {
+  if (variant.singleTask || variant.looped) {
+    return undefined;
+  }
+  return index === variant.lines.length - 1 ? 'last' : 'earlier';
 }
 
 /** The shipped and own variants of the recipe `name` a hiding record hides and no listed stored copy stands in for. */
@@ -562,16 +620,22 @@ export function replaceLineValue(
  * Rewrites line `index` of the variant `target` onto the harness `harness`, `claude`, `agy`,
  * `codex`, or `claude-desktop`, as `rewriteHarness` does with `offer`, that harness's model and
  * effort lists, which Claude Desktop does not read: the line's
- * prompt and its headless or interactive form kept, its model the first listed, and its effort kept
+ * prompt kept, its model the first listed, and its effort kept
  * where the list offers it and otherwise the first listed, a line switched onto Codex while the
- * list offers no effort carrying no effort override. The changed line is stored as a model or
+ * list offers no effort carrying no effort override. With no `form` the line keeps its headless or
+ * interactive form; with `form`, `headless` or `interactive`, the line on its harness is then
+ * rewritten into that form as `rewriteForm` does, so a pick of a line's own harness in its other
+ * form changes the form alone. The changed line is stored as a model or
  * effort pick is stored. A line whose harness control does not offer `harness` (a Codex line
  * neither opening `codex exec` nor a bare `codex '$gurita:…'`, a line without both `--model` and
  * `--effort`, a shell step), a line the variant lacks, and an offer listing no model, or no effort
- * for Claude Code or Antigravity, are refused, nothing written; a line already on `harness` writes
- * nothing. Onto Claude Desktop only the line of a variant holding exactly one line, an interactive
- * one, is rewritten, a line of a chain and a headless line refused, so a pick on a shipped,
- * project, or own variant stores the rewritten line as a `custom N` beside it.
+ * for Claude Code or Antigravity, are refused, nothing written; a line already on `harness` in the
+ * asked form writes nothing. A `form` is refused on a line of a single-task or looped variant, whose
+ * form is kept (`linePlace`), on a line in neither form, and the interactive form on a line that is
+ * not its variant's last, an earlier line of a chain made headless alone. Onto Claude Desktop, which
+ * takes the interactive form alone, only the line of a variant holding exactly one line, an
+ * interactive one, is rewritten, a line of a chain and a headless line refused, so a pick on a
+ * shipped, project, or own variant stores the rewritten line as a `custom N` beside it.
  */
 export function replaceLineHarness(
   storeFile: string,
@@ -581,6 +645,7 @@ export function replaceLineHarness(
   index: number,
   harness: SwitchableHarness,
   offer: HarnessOffer,
+  form?: LineForm,
 ): void {
   const { store, recipe } = load(storeFile, base, recipeName);
   const variant = find(recipe, target);
@@ -588,10 +653,21 @@ export function replaceLineHarness(
   if (line === undefined) {
     throw new VariantEditError(`The ${describe(target)} of the action recipe ${recipe.name} has no line ${index + 1}.`);
   }
+  const named = `Line ${index + 1} of the ${describe(target)} of the action recipe ${recipe.name}`;
   if (harness === 'claude-desktop' && !variant.singleInteractive) {
-    throw new VariantEditError(
-      `Line ${index + 1} of the ${describe(target)} of the action recipe ${recipe.name} cannot be switched onto ${harness}: only a variant of one interactive line can.`,
-    );
+    throw new VariantEditError(`${named} cannot be switched onto ${harness}: only a variant of one interactive line can.`);
+  }
+  if (harness === 'claude-desktop' && form === 'headless') {
+    throw new VariantEditError(`${named} cannot be switched onto ${harness} headless: Claude Desktop takes the interactive form alone.`);
+  }
+  const place = linePlace(variant, index);
+  if (harness !== 'claude-desktop' && form !== undefined) {
+    if (place === undefined) {
+      throw new VariantEditError(`${named} keeps its form: a single-task line and a line of a looped recipe pick a harness alone.`);
+    }
+    if (form === 'interactive' && place !== 'last') {
+      throw new VariantEditError(`${named} cannot be made interactive: only a variant's last line can.`);
+    }
   }
   let changed: string | undefined;
   try {
@@ -600,9 +676,16 @@ export function replaceLineHarness(
     throw new VariantEditError(error instanceof Error ? error.message : String(error));
   }
   if (changed === undefined) {
-    throw new VariantEditError(
-      `Line ${index + 1} of the ${describe(target)} of the action recipe ${recipe.name} cannot be switched onto ${harness}.`,
-    );
+    throw new VariantEditError(`${named} cannot be switched onto ${harness}.`);
+  }
+  if (harness !== 'claude-desktop' && form !== undefined) {
+    if (readForm(line) === undefined) {
+      throw new VariantEditError(`${named} is in neither form, so it cannot be made ${form}.`);
+    }
+    changed = rewriteForm(changed, form);
+    if (changed === undefined) {
+      throw new VariantEditError(`${named} cannot be made ${form} on ${harness}.`);
+    }
   }
   if (changed === line) {
     return;

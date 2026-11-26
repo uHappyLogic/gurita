@@ -71,9 +71,12 @@
 // shown as its text, read-only; one of these lines, headless or interactive, a Codex one opening
 // `codex exec` or a bare `codex '$gurita:…'`, gets a harness dropdown offering Claude Code,
 // Antigravity, and Codex, Claude Desktop after them on the line of a variant holding exactly one
-// line, an interactive one, and any other Codex line keeps its harness as text. A model or effort pick replaces the value the line carries
+// line, an interactive one, and any other Codex line keeps its harness as text. Under Variants the
+// dropdown picks a harness together with its form, each CLI headless and interactive on a variant's
+// last line and headless alone on every earlier line, while a named single-task line and a line of
+// a looped recipe pick a harness alone. A model or effort pick replaces the value the line carries
 // through the store's edit (`replaceLineValue`), a harness pick rewrites the line onto the picked
-// harness (`replaceLineHarness`), a shipped, project, or own variant left untouched and a `custom N` holding
+// harness and into the picked form (`replaceLineHarness`), a shipped, project, or own variant left untouched and a `custom N` holding
 // the changed line added beside it, a stored variant changed in place. The window also edits the
 // named single-task lines, each under its name with its single-task variants beneath it, through
 // the store's line edits.
@@ -130,7 +133,7 @@ import {
   readHarnessStates,
   setHarnessEnabled,
 } from './harnessSettings';
-import { HarnessOffer, SwitchableHarness } from './lineValues';
+import { HarnessOffer, LineForm, SwitchableHarness } from './lineValues';
 import { CHECK_SCRIPT, CheckResult, CliHarnessKey, HARNESSES, PLUGIN_VERSION_FILE, isCliHarnessKey, readPackagedVersion, runHarnessCheck } from './harnessCheck';
 import { desktopOfferedHere, pageShell, recipeFiles, recipesChanged, startLiveRead, startingRoot, webviewOptions } from './pane';
 import {
@@ -177,7 +180,7 @@ type SettingsPageMessage =
   | { type: 'resetVariant'; recipe: string; original: ReadVariantRef }
   | { type: 'resetVariantLines'; recipe: string; variant: VariantTarget }
   | { type: 'replaceLineValue'; recipe: string; variant: VariantTarget; line: number; kind: string; value: string }
-  | { type: 'replaceLineHarness'; recipe: string; variant: VariantTarget; line: number; harness: string }
+  | { type: 'replaceLineHarness'; recipe: string; variant: VariantTarget; line: number; harness: string; form?: string }
   | { type: 'duplicateLine'; line: string; variant: VariantTarget }
   | { type: 'renameLine'; line: string; variant: VariantTarget }
   | { type: 'deleteLine'; line: string; variant: VariantTarget }
@@ -353,7 +356,7 @@ function hookSettings(context: vscode.ExtensionContext, created: vscode.WebviewP
       } else if (message?.type === 'replaceLineValue') {
         void editLineValue(context, created, message.recipe, message.variant, message.line, message.kind, message.value);
       } else if (message?.type === 'replaceLineHarness') {
-        void editLineHarness(context, created, message.recipe, message.variant, message.line, message.harness);
+        void editLineHarness(context, created, message.recipe, message.variant, message.line, message.harness, message.form);
       } else if (message?.type === 'duplicateLine' || message?.type === 'renameLine' || message?.type === 'deleteLine') {
         void editLine(context, created, message.type, message.line, message.variant);
       } else if (message?.type === 'resetLine') {
@@ -963,16 +966,21 @@ const SWITCHABLE: readonly { key: CliHarnessKey | 'claude-desktop'; cli: Switcha
 /**
  * Rewrites line `line` of the variant `variant` of the recipe `recipe` onto the harness `harness`,
  * Claude Code, Antigravity, Codex, or, on a variant of one interactive line, Claude Desktop, whose
- * rewrite drops the line's model, effort, and bypass flag and reads no lists, picked in the line's
- * harness dropdown in the Settings window,
- * through the store's edit (`replaceLineHarness`): the line's prompt and its headless or
- * interactive form kept, its model the picked harness's first listed model, and its effort kept
+ * rewrite drops the line's model, effort, and bypass flag and reads no lists, and, where `form` is
+ * given, into that form, `headless` or `interactive`, picked in the line's harness dropdown in the
+ * Settings window,
+ * through the store's edit (`replaceLineHarness`): the line's prompt kept, its form kept where no
+ * form is given, a pick of its own harness in its other form changing the form alone and reading
+ * no lists, its model the picked harness's first listed model, and its effort kept
  * where that harness's effort list offers it and otherwise the first listed, a line switched onto
  * Codex while Codex's effort list is empty written with no effort override, stored as a model or
  * effort pick is, a shipped or own variant getting a `custom N` beside it; then posts the variant
  * list, the harness lists, and the pages again. Only a line the variant list read afresh gives a
- * harness control is rewritten, and only onto another harness that control offers: anything else
- * writes nothing. An edit the store refuses, a picked harness listing no model, or no effort for
+ * harness control is rewritten, and only onto an entry that control offers other than the one the
+ * line stands on: a harness among its harnesses, and, on a line whose control picks a form too, a
+ * form among its forms, a message naming no form taken as naming the line's own, Claude Desktop
+ * taken interactive alone; anything else writes nothing. An
+ * edit the store refuses, a picked harness listing no model, or no effort for
  * Claude Code or Antigravity, or lists or a store that cannot be read or written, is told in an
  * error notification.
  */
@@ -983,6 +991,7 @@ async function editLineHarness(
   variant: unknown,
   line: unknown,
   harness: unknown,
+  form?: unknown,
 ): Promise<void> {
   const named = variantTargetOf(variant);
   const picked = SWITCHABLE.find((each) => each.key === harness);
@@ -993,7 +1002,8 @@ async function editLineHarness(
     typeof line !== 'number' ||
     !Number.isInteger(line) ||
     line < 0 ||
-    picked === undefined
+    picked === undefined ||
+    (form !== undefined && form !== 'headless' && form !== 'interactive')
   ) {
     return;
   }
@@ -1003,17 +1013,24 @@ async function editLineHarness(
     return;
   }
   const editor = listedEditor(context, read, recipe, named, line);
-  if (
-    editor === undefined ||
-    editor === null ||
-    editor.harnesses === undefined ||
-    !editor.harnesses.includes(picked.key) ||
-    editor.harness === picked.key
-  ) {
+  if (editor === undefined || editor === null || editor.harnesses === undefined || !editor.harnesses.includes(picked.key)) {
+    return;
+  }
+  // A pick names its form where the line's dropdown picks one, a message naming none keeping the
+  // line's own form, which must then be among those offered.
+  const asked = picked.key === 'claude-desktop' || editor.forms === undefined ? (form as LineForm | undefined) : ((form as LineForm | undefined) ?? editor.form);
+  if (picked.key === 'claude-desktop') {
+    if (asked === 'headless') {
+      return;
+    }
+  } else if (editor.forms === undefined ? asked !== undefined : asked === undefined || !editor.forms.includes(asked)) {
+    return;
+  }
+  if (editor.harness === picked.key && (asked === undefined || asked === editor.form)) {
     return;
   }
   let offer: HarnessOffer = { models: [], efforts: [] };
-  if (picked.key !== 'claude-desktop') {
+  if (picked.key !== 'claude-desktop' && picked.key !== editor.harness) {
     const lists = readListsOf(context);
     if (lists.state === 'failed') {
       void vscode.window.showErrorMessage(`The harness lists could not be read: ${lists.cause}`);
@@ -1026,7 +1043,16 @@ async function editLineHarness(
   }
   try {
     const files = recipeFiles(context);
-    replaceLineHarness(files.store, readRecipes(files.shipped, files.own, undefined, files.project), recipe, named, line, picked.cli, offer);
+    replaceLineHarness(
+      files.store,
+      readRecipes(files.shipped, files.own, undefined, files.project),
+      recipe,
+      named,
+      line,
+      picked.cli,
+      offer,
+      picked.key === 'claude-desktop' ? undefined : asked,
+    );
   } catch (error) {
     void vscode.window.showErrorMessage(`The harness could not be changed: ${error instanceof Error ? error.message : String(error)}`);
   }

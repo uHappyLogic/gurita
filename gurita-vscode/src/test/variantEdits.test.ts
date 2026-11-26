@@ -6,6 +6,7 @@ import * as path from 'node:path';
 import {
   Recipe,
   defaultVariant,
+  isHeadless,
   mergeRecipes,
   overlayVariantStore,
   parseOwnRecipes,
@@ -20,6 +21,7 @@ import {
   deleteVariant,
   duplicateVariant,
   lineEditor,
+  linePlace,
   lineRow,
   pickDefault,
   renameVariant,
@@ -548,9 +550,140 @@ test('only a claude or agy line carrying both --model and --effort gets model an
   const listed = settingsRecipes(base(), emptyVariantStore(), '/home/x/.gurita/variants.json', []);
   for (const recipe of listed) {
     for (const variant of recipe.variants) {
-      assert.deepStrictEqual(variant.editors, variant.lines.map((line) => lineEditor(line) ?? null), `${recipe.name}: one editor or null per line`);
+      const source = byName(base(), recipe.name).variants.find((each) => each.name === variant.name);
+      assert.ok(source !== undefined);
+      assert.deepStrictEqual(
+        variant.editors,
+        variant.lines.map((line, index) => lineEditor(line, false, linePlace(source, index)) ?? null),
+        `${recipe.name}: one editor or null per line, each given its place`,
+      );
     }
   }
+});
+
+test("under Variants the harness dropdown offers each CLI headless and interactive on a variant's last line and headless alone on every earlier line, a single-task line or a looped recipe's line picking a harness alone", () => {
+  const shipped = parseShippedRecipes(fs.readFileSync(SHIPPED_RECIPES, 'utf8'), SHIPPED_RECIPES);
+  const both = ['headless', 'interactive'];
+  const offered: string[] = [];
+  for (const recipe of settingsRecipes(shipped, emptyVariantStore(), '/home/x/.gurita/variants.json', [])) {
+    for (const variant of recipe.variants) {
+      variant.editors.forEach((editor, index) => {
+        assert.ok(editor !== null && editor.harnesses !== undefined, `${recipe.name}/${variant.name}/${index} gets a harness dropdown`);
+        assert.deepStrictEqual(editor.harnesses.slice(0, 3), ['claude', 'antigravity', 'codex']);
+        assert.strictEqual(editor.form, isHeadless(variant.lines[index]) ? 'headless' : 'interactive', 'the editor carries the line\'s own form');
+        assert.deepStrictEqual(editor.forms, index === variant.lines.length - 1 ? both : ['headless'], `${recipe.name}/${variant.name}/${index}`);
+        offered.push(`${recipe.name}/${variant.name}/${index} ${editor.form} ${(editor.forms ?? []).join('+')}`);
+      });
+    }
+  }
+  assert.deepStrictEqual(offered, [
+    'First run/default/0 headless headless',
+    'First run/default/1 headless headless',
+    'First run/default/2 headless headless',
+    'First run/default/3 interactive headless+interactive',
+    'Approve all standing recommendations and review again/default/0 headless headless',
+    'Approve all standing recommendations and review again/default/1 headless headless',
+    'Approve all standing recommendations and review again/default/2 headless headless',
+    'Approve all standing recommendations and review again/default/3 interactive headless+interactive',
+    'Prepare tasks/default/0 headless headless',
+    'Prepare tasks/default/1 headless headless+interactive',
+    'Prepare and Execute tasks/Normal difficulty/0 headless headless',
+    'Prepare and Execute tasks/Normal difficulty/1 headless headless',
+    'Prepare and Execute tasks/Normal difficulty/2 interactive headless+interactive',
+    'Prepare and Execute tasks/Critical tasks/0 headless headless',
+    'Prepare and Execute tasks/Critical tasks/1 headless headless',
+    'Prepare and Execute tasks/Critical tasks/2 interactive headless+interactive',
+    'Execute tasks/Normal difficulty/0 interactive headless+interactive',
+    'Execute tasks/Critical tasks/0 interactive headless+interactive',
+    'Finish mission/default/0 headless headless+interactive',
+    'discuss-open-question/default/0 interactive headless+interactive',
+    'discuss-mission-goal/default/0 interactive headless+interactive',
+    'discuss-new-task/default/0 interactive headless+interactive',
+    'ask-in-mission-context/default/0 interactive headless+interactive',
+    'answer-open-question/default/0 headless headless+interactive',
+    'answer-open-question-with-alternative/default/0 headless headless+interactive',
+    'define-mission-goal/default/0 headless headless+interactive',
+    'init-mission-base-workflow/default/0 headless headless+interactive',
+    'capture-mission-principle-updates/default/0 interactive headless+interactive',
+  ], 'the six entries on every last line, the one line of a one-line variant included, and the three headless ones on every earlier line');
+  const lines = settingsLines(shipped, emptyVariantStore(), '/home/x/.gurita/variants.json');
+  assert.strictEqual(lines.lines.length, 4);
+  for (const line of lines.lines) {
+    for (const variant of line.variants) {
+      for (const editor of variant.editors) {
+        assert.ok(editor !== null && editor.harnesses !== undefined && editor.form === undefined && editor.forms === undefined, `${line.name}: a single-task line picks a harness alone`);
+      }
+    }
+  }
+  const loopFile = '/home/x/loop.md';
+  const loop = parseOwnRecipes('### Looped\n```\nclaude -p "/gurita:derive-tasks --mission <path>" --model "opus" --effort high;\n<single-task line>\n```\n', loopFile);
+  const looped = settingsRecipes(loop, emptyVariantStore(), '/home/x/.gurita/variants.json', []);
+  assert.deepStrictEqual(looped[0].variants[0].editors, [{ harness: 'claude', model: 'opus', effort: 'high', harnesses: ['claude', 'antigravity', 'codex'] }, null], "a looped recipe's line picks a harness alone");
+  assert.deepStrictEqual(
+    lineEditor('claude "/gurita:x --mission <path>" --model "opus" --effort high;', false, 'last'),
+    { harness: 'claude', model: 'opus', effort: 'high', harnesses: ['claude', 'antigravity', 'codex'] },
+    'a line in neither form picks a harness alone',
+  );
+});
+
+test("a harness pick with a form stores the line rewritten onto that harness in that form as a custom N, and an interactive pick on a line that is not its variant's last is refused", () => {
+  withStore((file) => {
+    const shipped = parseShippedRecipes(fs.readFileSync(SHIPPED_RECIPES, 'utf8'), SHIPPED_RECIPES);
+    const read = (): Recipe[] => overlayVariantStore(shipped, readVariantStore(file), file);
+    const claude = { models: ['fable', 'opus'], efforts: ['high', 'xhigh'] };
+    const agy = { models: ['claude-opus-5-5'], efforts: ['high'] };
+    const codex = { models: ['gpt-6-luna'], efforts: ['high', 'xhigh'] };
+    const shippedDefault = { name: 'default', origin: 'shipped' } as const;
+    // Finish mission's one headless line made interactive on its own harness: the form alone changes.
+    replaceLineHarness(file, shipped, 'Finish mission', shippedDefault, 0, 'claude', claude, 'interactive');
+    assert.deepStrictEqual(byName(read(), 'Finish mission').variants.map((each) => [each.name, variantOrigin(each), each.lines]), [
+      ['default', 'shipped', ['claude -p "/gurita:finish-mission --mission <path>" --dangerously-skip-permissions --model "opus" --effort high;']],
+      ['custom 1', 'stored', ['claude "/gurita:finish-mission --mission <path>" --dangerously-skip-permissions --model "opus" --effort high; # interactive']],
+    ], 'the shipped variant stays listed, the interactive line stored as custom 1');
+    assert.ok(byName(read(), 'Finish mission').variants[1].singleInteractive, 'custom 1 is now one interactive line');
+    // Execute tasks' interactive line made headless on Antigravity.
+    replaceLineHarness(file, shipped, 'Execute tasks', { name: 'Normal difficulty', origin: 'shipped' }, 0, 'agy', agy, 'headless');
+    assert.deepStrictEqual(byName(read(), 'Execute tasks').variants[2].lines, [
+      'agy -p "/gurita:complete-all-tasks --mission <path>" --dangerously-skip-permissions --model "claude-opus-5-5" --effort high;',
+    ]);
+    // First run's interactive last line made headless on Codex, and its headless first line moved onto Antigravity, staying headless.
+    replaceLineHarness(file, shipped, 'First run', shippedDefault, 3, 'codex', codex, 'headless');
+    const firstRun = byName(read(), 'First run').variants[1];
+    assert.strictEqual(firstRun.name, 'custom 1');
+    assert.strictEqual(
+      firstRun.lines[3],
+      "codex exec '$gurita:recommend-all-open-questions --mission <path>' --dangerously-bypass-approvals-and-sandbox -m \"gpt-6-luna\" -c model_reasoning_effort=xhigh;",
+    );
+    replaceLineHarness(file, shipped, 'First run', variantTarget(firstRun), 0, 'agy', agy, 'headless');
+    assert.strictEqual(
+      byName(read(), 'First run').variants[1].lines[0],
+      'agy -p "/gurita:specify-mission-starting-state --mission <path>" --dangerously-skip-permissions --model "claude-opus-5-5" --effort high;',
+      'a stored variant is changed in place',
+    );
+    // And back to Claude Code interactive on the last line.
+    replaceLineHarness(file, shipped, 'First run', variantTarget(firstRun), 3, 'claude', { models: ['fable'], efforts: ['high', 'xhigh'] }, 'interactive');
+    assert.strictEqual(byName(read(), 'First run').variants[1].lines[3], shipped[0].variants[0].lines[3], 'the round trip gives the shipped line');
+    assert.deepStrictEqual(
+      readVariantStore(file).variants.map((each) => [each.recipe, each.name]),
+      [['Finish mission', 'custom 1'], ['Execute tasks', 'custom 1'], ['First run', 'custom 1']],
+    );
+    const before = fs.readFileSync(file, 'utf8');
+    refused(() => replaceLineHarness(file, shipped, 'First run', shippedDefault, 0, 'claude', claude, 'interactive'), /cannot be made interactive: only a variant's last line can/);
+    refused(
+      () => replaceLineHarness(file, shipped, 'Prepare and Execute tasks', { name: 'Normal difficulty', origin: 'shipped' }, 1, 'codex', codex, 'interactive'),
+      /cannot be made interactive: only a variant's last line can/,
+    );
+    refused(() => replaceLineHarness(file, shipped, 'Prepare tasks', shippedDefault, 0, 'agy', agy, 'interactive'), /only a variant's last line can/);
+    refused(
+      () => replaceLineHarness(file, shipped, 'Single task with Opus High (Claude Code)', shippedDefault, 0, 'claude', claude, 'interactive'),
+      /keeps its form: a single-task line and a line of a looped recipe pick a harness alone/,
+    );
+    refused(
+      () => replaceLineHarness(file, shipped, 'Execute tasks', { name: 'Normal difficulty', origin: 'shipped' }, 0, 'claude-desktop', { models: [], efforts: [] }, 'headless'),
+      /Claude Desktop takes the interactive form alone/,
+    );
+    assert.strictEqual(fs.readFileSync(file, 'utf8'), before, 'a refused pick writes nothing');
+  });
 });
 
 test('the harness dropdown offers Claude Desktop on the line of a variant holding exactly one line, an interactive one, and on no other line', () => {

@@ -72,7 +72,13 @@
 // interactive one, shows its harness as a dropdown offering them, standing on the one
 // it runs on, in the harness's place on a skill row and before the model dropdown on a line drawn
 // as its text; a pick of another posts the line and the harness to the extension, which rewrites
-// the line onto it, and every other line keeps its harness as text. The model dropdown offers the harness's
+// the line onto it, and every other line keeps its harness as text. A line posted with its form and
+// the forms offered lists each harness together with its form instead, `Claude Code`,
+// `Claude Code interactive`, `Antigravity`, `Antigravity interactive`, `Codex`, and
+// `Codex interactive` on a variant's last line and the three headless entries alone on an earlier
+// one, the entry the line stands on drawn too when the forms offered lack it, and Claude Desktop
+// as `Claude Desktop interactive`; a pick posts the harness and the form, and the extension
+// rewrites the line onto that harness in that form. The model dropdown offers the harness's
 // model list and the effort dropdown its whole effort list, whatever the line's model, as the
 // extension last posted them, each standing on the value the line carries, offered too when the
 // list lacks it. A model or effort pick posts the line, the kind, and the value to the extension,
@@ -181,13 +187,26 @@ declare function acquireVsCodeApi(): VsCodeApi;
 
   /**
    * The dropdowns one line gets: the harness whose lists they offer, its model, its effort where it
-   * gets an effort dropdown, and the harnesses its harness dropdown offers where it gets one.
+   * gets an effort dropdown, and the harnesses its harness dropdown offers where it gets one, with,
+   * where that dropdown picks a form too, the line's own form and the forms offered on each CLI.
    */
   interface LineEditor {
     harness: string;
     model: string;
     effort?: string;
     harnesses?: string[];
+    form?: LineForm;
+    forms?: LineForm[];
+  }
+
+  /** A line's form: headless, or interactive, left open in its terminal. */
+  type LineForm = 'headless' | 'interactive';
+
+  /** One entry of a line's harness dropdown: a harness's key, the form a pick sets where it sets one, and its label. */
+  interface HarnessEntry {
+    key: string;
+    form?: LineForm;
+    label: string;
   }
 
   /** One recipe as the window lists it, with its variants and those a hiding record hides. */
@@ -715,33 +734,75 @@ declare function acquireVsCodeApi(): VsCodeApi;
     return choice;
   }
 
+  /** The label of Claude Desktop's one entry in a harness dropdown, Claude Desktop taking the interactive form alone. */
+  const DESKTOP_ENTRY = 'Claude Desktop interactive';
+
   /**
-   * The harness dropdown of a line posted with the harnesses it offers, in the window's order, Claude
-   * Desktop left out while it is not offered, and standing on the harness the line runs on; a pick
-   * of another it offers posts it for the line.
+   * The entries of the harness dropdown of a line posted with the harnesses it offers, in the
+   * window's order, Claude Desktop left out while it is not offered and listed as its one
+   * interactive entry: each harness alone for a line posted with no form, and for a line posted
+   * with its form each CLI once per form offered, headless before interactive, its name for the
+   * headless entry and its name with `interactive` for the other, the entry the line stands on
+   * drawn in its place too when the forms offered lack it.
+   */
+  function harnessEntries(editor: LineEditor, offered: readonly string[]): HarnessEntry[] {
+    const entries: HarnessEntry[] = [];
+    for (const [key, name] of listedHarnesses().filter(([each]) => offered.includes(each))) {
+      if (key === 'claude-desktop') {
+        entries.push({ key, label: DESKTOP_ENTRY });
+      } else if (editor.form === undefined || editor.forms === undefined) {
+        entries.push({ key, label: name });
+      } else {
+        for (const form of ['headless', 'interactive'] as const) {
+          if (editor.forms.includes(form) || (key === editor.harness && form === editor.form)) {
+            entries.push({ key, form, label: form === 'interactive' ? `${name} ${INTERACTIVE_MARK}` : name });
+          }
+        }
+      }
+    }
+    return entries;
+  }
+
+  /** The value an entry's option carries: its key, followed by its form where it sets one. */
+  function entryValue(entry: HarnessEntry): string {
+    return entry.form === undefined ? entry.key : `${entry.key} ${entry.form}`;
+  }
+
+  /**
+   * The harness dropdown of a line posted with the harnesses it offers, its entries as
+   * `harnessEntries` gives them, standing on the harness the line runs on in its form; a pick of
+   * another entry it offers posts its harness, and its form where it sets one, for the line.
    */
   function harnessDropdown(
     recipe: string,
     variant: SettingsVariant,
     focus: string,
     lineIndex: number,
-    current: string,
-    offered: readonly string[],
+    editor: LineEditor,
+    entries: readonly HarnessEntry[],
   ): HTMLSelectElement {
     const choice = element('select', undefined, 'line-harness');
     choice.setAttribute('aria-label', `The harness of line ${lineIndex + 1} of ${variant.name} in ${recipe}`);
-    choice.title = 'Pick the harness this line runs on';
+    choice.title = editor.forms === undefined ? 'Pick the harness this line runs on' : 'Pick the harness this line runs on and its form';
     choice.dataset.focus = `line-harness-${focus}-${lineIndex}`;
-    const listed = listedHarnesses().filter(([key]) => offered.includes(key));
-    for (const [key, name] of listed) {
-      const option = element('option', name);
-      option.value = key;
-      option.selected = key === current;
+    const current = entryValue({ key: editor.harness, ...(editor.forms === undefined || editor.form === undefined ? {} : { form: editor.form }), label: '' });
+    for (const entry of entries) {
+      const option = element('option', entry.label);
+      option.value = entryValue(entry);
+      option.selected = option.value === current;
       choice.append(option);
     }
     choice.addEventListener('change', () => {
-      if (choice.value !== current && listed.some(([key]) => key === choice.value)) {
-        vscode.postMessage({ type: 'replaceLineHarness', recipe, variant: variantTarget(variant), line: lineIndex, harness: choice.value });
+      const picked = entries.find((entry) => entryValue(entry) === choice.value);
+      if (choice.value !== current && picked !== undefined) {
+        vscode.postMessage({
+          type: 'replaceLineHarness',
+          recipe,
+          variant: variantTarget(variant),
+          line: lineIndex,
+          harness: picked.key,
+          ...(picked.form === undefined ? {} : { form: picked.form }),
+        });
       }
     });
     return choice;
@@ -762,7 +823,8 @@ declare function acquireVsCodeApi(): VsCodeApi;
       const row = variant.rows?.[lineIndex];
       const editor = variant.editors?.[lineIndex];
       const offered = editor !== undefined && editor !== null && editor.harnesses !== undefined && editor.harnesses.includes(editor.harness) ? editor.harnesses : [];
-      const switchable = editor !== undefined && editor !== null && offered.length > 1;
+      const entries = editor !== undefined && editor !== null ? harnessEntries(editor, offered) : [];
+      const switchable = editor !== undefined && editor !== null && entries.length > 1;
       const item = element('li', undefined, row !== undefined && row !== null ? 'variant-line skill-line' : 'variant-line');
       if (row !== undefined && row !== null) {
         const label = element('span', undefined, 'line-label');
@@ -780,7 +842,7 @@ declare function acquireVsCodeApi(): VsCodeApi;
         item.append(element('code', line, 'line-text'));
       }
       if (switchable) {
-        item.append(harnessDropdown(recipe, variant, focus, lineIndex, editor.harness, offered));
+        item.append(harnessDropdown(recipe, variant, focus, lineIndex, editor, entries));
       }
       if (editor !== undefined && editor !== null) {
         item.append(lineDropdown(recipe, variant, focus, lineIndex, editor.harness, 'model', editor.model));

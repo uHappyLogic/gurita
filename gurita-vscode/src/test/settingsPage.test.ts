@@ -1299,7 +1299,7 @@ test("a line posted with Claude Desktop among its harnesses draws it last in its
       ],
     },
   });
-  assert.deepStrictEqual(lineRows(page)[0][1][0], ['line-harness', ['Claude Code', 'Antigravity', 'Codex', 'Claude Desktop'], 'Claude Code']);
+  assert.deepStrictEqual(lineRows(page)[0][1][0], ['line-harness', ['Claude Code', 'Antigravity', 'Codex', 'Claude Desktop interactive'], 'Claude Code']);
   assert.deepStrictEqual(lineRows(page)[2][1][0], CC_HARNESS, 'a line posted without Claude Desktop is not offered it');
   const count = page.posted.length;
   focused(page, 'line-harness-0-0-0').change('claude-desktop');
@@ -1307,6 +1307,100 @@ test("a line posted with Claude Desktop among its harnesses draws it last in its
   assert.deepStrictEqual(page.posted.slice(count), [
     { type: 'replaceLineHarness', recipe: 'Execute tasks', variant: { name: 'Normal difficulty', origin: 'shipped' }, line: 0, harness: 'claude-desktop' },
   ], 'a pick not offered posts nothing');
+});
+
+test("a line posted with its form lists each harness together with its form, both forms on a variant's last line and headless alone on an earlier one, and a pick posts the harness and the form", () => {
+  const page = loadSettings();
+  page.send(harnessListsMessage(LISTS));
+  const execute = 'claude "/gurita:complete-all-tasks --mission <path>" --dangerously-skip-permissions --model "opus" --effort high; # interactive';
+  const both = ['headless', 'interactive'];
+  page.send({
+    type: 'variants',
+    variants: {
+      state: 'read',
+      recipes: [
+        {
+          name: 'First run',
+          group: 'shipped',
+          fixed: false,
+          variants: [
+            {
+              name: 'default',
+              origin: 'shipped',
+              lines: [CLAUDE_LINE, INTERACTIVE_LINE],
+              editors: [
+                { harness: 'claude', model: 'fable', effort: 'xhigh', harnesses: H3, form: 'headless', forms: ['headless'] },
+                { harness: 'claude', model: 'fable', effort: 'xhigh', harnesses: H3, form: 'interactive', forms: both },
+              ],
+              rows: [
+                { skill: 'review-mission-requirements', interactive: false, harness: 'claude' },
+                { skill: 'recommend-all-open-questions', interactive: true, harness: 'claude' },
+              ],
+              isDefault: true,
+            },
+            {
+              name: 'Interactive first',
+              origin: 'own',
+              lines: [INTERACTIVE_LINE, AGY_LINE],
+              editors: [
+                { harness: 'claude', model: 'fable', effort: 'xhigh', harnesses: H3, form: 'interactive', forms: ['headless'] },
+                { harness: 'antigravity', model: 'gemini-4-argon', effort: 'medium', harnesses: H3, form: 'headless', forms: both },
+              ],
+              rows: [
+                { skill: 'recommend-all-open-questions', interactive: true, harness: 'claude' },
+                { skill: 'review-mission-requirements', interactive: false, harness: 'antigravity' },
+              ],
+              isDefault: false,
+            },
+          ],
+          hidden: [],
+        },
+        {
+          name: 'Execute tasks',
+          group: 'shipped',
+          fixed: false,
+          variants: [
+            {
+              name: 'Normal difficulty',
+              origin: 'shipped',
+              lines: [execute],
+              editors: [{ harness: 'claude', model: 'opus', effort: 'high', harnesses: [...H3, 'claude-desktop'], form: 'interactive', forms: both }],
+              rows: [{ skill: 'complete-all-tasks', interactive: true, harness: 'claude' }],
+              isDefault: true,
+            },
+          ],
+          hidden: [],
+        },
+      ],
+    },
+  });
+  const six = ['Claude Code', 'Claude Code interactive', 'Antigravity', 'Antigravity interactive', 'Codex', 'Codex interactive'];
+  assert.deepStrictEqual(lineRows(page).map((row) => row[1][0]), [
+    ['line-harness', ['Claude Code', 'Antigravity', 'Codex'], 'Claude Code'],
+    ['line-harness', six, 'Claude Code interactive'],
+    ['line-harness', ['Claude Code', 'Claude Code interactive', 'Antigravity', 'Codex'], 'Claude Code interactive'],
+    ['line-harness', six, 'Antigravity'],
+    ['line-harness', [...six, 'Claude Desktop interactive'], 'Claude Code interactive'],
+  ], "the six entries on a last line, the three headless ones on an earlier line, an earlier interactive line's own entry drawn in its place, and Claude Desktop last as its one interactive entry");
+  const count = page.posted.length;
+  focused(page, 'line-harness-0-0-1').change('antigravity interactive');
+  focused(page, 'line-harness-0-0-1').change('claude headless');
+  focused(page, 'line-harness-0-0-1').change('claude interactive');
+  focused(page, 'line-harness-0-0-0').change('claude interactive');
+  focused(page, 'line-harness-0-0-0').change('codex headless');
+  focused(page, 'line-harness-0-1-0').change('claude headless');
+  focused(page, 'line-harness-0-1-1').change('antigravity interactive');
+  focused(page, 'line-harness-1-0-0').change('claude-desktop');
+  focused(page, 'line-harness-1-0-0').change('codex');
+  const first = { name: 'default', origin: 'shipped' };
+  assert.deepStrictEqual(page.posted.slice(count), [
+    { type: 'replaceLineHarness', recipe: 'First run', variant: first, line: 1, harness: 'antigravity', form: 'interactive' },
+    { type: 'replaceLineHarness', recipe: 'First run', variant: first, line: 1, harness: 'claude', form: 'headless' },
+    { type: 'replaceLineHarness', recipe: 'First run', variant: first, line: 0, harness: 'codex', form: 'headless' },
+    { type: 'replaceLineHarness', recipe: 'First run', variant: { name: 'Interactive first', origin: 'own' }, line: 0, harness: 'claude', form: 'headless' },
+    { type: 'replaceLineHarness', recipe: 'First run', variant: { name: 'Interactive first', origin: 'own' }, line: 1, harness: 'antigravity', form: 'interactive' },
+    { type: 'replaceLineHarness', recipe: 'Execute tasks', variant: { name: 'Normal difficulty', origin: 'shipped' }, line: 0, harness: 'claude-desktop' },
+  ], "the entry a line stands on and an interactive entry on an earlier line post nothing, and Claude Desktop is posted with no form");
 });
 
 test('outside a local macOS window Claude Desktop gets no row under Harnesses and no harness dropdown offers it, whatever the extension posts', () => {
@@ -1353,7 +1447,7 @@ test('outside a local macOS window Claude Desktop gets no row under Harnesses an
     assert.deepStrictEqual(page.posted.slice(count), [], 'a pick of it posts nothing');
     page.send({ type: 'workspace', folderOpen: true, desktopOffered: true });
     assert.deepStrictEqual(harnessRows(page)[3], DESKTOP_ROW, 'told it is offered, its row is drawn');
-    assert.deepStrictEqual(lineRows(page)[0][1][0], ['line-harness', ['Claude Code', 'Antigravity', 'Codex', 'Claude Desktop'], 'Claude Code'], 'and the dropdown offers it');
+    assert.deepStrictEqual(lineRows(page)[0][1][0], ['line-harness', ['Claude Code', 'Antigravity', 'Codex', 'Claude Desktop interactive'], 'Claude Code'], 'and the dropdown offers it');
   }
 });
 
