@@ -80,17 +80,28 @@ test('the prompt is the quoted /gurita: word with every typed value written in a
   assert.strictEqual(desktop.desktopPrompt('claude-desktop; # interactive', {}), '', 'a line invoking no skill sends no prompt');
 });
 
-test("every shipped variant of one interactive line, set to go to Claude Desktop, sends its prompt with the mission's path written in", () => {
+test("every shipped variant of one line, headless or interactive, set to go to Claude Desktop, sends its prompt with the mission's path written in", () => {
   const recipes = parseShippedRecipes(fs.readFileSync(SHIPPED_RECIPES, 'utf8'), SHIPPED_RECIPES);
   const sent: string[] = [];
   for (const variant of recipes.flatMap((recipe) => recipe.variants)) {
-    if (!variant.singleInteractive) {
+    if (!variant.singleLine) {
       continue;
     }
     const line = rewriteHarness(variant.lines[0], 'claude-desktop', { models: [], efforts: [] });
     assert.ok(line !== undefined, variant.lines[0]);
     assert.strictEqual(desktop.desktopLine([line]), line);
-    const values = { path: 'pkg/mission_alpha/', 'Short Title': 'Pane Layout', note: '', goal: 'A goal', 'issue description': 'An issue', question: 'Why?' };
+    assert.ok(/^claude-desktop "[^"]*"; # interactive$/.test(line), `the line is interactive, its flags dropped: ${line}`);
+    const values = {
+      path: 'pkg/mission_alpha/',
+      'Short Title': 'Pane Layout',
+      note: '',
+      goal: 'A goal',
+      'issue description': 'An issue',
+      question: 'Why?',
+      'answer text': 'Use tabs',
+      'Alternative Id': 'B',
+      scope: 'pkg',
+    };
     const prompt = desktop.desktopPrompt(line, values);
     assert.ok(prompt.startsWith('/gurita:'), prompt);
     assert.ok(!/<[A-Za-z][A-Za-z ]*>/.test(prompt), `every placeholder is written in: ${prompt}`);
@@ -100,10 +111,15 @@ test("every shipped variant of one interactive line, set to go to Claude Desktop
   assert.deepStrictEqual(sent, [
     '/gurita:complete-all-tasks --mission pkg/mission_alpha/',
     '/gurita:complete-all-tasks --mission pkg/mission_alpha/',
+    '/gurita:finish-mission --mission pkg/mission_alpha/',
     '/gurita:discuss-open-question --mission pkg/mission_alpha/ Pane Layout',
     '/gurita:discuss-mission-goal A goal',
     '/gurita:discuss-new-task --mission pkg/mission_alpha/ An issue',
     '/gurita:ask-in-mission-context --mission pkg/mission_alpha/ Why?',
+    '/gurita:answer-open-question --mission pkg/mission_alpha/ Pane Layout. Use tabs',
+    '/gurita:answer-open-question-with-alternative --mission pkg/mission_alpha/ Pane Layout. B',
+    '/gurita:define-mission-goal --at pkg A goal',
+    '/gurita:init-mission-base-workflow',
     '/gurita:capture-mission-principle-updates pkg/mission_alpha/',
   ]);
 });

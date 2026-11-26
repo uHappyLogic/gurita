@@ -36,7 +36,8 @@
 // default, and the mission page's recipe buttons and the buttons that run a recipe by its fixed
 // name take it while no dropdown selection is remembered for the recipe. Each variant is
 // classified by its content alone: whether it is a single-task line, whether it holds exactly one
-// line, an interactive one, whether it is the looped recipe, and which known and unknown
+// line, headless or interactive, and is neither a single-task line nor the looped recipe, whether
+// it is the looped recipe, and which known and unknown
 // placeholders it holds. A recipe may also declare the one step
 // of the workflow diagram it belongs to, by one `Stage: <step name>` line standing outside any fence
 // between its `###` heading and its first fence or first `####` sub-heading, once for the whole
@@ -141,8 +142,8 @@ export interface Variant {
   lines: string[];
   /** Exactly one line, headless, holding `<Task Title>`. */
   singleTask: boolean;
-  /** Exactly one line, interactive, ending in the `# interactive` mark: the one kind of variant a line may go to Claude Desktop on. */
-  singleInteractive: boolean;
+  /** Exactly one line, headless or interactive, and neither `singleTask` nor `looped`: the one kind of variant a line may go to Claude Desktop on. */
+  singleLine: boolean;
   /** Its last line is the slot line `<single-task line>`. */
   looped: boolean;
   /** The known placeholders its lines hold, by name, in order of first appearance. */
@@ -348,7 +349,7 @@ function variant(name: string, lines: readonly string[], origin: ReadOrigin, fil
     }
   }
   const singleTask = lines.length === 1 && isHeadless(lines[0]) && known.includes('Task Title');
-  const singleInteractive = lines.length === 1 && INTERACTIVE_MARK.test(lines[0]);
+  const singleLine = lines.length === 1 && !singleTask && !looped;
   return {
     name,
     own: origin === 'own',
@@ -356,7 +357,7 @@ function variant(name: string, lines: readonly string[], origin: ReadOrigin, fil
     file,
     lines: [...lines],
     singleTask,
-    singleInteractive,
+    singleLine,
     looped,
     knownPlaceholders: known,
     unknownPlaceholders: unknown,

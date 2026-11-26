@@ -887,16 +887,21 @@ test('an install request naming no harness, or no scope Claude Code offers, star
   assert.strictEqual(pluginRuns.pluginRunGoing(), undefined);
 });
 
-test('a Claude Desktop pick in the harness dropdown stores the line rewritten as a custom N variant, and one on a line of a chain writes nothing', async () => {
+test('a Claude Desktop pick in the harness dropdown stores the line rewritten as a custom N variant, a headless one-line variant included, and one on a line of a chain or a single-task line writes nothing', async () => {
   const window = openWindow();
   const store = path.join(home, '.gurita', 'variants.json');
   const kept = fs.existsSync(store) ? fs.readFileSync(store, 'utf8') : undefined;
   try {
     let from = window.posted.length;
     sendSettings({ type: 'replaceLineHarness', recipe: 'First run', variant: { name: 'default', origin: 'shipped' }, line: 3, harness: 'claude-desktop' });
-    sendSettings({ type: 'replaceLineHarness', recipe: 'Finish mission', variant: { name: 'default', origin: 'shipped' }, line: 0, harness: 'claude-desktop' });
+    sendSettings({ type: 'replaceLineHarness', recipe: 'Single task with Opus High (Claude Code)', variant: { name: 'default', origin: 'shipped' }, line: 0, harness: 'claude-desktop' });
+    sendSettings({ type: 'replaceLineHarness', recipe: 'Finish mission', variant: { name: 'default', origin: 'shipped' }, line: 0, harness: 'claude-desktop', form: 'headless' });
     await new Promise((resolve) => setTimeout(resolve, 200));
-    assert.strictEqual(fs.existsSync(store) ? fs.readFileSync(store, 'utf8') : undefined, kept, "a pick on a chain's interactive line or a headless line writes nothing");
+    assert.strictEqual(
+      fs.existsSync(store) ? fs.readFileSync(store, 'utf8') : undefined,
+      kept,
+      "a pick on a chain's interactive line, on a single-task line, or of Claude Desktop headless writes nothing",
+    );
     assert.deepStrictEqual(postedOf(window, 'variants', from), [], 'and posts nothing');
     from = window.posted.length;
     sendSettings({ type: 'replaceLineHarness', recipe: 'Execute tasks', variant: { name: 'Normal difficulty', origin: 'shipped' }, line: 0, harness: 'claude-desktop' });
@@ -911,6 +916,15 @@ test('a Claude Desktop pick in the harness dropdown stores the line rewritten as
       (each) => each.name === 'Execute tasks',
     );
     assert.deepStrictEqual(listed?.variants.map((each) => each.name), ['Normal difficulty', 'Critical tasks', 'custom 1'], 'the shipped variant stays listed beside its custom');
+    from = window.posted.length;
+    sendSettings({ type: 'replaceLineHarness', recipe: 'Finish mission', variant: { name: 'default', origin: 'shipped' }, line: 0, harness: 'claude-desktop' });
+    await until(() => postedOf(window, 'variants', from).length > 0, "the pick on Finish mission's headless line is posted to the window");
+    const finish = (JSON.parse(fs.readFileSync(store, 'utf8')).variants as { recipe: string; name: string; lines: string[] }[]).filter((each) => each.recipe === 'Finish mission');
+    assert.deepStrictEqual(
+      finish.map((each) => [each.name, each.lines]),
+      [['custom 1', ['claude-desktop "/gurita:finish-mission --mission <path>"; # interactive']]],
+      "Finish mission's headless line is stored made interactive on Claude Desktop, its -p, model, effort, and bypass flag dropped",
+    );
   } finally {
     if (kept === undefined) {
       fs.rmSync(store, { force: true });

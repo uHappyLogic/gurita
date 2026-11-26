@@ -19,11 +19,13 @@
 // `claude "/gurita:<skill> …"` or `agy -i "…"`, the trailing `# interactive` mark kept. The rewritten
 // line takes the picked harness's first listed model, and it keeps its effort when that harness's
 // effort list offers it, taking the list's first effort otherwise; a line switched onto Codex while
-// Codex's effort list is empty carries no effort override. An interactive line whose harness can be
-// picked is also rewritten onto Claude Desktop, whose line opens with the plain word
-// `claude-desktop` naming no CLI: `claude-desktop "/gurita:<skill> …"`, its prompt and every other
-// word kept, an `agy` line's `-i` dropped, a bare `codex` line's prompt invoked as `/gurita:` and
-// double-quoted, and its trailing `# interactive` mark kept, with every model flag, every effort,
+// Codex's effort list is empty carries no effort override. A line whose harness can be picked, in
+// either of its two forms, is also rewritten onto Claude Desktop, whose line opens with the plain
+// word `claude-desktop` naming no CLI and is always interactive: `claude-desktop "/gurita:<skill> …"`,
+// its prompt and every other word kept, a headless line first made interactive as `rewriteForm`
+// makes it (its `-p`, `--print`, or `exec` dropped and the `# interactive` mark added), an `agy`
+// line's `-i` dropped, a bare `codex` line's prompt invoked as `/gurita:` and double-quoted, and its
+// trailing `# interactive` mark kept, with every model flag, every effort,
 // and the bypass flag dropped, since no parameter of the `claude://code/new` link Desktop opens a
 // session from names a model, an effort, or a permission mode; the stored line so shows exactly
 // what the session gets. A line's harness is its first word when that word is, by exact equality,
@@ -358,7 +360,7 @@ export function replaceEffort(line: string, effort: string): string | undefined 
 
 /**
  * The harnesses a line can be rewritten onto, each named by the word a line opens with: the three
- * CLIs `harnessChoices` gives a line, and Claude Desktop for an interactive one.
+ * CLIs `harnessChoices` gives a line, and Claude Desktop for one in either of its two forms.
  */
 export const SWITCHABLE_HARNESSES = HARNESSES;
 
@@ -402,8 +404,8 @@ function bareCodex(command: Word[]): boolean {
  * are given the three harnesses that are CLIs, and every other line (any other Codex line, one
  * carrying no `-m`, a line without both flags, a Claude Desktop line, a shell step, a command the
  * extension does not know) none. Claude Desktop is not among the choices: whether a line may go to
- * it is not read from the line alone, and `rewriteHarness` rewrites onto it any interactive line
- * given choices here.
+ * it is not read from the line alone, and `rewriteHarness` rewrites onto it any line given choices
+ * here that is in one of its two forms, headless or interactive (`readForm`).
  */
 export function harnessChoices(line: string): readonly Harness[] | undefined {
   const read = readLine(line);
@@ -667,13 +669,16 @@ function rewriteDesktop(line: string, from: CliLineHarness): string {
  * line written without the override taking the first effort listed. A line already on `harness` is
  * given back unchanged, and undefined is given for a harness `harnessChoices` does not offer the
  * line. An offer listing no model is refused, and so is one listing no effort for `claude` or `agy`.
- * Onto Claude Desktop, `claude-desktop`, only an interactive line `harnessChoices` gives choices is
- * rewritten, one ending in the `# interactive` mark whose first command is an interactive `claude`,
- * `agy -i`, or bare `codex '$gurita:…'` one, and `offer` is not read: the line becomes
- * `claude-desktop "/gurita:<skill> …"` with its prompt, its other words, and its `# interactive`
- * mark kept and every model flag, every effort, and the bypass flag dropped. A Claude Desktop line
- * is given back unchanged onto Claude Desktop, and undefined onto any other harness, as a headless
- * line and every other line are onto Claude Desktop.
+ * Onto Claude Desktop, `claude-desktop`, a line `harnessChoices` gives choices is rewritten when it
+ * is in one of its two forms (`readForm`), and `offer` is not read: a headless one (`claude -p`,
+ * `agy -p`, `codex exec`) is first made interactive as `rewriteForm` makes it, and the interactive
+ * line, ending in the `# interactive` mark, becomes `claude-desktop "/gurita:<skill> …"` with its
+ * prompt, its other words, and its `# interactive` mark kept and every model flag, every effort,
+ * the `-p`, and the bypass flag dropped, so `claude -p "/gurita:finish-mission --mission <path>"
+ * --dangerously-skip-permissions --model "opus" --effort high;` becomes
+ * `claude-desktop "/gurita:finish-mission --mission <path>"; # interactive`. A Claude Desktop line
+ * is given back unchanged onto Claude Desktop, and undefined onto any other harness, as a line in
+ * neither form and every other line are onto Claude Desktop.
  */
 export function rewriteHarness(line: string, harness: SwitchableHarness, offer: HarnessOffer): string | undefined {
   const choices = harnessChoices(line);
@@ -682,10 +687,11 @@ export function rewriteHarness(line: string, harness: SwitchableHarness, offer: 
     if (read?.harness === DESKTOP) {
       return line;
     }
-    if (choices === undefined || read === undefined || !interactiveForm(line, words(line), read.harness)) {
+    const interactive = choices === undefined || read === undefined ? undefined : rewriteForm(line, 'interactive');
+    if (interactive === undefined || read === undefined) {
       return undefined;
     }
-    return rewriteDesktop(line, read.harness);
+    return rewriteDesktop(interactive, read.harness);
   }
   if (choices === undefined || read === undefined || read.harness === DESKTOP || !choices.includes(harness)) {
     return undefined;

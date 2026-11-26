@@ -156,23 +156,33 @@ test('a single-task line is exactly one headless line holding <Task Title>', () 
   assert.strictEqual(runs(own(), 'Single task (Antigravity)').singleTask, true);
 });
 
-test('a variant holds exactly one interactive line when its one line ends in the # interactive mark, and no chain or headless line is one', () => {
+test('a variant holds a single line when it holds exactly one line, headless or interactive, and is neither single-task nor looped', () => {
   const recipes = parseShippedRecipes(fs.readFileSync(SHIPPED_RECIPES, 'utf8'), SHIPPED_RECIPES);
-  const single = recipes.flatMap((recipe) => recipe.variants.filter((each) => each.singleInteractive).map((each) => `${recipe.name}/${each.name}`));
+  const single = recipes.flatMap((recipe) => recipe.variants.filter((each) => each.singleLine).map((each) => `${recipe.name}/${each.name}`));
   assert.deepStrictEqual(single, [
     'Execute tasks/Normal difficulty',
     'Execute tasks/Critical tasks',
+    'Finish mission/default',
     'discuss-open-question/default',
     'discuss-mission-goal/default',
     'discuss-new-task/default',
     'ask-in-mission-context/default',
+    'answer-open-question/default',
+    'answer-open-question-with-alternative/default',
+    'define-mission-goal/default',
+    'init-mission-base-workflow/default',
     'capture-mission-principle-updates/default',
   ]);
-  for (const name of ['First run', 'Approve all standing recommendations and review again', 'Prepare and Execute tasks', 'Finish mission', 'answer-open-question']) {
-    assert.ok(!byName(recipes, name).variants.some((each) => each.singleInteractive), `${name} holds no variant of one interactive line`);
+  for (const name of ['First run', 'Approve all standing recommendations and review again', 'Prepare tasks', 'Prepare and Execute tasks']) {
+    assert.ok(!byName(recipes, name).variants.some((each) => each.singleLine), `${name} is a chain, holding no single-line variant`);
   }
-  assert.strictEqual(runs(shipped(), 'Interactive task line').singleInteractive, true);
-  assert.strictEqual(runs(shipped(), 'Single task (Claude Code)').singleInteractive, false, 'a single-task line is headless');
+  for (const recipe of recipes.filter((each) => each.variants.some((variant) => variant.singleTask))) {
+    assert.ok(!recipe.variants.some((each) => each.singleLine), `${recipe.name} is a single-task line, holding no single-line variant`);
+  }
+  assert.strictEqual(runs(shipped(), 'Interactive task line').singleLine, true);
+  assert.strictEqual(runs(shipped(), 'Single task (Claude Code)').singleLine, false, 'a single-task line is not one');
+  const loop = parseOwnRecipes('### Loop\n```\n<single-task line>\n```\n', '/x/own.md')[0].variants[0];
+  assert.ok(loop.looped && !loop.singleLine, 'a looped recipe of the slot line alone is not one');
 });
 
 test('a line is headless when it holds a gurita: invocation and no # interactive mark', () => {

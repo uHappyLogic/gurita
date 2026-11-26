@@ -532,10 +532,49 @@ test('every shipped interactive line rewrites onto Claude Desktop from Claude Co
   }
 });
 
-test('only an interactive line whose harness can be picked is rewritten onto Claude Desktop, and a Desktop line onto no other harness', () => {
-  assert.strictEqual(rewriteHarness(CLAUDE_LINE, 'claude-desktop', CLAUDE_OFFER), undefined, 'a headless claude -p line');
-  assert.strictEqual(rewriteHarness(AGY_LINE, 'claude-desktop', AGY_OFFER), undefined, 'a headless agy -p line');
-  assert.strictEqual(rewriteHarness(CODEX_EFFORT_LINE, 'claude-desktop', CODEX_OFFER), undefined, 'a headless codex exec line');
+test('a headless line rewritten onto Claude Desktop is made interactive, its -p, exec, model, effort, and bypass flag dropped and the # interactive mark added', () => {
+  const finish = shippedRecipe('Finish mission').variants[0].lines[0];
+  assert.strictEqual(finish, 'claude -p "/gurita:finish-mission --mission <path>" --dangerously-skip-permissions --model "opus" --effort high;');
+  const desktop = rewriteHarness(finish, 'claude-desktop', { models: [], efforts: [] }) as string;
+  assert.strictEqual(desktop, 'claude-desktop "/gurita:finish-mission --mission <path>"; # interactive');
+  assert.deepStrictEqual(readLine(desktop), { harness: 'claude-desktop' });
+  assert.ok(!isHeadless(desktop), 'the Desktop line is interactive');
+  const review = 'claude-desktop "/gurita:review-mission-requirements --mission <path>"; # interactive';
+  assert.strictEqual(rewriteHarness(CLAUDE_LINE, 'claude-desktop', CLAUDE_OFFER), review, 'a headless claude -p line');
+  assert.strictEqual(rewriteHarness(AGY_LINE, 'claude-desktop', AGY_OFFER), review, 'a headless agy -p line');
+  assert.strictEqual(rewriteHarness(CODEX_EFFORT_LINE, 'claude-desktop', CODEX_OFFER), review, 'a headless codex exec line');
+  assert.strictEqual(rewriteHarness(CODEX_LINE, 'claude-desktop', CODEX_OFFER), review, 'a codex exec line written with a double-quoted /gurita: prompt');
+  assert.strictEqual(
+    rewriteHarness('claude --print "/gurita:define-mission-goal --at <scope> <goal>" --model=sonnet --add-dir ../x --effort=medium;', 'claude-desktop', CLAUDE_OFFER),
+    'claude-desktop "/gurita:define-mission-goal --at <scope> <goal>" --add-dir ../x; # interactive',
+    'a --print line, its flags written with =, every other word kept',
+  );
+});
+
+test('every shipped headless line rewrites onto Claude Desktop from Claude Code, Antigravity, and Codex alike, as its interactive form does', () => {
+  const lines = [
+    ...new Set(
+      parseShippedRecipes(fs.readFileSync(SHIPPED_RECIPES, 'utf8'), SHIPPED_RECIPES)
+        .flatMap((recipe) => recipe.variants.flatMap((variant) => variant.lines))
+        .filter((line) => line.startsWith('claude ') && isHeadless(line)),
+    ),
+  ];
+  assert.ok(lines.length >= 10, 'the shipped recipes hold headless claude lines');
+  for (const line of lines) {
+    const desktop = rewriteHarness(line, 'claude-desktop', CLAUDE_OFFER) as string;
+    const asked = /^claude -p ("[^"]*")/.exec(line);
+    assert.ok(asked, line);
+    assert.strictEqual(desktop, `claude-desktop ${asked[1]}; # interactive`, line);
+    assert.strictEqual(readSkill(desktop), readSkill(line), line);
+    assert.strictEqual(rewriteHarness(rewriteForm(line, 'interactive') as string, 'claude-desktop', CLAUDE_OFFER), desktop, `the interactive form: ${line}`);
+    for (const [harness, offer] of [['agy', AGY_OFFER], ['codex', CODEX_OFFER]] as const) {
+      const other = rewriteHarness(line, harness, offer) as string;
+      assert.strictEqual(rewriteHarness(other, 'claude-desktop', offer), desktop, `${harness}: ${other}`);
+    }
+  }
+});
+
+test('only a line whose harness can be picked, in one of its two forms, is rewritten onto Claude Desktop, and a Desktop line onto no other harness', () => {
   assert.strictEqual(
     rewriteHarness('claude "/gurita:complete-all-tasks --mission <path>" --model "opus" --effort high;', 'claude-desktop', CLAUDE_OFFER),
     undefined,

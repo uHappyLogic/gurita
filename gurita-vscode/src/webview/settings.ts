@@ -68,8 +68,8 @@
 // model dropdown and, when it also carries `-c model_reasoning_effort=<level>`, its effort
 // dropdown, every other line staying read-only. A line the extension posts with the harnesses it
 // may be switched between, Claude Code, Antigravity, and Codex for a headless or an interactive
-// line and Claude Desktop after them on the one line of a variant holding exactly one line, an
-// interactive one, shows its harness as a dropdown offering them, standing on the one
+// line and Claude Desktop after them on the one line of a variant holding exactly one line,
+// headless or interactive, shows its harness as a dropdown offering them, standing on the one
 // it runs on, in the harness's place on a skill row and before the model dropdown on a line drawn
 // as its text; a pick of another posts the line and the harness to the extension, which rewrites
 // the line onto it, and every other line keeps its harness as text. A line posted with its form and

@@ -5,6 +5,10 @@ import * as assert from 'node:assert';
 // `node:child_process` standing in for `open`, the opener a send to Claude Desktop calls.
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { rewriteHarness } from '../lineValues';
+import { isHeadless, parseShippedRecipes } from '../recipes';
+
+const SHIPPED_RECIPES = path.join(__dirname, '..', '..', 'shipped_recipes.md');
 const Module = require('node:module') as {
   _load: (request: string, parent: unknown, isMain: boolean) => unknown;
 };
@@ -180,6 +184,29 @@ test('an action of one claude-desktop line is sent to Claude Desktop through ope
     'an empty note is dropped from the prompt',
   );
   assert.strictEqual(created.length, count);
+});
+
+test("Finish mission's headless line, picked onto Claude Desktop, is sent to it with the finish prompt and the project root, and no run is tracked", async () => {
+  events.length = 0;
+  opened.length = 0;
+  errors.length = 0;
+  notifications.length = 0;
+  const count = created.length;
+  const shipped = parseShippedRecipes(fs.readFileSync(SHIPPED_RECIPES, 'utf8'), SHIPPED_RECIPES);
+  const finish = shipped.find((recipe) => recipe.name === 'Finish mission')?.variants[0].lines[0] as string;
+  assert.ok(isHeadless(finish), 'the shipped Finish mission line is headless');
+  const line = rewriteHarness(finish, 'claude-desktop', { models: [], efforts: [] }) as string;
+  assert.strictEqual(line, 'claude-desktop "/gurita:finish-mission --mission <path>"; # interactive');
+  await runs.startAction(context, '/my project', 'lib/mission_alpha/', 'Finish mission', [line], { path: 'lib/mission_alpha/' });
+  assert.deepStrictEqual(opened, [
+    { file: 'open', args: ['claude://code/new?q=%2Fgurita%3Afinish-mission%20--mission%20lib%2Fmission_alpha%2F&folder=%2Fmy%20project'] },
+  ]);
+  assert.strictEqual(new URL(opened[0].args[0]).searchParams.get('q'), '/gurita:finish-mission --mission lib/mission_alpha/');
+  assert.strictEqual(created.length, count, 'no terminal is created');
+  assert.deepStrictEqual(runs.runningMissions(), []);
+  assert.deepStrictEqual(events, []);
+  assert.deepStrictEqual(errors, []);
+  assert.deepStrictEqual(notifications, []);
 });
 
 test('a failed send is shown as one error notification carrying the cause the opener reported, and nothing is checked beforehand', async () => {
