@@ -1,7 +1,2 @@
 # TASKS TODO
 
-## Document Harness Forms And Desktop Chains In Usage
-
-Bring `gurita-vscode/USAGE.md` in line with the code the four preceding tasks leave, since the mission is done only when the reference is in place and it still describes a harness dropdown of one entry per harness that keeps the line's form, Claude Desktop offered only on a variant of one interactive line, `Finish mission` with no Desktop choice, and chains that never reach Desktop. It documents the dropdown's entries (`Claude Code`, `Claude Code interactive`, `Antigravity`, `Antigravity interactive`, `Codex`, `Codex interactive`, `Claude Desktop interactive`) and the lines each is offered on, the headless and interactive rewrite in both directions, Claude Desktop on any one-line variant with the `Finish mission` example, and, in `## Sending an action to Claude Desktop`, a chain whose last line goes to Desktop after its earlier lines ran in the terminal, with its stopped-chain, over-long, and failed-send cases, single-task lines and looped recipes documented as unchanged, and, under `## The runner`, the `chain` command's `--finished-file FILE` option the extension passes for those earlier lines (the runner writes the file, empty, only when they all finished, which is when the last line is sent). It is verified by reading each changed passage against the code it describes and by `git diff --quiet -- gurita-vscode/README.md gurita-vscode/package.json` succeeding, no other listing text coming to name Claude Desktop and no extension release being made.
-
----
