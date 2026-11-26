@@ -45,7 +45,12 @@
 // word of its arguments or a part of one, the quoted prompt being one word, and the line's prompt
 // (`readPrompt`) is that word as the shell reads it. A Claude Desktop line whose prompt is too long
 // for Desktop runs in a terminal as the line `claudeCodeLine` gives, its opening word replaced by
-// `claude` and every other word kept as stored. This module imports nothing from `vscode`.
+// `claude` and every other word kept as stored. A line whose harness can be picked is also
+// rewritten between its headless and interactive forms in both directions (`rewriteForm`, the
+// form read by `readForm`): `claude -p "…"` and `claude "…"`, `agy -p "…"` and `agy -i "…"`,
+// `codex exec '$gurita:…'` and the bare `codex '$gurita:…'`, the trailing `# interactive` mark
+// added or dropped with the form and the prompt, model, effort, bypass flag, and every other word
+// kept as written. This module imports nothing from `vscode`.
 
 /** The harnesses a line can run on that are CLIs, each named by the command a line opens with. */
 const CLI_LINE_HARNESSES = ['claude', 'agy', 'codex'] as const;
@@ -705,4 +710,91 @@ export function rewriteHarness(line: string, harness: SwitchableHarness, offer: 
   }
   const valued = replaceEffort(replaceModel(line, model) as string, effort) as string;
   return switchCommand(valued, harness);
+}
+
+/** A line's form: headless, run to its end with no session left open, or interactive, left open in its terminal. */
+export type LineForm = 'headless' | 'interactive';
+
+/**
+ * The form of a line whose harness can be picked, as `harnessChoices` gives it choices, read from
+ * its text: interactive when it ends in the `# interactive` mark and its first command is in its
+ * harness's interactive form (`claude "…"`, `agy "…"` with no `-p` or `--print`, the bare
+ * `codex '$gurita:…'`), headless when it carries no mark and its first command is in its harness's
+ * headless form (`claude` or `agy` carrying `-p` or `--print`, `codex exec`), and undefined for a
+ * line in neither form and for every line `harnessChoices` gives none.
+ */
+export function readForm(line: string): LineForm | undefined {
+  const read = readLine(line);
+  if (read === undefined || read.harness === DESKTOP || harnessChoices(line) === undefined) {
+    return undefined;
+  }
+  const command = words(line);
+  if (INTERACTIVE_MARK.test(line)) {
+    return interactiveForm(line, command, read.harness) ? 'interactive' : undefined;
+  }
+  const headless = read.harness === 'codex' ? execWord(command) !== undefined : printForm(command);
+  return headless ? 'headless' : undefined;
+}
+
+/**
+ * The line `line` rewritten into `form`, its harness, prompt, model, effort, bypass flag, and every
+ * other word kept as written, only its form words and its trailing `# interactive` mark changed:
+ * a headless line made interactive loses `-p` or `--print` (`claude -p "…"` to `claude "…"`), an
+ * `agy` line's `-p` becoming `-i` in its place (`agy -p "…"` to `agy -i "…"`), a `codex exec` line
+ * loses its `exec` (`codex exec '$gurita:…'` to `codex '$gurita:…'`), a prompt invoking its skill as
+ * `/gurita:` rewritten to the single-quoted `'$gurita:…'` the bare form needs, and the line gains
+ * ` # interactive` after its last word; an interactive line made headless gains `-p` after `claude`,
+ * an `agy` line's `-i` becoming `-p` in its place (or `-p` written after `agy` when it carries no
+ * `-i`), a bare `codex` line gains `exec` after `codex`, and the line loses its `# interactive` mark
+ * with the blanks before it. A line already in `form` is given back unchanged, and undefined is given
+ * for a line `readForm` reads no form of: a line whose harness cannot be picked (a Claude Desktop
+ * line, a shell step, the slot line, a line without the flags `harnessChoices` asks for) and one in
+ * neither form.
+ */
+export function rewriteForm(line: string, form: LineForm): string | undefined {
+  const current = readForm(line);
+  if (current === undefined) {
+    return undefined;
+  }
+  if (current === form) {
+    return line;
+  }
+  const harness = (readLine(line) as LineValues).harness as CliLineHarness;
+  const command = words(line);
+  const first = command[0];
+  const rest = command.slice(1);
+  const edits: Edit[] = [];
+  if (form === 'interactive') {
+    const prints = rest.filter((word) => word.text === '-p' || word.text === '--print');
+    const marked = rest.some((word) => line.slice(word.start, word.end) === '-i');
+    if (harness === 'codex') {
+      edits.push(removal(command, execWord(command) as Word));
+      const asked = promptWord(command);
+      if (asked !== undefined && !/(?:^|\s)\$gurita:/.test(asked.text)) {
+        edits.push({ start: asked.start, end: asked.end, text: prompt(asked.text, 'codex') });
+      }
+    } else {
+      prints.forEach((word, index) => {
+        edits.push(harness === 'agy' && index === 0 && !marked ? { start: word.start, end: word.end, text: '-i' } : removal(command, word));
+      });
+    }
+    const changed = applyEdits(line, edits).trimEnd();
+    const interactive = `${changed} # interactive`;
+    return readForm(interactive) === 'interactive' ? interactive : undefined;
+  }
+  if (harness === 'codex') {
+    edits.push({ start: first.end, end: first.end, text: ' exec' });
+  } else {
+    const interactive = harness === 'agy' ? rest.filter((word) => line.slice(word.start, word.end) === '-i') : [];
+    if (interactive.length === 0) {
+      edits.push({ start: first.end, end: first.end, text: ' -p' });
+    }
+    interactive.forEach((word, index) => {
+      edits.push(index === 0 ? { start: word.start, end: word.end, text: '-p' } : removal(command, word));
+    });
+  }
+  const changed = applyEdits(line, edits);
+  const mark = INTERACTIVE_MARK.exec(changed) as RegExpExecArray;
+  const headless = changed.slice(0, mark.index).trimEnd();
+  return readForm(headless) === 'headless' ? headless : undefined;
 }

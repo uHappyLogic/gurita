@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import * as assert from 'node:assert';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { claudeCodeLine, harnessChoices, readLine, readPrompt, readSkill, replaceEffort, replaceModel, rewriteHarness } from '../lineValues';
+import { claudeCodeLine, harnessChoices, readForm, readLine, readPrompt, readSkill, replaceEffort, replaceModel, rewriteForm, rewriteHarness } from '../lineValues';
 import { Recipe, SLOT_LINE, isHeadless, parseShippedRecipes } from '../recipes';
 
 const SHIPPED_RECIPES = path.join(__dirname, '..', '..', 'shipped_recipes.md');
@@ -582,4 +582,122 @@ test('a Claude Desktop line runs in a terminal with its opening word replaced by
   for (const line of ['claude "/gurita:x"; # interactive', 'claude-desktops "/gurita:x"; # interactive', 'echo claude-desktop', '']) {
     assert.strictEqual(claudeCodeLine(line), undefined, line);
   }
+});
+
+test('a headless line is rewritten to its interactive form and back on each CLI, the # interactive mark added and dropped', () => {
+  const headless = shippedRecipe('First run').variants[0].lines[0];
+  const interactive = 'claude "/gurita:specify-mission-starting-state --mission <path>" --dangerously-skip-permissions --model "fable" --effort xhigh; # interactive';
+  assert.strictEqual(readForm(headless), 'headless');
+  assert.strictEqual(rewriteForm(headless, 'interactive'), interactive);
+  assert.strictEqual(readForm(interactive), 'interactive');
+  assert.strictEqual(rewriteForm(interactive, 'headless'), headless);
+  assert.strictEqual(
+    rewriteForm(AGY_LINE, 'interactive'),
+    'agy -i "/gurita:review-mission-requirements --mission <path>" --dangerously-skip-permissions --model "gemini-4-argon" --effort medium; # interactive',
+    "an agy line's -p becomes -i in its place",
+  );
+  assert.strictEqual(rewriteForm(AGY_INTERACTIVE_LINE, 'headless'), AGY_INTERACTIVE_LINE.replace('agy -i', 'agy -p').replace(' # interactive', ''));
+  assert.strictEqual(
+    rewriteForm(CODEX_EFFORT_LINE, 'interactive'),
+    "codex '$gurita:review-mission-requirements --mission <path>' --dangerously-bypass-approvals-and-sandbox -m gpt-5.5 -c model_reasoning_effort=high; # interactive",
+    'a codex exec line loses its exec',
+  );
+  assert.strictEqual(
+    rewriteForm(CODEX_INTERACTIVE_LINE, 'headless'),
+    "codex exec '$gurita:complete-all-tasks --mission <path>' --dangerously-bypass-approvals-and-sandbox -m \"gpt-5.5\" -c model_reasoning_effort=high;",
+    'a bare codex line gains exec',
+  );
+  assert.strictEqual(
+    rewriteForm(CODEX_LINE, 'interactive'),
+    "codex '$gurita:review-mission-requirements --mission <path>' -m gpt-5.5; # interactive",
+    'a codex exec line invoking /gurita: is invoked as $gurita: in the bare form',
+  );
+});
+
+test('a line already in the asked form is given back unchanged, and the other words and their spelling are kept', () => {
+  assert.strictEqual(rewriteForm(CLAUDE_LINE, 'headless'), CLAUDE_LINE);
+  assert.strictEqual(rewriteForm(AGY_INTERACTIVE_LINE, 'interactive'), AGY_INTERACTIVE_LINE);
+  assert.strictEqual(rewriteForm(CODEX_EFFORT_LINE, 'headless'), CODEX_EFFORT_LINE);
+  assert.strictEqual(
+    rewriteForm("claude --print '/x' --model=fable --effort=high", 'interactive'),
+    "claude '/x' --model=fable --effort=high # interactive",
+    '--print is dropped and the =-forms kept',
+  );
+  assert.strictEqual(rewriteForm("claude '/x' --model=fable --effort=high   #interactive  ", 'headless'), "claude -p '/x' --model=fable --effort=high");
+  assert.strictEqual(
+    rewriteForm('agy "/gurita:x" --model m --effort high; # interactive', 'headless'),
+    'agy -p "/gurita:x" --model m --effort high;',
+    'an interactive agy line without -i gains -p after agy',
+  );
+});
+
+test('every shipped line whose harness can be picked is rewritten to its other form and back on Claude Code, Antigravity, and Codex', () => {
+  const lines = [
+    ...new Set(
+      parseShippedRecipes(fs.readFileSync(SHIPPED_RECIPES, 'utf8'), SHIPPED_RECIPES).flatMap((recipe) => recipe.variants.flatMap((variant) => variant.lines)),
+    ),
+  ];
+  const offers = { claude: CLAUDE_OFFER, agy: AGY_OFFER, codex: CODEX_OFFER } as const;
+  const counts = { claude: 0, agy: 0, codex: 0, headless: 0, interactive: 0 };
+  for (const shipped of lines) {
+    if (harnessChoices(shipped) === undefined) {
+      continue;
+    }
+    for (const harness of ['claude', 'agy', 'codex'] as const) {
+      const line = rewriteHarness(shipped, harness, offers[harness]) as string;
+      assert.ok(line !== undefined, `${harness}: ${shipped}`);
+      const form = readForm(line);
+      assert.ok(form !== undefined, line);
+      assert.strictEqual(form === 'headless', isHeadless(line), line);
+      const otherForm = form === 'headless' ? 'interactive' : 'headless';
+      const other = rewriteForm(line, otherForm);
+      assert.ok(other !== undefined, line);
+      assert.strictEqual(readForm(other), otherForm, other);
+      assert.strictEqual(isHeadless(other), otherForm === 'headless', other);
+      assert.strictEqual(other.endsWith(' # interactive'), otherForm === 'interactive', other);
+      assert.deepStrictEqual(readLine(other), readLine(line), 'the harness, model, and effort are kept');
+      assert.strictEqual(readPrompt(other), readPrompt(line), 'the prompt is kept');
+      assert.strictEqual(readSkill(other), readSkill(line));
+      const bypass = harness === 'codex' ? '--dangerously-bypass-approvals-and-sandbox' : '--dangerously-skip-permissions';
+      assert.strictEqual(other.includes(bypass), line.includes(bypass), 'the bypass flag is kept');
+      assert.deepStrictEqual(harnessChoices(other), ['claude', 'agy', 'codex'], 'the rewritten line keeps its harness choices');
+      assert.strictEqual(rewriteForm(other, form), line, 'the way back gives the line as written');
+      counts[harness]++;
+      counts[form]++;
+    }
+  }
+  assert.ok(counts.claude >= 20 && counts.agy === counts.claude && counts.codex === counts.claude, JSON.stringify(counts));
+  assert.ok(counts.headless >= 30 && counts.interactive >= 18, JSON.stringify(counts));
+  const execute = shippedRecipe('Execute tasks').variants[0].lines[0];
+  assert.strictEqual(
+    rewriteForm(execute, 'headless'),
+    'claude -p "/gurita:complete-all-tasks --mission <path>" --dangerously-skip-permissions --model "opus" --effort high;',
+  );
+  const codex = shippedRecipe('Single task with GPT-6-Luna High (Codex)').variants[0].lines[0];
+  assert.strictEqual(
+    rewriteForm(codex, 'interactive'),
+    "codex '$gurita:complete-task --mission <path> <Task Title>' --dangerously-bypass-approvals-and-sandbox -m \"gpt-6-luna\" -c model_reasoning_effort=high; # interactive",
+  );
+});
+
+test('a line whose harness cannot be picked, or in neither form, is refused a form rewrite', () => {
+  const recipes = parseShippedRecipes(fs.readFileSync(SHIPPED_RECIPES, 'utf8'), SHIPPED_RECIPES);
+  const refused = recipes.flatMap((recipe) => recipe.variants.flatMap((variant) => variant.lines)).filter((line) => harnessChoices(line) === undefined);
+  for (const line of [
+    ...refused,
+    SLOT_LINE,
+    DESKTOP_LINE,
+    'git pull --model x --effort y;',
+    'claude -p "/gurita:finish-mission" --model opus;',
+    'claude "/gurita:discuss-mission-goal" --model opus; # interactive',
+    "codex exec '$gurita:finish-mission' -c model_reasoning_effort=high;",
+    'codex "/gurita:finish-mission" -m gpt-5.5;',
+    'claude "/gurita:complete-all-tasks --mission <path>" --model "opus" --effort high;',
+    'claude -p "/gurita:complete-all-tasks" --model "opus" --effort high; # interactive',
+  ]) {
+    assert.strictEqual(readForm(line), undefined, line);
+    assert.strictEqual(rewriteForm(line, 'interactive'), undefined, line);
+    assert.strictEqual(rewriteForm(line, 'headless'), undefined, line);
+  }
+  assert.strictEqual(rewriteForm('codex exec "echo hi" -m gpt-5.5;', 'interactive'), undefined, 'a codex exec line invoking no skill has no bare form');
 });
