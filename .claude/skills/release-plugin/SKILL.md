@@ -22,8 +22,9 @@ form, so an extension tag never stands in for a plugin release.
 Nothing is written, committed, pushed, tagged, or published until every gate below has
 passed and the release notes have been composed. The pre-flight and version gates (steps 2
 and 3) are hard stops: on failure, report the specific reason and exit, having changed
-nothing tracked and nothing published. The one write before step 6 is step 2g's refresh of
-each selected host's installed plugin copy, which touches no tracked file. Never work around
+nothing tracked and nothing published. The only writes before step 6 are step 2e's removal
+of the git-ignored bytecode caches and step 2g's refresh of each selected host's installed
+plugin copy, and neither touches a tracked file. Never work around
 a gate, and never ask the maintainer to waive one.
 
 The release notes live in the repository: the `Release: <VERSION>` commit prepends them to
@@ -109,8 +110,9 @@ git describe --tags --abbrev=0 --match '[0-9]*' --exclude=<VERSION>
 Run all seven checks. Each one blocks a route by which the release would tag something other
 than a fresh build of committed `core/`, publish into a place that does not exist or cannot
 run its traffic workflow, or ship any host's integration that host's installed CLI no longer
-runs, so any failure stops the run. None of them writes anything tracked. The only write is
-check g's refresh of the installed copies it is about to test, made outside the tracked tree.
+runs, so any failure stops the run. None of them writes anything tracked. The only writes
+are check e's removal of the git-ignored bytecode caches and check g's refresh of the
+installed copies it is about to test.
 
 **a. The tracked working tree is clean.**
 
@@ -153,6 +155,21 @@ files **elsewhere** in the repo are tolerated and are not checked: staging is pa
 they cannot be picked up.
 
 **e. The committed host trees are a fresh build of `core/`.**
+
+First, always delete the git-ignored bytecode caches under `core/` and `hosts/`, both at
+once:
+
+```bash
+find core hosts -name __pycache__ -type d -prune -exec rm -rf {} +
+```
+
+The build renders every file under `core/`, including the `core/tools/__pycache__/` that any
+import of a tool (a pytest run, for one) leaves behind. Both the drift gate below and the
+host suite in check g compare every file in the working tree, ignored ones included. So a
+cache present on one side and not the other, or stale on either, fails a comparison that has
+nothing to do with the committed tree. The caches are untracked, and nothing reads them.
+Clearing both directories together keeps the fresh build and the committed trees cache-free
+alike. Then run the gate:
 
 ```bash
 uv run scripts/build_hosts.py --check
@@ -303,16 +320,8 @@ selected host's copy up to the committed tree the run is checking, at the curren
 since the release commit has not been made yet. Do this unattended, without asking, on every
 run, a resumption included. Never refresh an unselected host.
 
-First delete the git-ignored bytecode caches under `hosts/`. The suite compares every file in
-the working tree, ignored ones included, so a stray `__pycache__/` left by running a tool from
-`hosts/` would make even a correct copy fail the comparison. They are untracked and nothing
-reads them:
-
-```bash
-find hosts -name __pycache__ -type d -prune -exec rm -rf {} +
-```
-
-Then run the refresh for each selected host, and only those:
+Check e already cleared the bytecode caches under `core/` and `hosts/`, so the trees being
+copied hold only built files. Run the refresh for each selected host, and only those:
 
 - Claude Code: re-register the checkout as the directory marketplace and install from it.
   Both commands are idempotent, and the copy then loads in place from `hosts/claude/`:
